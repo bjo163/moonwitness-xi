@@ -17,6 +17,12 @@ const DashboardPage = lazy(() =>
 const ModelPage = lazy(() =>
   import('@/pages/model-page').then((module) => ({ default: module.ModelPage }))
 );
+const ProfilePage = lazy(() =>
+  import('@/pages/profile-page').then((module) => ({ default: module.ProfilePage }))
+);
+const SettingsPage = lazy(() =>
+  import('@/pages/settings-page').then((module) => ({ default: module.SettingsPage }))
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,6 +51,8 @@ export default function App() {
                 <Route element={<ProtectedRoute />}>
                   <Route element={<AppShell />}>
                     <Route path="/" element={<DashboardPage />} />
+                    <Route path="/profile" element={<ProfilePage />} />
+                    <Route path="/settings" element={<SettingsPage />} />
                     <Route path="/m/:model" element={<ModelPage />} />
                     <Route path="/m/:model/:id" element={<ModelPage />} />
                   </Route>

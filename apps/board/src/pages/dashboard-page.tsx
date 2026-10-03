@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -22,6 +22,7 @@ import { client } from '@/lib/client';
 import { useAuth } from '@/hooks/use-auth';
 import { useModels } from '@/hooks/use-model';
 import { modelIcon, modelLabel } from '@/lib/models';
+import { DEVELOPMENT_MODE_EVENT, readDevelopmentMode } from '@/lib/navigation';
 import { Doodle, SpeedLines } from '@/components/manga/effects';
 import { Button } from '@/components/ui/button';
 import {
@@ -40,6 +41,17 @@ export function DashboardPage() {
   const { data: models, isLoading: modelsLoading } = useModels();
   const isAdmin = user?.role === 'superadmin' || user?.role === 'system';
   const [adminSubView, setAdminSubView] = useState<'telemetry' | 'crons'>('telemetry');
+  const [developmentMode, setDevelopmentMode] = useState(readDevelopmentMode);
+
+  useEffect(() => {
+    const syncMode = (event: Event) =>
+      setDevelopmentMode(
+        event instanceof CustomEvent ? event.detail === true : readDevelopmentMode()
+      );
+    window.addEventListener(DEVELOPMENT_MODE_EVENT, syncMode);
+    return () => window.removeEventListener(DEVELOPMENT_MODE_EVENT, syncMode);
+  }, []);
+  const visibleModels = models?.filter((model) => developmentMode || !model.menu.developmentOnly);
 
   // Live KPI Queries
   const { data: partnerStats, isLoading: partnerLoading } = useQuery({
@@ -769,10 +781,10 @@ export function DashboardPage() {
                 Array.from({ length: 6 }, (_, i) => (
                   <div key={i} className="h-32 border-2 border-ink/20 bg-card p-6 animate-pulse" />
                 ))
-              ) : models?.length === 0 ? (
+              ) : visibleModels?.length === 0 ? (
                 <p className="text-ink-faint">No accessible models found for your role.</p>
               ) : (
-                models?.map((m) => {
+                visibleModels?.map((m) => {
                   const Icon = modelIcon(m.model);
                   return (
                     <Link
@@ -791,7 +803,7 @@ export function DashboardPage() {
 
                       <div className="mt-4">
                         <h3 className="font-display text-xl uppercase tracking-wide group-hover:text-lime-600 transition-colors">
-                          {modelLabel(m.model)}
+                          {m.menu.label ?? modelLabel(m.model)}
                         </h3>
                         <p className="font-mono text-xs text-ink-faint mt-0.5">{m.model}</p>
                       </div>

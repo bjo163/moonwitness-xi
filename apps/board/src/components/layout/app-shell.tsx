@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
+import type { ModelInfo } from '@moonwitness/client';
 import {
   Building2,
   Calendar,
   Check,
+  Code2,
   Globe,
   Keyboard,
   LogOut,
   Menu,
   Moon,
   Search,
+  Settings,
   Sun,
   User,
   Users,
@@ -20,7 +23,8 @@ import { client } from '@/lib/client';
 import { useAuth } from '@/hooks/use-auth';
 import { useModels } from '@/hooks/use-model';
 import { useTheme } from '@/hooks/use-theme';
-import { DashboardIcon, modelAddon, modelIcon, modelLabel } from '@/lib/models';
+import { DashboardIcon, modelIcon, modelLabel } from '@/lib/models';
+import { readDevelopmentMode, updateDevelopmentMode } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -94,7 +98,7 @@ function ModelNavigation({
   isLoading,
   onNavigate,
 }: {
-  groups: Array<[string, string[]]>;
+  groups: Array<[string, ModelInfo[]]>;
   isLoading: boolean;
   onNavigate?: () => void;
 }) {
@@ -103,17 +107,17 @@ function ModelNavigation({
       <NavItem to="/" label="Dashboard" icon={DashboardIcon} tilt={-1.5} onNavigate={onNavigate} />
       {isLoading &&
         Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-8 bg-ink/10" />)}
-      {groups.map(([addon, names]) => (
-        <div key={addon} className="space-y-1">
+      {groups.map(([group, items]) => (
+        <div key={group} className="space-y-1">
           <p className="px-3 pb-1 font-mono text-[11px] uppercase tracking-[0.2em] text-ink-faint">
-            {addon}
+            {group}
           </p>
-          {names.map((model, i) => (
+          {items.map((item, i) => (
             <NavItem
-              key={model}
-              to={`/m/${model}`}
-              label={modelLabel(model)}
-              icon={modelIcon(model)}
+              key={item.model}
+              to={`/m/${item.model}`}
+              label={item.menu.label ?? modelLabel(item.model)}
+              icon={modelIcon(item.model)}
               tilt={i % 2 ? 1.2 : -1.5}
               onNavigate={onNavigate}
             />
@@ -135,6 +139,14 @@ export function AppShell() {
   const [activeCompanyId, setActiveCompanyId] = useState<number | undefined>(() =>
     client.getCompanyId()
   );
+  const [developmentMode, setDevelopmentMode] = useState(readDevelopmentMode);
+
+  const toggleDevelopmentMode = () => {
+    setDevelopmentMode((enabled) => {
+      updateDevelopmentMode(!enabled);
+      return !enabled;
+    });
+  };
 
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -234,13 +246,29 @@ export function AppShell() {
   });
 
   const groups = useMemo(() => {
-    const byAddon = new Map<string, string[]>();
-    for (const { model } of models ?? []) {
-      const addon = modelAddon(model);
-      byAddon.set(addon, [...(byAddon.get(addon) ?? []), model]);
+    const byGroup = new Map<string, ModelInfo[]>();
+    for (const item of models ?? []) {
+      const group = item.menu.group;
+      byGroup.set(group, [...(byGroup.get(group) ?? []), item]);
     }
-    return [...byAddon.entries()];
+    return [...byGroup.entries()].map(
+      ([group, items]) =>
+        [group, items.sort((left, right) => left.menu.sequence - right.menu.sequence)] as [
+          string,
+          ModelInfo[],
+        ]
+    );
   }, [models]);
+
+  const visibleGroups = useMemo(() => {
+    if (developmentMode) return groups;
+    return groups
+      .map(
+        ([group, items]) =>
+          [group, items.filter((item) => !item.menu.developmentOnly)] as [string, ModelInfo[]]
+      )
+      .filter(([, items]) => items.length > 0);
+  }, [developmentMode, groups]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -264,7 +292,23 @@ export function AppShell() {
         <div className="relative border-b-2 border-dashed border-ink/20 px-5 py-5">
           <Logo />
         </div>
-        <ModelNavigation groups={groups} isLoading={isLoading} />
+        <ModelNavigation groups={visibleGroups} isLoading={isLoading} />
+        <div className="border-t-2 border-dashed border-ink/20 p-3">
+          <button
+            type="button"
+            onClick={toggleDevelopmentMode}
+            aria-pressed={developmentMode}
+            className={cn(
+              'flex w-full items-center gap-3 border-2 px-3 py-2 text-left font-mono text-xs uppercase tracking-wider transition-colors',
+              developmentMode
+                ? 'border-lime bg-lime text-on-accent font-bold'
+                : 'border-ink/30 text-ink-soft hover:border-ink hover:text-ink'
+            )}
+          >
+            <Code2 className="size-4" />
+            {developmentMode ? 'Development Mode: On' : 'Development Mode'}
+          </button>
+        </div>
         <div className="flex items-center gap-2 border-t-2 border-dashed border-ink/20 px-5 py-4 font-mono text-[11px] uppercase tracking-widest text-ink-faint">
           <Doodle kind="bolt" className="size-4" /> +1 every day
         </div>
@@ -292,10 +336,26 @@ export function AppShell() {
                 <Logo />
               </div>
               <ModelNavigation
-                groups={groups}
+                groups={visibleGroups}
                 isLoading={isLoading}
                 onNavigate={() => setMobileNavOpen(false)}
               />
+              <div className="border-t-2 border-dashed border-ink/20 p-3">
+                <button
+                  type="button"
+                  onClick={toggleDevelopmentMode}
+                  aria-pressed={developmentMode}
+                  className={cn(
+                    'flex w-full items-center gap-3 border-2 px-3 py-2 text-left font-mono text-xs uppercase tracking-wider transition-colors',
+                    developmentMode
+                      ? 'border-lime bg-lime text-on-accent font-bold'
+                      : 'border-ink/30 text-ink-soft hover:border-ink hover:text-ink'
+                  )}
+                >
+                  <Code2 className="size-4" />
+                  {developmentMode ? 'Development Mode: On' : 'Development Mode'}
+                </button>
+              </div>
               <div className="flex items-center gap-2 border-t-2 border-dashed border-ink/20 px-5 py-4 font-mono text-[11px] uppercase tracking-widest text-ink-faint">
                 <Doodle kind="bolt" className="size-4" /> +1 every day
               </div>
@@ -414,6 +474,17 @@ export function AppShell() {
                   </span>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <NavLink to="/profile" className="flex cursor-pointer items-center gap-2">
+                    <User /> Profile
+                  </NavLink>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <NavLink to="/settings" className="flex cursor-pointer items-center gap-2">
+                    <Settings /> Settings
+                  </NavLink>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem id="logout" onSelect={() => void logout()}>
                   <LogOut /> Sign out
                 </DropdownMenuItem>
@@ -473,22 +544,22 @@ export function AppShell() {
           )}
 
           {/* System Modules Section */}
-          {groups.map(([addon, names]) => (
-            <CommandGroup key={addon} heading={addon}>
-              {names.map((model) => {
-                const Icon = modelIcon(model);
+          {visibleGroups.map(([group, items]) => (
+            <CommandGroup key={group} heading={group}>
+              {items.map((item) => {
+                const Icon = modelIcon(item.model);
                 return (
                   <CommandItem
-                    key={model}
-                    value={`${modelLabel(model)} ${model}`}
+                    key={item.model}
+                    value={`${item.menu.label ?? modelLabel(item.model)} ${item.model}`}
                     onSelect={() => {
                       setPaletteOpen(false);
                       setPaletteQuery('');
-                      navigate(`/m/${model}`);
+                      navigate(`/m/${item.model}`);
                     }}
                   >
-                    <Icon /> {modelLabel(model)}
-                    <span className="ml-auto font-mono text-xs text-ink-faint">{model}</span>
+                    <Icon /> {item.menu.label ?? modelLabel(item.model)}
+                    <span className="ml-auto font-mono text-xs text-ink-faint">{item.model}</span>
                   </CommandItem>
                 );
               })}
