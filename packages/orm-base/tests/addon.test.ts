@@ -72,7 +72,7 @@ describe('declarative addons', () => {
     ).toEqual([]);
     expect(seededModels.has(AuditLog.modelName)).toBe(false);
     expect(await db('users').count({ count: '*' }).first()).toMatchObject({ count: 2 });
-    expect(await db('partners').count({ count: '*' }).first()).toMatchObject({ count: 11 });
+    expect(await db('partners').count({ count: '*' }).first()).toMatchObject({ count: 10 });
     expect(await db('partner_categories').count({ count: '*' }).first()).toMatchObject({
       count: 2,
     });
@@ -194,7 +194,7 @@ describe('declarative addons', () => {
     await Partner.query().findById(admin.partner_id).patch({ email: 'owner@example.test' });
     await installAddons(db, [manifest]);
     expect(await db('users').count({ count: '*' }).first()).toMatchObject({ count: 2 });
-    expect(await db('partners').count({ count: '*' }).first()).toMatchObject({ count: 11 });
+    expect(await db('partners').count({ count: '*' }).first()).toMatchObject({ count: 10 });
     expect((await User.query().findById(admin.id))?.login).toBe('owner');
     expect((await Partner.query().findById(admin.partner_id))?.email).toBe('owner@example.test');
   });
@@ -244,7 +244,7 @@ describe('declarative addons', () => {
       }),
     ]);
     expect(await db.schema.hasColumn('partners', 'test_field')).toBe(true);
-    expect(await db('partners').count({ count: '*' }).first()).toMatchObject({ count: 11 });
+    expect(await db('partners').count({ count: '*' }).first()).toMatchObject({ count: 10 });
     const UnsafePartner = defineModel('base.partner', {
       table: 'partners',
       fields: { ...Partner.fields, secret: fields.string({ required: true }) },

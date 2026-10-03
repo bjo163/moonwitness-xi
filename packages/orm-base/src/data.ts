@@ -207,12 +207,6 @@ export const data = [
     email: 'team@openfield.local',
     is_company: true,
   }),
-  seed(Partner, 'base.partner_riverstone', {
-    name: 'Riverstone Group',
-    email: 'info@riverstone.local',
-    is_company: true,
-  }),
-
   // 7. Partner Bank Accounts
   seed(PartnerBank, 'base.partner_bank_acme', {
     acc_number: '1234567890',

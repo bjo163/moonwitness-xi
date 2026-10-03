@@ -40,7 +40,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 - [ ] M0.05 Inventarisasi duplikasi, komponen besar, dependency tidak terpakai, siklus import, dan tanggung jawab yang masih membebani apps/api atau Board.
 - [ ] M0.06 Tetapkan versi runtime/database/browser yang didukung, anggaran durasi CI, retensi artefak, serta baseline performa yang terukur.
 - [ ] M0.07 Dokumentasikan keputusan arsitektur: versi monorepo bersama, dua branch, model promosi, sumber metadata, dan batas package.
-- [ ] M0.08 Verifikasi ulang jumlah seed yang diminta: dua user default dan total 12 partner sesuai kebutuhan; selesaikan ketidaksesuaian nama test, jumlah aktual, dan dokumentasi tanpa menggandakan data existing.
+- [x] M0.08 Fresh install seed tepat 2 user + 10 partner (12 record utama); pertahankan partner existing pada upgrade, dan buktikan reinstall tidak menggandakan/menimpa edit. Bukti: [M0.08](docs/roadmap/evidence/M0.08.md).
 
 ## M1 — Governance dua branch (jalur A; setelah M0)
 

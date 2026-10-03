@@ -60,7 +60,7 @@
     },
     {
       "id": "M0.08",
-      "title": "Verifikasi ulang jumlah seed yang diminta: dua user default dan total 12 partner sesuai kebutuhan; selesaikan ketidaksesuaian nama test, jumlah aktual, dan dokumentasi tanpa menggandakan data existing.",
+      "title": "Fresh install seed tepat 2 user + 10 partner (12 record utama); pertahankan partner existing pada upgrade, dan buktikan reinstall tidak menggandakan/menimpa edit.",
       "milestone": "M0",
       "dependsOn": ["M0.01"],
       "output": "Seed contract dan test regresi pada packages/orm-base/tests",

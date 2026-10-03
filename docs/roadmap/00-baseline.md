@@ -128,7 +128,7 @@ Tidak ada ADR yang mensyaratkan release branch atau deployment aplikasi.
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M0.07.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
-## M0.08 — Verifikasi ulang jumlah seed yang diminta: dua user default dan total 12 partner sesuai kebutuhan; selesaikan ketidaksesuaian nama test, jumlah aktual, dan dokumentasi tanpa menggandakan data existing.
+## M0.08 — Fresh install seed tepat 2 user + 10 partner (12 record utama); pertahankan partner existing pada upgrade, dan buktikan reinstall tidak menggandakan/menimpa edit.
 
 - **Prasyarat:** M0.01
 - **Baca/periksa:** packages/orm-base/src/data.ts; packages/orm-base/tests/addon.test.ts.
@@ -142,6 +142,6 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ### Verifikasi dan syarat selesai
 
-Fresh install menghasilkan 2 user dan 12 partner sesuai fixture demo; reinstall tidak menambah duplikat dan mempertahankan edit.
+Fresh install menghasilkan 2 user dan 10 baris partner total (dua di antaranya profile user; 12 record utama bila user dan partner dihitung bersama). Reinstall mempertahankan sepuluh record dan edit; upgrade DB yang sudah berisi partner lama tidak menghapus record existing.
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M0.08.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.

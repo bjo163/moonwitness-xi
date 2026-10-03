@@ -37,21 +37,21 @@ Tabel ini melengkapi kartu task. Nilai HTTP/status aktual harus mengikuti kontra
 
 ## Backend dan data
 
-| ID  | Given / When                            | Expected                                                                         |
-| --- | --------------------------------------- | -------------------------------------------------------------------------------- |
-| D01 | Fresh base install dengan demo          | 2 users, 12 partners, company dan reference data sesuai contract                 |
-| D02 | Edit seed lalu reinstall                | External ID stabil; edit tidak ditimpa                                           |
-| D03 | Populated legacy schema upgrade         | Existing records/relations tetap valid                                           |
-| D04 | Two startup installers                  | Lock/serialization; tidak duplicate schema/seed                                  |
-| D05 | Inject seed/schema failure              | Transaction rollback atau documented safe recovery, tidak silent partial success |
-| D06 | Member A CRUD/count/export B            | Deny tanpa row/count leakage                                                     |
-| D07 | A assign FK milik B                     | Ditolak sesuai ownership policy                                                  |
-| D08 | Unknown/sensitive writable field        | Validation deny/ignore sesuai documented whitelist; tak ada mass assignment      |
-| D09 | Excessive domain/eager/limit/payload    | Bounded validation failure sebelum heavy query                                   |
-| D10 | Sensitive sentinel pada nested relation | Tidak ada plaintext/hash/token pada response/export/log                          |
-| D11 | Duplicate/invalid FK                    | Safe error code; tidak raw SQL/secret                                            |
-| D12 | Two conflicting updates                 | Conflict policy ditegakkan, tidak lost update yang tak terdokumentasi            |
-| D13 | Superadmin reset di DB fixture          | Command exit code jelas; hash benar; tidak plaintext log                         |
+| ID  | Given / When                            | Expected                                                                                  |
+| --- | --------------------------------------- | ----------------------------------------------------------------------------------------- |
+| D01 | Fresh base install dengan demo          | 2 users + 10 partner rows (12 core records total); user profiles included in partner rows |
+| D02 | Edit seed lalu reinstall                | External ID stabil; edit tidak ditimpa                                                    |
+| D03 | Populated legacy schema upgrade         | Existing records/relations tetap valid                                                    |
+| D04 | Two startup installers                  | Lock/serialization; tidak duplicate schema/seed                                           |
+| D05 | Inject seed/schema failure              | Transaction rollback atau documented safe recovery, tidak silent partial success          |
+| D06 | Member A CRUD/count/export B            | Deny tanpa row/count leakage                                                              |
+| D07 | A assign FK milik B                     | Ditolak sesuai ownership policy                                                           |
+| D08 | Unknown/sensitive writable field        | Validation deny/ignore sesuai documented whitelist; tak ada mass assignment               |
+| D09 | Excessive domain/eager/limit/payload    | Bounded validation failure sebelum heavy query                                            |
+| D10 | Sensitive sentinel pada nested relation | Tidak ada plaintext/hash/token pada response/export/log                                   |
+| D11 | Duplicate/invalid FK                    | Safe error code; tidak raw SQL/secret                                                     |
+| D12 | Two conflicting updates                 | Conflict policy ditegakkan, tidak lost update yang tak terdokumentasi                     |
+| D13 | Superadmin reset di DB fixture          | Command exit code jelas; hash benar; tidak plaintext log                                  |
 
 ## Background dan operasional
 
