@@ -223,6 +223,117 @@ describe('authentication and authorization', () => {
       expect(response.json()).toMatchObject({ data: { login: 'alice', role: 'user' } });
       expect(response.payload).not.toContain('password');
     });
+
+    it('returns manifest menu metadata for models visible to the current user', async () => {
+      const response = await as(alice.access_token, { method: 'GET', url: '/api/models' });
+      expect(response.statusCode).toBe(200);
+      const models = response.json<{
+        models: Array<{
+          model: string;
+          menu: { group: string; sequence: number; developmentOnly: boolean };
+        }>;
+      }>().models;
+      expect(models.find((item) => item.model === 'base.partner')?.menu).toMatchObject({
+        group: 'Workspace',
+        sequence: 10,
+        developmentOnly: false,
+      });
+      expect(models.some((item) => item.model === 'base.model_access')).toBe(false);
+      expect(models.find((item) => item.model === 'base.bank')?.menu.developmentOnly).toBe(true);
+      expect(models.some((item) => item.model === 'base.partner_bank')).toBe(false);
+    });
+
+    it('updates only the authenticated user regional preferences', async () => {
+      const unauthenticated = await app.inject({
+        method: 'PATCH',
+        url: '/auth/me/preferences',
+        payload: { language_id: null, timezone: 'Asia/Jakarta' },
+      });
+      expect(unauthenticated.statusCode).toBe(401);
+
+      const invalid = await as(alice.access_token, {
+        method: 'PATCH',
+        url: '/auth/me/preferences',
+        payload: { language_id: null, timezone: 'Not/A_Real_Zone' },
+      });
+      expect(invalid.statusCode).toBe(400);
+
+      const updated = await as(alice.access_token, {
+        method: 'PATCH',
+        url: '/auth/me/preferences',
+        payload: { language_id: null, timezone: 'Asia/Jakarta' },
+      });
+      expect(updated.statusCode).toBe(200);
+      await expect(User.query().findById(alice.user.id)).resolves.toMatchObject({
+        timezone: 'Asia/Jakarta',
+      });
+    });
+
+    it('updates only the contact linked to the authenticated user profile', async () => {
+      const response = await as(alice.access_token, {
+        method: 'PATCH',
+        url: '/auth/me/profile',
+        payload: {
+          name: 'Alice Regular',
+          email: 'alice.updated@example.com',
+          phone: '+62-555-0199',
+          role: 'superadmin',
+        },
+      });
+      expect(response.statusCode).toBe(200);
+      const aliceRecord = await User.query().findById(alice.user.id).throwIfNotFound();
+      const alicePartner = await Partner.query().findById(aliceRecord.partner_id).throwIfNotFound();
+      expect(alicePartner).toMatchObject({
+        name: 'Alice Regular',
+        email: 'alice.updated@example.com',
+        phone: '+62-555-0199',
+      });
+      expect(aliceRecord.role).toBe('user');
+    });
+
+    it('changes password only with the current password and revokes refresh sessions', async () => {
+      const oldSession = (await login('alice', USER_PASSWORD)).json<TokenBody>().data;
+      try {
+        const wrongCurrentPassword = await as(alice.access_token, {
+          method: 'POST',
+          url: '/auth/me/password',
+          payload: {
+            current_password: 'incorrect-password',
+            new_password: 'new-strong-password-123',
+          },
+        });
+        expect(wrongCurrentPassword.statusCode).toBe(400);
+
+        const tooShort = await as(alice.access_token, {
+          method: 'POST',
+          url: '/auth/me/password',
+          payload: { current_password: USER_PASSWORD, new_password: 'short' },
+        });
+        expect(tooShort.statusCode).toBe(400);
+
+        const changed = await as(alice.access_token, {
+          method: 'POST',
+          url: '/auth/me/password',
+          payload: {
+            current_password: USER_PASSWORD,
+            new_password: 'new-strong-password-123',
+          },
+        });
+        expect(changed.statusCode).toBe(200);
+        expect(changed.json()).toMatchObject({ data: { refresh_sessions_revoked: true } });
+
+        const oldRefresh = await app.inject({
+          method: 'POST',
+          url: '/auth/refresh',
+          payload: { refresh_token: oldSession.refresh_token },
+        });
+        expect(oldRefresh.statusCode).toBe(401);
+        expect((await login('alice', USER_PASSWORD)).statusCode).toBe(401);
+        expect((await login('alice', 'new-strong-password-123')).statusCode).toBe(200);
+      } finally {
+        await User.query().findById(alice.user.id).patch({ password: USER_PASSWORD });
+      }
+    });
   });
 
   describe('refresh and logout', () => {

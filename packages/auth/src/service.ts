@@ -166,6 +166,31 @@ export function createAuthService(options: AuthServiceOptions = {}) {
       return issue(user, randomUUID(), meta);
     },
 
+    /** Change credentials only after verifying the current secret, then revoke every session. */
+    async changePassword(
+      userId: number,
+      currentPassword: string,
+      newPassword: string
+    ): Promise<void> {
+      if (newPassword.length < 12 || newPassword.length > 1024) {
+        throw new RangeError('New password must be between 12 and 1024 characters');
+      }
+      const user = await User.query().findById(userId);
+      if (
+        !user ||
+        user.active === false ||
+        !(await verifyPassword(currentPassword, user.password))
+      ) {
+        throw new AuthError('Current password is incorrect');
+      }
+
+      const changed = await User.query()
+        .where({ id: userId, password: user.password })
+        .patch({ password: newPassword });
+      if (!changed) throw new AuthError('Current password is incorrect');
+      await this.revokeAllForUser(userId);
+    },
+
     /** Rotates the token. Presenting an already-used token revokes its whole family. */
     async refresh(token: string, meta: RequestMeta = {}): Promise<AuthSession> {
       const hash = hashToken(token);

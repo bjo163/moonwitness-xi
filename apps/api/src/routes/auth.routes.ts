@@ -160,6 +160,44 @@ export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (fastify,
     }
   );
 
+  fastify.post<{ Body: { current_password: string; new_password: string } }>(
+    '/auth/me/password',
+    {
+      config: { rateLimit: { max: loginRateMax, timeWindow: '1 minute' } },
+      schema: {
+        tags: ['Auth'],
+        summary: 'Change the authenticated user password and revoke active sessions',
+        body: {
+          type: 'object',
+          required: ['current_password', 'new_password'],
+          additionalProperties: false,
+          properties: {
+            current_password: { type: 'string', minLength: 1, maxLength: 1024 },
+            new_password: { type: 'string', minLength: 12, maxLength: 1024 },
+          },
+        },
+      },
+    },
+    async (req, reply) => {
+      if (!req.auth)
+        return reply.code(401).send({ success: false, error: 'Authentication required' });
+      try {
+        await authService.changePassword(
+          req.auth.userId,
+          req.body.current_password,
+          req.body.new_password
+        );
+        return { success: true, data: { refresh_sessions_revoked: true } };
+      } catch (error) {
+        if (error instanceof AuthError)
+          return reply.code(400).send({ success: false, error: error.message });
+        if (error instanceof RangeError)
+          return reply.code(400).send({ success: false, error: error.message });
+        throw error;
+      }
+    }
+  );
+
   fastify.get(
     '/auth/me',
     { schema: { tags: ['Auth'], summary: 'Return the authenticated user' } },
@@ -171,6 +209,8 @@ export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (fastify,
                 login: string;
                 role: string;
                 partner_id?: number;
+                language_id?: number | null;
+                timezone?: string;
               })
             | undefined)
         : undefined;
@@ -185,8 +225,113 @@ export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (fastify,
           role: user.role,
           partner_id: user.partner_id,
           company_id: req.auth?.companyId,
+          language_id: user.language_id ?? null,
+          timezone: user.timezone ?? 'UTC',
         },
       };
+    }
+  );
+
+  fastify.patch<{ Body: { language_id: number | null; timezone: string } }>(
+    '/auth/me/preferences',
+    {
+      schema: {
+        tags: ['Auth'],
+        summary: 'Update preferences for the authenticated user',
+        body: {
+          type: 'object',
+          required: ['language_id', 'timezone'],
+          additionalProperties: false,
+          properties: {
+            language_id: { anyOf: [{ type: 'integer', minimum: 1 }, { type: 'null' }] },
+            timezone: { type: 'string', minLength: 1, maxLength: 100 },
+          },
+        },
+      },
+    },
+    async (req, reply) => {
+      if (!req.auth)
+        return reply.code(401).send({ success: false, error: 'Authentication required' });
+      let timezoneIsValid = false;
+      try {
+        new Intl.DateTimeFormat('en-US', { timeZone: req.body.timezone });
+        timezoneIsValid = true;
+      } catch {
+        timezoneIsValid = false;
+      }
+      if (!timezoneIsValid) {
+        return reply.code(400).send({ success: false, error: 'Invalid timezone' });
+      }
+
+      const UserModel = req.env.get('base.user');
+      if (req.body.language_id !== null) {
+        const LanguageModel = req.env.get('base.language');
+        const language = await LanguageModel.query().findById(req.body.language_id);
+        if (!language) return reply.code(400).send({ success: false, error: 'Unknown language' });
+      }
+      const user = await UserModel.query().findById(req.auth.userId);
+      if (!user || user.active === false) {
+        return reply.code(401).send({ success: false, error: 'Authentication required' });
+      }
+      await UserModel.query()
+        .findById(req.auth.userId)
+        .patch({
+          language_id: req.body.language_id,
+          timezone: req.body.timezone,
+        } as never);
+      return { success: true };
+    }
+  );
+
+  fastify.patch<{
+    Body: {
+      name?: string;
+      email?: string | null;
+      phone?: string | null;
+      mobile?: string | null;
+      job_title?: string | null;
+      website?: string | null;
+    };
+  }>(
+    '/auth/me/profile',
+    {
+      schema: {
+        tags: ['Auth'],
+        summary: 'Update contact details for the authenticated user',
+        body: {
+          type: 'object',
+          minProperties: 1,
+          additionalProperties: false,
+          properties: {
+            name: { type: 'string', minLength: 1, maxLength: 255 },
+            email: {
+              anyOf: [{ type: 'string', format: 'email', maxLength: 255 }, { type: 'null' }],
+            },
+            phone: { anyOf: [{ type: 'string', maxLength: 64 }, { type: 'null' }] },
+            mobile: { anyOf: [{ type: 'string', maxLength: 64 }, { type: 'null' }] },
+            job_title: { anyOf: [{ type: 'string', maxLength: 255 }, { type: 'null' }] },
+            website: { anyOf: [{ type: 'string', maxLength: 2048 }, { type: 'null' }] },
+          },
+        },
+      },
+    },
+    async (req, reply) => {
+      if (!req.auth)
+        return reply.code(401).send({ success: false, error: 'Authentication required' });
+      const UserModel = req.env.get('base.user');
+      const user = (await UserModel.query().findById(req.auth.userId)) as
+        (InstanceType<typeof UserModel> & { partner_id?: number; active?: boolean }) | undefined;
+      if (!user || user.active === false || !user.partner_id) {
+        return reply.code(401).send({ success: false, error: 'Profile is unavailable' });
+      }
+      const PartnerModel = req.env.get('base.partner');
+      const partner = await PartnerModel.query().findById(user.partner_id);
+      if (!partner)
+        return reply.code(404).send({ success: false, error: 'Profile is unavailable' });
+      await PartnerModel.query()
+        .findById(user.partner_id)
+        .patch(req.body as never);
+      return { success: true };
     }
   );
 };
