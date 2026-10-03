@@ -120,14 +120,32 @@ describe('data-driven view metadata', () => {
     expect(response.statusCode).toBe(200);
     const body = response.json<ViewsBody>();
     expect(body.title).toBe('Partners');
-    expect(body.list.columns).toEqual(['name', 'email', 'phone', 'company_id', 'country_id']);
+    expect(body.list.columns).toEqual([
+      'name',
+      'is_company',
+      'parent_id',
+      'job_title',
+      'email',
+      'phone',
+      'city',
+      'country_id',
+    ]);
     expect(body.form.sections.map((section) => section.title)).toEqual([
       'Identity',
+      'Contact Details',
       'Address',
-      'Contact',
+      'Classification',
+      'Internal Notes',
     ]);
-    expect(body.form.sections[0].fields).toEqual(['name', 'company_id', 'country_id']);
-    expect(body.search.filters.map((filter) => filter.label)).toContain('With company');
+    expect(body.form.sections[0].fields).toEqual([
+      'name',
+      'is_company',
+      'parent_id',
+      'job_title',
+      'vat',
+      'company_id',
+    ]);
+    expect(body.search.filters.map((filter) => filter.label)).toContain('Companies');
     expect(body.permissions).toEqual({ read: true, create: true, write: true, unlink: true });
   });
 

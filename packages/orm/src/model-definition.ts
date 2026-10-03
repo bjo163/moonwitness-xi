@@ -32,7 +32,7 @@ export interface HasManyOptions {
 export interface Field<T extends Scalar = Scalar> extends FieldOptions<T> {
   kind: 'string' | 'text' | 'integer' | 'boolean' | 'enum' | 'belongsTo' | 'hasMany' | 'password';
   values?: readonly string[];
-  target?: typeof BaseModel;
+  target?: typeof BaseModel | (() => typeof BaseModel);
   foreignKey?: string;
   /** Type-only marker used to infer the model's record shape. */
   readonly valueType?: T;
@@ -61,12 +61,12 @@ export const fields = {
     return { kind: 'enum' as const, values, ...options } as Field<V[number]> & O;
   },
   belongsTo<M extends typeof BaseModel, const O extends FieldOptions<number>>(
-    target: M,
+    target: M | (() => M),
     options: O = {} as O
   ) {
     return { ...options, kind: 'belongsTo' as const, target };
   },
-  hasMany<M extends typeof BaseModel>(target: M, options: HasManyOptions = {}) {
+  hasMany<M extends typeof BaseModel>(target: M | (() => M), options: HasManyOptions = {}) {
     return { ...options, kind: 'hasMany' as const, target };
   },
 };
@@ -93,9 +93,15 @@ export type ModelValues<F extends FieldMap> = {
   ]?: FieldValue<F[K]> | null;
 } & {
   -readonly [K in keyof F as F[K] extends { kind: 'belongsTo' } ? K : never]?: F[K] extends {
-    target: infer M extends typeof BaseModel;
+    target: infer M;
   }
-    ? InstanceType<M>
+    ? M extends () => infer T
+      ? T extends typeof BaseModel
+        ? InstanceType<T>
+        : BaseModel
+      : M extends typeof BaseModel
+        ? InstanceType<M>
+        : BaseModel
     : never;
 };
 
@@ -161,14 +167,6 @@ export function defineModel<const F extends FieldMap>(
       throw new Error(`Invalid or duplicate field: ${name}.${key}`);
     }
     if (field.kind === 'hasMany') {
-      if (field.target) {
-        const foreignKey = field.foreignKey ?? `${name.split('.').pop()}_id`;
-        relations[key] = {
-          relation: BaseModel.HasManyRelation,
-          modelClass: field.target,
-          join: { from: `${tableName}.id`, to: `${field.target.tableName}.${foreignKey}` },
-        };
-      }
       continue;
     }
     if (
@@ -180,13 +178,6 @@ export function defineModel<const F extends FieldMap>(
     }
     properties[column] = fieldSchema(field);
     if (field.required && field.default === undefined) required.push(column);
-    if (field.kind === 'belongsTo' && field.target) {
-      relations[key] = {
-        relation: BaseModel.BelongsToOneRelation,
-        modelClass: field.target,
-        join: { from: `${tableName}.${column}`, to: `${field.target.tableName}.id` },
-      };
-    }
   }
 
   class DeclaredModel extends BaseModel {
@@ -227,7 +218,48 @@ export function defineModel<const F extends FieldMap>(
       properties,
       required,
     };
-    static override relationMappings = relations;
+
+    private static _customRelationMappings?: RelationMappings;
+
+    static override get relationMappings(): RelationMappings {
+      const rels: RelationMappings = {};
+      const resolveTarget = (t: unknown): typeof BaseModel | undefined => {
+        if (!t) return undefined;
+        if (typeof t === 'function' && !('tableName' in t)) {
+          return (t as () => typeof BaseModel)();
+        }
+        return t as typeof BaseModel;
+      };
+
+      for (const [key, field] of Object.entries(definition.fields)) {
+        const column = columnName(key, field);
+        if (field.kind === 'hasMany') {
+          const target = resolveTarget(field.target);
+          if (target) {
+            const foreignKey = field.foreignKey ?? `${name.split('.').pop()}_id`;
+            rels[key] = {
+              relation: BaseModel.HasManyRelation,
+              modelClass: target,
+              join: { from: `${tableName}.id`, to: `${target.tableName}.${foreignKey}` },
+            };
+          }
+        } else if (field.kind === 'belongsTo') {
+          const target = resolveTarget(field.target);
+          if (target) {
+            rels[key] = {
+              relation: BaseModel.BelongsToOneRelation,
+              modelClass: target,
+              join: { from: `${tableName}.${column}`, to: `${target.tableName}.id` },
+            };
+          }
+        }
+      }
+      return { ...rels, ...this._customRelationMappings };
+    }
+
+    static override set relationMappings(value: RelationMappings) {
+      this._customRelationMappings = { ...value };
+    }
   }
   return DeclaredModel as DefinedModel<F>;
 }

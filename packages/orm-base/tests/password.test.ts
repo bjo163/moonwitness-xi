@@ -7,6 +7,7 @@ import {
   Partner,
   Company,
   Country,
+  CountryState,
   Currency,
   Language,
   initializeSuperadminPassword,
@@ -79,15 +80,20 @@ describe('passwords', () => {
     await installAddons(db, [
       defineAddon({
         ...manifest,
-        models: [Country, Currency, Language, Company, Partner, LegacyUser],
+        models: [Country, CountryState, Currency, Language, Company, Partner, LegacyUser],
+        menus: manifest.menus?.filter((menu) =>
+          [Country, CountryState, Currency, Language, Company, Partner, User].some(
+            (model) => model.modelName === menu.model
+          )
+        ),
         views: manifest.views?.filter((view) =>
-          [Country, Currency, Language, Company, Partner, User].some(
+          [Country, CountryState, Currency, Language, Company, Partner, User].some(
             (model) => model.modelName === view.model
           )
         ),
         data: manifest.data
           ?.filter((record) =>
-            [Country, Currency, Language, Company, Partner, User].some(
+            [Country, CountryState, Currency, Language, Company, Partner, User].some(
               (model) => model.modelName === record.model.modelName
             )
           )

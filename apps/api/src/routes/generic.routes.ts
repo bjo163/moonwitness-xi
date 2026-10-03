@@ -6,6 +6,7 @@ import {
   applyDomain,
   describeFields,
   resolveViews,
+  getModelMenuInfo,
   type Domain,
 } from '@moonwitness/orm';
 import { assignDefaultCompanyMembership, assignDefaultUserGroup } from '@moonwitness/orm-base';
@@ -639,6 +640,7 @@ export const genericRoutes: FastifyPluginAsync = async (fastify) => {
       .map((name) => ({
         model: name,
         table: Registry.get(name).tableName,
+        menu: getModelMenuInfo(name),
       })),
   }));
 

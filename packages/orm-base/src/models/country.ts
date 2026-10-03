@@ -10,6 +10,9 @@ export const Country = defineModel('base.country', {
       label: 'ISO Alpha-2 Code',
       pattern: '^[A-Z]{2}$',
     }),
-    name: fields.string({ required: true, unique: true }),
+    name: fields.string({ required: true, unique: true, label: 'Country Name' }),
+    phone_code: fields.string({ label: 'Calling Code' }),
+    code_alpha3: fields.string({ label: 'ISO Alpha-3 Code', pattern: '^[A-Z]{3}$' }),
+    vat_label: fields.string({ label: 'Tax ID Label (e.g. NPWP, VAT, EIN)' }),
   },
 });

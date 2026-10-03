@@ -6,6 +6,8 @@ export interface UserProfile {
   role: Role;
   partner_id?: number;
   company_id?: number;
+  language_id?: number | null;
+  timezone?: string;
 }
 
 export interface AuthTokens {
@@ -92,6 +94,12 @@ export interface ModelPermissions {
 export interface ModelInfo {
   model: string;
   table: string;
+  menu: {
+    label?: string;
+    group: string;
+    sequence: number;
+    developmentOnly: boolean;
+  };
 }
 
 export interface ModelFields {

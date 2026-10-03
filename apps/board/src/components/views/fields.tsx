@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Check, ChevronsUpDown, X } from 'lucide-react';
-import type { FieldMeta } from '@moonwitness/client';
+import type { Domain, FieldMeta } from '@moonwitness/client';
 import { client } from '@/lib/client';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
@@ -31,6 +31,14 @@ export const relationKey = (field: FieldMeta) => field.name.replace(/_id$/, '');
 /** Best human label for a related record. */
 export function displayName(record: Row | null | undefined): string {
   if (!record) return '';
+  if (
+    record.name &&
+    record.code &&
+    typeof record.name === 'string' &&
+    typeof record.code === 'string'
+  ) {
+    return `${record.name} [${record.code}]`;
+  }
   for (const key of ['name', 'display_name', 'login', 'code', 'email']) {
     if (typeof record[key] === 'string' && record[key]) return record[key] as string;
   }
@@ -102,9 +110,18 @@ interface WidgetProps {
   related?: Row | null;
   invalid?: boolean;
   id: string;
+  contextDomain?: Domain;
 }
 
-export function FieldWidget({ field, value, onChange, related, invalid, id }: WidgetProps) {
+export function FieldWidget({
+  field,
+  value,
+  onChange,
+  related,
+  invalid,
+  id,
+  contextDomain,
+}: WidgetProps) {
   const common = { id, 'aria-invalid': invalid || undefined, disabled: field.readonly };
   switch (field.type) {
     case 'boolean':
@@ -153,6 +170,7 @@ export function FieldWidget({ field, value, onChange, related, invalid, id }: Wi
           value={value as number | null}
           onChange={onChange}
           related={related}
+          contextDomain={contextDomain}
         />
       );
     case 'password':
@@ -194,6 +212,7 @@ function Many2oneWidget({
   related,
   id,
   disabled,
+  contextDomain,
   ...aria
 }: {
   field: FieldMeta;
@@ -203,6 +222,7 @@ function Many2oneWidget({
   id: string;
   disabled?: boolean;
   'aria-invalid'?: boolean;
+  contextDomain?: Domain;
 }) {
   const [open, setOpen] = useState(false);
   const [term, setTerm] = useState('');
@@ -210,12 +230,26 @@ function Many2oneWidget({
   const target = field.relation!;
 
   const { data, isFetching, error } = useQuery({
-    queryKey: ['m2o', target, term],
+    queryKey: ['m2o', target, term, contextDomain],
     queryFn: () => {
-      const searchField = target === 'base.user' ? 'login' : 'name';
+      const baseDomain: Domain = contextDomain ? [...contextDomain] : [];
+      if (term) {
+        if (
+          target === 'base.country_state' ||
+          target === 'base.country' ||
+          target === 'base.bank'
+        ) {
+          baseDomain.push('|', ['name', 'ilike', `%${term}%`], ['code', 'ilike', `%${term}%`]);
+        } else {
+          const searchField = target === 'base.user' ? 'login' : 'name';
+          baseDomain.push([searchField, 'ilike', `%${term}%`]);
+        }
+      }
       return client.model<Row>(target).searchRead({
-        domain: term ? [[searchField, 'ilike', `%${term}%`]] : [],
-        limit: 20,
+        domain: baseDomain,
+        limit: 30,
+        order:
+          target === 'base.country_state' || target === 'base.country' ? 'name asc' : undefined,
       });
     },
     enabled: open,

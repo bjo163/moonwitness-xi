@@ -5,6 +5,16 @@ import type { BaseModel } from './base.model.js';
 import { columnName, type DefinedModel, type Field, type FieldMap } from './model-definition.js';
 import { registerView, type ViewDefinition } from './view.js';
 
+function resolveTargetModel(
+  target: typeof BaseModel | (() => typeof BaseModel) | undefined
+): typeof BaseModel | undefined {
+  if (!target) return undefined;
+  if (typeof target === 'function' && !('tableName' in target)) {
+    return (target as () => typeof BaseModel)();
+  }
+  return target as typeof BaseModel;
+}
+
 type AddonModel = typeof BaseModel & { readonly fields: FieldMap };
 export interface SeedReference {
   readonly $ref: string;
@@ -55,12 +65,50 @@ export interface Addon {
   readonly models: readonly AddonModel[];
   readonly data?: readonly SeedRecord[];
   readonly views?: readonly ViewDefinition[];
+  readonly menus?: readonly AddonMenu[];
   /** Programmatic, transactional data/schema backfills keyed by the exact prior addon version. */
   readonly upgrade?: Readonly<Record<string, (transaction: Knex.Transaction) => Promise<void>>>;
+}
+
+export interface AddonMenu {
+  readonly model: string;
+  readonly label?: string;
+  readonly group: string;
+  readonly sequence?: number;
+  readonly developmentOnly?: boolean;
+}
+
+export interface ModelMenuInfo {
+  label?: string;
+  group: string;
+  sequence: number;
+  developmentOnly: boolean;
+}
+
+const modelMenus = new Map<string, ModelMenuInfo>();
+
+export function getModelMenuInfo(model: string): ModelMenuInfo {
+  return (
+    modelMenus.get(model) ?? {
+      group: model.split('.')[0] ?? 'other',
+      sequence: 1000,
+      developmentOnly: true,
+    }
+  );
 }
 export function defineAddon(addon: Addon): Readonly<Addon> {
   if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(addon.version)) {
     throw new Error(`Addon '${addon.name}' must use a semantic version (major.minor.patch)`);
+  }
+  const models = new Set(addon.models.map((model) => model.modelName));
+  const menuModels = new Set<string>();
+  for (const menu of addon.menus ?? []) {
+    if (!models.has(menu.model))
+      throw new Error(`Menu model '${menu.model}' is not in addon '${addon.name}'`);
+    if (menuModels.has(menu.model))
+      throw new Error(`Duplicate menu model '${menu.model}' in addon '${addon.name}'`);
+    if (!menu.group.trim()) throw new Error(`Menu group is required for '${menu.model}'`);
+    menuModels.add(menu.model);
   }
   return Object.freeze(addon);
 }
@@ -126,8 +174,9 @@ function addField(
   if (field.default !== undefined) builder.defaultTo(field.default);
   if (field.unique) builder.unique();
   if (field.values) builder.checkIn([...field.values]);
-  if (field.target && includeForeignKey)
-    builder.references('id').inTable(field.target.tableName).onDelete('RESTRICT');
+  const targetModel = resolveTargetModel(field.target);
+  if (targetModel && includeForeignKey)
+    builder.references('id').inTable(targetModel.tableName).onDelete('RESTRICT');
 }
 
 async function syncModel(db: Knex.Transaction, model: AddonModel) {
@@ -229,7 +278,8 @@ async function installData(db: Knex.Transaction, data: readonly SeedRecord[]) {
       if (!field) throw new Error(`Unknown seed field: ${record.model.modelName}.${name}`);
       if (typeof value === 'object' && value !== null) {
         const linked = await ensure(value.$ref);
-        if (field.target?.modelName !== linked.model)
+        const targetModel = resolveTargetModel(field.target);
+        if (targetModel?.modelName !== linked.model)
           throw new Error(`Invalid relation for ${record.id}.${name}`);
         values[columnName(name, field)] = linked.record_id;
       } else values[columnName(name, field)] = value;
@@ -298,11 +348,28 @@ export async function installAddons(db: Knex, addons: readonly Addon[]): Promise
     (addon) => addon.name,
     (addon) => addon.depends ?? []
   );
+  const nextMenus = new Map<string, ModelMenuInfo>();
+  for (const addon of ordered) {
+    for (const menu of addon.menus ?? []) {
+      if (nextMenus.has(menu.model)) throw new Error(`Duplicate addon menu model: ${menu.model}`);
+      nextMenus.set(menu.model, {
+        ...(menu.label ? { label: menu.label } : {}),
+        group: menu.group,
+        sequence: menu.sequence ?? 1000,
+        developmentOnly: menu.developmentOnly ?? false,
+      });
+    }
+  }
   const models = sort(
     ordered.flatMap((addon) => [...addon.models]),
     (model) => model.modelName,
     (model) =>
-      Object.values(model.fields).flatMap((field) => (field.target ? [field.target.modelName] : []))
+      Object.values(model.fields).flatMap((field) => {
+        const targetModel = resolveTargetModel(field.target);
+        return targetModel && targetModel.modelName !== model.modelName
+          ? [targetModel.modelName]
+          : [];
+      })
   );
   if (new Set(models.map((model) => model.tableName)).size !== models.length)
     throw new Error('Duplicate addon table');
@@ -361,4 +428,6 @@ export async function installAddons(db: Knex, addons: readonly Addon[]): Promise
       registerView(view);
     }
   }
+  modelMenus.clear();
+  for (const [name, menu] of nextMenus) modelMenus.set(name, menu);
 }

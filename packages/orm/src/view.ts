@@ -145,7 +145,14 @@ function describeField(key: string, field: Field): FieldMeta {
     ...(field.values
       ? { selection: field.values.map((value) => ({ value, label: humanize(value) })) }
       : {}),
-    ...(field.target ? { relation: field.target.modelName } : {}),
+    ...(() => {
+      if (!field.target) return {};
+      const target =
+        typeof field.target === 'function' && !('tableName' in field.target)
+          ? (field.target as () => typeof BaseModel)()
+          : (field.target as typeof BaseModel);
+      return target?.modelName ? { relation: target.modelName } : {};
+    })(),
     ...(field.foreignKey ? { foreignKey: field.foreignKey } : {}),
     ...(field.invisible !== undefined ? { invisible: field.invisible } : {}),
     ...(field.readonlyIf !== undefined ? { readonlyIf: field.readonlyIf } : {}),

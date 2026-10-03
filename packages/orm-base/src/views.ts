@@ -1,6 +1,8 @@
 import { defineView } from '@moonwitness/orm';
 import { Company } from './models/company.js';
 import { Partner, PartnerAddress, PartnerCategory, PartnerCategoryLink } from './models/partner.js';
+import { CountryState } from './models/country-state.js';
+import { Bank, PartnerBank } from './models/bank.js';
 import { User } from './models/user.js';
 import { Country } from './models/country.js';
 import { Currency } from './models/currency.js';
@@ -42,21 +44,28 @@ export const views = [
   defineView(Partner, {
     title: 'Partners',
     list: {
-      columns: ['name', 'email', 'phone', 'company', 'country'],
+      columns: ['name', 'is_company', 'parent', 'job_title', 'email', 'phone', 'city', 'country'],
       order: 'name asc',
     },
     form: {
       sections: [
-        { title: 'Identity', fields: ['name', 'company', 'country'] },
-        { title: 'Address', fields: ['street', 'city', 'postal_code'] },
-        { title: 'Contact', fields: ['email', 'phone'] },
+        {
+          title: 'Identity',
+          fields: ['name', 'is_company', 'parent', 'job_title', 'vat', 'company'],
+        },
+        { title: 'Contact Details', fields: ['email', 'phone', 'mobile', 'website'] },
+        { title: 'Address', fields: ['street', 'city', 'state', 'postal_code', 'country'] },
+        { title: 'Classification', fields: ['is_customer', 'is_supplier'] },
+        { title: 'Internal Notes', fields: ['notes'] },
       ],
     },
     search: {
-      fields: ['name', 'email'],
+      fields: ['name', 'email', 'vat', 'phone', 'mobile'],
       filters: [
-        { label: 'With company', domain: [['company_id', '!=', null]] },
-        { label: 'Individuals', domain: [['company_id', '=', null]] },
+        { label: 'Companies', domain: [['is_company', '=', true]] },
+        { label: 'Individuals', domain: [['is_company', '=', false]] },
+        { label: 'Customers', domain: [['is_customer', '=', true]] },
+        { label: 'Vendors / Suppliers', domain: [['is_supplier', '=', true]] },
       ],
     },
   }),
@@ -93,9 +102,63 @@ export const views = [
   }),
   defineView(Country, {
     title: 'Countries',
-    list: { columns: ['code', 'name'], order: 'name asc' },
-    form: { sections: [{ title: 'Country', fields: ['code', 'name'] }] },
+    list: {
+      columns: ['code', 'name', 'code_alpha3', 'phone_code', 'vat_label'],
+      order: 'name asc',
+    },
+    form: {
+      sections: [
+        {
+          title: 'Country Information',
+          fields: ['name', 'code', 'code_alpha3', 'phone_code', 'vat_label'],
+        },
+      ],
+    },
+    search: { fields: ['code', 'name', 'code_alpha3'] },
+  }),
+  defineView(CountryState, {
+    title: 'Provinces & States',
+    list: { columns: ['code', 'name', 'country', 'type'], order: 'name asc' },
+    form: {
+      sections: [{ title: 'Subdivision Details', fields: ['name', 'code', 'country', 'type'] }],
+    },
     search: { fields: ['code', 'name'] },
+  }),
+  defineView(Bank, {
+    title: 'Banks',
+    list: { columns: ['name', 'bic', 'code', 'country', 'active'], order: 'name asc' },
+    form: {
+      sections: [
+        { title: 'Bank Information', fields: ['name', 'bic', 'code', 'country', 'active'] },
+        { title: 'Contact', fields: ['phone', 'website'] },
+      ],
+    },
+    search: { fields: ['name', 'bic', 'code'] },
+  }),
+  defineView(PartnerBank, {
+    title: 'Bank Accounts',
+    list: {
+      columns: ['partner', 'acc_number', 'bank', 'currency', 'is_primary'],
+      order: 'is_primary desc, id desc',
+    },
+    form: {
+      sections: [
+        {
+          title: 'Account Information',
+          fields: [
+            'partner',
+            'bank',
+            'acc_number',
+            'acc_holder_name',
+            'currency',
+            'company',
+            'is_primary',
+          ],
+        },
+        { title: 'Security & Verification', fields: ['sanitized_acc_number'] },
+      ],
+    },
+    search: { fields: ['acc_number', 'acc_holder_name'] },
   }),
   defineView(Currency, {
     title: 'Currencies',

@@ -12,10 +12,12 @@ import {
 } from '@moonwitness/orm';
 import {
   manifest,
+  countryStates,
   Partner,
   User,
   Company,
   Country,
+  CountryState,
   Currency,
   Language,
   resolveUserPreferences,
@@ -58,6 +60,9 @@ describe('declarative addons', () => {
   it('infers schema and relations and seeds exactly 2 users plus 10 partners', async () => {
     await installAddons(db, [manifest]);
     await installAddons(db, [manifest]);
+    expect(manifest.menus?.map((menu) => menu.model).sort()).toEqual(
+      manifest.models.map((model) => model.modelName).sort()
+    );
     const seededModels = new Set(manifest.data?.map((record) => record.model.modelName));
     expect(
       manifest.models
@@ -67,7 +72,7 @@ describe('declarative addons', () => {
     ).toEqual([]);
     expect(seededModels.has(AuditLog.modelName)).toBe(false);
     expect(await db('users').count({ count: '*' }).first()).toMatchObject({ count: 2 });
-    expect(await db('partners').count({ count: '*' }).first()).toMatchObject({ count: 10 });
+    expect(await db('partners').count({ count: '*' }).first()).toMatchObject({ count: 11 });
     expect(await db('partner_categories').count({ count: '*' }).first()).toMatchObject({
       count: 2,
     });
@@ -80,13 +85,18 @@ describe('declarative addons', () => {
     });
     expect(await db('companies').count({ count: '*' }).first()).toMatchObject({ count: 1 });
     expect(await db('countries').count({ count: '*' }).first()).toMatchObject({ count: 249 });
+    expect(await db('country_states').count({ count: '*' }).first()).toMatchObject({
+      count: countryStates.length,
+    });
+    expect(await db('banks').count({ count: '*' }).first()).toMatchObject({ count: 8 });
+    expect(await db('partner_banks').count({ count: '*' }).first()).toMatchObject({ count: 2 });
     expect(await db('currencies').count({ count: '*' }).first()).toMatchObject({ count: 1 });
     expect(await db('languages').count({ count: '*' }).first()).toMatchObject({ count: 1 });
     expect(await db('tags').count({ count: '*' }).first()).toMatchObject({ count: 1 });
     expect(await db('tag_links').count({ count: '*' }).first()).toMatchObject({ count: 1 });
     expect(await db('attachments').count({ count: '*' }).first()).toMatchObject({ count: 1 });
     expect(await db('activities').count({ count: '*' }).first()).toMatchObject({ count: 1 });
-    expect(await db('sequences').count({ count: '*' }).first()).toMatchObject({ count: 1 });
+    expect(await db('sequences').count({ count: '*' }).first()).toMatchObject({ count: 2 });
     expect(await db('access_groups').count({ count: '*' }).first()).toMatchObject({ count: 3 });
     expect(await db('group_memberships').count({ count: '*' }).first()).toMatchObject({ count: 1 });
     expect(await db('model_access').count({ count: '*' }).first()).toMatchObject({ count: 1 });
@@ -184,7 +194,7 @@ describe('declarative addons', () => {
     await Partner.query().findById(admin.partner_id).patch({ email: 'owner@example.test' });
     await installAddons(db, [manifest]);
     expect(await db('users').count({ count: '*' }).first()).toMatchObject({ count: 2 });
-    expect(await db('partners').count({ count: '*' }).first()).toMatchObject({ count: 10 });
+    expect(await db('partners').count({ count: '*' }).first()).toMatchObject({ count: 11 });
     expect((await User.query().findById(admin.id))?.login).toBe('owner');
     expect((await Partner.query().findById(admin.partner_id))?.email).toBe('owner@example.test');
   });
@@ -224,17 +234,17 @@ describe('declarative addons', () => {
     await installAddons(db, [manifest]);
     const ExtendedPartner = defineModel('base.partner', {
       table: 'partners',
-      fields: { ...Partner.fields, website: fields.string() },
+      fields: { ...Partner.fields, test_field: fields.string() },
     });
     await installAddons(db, [
       defineAddon({
         name: 'base',
         version: '1.1.0',
-        models: [Country, Currency, Language, Company, ExtendedPartner],
+        models: [Country, CountryState, Currency, Language, Company, ExtendedPartner],
       }),
     ]);
-    expect(await db.schema.hasColumn('partners', 'website')).toBe(true);
-    expect(await db('partners').count({ count: '*' }).first()).toMatchObject({ count: 10 });
+    expect(await db.schema.hasColumn('partners', 'test_field')).toBe(true);
+    expect(await db('partners').count({ count: '*' }).first()).toMatchObject({ count: 11 });
     const UnsafePartner = defineModel('base.partner', {
       table: 'partners',
       fields: { ...Partner.fields, secret: fields.string({ required: true }) },
@@ -244,7 +254,7 @@ describe('declarative addons', () => {
         defineAddon({
           name: 'base',
           version: '2.0.0',
-          models: [Country, Currency, Language, Company, UnsafePartner],
+          models: [Country, CountryState, Currency, Language, Company, UnsafePartner],
         }),
       ])
     ).rejects.toThrow('Cannot safely add');
@@ -252,7 +262,7 @@ describe('declarative addons', () => {
   });
 
   it('adds the default company and optional partner relation to existing data', async () => {
-    const { company: _company, ...legacyFields } = Partner.fields;
+    const { company: _company, state: _state, parent: _parent, ...legacyFields } = Partner.fields;
     const LegacyPartner = defineModel('base.partner', { table: 'partners', fields: legacyFields });
     const legacyModels = new Set([
       Country.modelName,
@@ -267,13 +277,14 @@ describe('declarative addons', () => {
       if (record.model === Company) return [];
       const model = record.model === Partner ? LegacyPartner : record.model;
       if (model !== LegacyPartner) return [{ ...record, model }];
-      const { company: _company, ...values } = record.values;
+      const { company: _company, state: _state, parent: _parent, ...values } = record.values;
       return [{ ...record, model, values }];
     });
     await installAddons(db, [
       defineAddon({
         ...manifest,
         models: [Country, Currency, Language, Company, LegacyPartner, User],
+        menus: manifest.menus?.filter((menu) => legacyModels.has(menu.model)),
         views: manifest.views?.filter((view) =>
           [Country, Currency, Language, Company, Partner, User].some(
             (model) => model.modelName === view.model
@@ -309,6 +320,8 @@ describe('declarative addons', () => {
       postal_code: _partnerPostalCode,
       country: _partnerCountry,
       company: _partnerCompany,
+      state: _partnerState,
+      parent: _partnerParent,
       ...legacyPartnerFields
     } = Partner.fields;
     const { language: _userLanguage, timezone: _userTimezone, ...legacyUserFields } = User.fields;
@@ -386,15 +399,20 @@ describe('declarative addons', () => {
     await installAddons(db, [
       defineAddon({
         ...manifest,
-        models: [User, Partner, Company, Country, Currency, Language],
+        models: [User, Partner, Company, CountryState, Country, Currency, Language],
+        menus: manifest.menus?.filter((menu) =>
+          [User, Partner, Company, CountryState, Country, Currency, Language].some(
+            (model) => model.modelName === menu.model
+          )
+        ),
         views: manifest.views?.filter((view) =>
-          [User, Partner, Company, Country, Currency, Language].some(
+          [User, Partner, Company, CountryState, Country, Currency, Language].some(
             (model) => model.modelName === view.model
           )
         ),
         data: (manifest.data ?? [])
           .filter((record) =>
-            [User, Partner, Company, Country, Currency, Language].some(
+            [User, Partner, Company, CountryState, Country, Currency, Language].some(
               (model) => model.modelName === record.model.modelName
             )
           )

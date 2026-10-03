@@ -51,6 +51,12 @@ export interface RootInfoResponse {
 export interface ModelListResponseItem {
   model: string;
   table: string;
+  menu: {
+    label?: string;
+    group: string;
+    sequence: number;
+    developmentOnly: boolean;
+  };
 }
 
 export interface ModelListResponse {

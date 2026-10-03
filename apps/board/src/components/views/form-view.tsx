@@ -85,7 +85,17 @@ export function FormView({ model, views, recordId, onBack, onSaved }: FormViewPr
   }, [dirty, formData]);
 
   function handleChange(name: string, val: unknown) {
-    setFormData((prev) => ({ ...prev, [name]: val }));
+    setFormData((prev) => {
+      const next = { ...prev, [name]: val };
+      // When country changes, reset dependent state field if it was set
+      if (name === 'country' || name === 'country_id') {
+        if (prev.state || prev.state_id) {
+          next.state = null;
+          next.state_id = null;
+        }
+      }
+      return next;
+    });
     setDirty(true);
     setError(null);
     setSuccessMsg(null);
@@ -333,6 +343,26 @@ export function FormView({ model, views, recordId, onBack, onSaved }: FormViewPr
                       required: isRequired,
                     };
 
+                    const contextDomain = (() => {
+                      if (field.name === 'state' || field.name === 'state_id') {
+                        const countryVal = formData.country_id ?? formData.country;
+                        if (countryVal) {
+                          return [['country_id', '=', countryVal]] as Array<
+                            [string, string, unknown]
+                          >;
+                        }
+                      }
+                      if (field.name === 'bank' || field.name === 'bank_id') {
+                        const countryVal = formData.country_id ?? formData.country;
+                        if (countryVal) {
+                          return [['country_id', '=', countryVal]] as Array<
+                            [string, string, unknown]
+                          >;
+                        }
+                      }
+                      return undefined;
+                    })();
+
                     return (
                       <div
                         key={field.name}
@@ -359,6 +389,7 @@ export function FormView({ model, views, recordId, onBack, onSaved }: FormViewPr
                           value={formData[field.name]}
                           onChange={(val) => handleChange(field.name, val)}
                           related={relatedObj}
+                          contextDomain={contextDomain}
                         />
 
                         {field.help && <p className="text-xs text-ink-faint">{field.help}</p>}

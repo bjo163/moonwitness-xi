@@ -12,6 +12,7 @@ const ADMIN_ONLY_MODELS = new Set([
   'base.group_membership',
   'base.model_access',
   'base.company_membership',
+  'base.partner_bank',
 ]);
 
 const ADMIN_ROLES = new Set(['system', 'superadmin']);
