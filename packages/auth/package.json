@@ -1,0 +1,30 @@
+{
+  "name": "@moonwitness/auth",
+  "version": "1.0.0",
+  "description": "Authentication addon for MoonWitness: credential login and rotating refresh tokens",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "tsc -p tsconfig.check.json && vitest run"
+  },
+  "dependencies": {
+    "@moonwitness/orm": "workspace:*",
+    "@moonwitness/orm-base": "workspace:*",
+    "objection": "^3.1.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "better-sqlite3": "^13.0.3",
+    "knex": "^3.3.0",
+    "typescript": "~5.7.3",
+    "vitest": "^5.0.3"
+  }
+}

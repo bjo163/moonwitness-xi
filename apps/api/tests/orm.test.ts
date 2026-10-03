@@ -4,7 +4,7 @@ import { Model } from 'objection';
 import type { QueryContext } from 'objection';
 import { BaseModel, Registry, Environment } from '@moonwitness/orm';
 import { buildApp } from '../src/app.js';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, InjectOptions } from 'fastify';
 
 class TestItem extends BaseModel {
   static override modelName = 'test.item';
@@ -55,6 +55,13 @@ Registry.register(TestItem);
 describe('Enterprise BaseModel & Fastify Integration', () => {
   let testDb: Knex;
   let app: FastifyInstance;
+  let accessToken = '';
+  /** Injects a request authenticated as the seeded superadmin. */
+  const send = (options: InjectOptions) =>
+    app.inject({
+      ...options,
+      headers: { authorization: `Bearer ${accessToken}`, ...options.headers },
+    });
 
   beforeAll(async () => {
     testDb = knex({
@@ -83,9 +90,19 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
     });
 
     process.env.NODE_ENV = 'test';
-    app = await buildApp({ db: testDb });
+    app = await buildApp({
+      db: testDb,
+      superadminPassword: 'api-test-password',
+      jwtSecret: 'test-secret-test-secret-test-secret-123',
+    });
     await app.ready();
-  });
+    const login = await app.inject({
+      method: 'POST',
+      url: '/auth/login',
+      payload: { login: 'superadmin', password: 'api-test-password' },
+    });
+    accessToken = login.json<{ data: { access_token: string } }>().data.access_token;
+  }, 30000);
 
   afterAll(async () => {
     await app.close();
@@ -98,11 +115,11 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
 
   it('does not expose password hashes in database error responses', async () => {
     const payload = { login: 'superadmin', partner_id: 2, password: 'test-error-password' };
-    const response = await app.inject({ method: 'POST', url: '/api/base.user', payload });
+    const response = await send({ method: 'POST', url: '/api/base.user', payload });
     expect(response.statusCode).toBe(409);
     expect(response.payload).not.toContain('scrypt$');
     expect(response.payload).not.toContain(payload.password);
-    const rpc = await app.inject({
+    const rpc = await send({
       method: 'POST',
       url: '/jsonrpc',
       payload: {
@@ -122,20 +139,127 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
   });
 
   it('serves seeded user profiles through the generic addon endpoint', async () => {
-    const response = await app.inject({ method: 'GET', url: '/api/base.user?with=partner' });
-    expect(response.statusCode).toBe(200);
+    const response = await send({
+      method: 'GET',
+      url: '/api/base.user?with=partner.company',
+    });
+    expect(response.statusCode, response.payload).toBe(200);
     const body = response.json<{
-      data: { login: string; partner: { name: string; email: string } }[];
+      data: {
+        login: string;
+        partner: {
+          name: string;
+          company: { name: string };
+        };
+      }[];
     }>();
     expect(body.data).toHaveLength(2);
     const admin = body.data.find((user) => user.login === 'superadmin');
     expect(admin?.partner).toMatchObject({ name: 'Super Administrator' });
+    expect(admin?.partner.company).toMatchObject({ name: 'MoonWitness' });
     expect(admin).not.toHaveProperty('email');
     expect(admin).not.toHaveProperty('name');
     expect(admin).not.toHaveProperty('password');
+    const partner = await send({
+      method: 'GET',
+      url: '/api/base.partner?domain=%5B%5B%22name%22%2C%22%3D%22%2C%22Acme%20Studio%22%5D%5D&with=[addresses.country,category_links.category]',
+    });
+    expect(partner.statusCode).toBe(200);
+    expect(
+      partner.json<{
+        data: {
+          addresses: { city: string; country: { code: string } }[];
+          category_links: { category: { code: string } }[];
+        }[];
+      }>().data[0]
+    ).toMatchObject({
+      addresses: [{ city: 'San Francisco', country: { code: 'US' } }],
+      category_links: [{ category: { code: 'customer' } }],
+    });
     expect(response.payload).not.toContain('scrypt$');
-    const privateField = await app.inject({ method: 'GET', url: '/api/base.user?fields=password' });
+    const commaRelations = await send({
+      method: 'GET',
+      url: '/api/base.user?with=partner%2Clanguage&count=true&order=login%20asc',
+    });
+    expect(commaRelations.statusCode).toBe(200);
+    expect(commaRelations.json<{ total: number }>().total).toBe(2);
+    const privateField = await send({ method: 'GET', url: '/api/base.user?fields=password' });
     expect(privateField.statusCode).toBe(400);
+  });
+
+  it('validates polymorphic resource references for base extensions', async () => {
+    const partner = await testDb('partners').where({ name: 'Acme Studio' }).first('id');
+    expect(partner).toBeDefined();
+    const tag = await send({
+      method: 'POST',
+      url: '/api/base.tag',
+      payload: { name: 'Priority', color: '#123ABC' },
+    });
+    expect(tag.statusCode).toBe(201);
+    const tagId = tag.json<{ data: { id: number } }>().data.id;
+
+    const invalidLink = await send({
+      method: 'POST',
+      url: '/api/base.tag_link',
+      payload: { tag_id: tagId, resource_model: 'missing.model', resource_id: partner?.id },
+    });
+    expect(invalidLink.statusCode).toBe(400);
+
+    const link = await send({
+      method: 'POST',
+      url: '/api/base.tag_link',
+      payload: { tag_id: tagId, resource_model: 'base.partner', resource_id: partner?.id },
+    });
+    expect(link.statusCode).toBe(201);
+
+    const invalidActivity = await send({
+      method: 'POST',
+      url: '/api/base.activity',
+      payload: {
+        summary: 'Call customer',
+        resource_model: 'base.partner',
+        resource_id: 999999,
+      },
+    });
+    expect(invalidActivity.statusCode).toBe(400);
+
+    const activity = await send({
+      method: 'POST',
+      url: '/api/base.activity',
+      payload: {
+        summary: 'Call customer',
+        activity_type: 'call',
+        resource_model: 'base.partner',
+        resource_id: partner?.id,
+      },
+    });
+    expect(activity.statusCode).toBe(201);
+    const attachment = await send({
+      method: 'POST',
+      url: '/api/base.attachment',
+      payload: {
+        name: 'proposal.pdf',
+        resource_model: 'base.partner',
+        resource_id: partner?.id,
+        mimetype: 'application/pdf',
+        size_bytes: 2048,
+        storage_key: 'partners/acme/proposal.pdf',
+      },
+    });
+    expect(attachment.statusCode).toBe(201);
+    const attachmentId = attachment.json<{ data: { id: number } }>().data.id;
+    const invalidAttachmentUpdate = await send({
+      method: 'PATCH',
+      url: `/api/base.attachment/${attachmentId}`,
+      payload: { resource_id: null },
+    });
+    expect(invalidAttachmentUpdate.statusCode).toBe(400);
+
+    const referencedPartnerDelete = await send({
+      method: 'DELETE',
+      url: `/api/base.partner/${partner?.id}?hard=true`,
+    });
+    expect(referencedPartnerDelete.statusCode).toBe(409);
   });
 
   it('should create and search records with BaseModel', async () => {
@@ -228,7 +352,7 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
   });
 
   it('should test Fastify Generic REST API endpoints', async () => {
-    const resModels = await app.inject({
+    const resModels = await send({
       method: 'GET',
       url: '/api/models',
     });
@@ -240,7 +364,7 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
     );
 
     // Create via POST
-    const resCreate = await app.inject({
+    const resCreate = await send({
       method: 'POST',
       url: '/api/test.item',
       payload: {
@@ -254,7 +378,7 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
     const itemId = createdData.id;
 
     // Search via GET
-    const resSearch = await app.inject({
+    const resSearch = await send({
       method: 'GET',
       url: `/api/test.item?domain=${encodeURIComponent(JSON.stringify([['id', '=', itemId]]))}`,
     });
@@ -264,7 +388,7 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
     expect(searchBody.data[0].name).toBe('REST API Item');
 
     // Update via PUT
-    const resUpdate = await app.inject({
+    const resUpdate = await send({
       method: 'PUT',
       url: `/api/test.item/${itemId}`,
       payload: { city: 'Bandung' },
@@ -273,7 +397,7 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
     expect(JSON.parse(resUpdate.payload).data.city).toBe('Bandung');
 
     // Model Action
-    const resAction = await app.inject({
+    const resAction = await send({
       method: 'POST',
       url: `/api/test.item/${itemId}/action/action_toggle_company`,
     });
@@ -282,7 +406,7 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
     expect(actionResult.result.is_company).toBe(false);
 
     // Delete (archive)
-    const resDelete = await app.inject({
+    const resDelete = await send({
       method: 'DELETE',
       url: `/api/test.item/${itemId}`,
     });
@@ -290,7 +414,7 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
   });
 
   it('should handle JSON-RPC execute_kw call', async () => {
-    const rpcRes = await app.inject({
+    const rpcRes = await send({
       method: 'POST',
       url: '/jsonrpc',
       payload: {

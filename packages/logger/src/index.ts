@@ -1,10 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import pino, {
-  type Logger,
-  type LoggerOptions,
-  type TransportTargetOptions,
-} from 'pino';
+import pino, { type Logger, type LoggerOptions, type TransportTargetOptions } from 'pino';
 import pretty from 'pino-pretty';
 
 export type LogLevel = 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'silent';
@@ -67,7 +63,11 @@ export function createLogger(options: CreateLoggerOptions = {}): Logger {
       fs.mkdirSync(logDir, { recursive: true });
       streams.push({
         level: streamLevel,
-        stream: pino.destination({ dest: path.resolve(logDir, logFileName), sync: true, mkdir: true }),
+        stream: pino.destination({
+          dest: path.resolve(logDir, logFileName),
+          sync: true,
+          mkdir: true,
+        }),
       });
     } catch {
       // Fail-safe: never crash the app because the log dir is not writable
@@ -88,6 +88,19 @@ export function createLogger(options: CreateLoggerOptions = {}): Logger {
     name,
     level,
     timestamp: pino.stdTimeFunctions.isoTime,
+    redact: {
+      paths: [
+        'req.headers.authorization',
+        'req.headers.cookie',
+        'password',
+        '*.password',
+        'refresh_token',
+        '*.refresh_token',
+        'access_token',
+        '*.access_token',
+      ],
+      censor: '[redacted]',
+    },
   };
 
   return streams.length > 0 ? pino(pinoOptions, pino.multistream(streams)) : pino(pinoOptions);

@@ -22,6 +22,7 @@ export class BaseModel extends Model {
   static defaultOrder: string = 'id desc';
   static exposedActions: readonly string[] = ['action_archive', 'action_unarchive'];
   static hiddenFields: readonly string[] = [];
+  static uniqueConstraints: readonly (readonly string[])[] = [];
 
   /**
    * The Environment associated with this model class execution.
@@ -318,7 +319,7 @@ export class BaseModel extends Model {
     domain: Domain = [],
     options: SearchOptions = {}
   ): Promise<number> {
-    const qb = this.buildSearchQuery(domain, { ...options, order: undefined });
+    const qb = this.buildSearchQuery(domain, { ...options, order: '' });
     const countResult: unknown = await qb.count('* as count').first();
     const count =
       typeof countResult === 'object' && countResult !== null && 'count' in countResult
@@ -368,6 +369,24 @@ export class BaseModel extends Model {
   }
 
   /**
+   * Private fields (e.g. password hashes) must never be usable as a filter or sort key,
+   * otherwise their content could be inferred one comparison at a time.
+   */
+  private static assertQueryable(domain: Domain, order?: string): void {
+    if (this.hiddenFields.length === 0) return;
+    const used: string[] = [];
+    for (const item of domain) if (Array.isArray(item)) used.push(String(item[0]));
+    if (order) {
+      for (const part of order.split(',')) used.push(part.trim().split(/\s+/)[0] ?? '');
+    }
+    if (used.some((field) => this.hiddenFields.includes(field.split('.').pop() ?? field))) {
+      throw Object.assign(new Error('Invalid or private field in domain or order'), {
+        statusCode: 400,
+      });
+    }
+  }
+
+  /**
    * Helper to construct the query with domain, activeTest, ordering, and pagination.
    */
   private static buildSearchQuery<M extends BaseModel>(
@@ -377,6 +396,7 @@ export class BaseModel extends Model {
   ): QueryBuilder<BaseModel, BaseModel[]> {
     const trx = this.resolveTrx(options.transaction as Transaction | undefined);
     const context = this.resolveContext(options.context);
+    this.assertQueryable(domain, options.order);
 
     let qb: QueryBuilder<BaseModel, BaseModel[]> = this.query(trx);
 
@@ -407,7 +427,7 @@ export class BaseModel extends Model {
     }
 
     // Ordering
-    const orderClause = options.order || this.defaultOrder;
+    const orderClause = options.order === undefined ? this.defaultOrder : options.order;
     if (orderClause) {
       const parts = orderClause.split(',').map((s) => s.trim());
       for (const part of parts) {

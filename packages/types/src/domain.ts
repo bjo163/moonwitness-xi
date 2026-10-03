@@ -44,6 +44,8 @@ export interface SearchReadOptions extends SearchOptions {
 
 export interface ModelContext {
   userId?: number;
+  role?: string;
+  companyId?: number;
   lang?: string;
   tz?: string;
   activeTest?: boolean;

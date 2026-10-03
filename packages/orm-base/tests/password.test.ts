@@ -1,7 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import knex, { type Knex } from 'knex';
 import { defineAddon, defineModel, installAddons, verifyPassword } from '@moonwitness/orm';
-import { manifest, User, Partner, initializeSuperadminPassword } from '../src/index.js';
+import {
+  manifest,
+  User,
+  Partner,
+  Company,
+  Country,
+  Currency,
+  Language,
+  initializeSuperadminPassword,
+  resetSuperadminPassword,
+} from '../src/index.js';
 
 describe('passwords', () => {
   let db: Knex;
@@ -39,17 +49,52 @@ describe('passwords', () => {
     expect(await verifyPassword('replacement-env-password', changed.password)).toBe(false);
   }, 15000);
 
+  it('explicitly resets the seeded superadmin password through the password hook', async () => {
+    await installAddons(db, [manifest]);
+    await initializeSuperadminPassword('initial-test-password');
+
+    await resetSuperadminPassword('reset-test-password');
+
+    const user = await User.query().findOne({ login: 'superadmin' }).throwIfNotFound();
+    expect(await verifyPassword('reset-test-password', user.password)).toBe(true);
+    expect(await verifyPassword('initial-test-password', user.password)).toBe(false);
+    expect(user.toJSON()).not.toHaveProperty('password');
+  }, 15000);
+
+  it('rejects invalid reset passwords and missing seeded superadmin records', async () => {
+    await installAddons(db, [manifest]);
+    await expect(resetSuperadminPassword('short')).rejects.toThrow(
+      'Superadmin password must be between 6 and 1024 characters'
+    );
+
+    await db('_orm_data').where({ id: 'base.user_superadmin', model: User.modelName }).delete();
+    await expect(resetSuperadminPassword('valid-test-password')).rejects.toThrow(
+      'Seeded superadmin account was not found'
+    );
+  }, 15000);
+
   it('adds the field to previously installed users and initializes by external ID', async () => {
     const { password: _password, ...oldFields } = User.fields;
     const LegacyUser = defineModel('base.user', { table: 'users', fields: oldFields });
     await installAddons(db, [
       defineAddon({
         ...manifest,
-        models: [Partner, LegacyUser],
-        data: manifest.data?.map((record) => ({
-          ...record,
-          model: record.model === User ? LegacyUser : record.model,
-        })),
+        models: [Country, Currency, Language, Company, Partner, LegacyUser],
+        views: manifest.views?.filter((view) =>
+          [Country, Currency, Language, Company, Partner, User].some(
+            (model) => model.modelName === view.model
+          )
+        ),
+        data: manifest.data
+          ?.filter((record) =>
+            [Country, Currency, Language, Company, Partner, User].some(
+              (model) => model.modelName === record.model.modelName
+            )
+          )
+          .map((record) => ({
+            ...record,
+            model: record.model === User ? LegacyUser : record.model,
+          })),
       }),
     ]);
     expect(await db.schema.hasColumn('users', 'password')).toBe(false);

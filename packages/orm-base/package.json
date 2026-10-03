@@ -16,7 +16,8 @@
     "test": "tsc -p tsconfig.check.json && vitest run"
   },
   "dependencies": {
-    "@moonwitness/orm": "workspace:*"
+    "@moonwitness/orm": "workspace:*",
+    "objection": "^3.1.5"
   },
   "devDependencies": {
     "knex": "^3.3.0",

@@ -5,4 +5,5 @@ export * from './registry.js';
 export * from './base.model.js';
 export * from './model-definition.js';
 export * from './addon.js';
-export { verifyPassword } from './password.js';
+export * from './view.js';
+export { hashPassword, verifyPassword } from './password.js';

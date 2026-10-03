@@ -3,17 +3,24 @@ import cors from '@fastify/cors';
 import sensible from '@fastify/sensible';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import rateLimit from '@fastify/rate-limit';
 import ormPlugin from './plugins/orm.plugin.js';
+import authPlugin, { validateJwtSecret } from './plugins/auth.plugin.js';
+import { authRoutes } from './routes/auth.routes.js';
 import { genericRoutes } from './routes/generic.routes.js';
 import { healthRoutes } from './routes/health.routes.js';
+import { jobsRoutes } from './routes/jobs.routes.js';
 import { config } from './config/env.js';
 import { createDatabase } from './database/knex.js';
-import { databaseErrorCode } from './database/errors.js';
+import { databaseErrorCode, databaseErrorContext } from './database/errors.js';
 import type { Knex } from 'knex';
 import { manifest as baseAddon, initializeSuperadminPassword } from '@moonwitness/orm-base';
 import { installAddons } from '@moonwitness/orm';
+import { manifest as authAddon, createAuthService } from '@moonwitness/auth';
+import { jobsManifest } from '@moonwitness/jobs';
 
 import { createLogger, type LogLevel } from '@moonwitness/logger';
+import observabilityPlugin from './plugins/observability.plugin.js';
 
 function errorProperty(error: unknown, key: string): unknown {
   return typeof error === 'object' && error !== null && key in error
@@ -21,16 +28,37 @@ function errorProperty(error: unknown, key: string): unknown {
     : undefined;
 }
 
-export async function buildApp(options: { db?: Knex } = {}) {
+export interface BuildAppOptions {
+  db?: Knex;
+  /** Overrides SUPERADMIN_PASSWORD (used by tests). */
+  superadminPassword?: string;
+  /** Overrides JWT_SECRET (used by tests). */
+  jwtSecret?: string;
+  /** Overrides AUTH_LOGIN_RATE_MAX (used by tests). */
+  loginRateMax?: number;
+  metricsToken?: string;
+}
+
+export async function buildApp(options: BuildAppOptions = {}) {
+  const authConfig = config.auth ?? {
+    accessTtlSeconds: 15 * 60,
+    refreshTtlSeconds: 14 * 24 * 60 * 60,
+    loginRateMax: 10,
+  };
+  const jwtSecret = validateJwtSecret(options.jwtSecret ?? authConfig.jwtSecret);
+  const superadminPassword = options.superadminPassword ?? config.superadminPassword;
+  if (superadminPassword && (superadminPassword.length < 6 || superadminPassword.length > 1024)) {
+    throw new Error('SUPERADMIN_PASSWORD must be between 6 and 1024 characters when configured');
+  }
+
   const db = options.db ?? createDatabase();
   try {
-    await installAddons(db, [baseAddon]);
-    await initializeSuperadminPassword(config.superadminPassword);
+    await installAddons(db, [baseAddon, authAddon, jobsManifest]);
+    await initializeSuperadminPassword(superadminPassword);
   } catch (error) {
     if (!options.db) await db.destroy();
     throw error;
   }
-
   const appLogger = createLogger({
     name: 'api',
     level: (config.log?.level as LogLevel) ?? (config.env === 'test' ? 'silent' : 'info'),
@@ -42,6 +70,24 @@ export async function buildApp(options: { db?: Knex } = {}) {
 
   const app = Fastify({
     loggerInstance: appLogger,
+    ajv: {
+      customOptions: {
+        coerceTypes: false,
+      },
+    },
+  });
+
+  await app.register(observabilityPlugin);
+
+  // Collect routes (registered before any route) for a readable startup listing
+  const routes: { method: string; url: string }[] = [];
+  app.decorate('routeList', routes);
+  app.addHook('onRoute', (route) => {
+    const methods = Array.isArray(route.method) ? route.method : [route.method];
+    for (const method of methods) {
+      if (method === 'HEAD' || route.url.startsWith('/docs/static')) continue;
+      routes.push({ method, url: route.url });
+    }
   });
 
   // Security & utility plugins
@@ -59,9 +105,14 @@ export async function buildApp(options: { db?: Knex } = {}) {
       },
       servers: [{ url: 'http://localhost:3000', description: 'Local development' }],
       tags: [
+        { name: 'Auth', description: 'Login, token refresh and current user' },
         { name: 'ORM', description: 'Generic CRUD and RPC endpoints' },
         { name: 'System', description: 'Health and status checks' },
       ],
+      components: {
+        securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' } },
+      },
+      security: [{ bearerAuth: [] }],
     },
   });
 
@@ -78,18 +129,33 @@ export async function buildApp(options: { db?: Knex } = {}) {
   await app.register(ormPlugin, { db });
   app.addHook('onClose', async () => db.destroy());
 
+  // Authentication: after the ORM plugin (it enriches request.env), before any route.
+  await app.register(rateLimit, { global: false });
+  await app.register(authPlugin, {
+    jwtSecret,
+    accessTtlSeconds: authConfig.accessTtlSeconds,
+  });
+
   // Error handling
   app.setErrorHandler((error, request, reply) => {
     const code = databaseErrorCode(error);
     if (code) {
       // Driver errors can contain SQL bindings, including password hashes.
       const name = errorProperty(error, 'name');
-      request.log.error({ name, code }, 'Database request failed');
+      request.log.error({ name, ...databaseErrorContext(error) }, 'Database request failed');
       const conflict =
-        name === 'UniqueViolationError' || code === '23505' || code === 'SQLITE_CONSTRAINT_UNIQUE';
+        name === 'UniqueViolationError' ||
+        code === '23505' ||
+        code === 'SQLITE_CONSTRAINT_UNIQUE' ||
+        code === 'SQLITE_BUSY' ||
+        code === 'SQLITE_BUSY_SNAPSHOT';
       return reply.status(conflict ? 409 : 500).send({
         success: false,
-        error: conflict ? 'Unique constraint violation' : 'Database request failed',
+        error: conflict
+          ? code === 'SQLITE_BUSY' || code === 'SQLITE_BUSY_SNAPSHOT'
+            ? 'Database is busy; retry the request'
+            : 'Unique constraint violation'
+          : 'Database request failed',
       });
     }
     request.log.error(error);
@@ -113,8 +179,14 @@ export async function buildApp(options: { db?: Knex } = {}) {
   });
 
   // Install the handler before route plugins inherit their error handling scope.
-  await app.register(healthRoutes);
+  await app.register(healthRoutes, { metricsToken: options.metricsToken ?? config.metricsToken });
+  await app.register(authRoutes, {
+    authService: createAuthService({ refreshTtlSeconds: authConfig.refreshTtlSeconds }),
+    accessTtlSeconds: authConfig.accessTtlSeconds,
+    loginRateMax: options.loginRateMax ?? authConfig.loginRateMax,
+  });
   await app.register(genericRoutes);
+  await app.register(jobsRoutes);
 
   return app;
 }

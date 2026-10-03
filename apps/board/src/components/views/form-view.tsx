@@ -1,0 +1,406 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Archive, ArrowLeft, Check, Loader2, Save, Zap } from 'lucide-react';
+import { evalDomain, type FieldMeta, type ResolvedViews } from '@moonwitness/client';
+import { useRecord, useRecordMutations } from '@/hooks/use-model';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import { FieldWidget, relationKey } from './fields';
+import { One2ManyWidget } from './one2many-widget';
+import { Chatter } from './chatter';
+import { TagsWidget } from './tags-widget';
+
+interface FormViewProps {
+  model: string;
+  views: ResolvedViews;
+  recordId?: number; // undefined = create mode
+  onBack: () => void;
+  onSaved?: (id: number) => void;
+}
+
+export function FormView({ model, views, recordId, onBack, onSaved }: FormViewProps) {
+  const isCreate = recordId === undefined;
+  const { data: initialRecord, isLoading } = useRecord(model, recordId);
+  const mutations = useRecordMutations(model);
+
+  const [formData, setFormData] = useState<Record<string, unknown>>({});
+  const [dirty, setDirty] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Field lookup map
+  const fieldMap = useMemo(() => {
+    return new Map<string, FieldMeta>(views.fields.map((f) => [f.name, f]));
+  }, [views]);
+
+  // Populate form defaults or loaded record
+  useEffect(() => {
+    if (isCreate) {
+      const defaults: Record<string, unknown> = {};
+      for (const f of views.fields) {
+        if (f.default !== undefined) {
+          defaults[f.name] = f.default;
+        }
+      }
+      setFormData(defaults);
+      setDirty(false);
+    } else if (initialRecord) {
+      setFormData({ ...initialRecord });
+      setDirty(false);
+    }
+  }, [isCreate, initialRecord, views]);
+
+  // Warn on browser tab close or reload if dirty
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (dirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [dirty]);
+
+  const handleBackSafe = () => {
+    if (dirty && !window.confirm('You have unsaved changes. Are you sure you want to leave?')) {
+      return;
+    }
+    onBack();
+  };
+
+  // Keyboard shortcut listener: Ctrl+S to save, Esc to go back
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === 's' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        void handleSave();
+      }
+      if (e.key === 'Escape') {
+        handleBackSafe();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [dirty, formData]);
+
+  function handleChange(name: string, val: unknown) {
+    setFormData((prev) => ({ ...prev, [name]: val }));
+    setDirty(true);
+    setError(null);
+    setSuccessMsg(null);
+  }
+
+  async function handleSave(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    setError(null);
+    setSuccessMsg(null);
+
+    // Validate required fields (respecting dynamic visibility and required predicates)
+    for (const [name, f] of fieldMap.entries()) {
+      if (f.type === 'one2many') continue;
+      const isInvisible = evalDomain(f.invisible, formData);
+      const isRequired = f.required || evalDomain(f.requiredIf, formData);
+
+      if (
+        !isInvisible &&
+        isRequired &&
+        (formData[name] === undefined || formData[name] === null || formData[name] === '')
+      ) {
+        setError(`Field '${f.label}' is required.`);
+        return;
+      }
+    }
+
+    try {
+      const saved = await mutations.save.mutateAsync({
+        id: recordId,
+        values: formData,
+      });
+      setDirty(false);
+      setSuccessMsg('Record saved successfully!');
+      setTimeout(() => setSuccessMsg(null), 3500);
+
+      if (isCreate && saved?.id) {
+        onSaved?.(saved.id);
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to save record.');
+    }
+  }
+
+  async function handleArchive(hard = false) {
+    if (!recordId) return;
+    const confirmMsg = hard
+      ? 'Permanently delete this record? This action cannot be undone.'
+      : 'Archive this record?';
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      await mutations.archive.mutateAsync({ id: recordId, hard });
+      onBack();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to archive record.');
+    }
+  }
+
+  const exposedActions = useMemo(() => {
+    return (views.actions ?? []).filter((act) => act !== 'action_archive');
+  }, [views.actions]);
+
+  async function handleExecuteAction(method: string) {
+    if (!recordId) return;
+    setError(null);
+    setSuccessMsg(null);
+    try {
+      await mutations.action.mutateAsync({ id: recordId, method });
+      setSuccessMsg(`Action executed successfully.`);
+      setTimeout(() => setSuccessMsg(null), 3500);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Action failed to execute.');
+    }
+  }
+
+  const sections = views.form?.sections?.length
+    ? views.form.sections
+    : [{ fields: views.fields.map((f) => f.name) }];
+  const canWrite = views.permissions.write || (isCreate && views.permissions.create);
+
+  return (
+    <div className="space-y-6">
+      {/* Top action bar */}
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b-2 border-ink pb-5">
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="sm" onClick={handleBackSafe} className="gap-1.5">
+            <ArrowLeft className="size-4" /> Back to list
+          </Button>
+          <div className="h-6 w-0.5 bg-ink/20" />
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="ink-title text-2xl sm:text-3xl">
+              {isCreate ? (
+                <span>New {views.title.replace(/s$/, '')}</span>
+              ) : (
+                <span>
+                  {views.title.replace(/s$/, '')}{' '}
+                  <span className="font-mono text-ink-faint">#{recordId}</span>
+                </span>
+              )}
+            </h1>
+            {!isCreate && recordId !== undefined && (
+              <TagsWidget model={model} recordId={recordId} />
+            )}
+          </div>
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Custom exposed actions */}
+          {!isCreate &&
+            exposedActions.map((method) => {
+              if (method === 'action_unarchive' && initialRecord?.active !== false) {
+                return null;
+              }
+              const label = method
+                .replace(/^action_/, '')
+                .replace(/_/g, ' ')
+                .replace(/\b\w/g, (c) => c.toUpperCase());
+              const isUnarchive = method === 'action_unarchive';
+
+              return (
+                <Button
+                  key={method}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleExecuteAction(method)}
+                  disabled={mutations.action.isPending}
+                  className={
+                    isUnarchive
+                      ? 'gap-1.5 hover:bg-lime hover:text-on-accent'
+                      : 'gap-1.5 hover:bg-lime/25'
+                  }
+                >
+                  {mutations.action.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Zap className="size-4 text-lime-600 dark:text-lime" />
+                  )}
+                  {label}
+                </Button>
+              );
+            })}
+
+          {!isCreate && views.permissions.unlink && initialRecord?.active !== false && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleArchive(false)}
+              className="gap-1.5 hover:bg-pink hover:text-white"
+              disabled={mutations.archive.isPending}
+            >
+              <Archive className="size-4" /> Archive
+            </Button>
+          )}
+
+          {canWrite && (
+            <Button
+              onClick={() => handleSave()}
+              size="sm"
+              disabled={!dirty || mutations.save.isPending}
+              className="gap-1.5"
+            >
+              {mutations.save.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Save className="size-4" />
+              )}
+              Save Record
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Notifications */}
+      {error && (
+        <div className="border-2 border-ink bg-pink p-3 font-bold text-white shadow-ink">
+          {error}
+        </div>
+      )}
+      {successMsg && (
+        <div className="border-2 border-ink bg-lime p-3 font-bold text-on-accent shadow-ink flex items-center gap-2">
+          <Check className="size-5" /> {successMsg}
+        </div>
+      )}
+
+      {/* Form sections */}
+      {isLoading ? (
+        <div className="ink-panel p-8 space-y-6 bg-card">
+          <Skeleton className="h-10 w-full bg-ink/10" />
+          <Skeleton className="h-10 w-full bg-ink/10" />
+          <Skeleton className="h-10 w-2/3 bg-ink/10" />
+        </div>
+      ) : (
+        <form onSubmit={handleSave} className="space-y-6">
+          {sections.map((section, sIdx) => {
+            const visibleFields = section.fields
+              .map((fieldName) => fieldMap.get(fieldName))
+              .filter((f): f is FieldMeta => f !== undefined && f.name !== 'id');
+
+            return (
+              <div key={sIdx} className="ink-panel bg-card p-6 sm:p-8">
+                {section.title && (
+                  <div className="mb-6 border-b-2 border-ink pb-2">
+                    <h2 className="font-display text-xl uppercase tracking-wider">
+                      {section.title}
+                    </h2>
+                  </div>
+                )}
+
+                <div className="grid gap-6 sm:grid-cols-2">
+                  {visibleFields.map((field) => {
+                    const isInvisible = evalDomain(field.invisible, formData);
+                    if (isInvisible) return null;
+
+                    const isReadonly = field.readonly || evalDomain(field.readonlyIf, formData);
+                    const isRequired = field.required || evalDomain(field.requiredIf, formData);
+
+                    if (field.type === 'one2many') {
+                      return (
+                        <div key={field.name} className="sm:col-span-2 pt-2">
+                          <One2ManyWidget field={field} parentId={recordId} isCreate={isCreate} />
+                        </div>
+                      );
+                    }
+
+                    const isFullWidth =
+                      field.type === 'string' && field.name.includes('description');
+                    const relatedObj = initialRecord?.[relationKey(field)] as Record<
+                      string,
+                      unknown
+                    > | null;
+
+                    const effectiveField: FieldMeta = {
+                      ...field,
+                      readonly: isReadonly,
+                      required: isRequired,
+                    };
+
+                    return (
+                      <div
+                        key={field.name}
+                        className={isFullWidth ? 'sm:col-span-2 space-y-2' : 'space-y-2'}
+                      >
+                        <div className="flex items-center justify-between">
+                          <Label
+                            htmlFor={`field-${field.name}`}
+                            className="font-bold text-xs uppercase tracking-wider"
+                          >
+                            {field.label}
+                            {isRequired && <span className="ml-1 text-pink">*</span>}
+                          </Label>
+                          {isReadonly && (
+                            <span className="font-mono text-[10px] uppercase text-ink-faint">
+                              Readonly
+                            </span>
+                          )}
+                        </div>
+
+                        <FieldWidget
+                          id={`field-${field.name}`}
+                          field={effectiveField}
+                          value={formData[field.name]}
+                          onChange={(val) => handleChange(field.name, val)}
+                          related={relatedObj}
+                        />
+
+                        {field.help && <p className="text-xs text-ink-faint">{field.help}</p>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </form>
+      )}
+
+      {/* Audit Trail & Meta box */}
+      {!isCreate && initialRecord && (
+        <div className="ink-panel border-dashed bg-card/60 p-4 text-xs font-mono text-ink-muted">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-6">
+              <div>
+                <span className="block text-[10px] uppercase tracking-wider text-ink-faint">
+                  Created At
+                </span>
+                <span>
+                  {initialRecord.create_date
+                    ? new Date(String(initialRecord.create_date)).toLocaleString()
+                    : '—'}
+                </span>
+              </div>
+              <div>
+                <span className="block text-[10px] uppercase tracking-wider text-ink-faint">
+                  Last Modified
+                </span>
+                <span>
+                  {initialRecord.write_date
+                    ? new Date(String(initialRecord.write_date)).toLocaleString()
+                    : '—'}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="ink-tag text-[10px]">
+                Status: {initialRecord.active !== false ? 'ACTIVE' : 'ARCHIVED'}
+              </span>
+              <span className="font-mono text-[10px] text-ink-faint">ID: #{recordId}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unified Chatter & Activity Stream */}
+      {!isCreate && recordId !== undefined && <Chatter model={model} recordId={recordId} />}
+    </div>
+  );
+}

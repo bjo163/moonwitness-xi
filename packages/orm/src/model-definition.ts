@@ -1,28 +1,52 @@
 import type { JSONSchema, RelationMappings, QueryContext, ModelOptions } from 'objection';
 import { BaseModel } from './base.model.js';
 import { hashPassword } from './password.js';
+import type { Domain } from './types.js';
 
 type Scalar = string | number | boolean;
 export interface FieldOptions<T extends Scalar = Scalar> {
   required?: boolean;
   unique?: boolean;
   default?: T;
+  /** Human-readable label for generated UIs; defaults to the humanized field name. */
+  label?: string;
+  /** Tooltip / helper text for generated UIs. */
+  help?: string;
+  /** Optional regular expression used by generated JSON Schema validation. */
+  pattern?: string;
+  /** Conditional visibility based on domain */
+  invisible?: Domain | boolean;
+  /** Conditional readonly based on domain */
+  readonlyIf?: Domain;
+  /** Conditional required based on domain */
+  requiredIf?: Domain;
+}
+
+export interface HasManyOptions {
+  label?: string;
+  help?: string;
+  foreignKey?: string;
+  invisible?: Domain | boolean;
 }
 
 export interface Field<T extends Scalar = Scalar> extends FieldOptions<T> {
-  kind: 'string' | 'integer' | 'boolean' | 'enum' | 'belongsTo' | 'password';
+  kind: 'string' | 'text' | 'integer' | 'boolean' | 'enum' | 'belongsTo' | 'hasMany' | 'password';
   values?: readonly string[];
   target?: typeof BaseModel;
+  foreignKey?: string;
   /** Type-only marker used to infer the model's record shape. */
   readonly valueType?: T;
 }
 
 export const fields = {
-  password() {
-    return { kind: 'password' as const } as Field<string> & { kind: 'password' };
+  password(options: Pick<FieldOptions<string>, 'label' | 'help'> = {}) {
+    return { kind: 'password' as const, ...options } as Field<string> & { kind: 'password' };
   },
   string<const O extends FieldOptions<string>>(options: O = {} as O) {
     return { kind: 'string' as const, ...options } as Field<string> & O;
+  },
+  text<const O extends FieldOptions<string>>(options: O = {} as O) {
+    return { kind: 'text' as const, ...options } as Field<string> & O;
   },
   integer<const O extends FieldOptions<number>>(options: O = {} as O) {
     return { kind: 'integer' as const, ...options } as Field<number> & O;
@@ -41,6 +65,9 @@ export const fields = {
     options: O = {} as O
   ) {
     return { ...options, kind: 'belongsTo' as const, target };
+  },
+  hasMany<M extends typeof BaseModel>(target: M, options: HasManyOptions = {}) {
+    return { ...options, kind: 'hasMany' as const, target };
   },
 };
 
@@ -75,6 +102,7 @@ export type ModelValues<F extends FieldMap> = {
 export type DefinedModel<F extends FieldMap = FieldMap> = typeof BaseModel & {
   new (): BaseModel & ModelValues<F>;
   readonly fields: F;
+  readonly uniqueConstraints: readonly (readonly string[])[];
 };
 
 export const standardProperties: Record<string, JSONSchema> = {
@@ -94,7 +122,7 @@ function fieldSchema(field: Field): JSONSchema {
   const type =
     field.kind === 'belongsTo'
       ? 'integer'
-      : field.kind === 'enum' || field.kind === 'password'
+      : field.kind === 'enum' || field.kind === 'password' || field.kind === 'text'
         ? 'string'
         : field.kind;
   const nonNullable = field.required || field.default !== undefined;
@@ -102,7 +130,8 @@ function fieldSchema(field: Field): JSONSchema {
     type: nonNullable ? type : [type, 'null'],
     ...(field.values ? { enum: nonNullable ? [...field.values] : [...field.values, null] } : {}),
     ...(field.default !== undefined ? { default: field.default } : {}),
-    ...(type === 'string'
+    ...(field.pattern !== undefined ? { pattern: field.pattern } : {}),
+    ...(type === 'string' && field.kind !== 'text'
       ? {
           maxLength: field.kind === 'password' ? 1024 : 255,
           ...(field.required || field.kind === 'password' ? { minLength: 1 } : {}),
@@ -114,7 +143,12 @@ function fieldSchema(field: Field): JSONSchema {
 /** Define business fields once; validation, relations, storage and TS types follow. */
 export function defineModel<const F extends FieldMap>(
   name: string,
-  definition: { fields: F; table?: string; order?: string }
+  definition: {
+    fields: F;
+    table?: string;
+    order?: string;
+    unique?: readonly (readonly (keyof F & string)[])[];
+  }
 ): DefinedModel<F> {
   const tableName = definition.table ?? name.replaceAll('.', '_');
   if (!/^[a-z][a-z0-9_]*$/.test(tableName)) throw new Error(`Invalid table name: ${tableName}`);
@@ -125,6 +159,17 @@ export function defineModel<const F extends FieldMap>(
     const column = columnName(key, field);
     if (!/^[a-z][a-z0-9_]*$/.test(key) || column in properties) {
       throw new Error(`Invalid or duplicate field: ${name}.${key}`);
+    }
+    if (field.kind === 'hasMany') {
+      if (field.target) {
+        const foreignKey = field.foreignKey ?? `${name.split('.').pop()}_id`;
+        relations[key] = {
+          relation: BaseModel.HasManyRelation,
+          modelClass: field.target,
+          join: { from: `${tableName}.id`, to: `${field.target.tableName}.${foreignKey}` },
+        };
+      }
+      continue;
     }
     if (
       field.default !== undefined &&
@@ -175,6 +220,7 @@ export function defineModel<const F extends FieldMap>(
     static override tableName = tableName;
     static override defaultOrder = definition.order ?? 'id asc';
     static fields = definition.fields;
+    static override uniqueConstraints = (definition.unique ?? []).map((fields) => [...fields]);
     static override jsonSchema: JSONSchema = {
       type: 'object',
       additionalProperties: false,

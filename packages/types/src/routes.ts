@@ -15,6 +15,8 @@ export interface SearchQueryParams {
   fields?: string;
   limit?: string;
   offset?: string;
+  /** ID cursor for stable keyset pagination; combine only with ascending ID order. */
+  cursor?: string;
   order?: string;
   with?: string;
   count?: string;

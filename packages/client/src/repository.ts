@@ -1,0 +1,102 @@
+import type {
+  FieldMeta,
+  ModelFields,
+  ResolvedViews,
+  SearchReadOptions,
+  SearchReadResult,
+} from './types.js';
+
+export interface RequestOptions {
+  method?: string;
+  query?: Record<string, string | number | boolean | undefined>;
+  body?: unknown;
+}
+
+export interface HttpClient {
+  request<T>(path: string, options?: RequestOptions): Promise<T>;
+}
+
+/** Typed access to one model's `/api/:model` endpoints. Response shapes mirror generic.routes.ts. */
+export class ModelRepository<TRecord = Record<string, unknown>> {
+  constructor(
+    readonly model: string,
+    private readonly http: HttpClient
+  ) {}
+
+  private path(...segments: (string | number)[]): string {
+    return `/api/${[this.model, ...segments].map((s) => encodeURIComponent(String(s))).join('/')}`;
+  }
+
+  /** Field metadata plus the caller's permissions (fields are readonly when write is denied). */
+  async getFields(): Promise<ModelFields> {
+    const { model, permissions, fields } = await this.http.request<ModelFields>(
+      this.path('fields')
+    );
+    return { model, permissions, fields };
+  }
+
+  /** List/form/search view definitions, merged with server-side defaults. */
+  async getViews(): Promise<ResolvedViews> {
+    const { success: _success, ...views } = await this.http.request<
+      ResolvedViews & { success: boolean }
+    >(this.path('views'));
+    return views;
+  }
+
+  async searchRead(options: SearchReadOptions = {}): Promise<SearchReadResult<TRecord>> {
+    const res = await this.http.request<{ data: TRecord[]; total?: number }>(this.path(), {
+      query: {
+        domain: options.domain?.length ? JSON.stringify(options.domain) : undefined,
+        fields: options.fields?.length ? options.fields.join(',') : undefined,
+        offset: options.offset,
+        limit: options.limit,
+        order: options.order,
+        with: options.with,
+        count: options.count ? 'true' : undefined,
+      },
+    });
+    return { records: res.data, ...(res.total !== undefined ? { total: res.total } : {}) };
+  }
+
+  async read(id: number, options: { with?: string } = {}): Promise<TRecord> {
+    const res = await this.http.request<{ data: TRecord }>(this.path(id), {
+      query: { with: options.with },
+    });
+    return res.data;
+  }
+
+  async create(values: Partial<TRecord>): Promise<TRecord> {
+    const res = await this.http.request<{ data: TRecord }>(this.path(), {
+      method: 'POST',
+      body: values,
+    });
+    return res.data;
+  }
+
+  async write(id: number, values: Partial<TRecord>): Promise<TRecord> {
+    const res = await this.http.request<{ data: TRecord }>(this.path(id), {
+      method: 'PATCH',
+      body: values,
+    });
+    return res.data;
+  }
+
+  /** Archives (active=false) by default; `hard: true` deletes permanently. */
+  async unlink(id: number, options: { hard?: boolean } = {}): Promise<void> {
+    await this.http.request(this.path(id), {
+      method: 'DELETE',
+      query: { hard: options.hard ? 'true' : undefined },
+    });
+  }
+
+  /** Runs an exposed `action_*` method on a record. */
+  async executeAction<TResult = unknown>(id: number, method: string): Promise<TResult> {
+    const res = await this.http.request<{ result: TResult }>(this.path(id, 'action', method), {
+      method: 'POST',
+      body: {},
+    });
+    return res.result;
+  }
+}
+
+export type { FieldMeta };

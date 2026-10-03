@@ -4,6 +4,11 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm --filter @moonwitness/api dev",
+    "dev:board": "pnpm --filter @moonwitness/board dev",
+    "reset:superadmin-password": "pnpm --filter @moonwitness/api reset:superadmin-password",
+    "jobs:worker": "pnpm --filter @moonwitness/api jobs:worker",
+    "jobs:scheduler": "pnpm --filter @moonwitness/api jobs:scheduler",
+    "jobs:outbox": "pnpm --filter @moonwitness/api jobs:outbox",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "lint": "eslint .",

@@ -1,0 +1,282 @@
+import knex, { type Knex } from 'knex';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { installAddons } from '@moonwitness/orm';
+import { manifest as baseManifest, Company, CompanyMembership, User } from '@moonwitness/orm-base';
+import { Cron, Job, JobRun, OutboxEvent, jobsManifest } from '../src/models.js';
+import {
+  enqueueDueCrons,
+  enqueueJob,
+  registerJobHandler,
+  runOneJob,
+  cancelJob,
+  registerOutboxConsumer,
+  dispatchOneOutboxEvent,
+} from '../src/runtime.js';
+
+describe('durable job runtime', () => {
+  let db: Knex;
+
+  beforeEach(async () => {
+    db = knex({
+      client: 'better-sqlite3',
+      connection: { filename: ':memory:' },
+      useNullAsDefault: true,
+    });
+    await installAddons(db, [baseManifest, jobsManifest]);
+  });
+
+  afterEach(async () => {
+    await db.destroy();
+  });
+
+  it('validates typed payloads, deduplicates enqueue requests, and records a fenced run', async () => {
+    const unregister = registerJobHandler({
+      name: 'test.echo',
+      version: 1,
+      parse(payload: unknown): { message: string } {
+        if (
+          typeof payload !== 'object' ||
+          payload === null ||
+          !('message' in payload) ||
+          typeof payload.message !== 'string'
+        )
+          throw new Error('message is required');
+        return { message: payload.message };
+      },
+      async run(payload, context) {
+        return {
+          message: payload.message.toUpperCase(),
+          companyId: context.env.context.companyId,
+          actorId: context.env.context.userId,
+        };
+      },
+    });
+    try {
+      const company = await Company.query().findOne({ name: 'MoonWitness' }).throwIfNotFound();
+      const admin = await User.query().findOne({ login: 'superadmin' }).throwIfNotFound();
+      const firstId = await enqueueJob(
+        'test.echo',
+        { message: 'hello' },
+        { idempotencyKey: 'once', companyId: company.id, requestedBy: admin.id }
+      );
+      const secondId = await enqueueJob(
+        'test.echo',
+        { message: 'ignored' },
+        { idempotencyKey: 'once' }
+      );
+      expect(secondId).toBe(firstId);
+      expect(await runOneJob({ workerId: 'worker-a' })).toBe(true);
+      expect(await Job.query().findById(firstId)).toMatchObject({
+        status: 'succeeded',
+        attempts: 1,
+        fencing_token: 1,
+      });
+      expect(await JobRun.query().where({ job_id: firstId }).first()).toMatchObject({
+        status: 'succeeded',
+        worker_id: 'worker-a',
+        result: JSON.stringify({ message: 'HELLO', companyId: company.id, actorId: admin.id }),
+      });
+    } finally {
+      unregister();
+    }
+  });
+
+  it('retries a transient failure and dead-letters a permanent failure', async () => {
+    let calls = 0;
+    const unregister = registerJobHandler({
+      name: 'test.retry',
+      version: 1,
+      parse(payload: unknown): { ok: true } {
+        if (typeof payload !== 'object' || payload === null || !('ok' in payload))
+          throw new Error('invalid payload');
+        return { ok: true };
+      },
+      async run() {
+        calls += 1;
+        if (calls === 1) throw new Error('temporary');
+        return { ok: true };
+      },
+    });
+    try {
+      const id = await enqueueJob('test.retry', { ok: true }, { maxAttempts: 2 });
+      expect(await runOneJob({ workerId: 'worker-b', retryBaseSeconds: 0 })).toBe(true);
+      await Job.query()
+        .findById(id)
+        .patch({ available_at: new Date(0).toISOString() });
+      expect(await runOneJob({ workerId: 'worker-b' })).toBe(true);
+      expect(await Job.query().findById(id)).toMatchObject({
+        status: 'succeeded',
+        attempts: 2,
+        fencing_token: 2,
+      });
+      expect(await JobRun.query().where({ job_id: id }).orderBy('attempt')).toHaveLength(2);
+    } finally {
+      unregister();
+    }
+  });
+
+  it('dead-letters a user job after its company membership is revoked', async () => {
+    let invoked = false;
+    const unregister = registerJobHandler({
+      name: 'test.secure',
+      version: 1,
+      parse(payload: unknown): { run: true } {
+        if (typeof payload !== 'object' || payload === null || !('run' in payload))
+          throw new Error('invalid payload');
+        return { run: true };
+      },
+      async run() {
+        invoked = true;
+      },
+    });
+    try {
+      const company = await Company.query().findOne({ name: 'MoonWitness' }).throwIfNotFound();
+      const admin = await User.query().findOne({ login: 'superadmin' }).throwIfNotFound();
+      const membership = await CompanyMembership.query()
+        .findOne({ user_id: admin.id, company_id: company.id })
+        .throwIfNotFound();
+      const jobId = await enqueueJob(
+        'test.secure',
+        { run: true },
+        {
+          companyId: company.id,
+          requestedBy: admin.id,
+        }
+      );
+      await CompanyMembership.query().findById(membership.id).patch({ active: false });
+      await runOneJob({ workerId: 'worker-secure' });
+      expect(invoked).toBe(false);
+      expect(await Job.query().findById(jobId)).toMatchObject({ status: 'dead', attempts: 1 });
+      expect(await JobRun.query().where({ job_id: jobId }).first()).toMatchObject({
+        error_code: 'COMPANY_ACCESS_REVOKED',
+      });
+    } finally {
+      unregister();
+    }
+  });
+
+  it('cancels cooperatively and never exceeds attempts after a lost lease', async () => {
+    const unregister = registerJobHandler({
+      name: 'test.cancel',
+      version: 1,
+      parse(payload: unknown): { run: true } {
+        if (typeof payload !== 'object' || payload === null || !('run' in payload))
+          throw new Error('invalid payload');
+        return { run: true };
+      },
+      run(_payload, context) {
+        return new Promise<void>((resolve) => {
+          context.signal.addEventListener('abort', () => resolve(), { once: true });
+        });
+      },
+    });
+    try {
+      const cancellableId = await enqueueJob('test.cancel', { run: true });
+      const worker = runOneJob({ workerId: 'worker-cancel', leaseSeconds: 3, heartbeatSeconds: 1 });
+      for (let attempt = 0; attempt < 30; attempt += 1) {
+        const current = await Job.query().findById(cancellableId);
+        if (current?.status === 'running') break;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      expect(await cancelJob(cancellableId)).toBe(true);
+      await worker;
+      expect(await Job.query().findById(cancellableId)).toMatchObject({ status: 'cancelled' });
+
+      const exhausted = await Job.query().insertAndFetch({
+        handler: 'test.cancel',
+        payload: '{"run":true}',
+        status: 'running',
+        attempts: 1,
+        max_attempts: 1,
+        fencing_token: 1,
+        lease_owner: 'dead-worker',
+        lease_until: new Date(0).toISOString(),
+        available_at: new Date(0).toISOString(),
+      });
+      await JobRun.query().insert({
+        job_id: exhausted.id,
+        attempt: 1,
+        worker_id: 'dead-worker',
+        status: 'running',
+        started_at: new Date(0).toISOString(),
+      });
+      expect(await runOneJob({ workerId: 'worker-reclaim' })).toBe(false);
+      expect(await Job.query().findById(exhausted.id)).toMatchObject({
+        status: 'dead',
+        attempts: 1,
+      });
+      expect(await JobRun.query().where({ job_id: exhausted.id }).first()).toMatchObject({
+        status: 'dead',
+        error_code: 'LEASE_EXPIRED',
+      });
+    } finally {
+      unregister();
+    }
+  });
+
+  it('coalesces missed cron occurrences, deduplicates them, and advances the schedule', async () => {
+    const unregister = registerJobHandler({
+      name: 'test.cron',
+      version: 1,
+      parse(payload: unknown): { run: true } {
+        if (typeof payload !== 'object' || payload === null || !('run' in payload))
+          throw new Error('invalid payload');
+        return { run: true };
+      },
+      async run() {
+        return null;
+      },
+    });
+    try {
+      const company = await Company.query().findOne({ name: 'MoonWitness' }).throwIfNotFound();
+      const now = new Date('2026-10-03T12:03:00.000Z');
+      const cron = await Cron.query().insertAndFetch({
+        code: 'test.minute',
+        name: 'Minute schedule',
+        handler: 'test.cron',
+        payload: '{"run":true}',
+        company_id: company.id,
+        cron_expression: '* * * * *',
+        timezone: 'UTC',
+        enabled: true,
+        next_run_at: '2026-10-03T12:00:00.000Z',
+        misfire_policy: 'coalesce',
+        concurrency_policy: 'allow',
+        max_catch_up: 3,
+      });
+      expect(await enqueueDueCrons({ now })).toBe(1);
+      expect(await enqueueDueCrons({ now })).toBe(0);
+      expect(await Job.query().where({ cron_id: cron.id })).toHaveLength(1);
+      const advanced = await Cron.query().findById(cron.id);
+      expect(Date.parse(advanced?.next_run_at ?? '')).toBeGreaterThan(now.getTime());
+    } finally {
+      unregister();
+    }
+  });
+
+  it('fences and retries durable outbox delivery with a stable event id', async () => {
+    const delivered: number[] = [];
+    const unregister = registerOutboxConsumer('record.created', async (_payload, eventId) => {
+      delivered.push(eventId);
+    });
+    try {
+      const event = await OutboxEvent.query().insertAndFetch({
+        event_type: 'record.created',
+        aggregate_model: 'base.partner',
+        aggregate_id: 123,
+        payload: '{"record":{"id":123}}',
+        available_at: new Date().toISOString(),
+      });
+      expect(await dispatchOneOutboxEvent('outbox-a')).toBe(true);
+      expect(delivered).toEqual([event.id]);
+      expect(await OutboxEvent.query().findById(event.id)).toMatchObject({
+        status: 'published',
+        attempts: 1,
+        fencing_token: 1,
+      });
+      expect(await dispatchOneOutboxEvent('outbox-a')).toBe(false);
+    } finally {
+      unregister();
+    }
+  });
+});

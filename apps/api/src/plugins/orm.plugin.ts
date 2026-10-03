@@ -11,6 +11,7 @@ declare module 'fastify' {
     models: typeof Registry;
     db: Knex;
     testConnection: () => Promise<boolean>;
+    routeList: { method: string; url: string }[];
   }
 
   interface FastifyRequest {
@@ -34,16 +35,11 @@ const ormPlugin: FastifyPluginAsync<{ db: Knex }> = async (fastify, options) => 
   });
 
   fastify.addHook('onRequest', async (request) => {
-    const userIdHeader = request.headers['x-user-id'];
-    const rawUserId = Array.isArray(userIdHeader) ? userIdHeader[0] : userIdHeader;
-    const parsedUserId = rawUserId ? Number(rawUserId) : undefined;
-    const userId =
-      parsedUserId !== undefined && Number.isInteger(parsedUserId) ? parsedUserId : undefined;
+    // userId and role are added later by the auth plugin from the verified access token.
     const lang = (request.headers['accept-language'] || 'en').split(',')[0].trim();
     const activeTest = request.headers['x-active-test'] !== 'false';
 
     request.env = new Environment({
-      userId,
       lang,
       activeTest,
     });

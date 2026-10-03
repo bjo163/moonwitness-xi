@@ -1,7 +1,9 @@
+import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { Registry } from './registry.js';
 import type { BaseModel } from './base.model.js';
 import { columnName, type DefinedModel, type Field, type FieldMap } from './model-definition.js';
+import { registerView, type ViewDefinition } from './view.js';
 
 type AddonModel = typeof BaseModel & { readonly fields: FieldMap };
 export interface SeedReference {
@@ -52,9 +54,31 @@ export interface Addon {
   readonly depends?: readonly string[];
   readonly models: readonly AddonModel[];
   readonly data?: readonly SeedRecord[];
+  readonly views?: readonly ViewDefinition[];
+  /** Programmatic, transactional data/schema backfills keyed by the exact prior addon version. */
+  readonly upgrade?: Readonly<Record<string, (transaction: Knex.Transaction) => Promise<void>>>;
 }
 export function defineAddon(addon: Addon): Readonly<Addon> {
+  if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(addon.version)) {
+    throw new Error(`Addon '${addon.name}' must use a semantic version (major.minor.patch)`);
+  }
   return Object.freeze(addon);
+}
+
+interface InstalledAddon {
+  name: string;
+  version: string;
+  installed_at?: string;
+  upgraded_at?: string;
+}
+
+function compareVersions(left: string, right: string): number {
+  const a = left.split('.').map(Number);
+  const b = right.split('.').map(Number);
+  for (let index = 0; index < 3; index += 1) {
+    if (a[index] !== b[index]) return (a[index] ?? 0) - (b[index] ?? 0);
+  }
+  return 0;
 }
 
 function sort<T>(
@@ -82,25 +106,34 @@ function sort<T>(
   return sorted;
 }
 
-function addField(table: Knex.CreateTableBuilder, name: string, field: Field) {
+function addField(
+  table: Knex.CreateTableBuilder,
+  name: string,
+  field: Field,
+  includeForeignKey = true
+) {
   const column = columnName(name, field);
   const builder =
     field.kind === 'integer' || field.kind === 'belongsTo'
       ? table.integer(column)
-      : field.kind === 'boolean'
-        ? table.boolean(column)
-        : table.string(column, 255);
+      : field.kind === 'text'
+        ? table.text(column)
+        : field.kind === 'boolean'
+          ? table.boolean(column)
+          : table.string(column, 255);
   if (field.required || field.default !== undefined) builder.notNullable();
   else builder.nullable();
   if (field.default !== undefined) builder.defaultTo(field.default);
   if (field.unique) builder.unique();
   if (field.values) builder.checkIn([...field.values]);
-  if (field.target) builder.references('id').inTable(field.target.tableName).onDelete('RESTRICT');
+  if (field.target && includeForeignKey)
+    builder.references('id').inTable(field.target.tableName).onDelete('RESTRICT');
 }
 
 async function syncModel(db: Knex.Transaction, model: AddonModel) {
   const entries = Object.entries(model.fields);
-  if (!(await db.schema.hasTable(model.tableName))) {
+  const tableExists = await db.schema.hasTable(model.tableName);
+  if (!tableExists) {
     await db.schema.createTable(model.tableName, (table) => {
       table.increments('id').primary();
       table.boolean('active').notNullable().defaultTo(true);
@@ -110,22 +143,59 @@ async function syncModel(db: Knex.Transaction, model: AddonModel) {
       table.integer('write_uid').nullable();
       for (const [name, field] of entries) addField(table, name, field);
     });
-    return;
-  }
-  for (const [name, field] of entries) {
-    if (await db.schema.hasColumn(model.tableName, columnName(name, field))) continue;
-    const populated: unknown = await db(model.tableName).first('id');
-    if (
-      populated &&
-      ((field.required && field.default === undefined) ||
-        field.unique ||
-        field.kind === 'belongsTo')
-    ) {
-      throw new Error(
-        `Cannot safely add ${model.modelName}.${name} to an existing populated table; backfill explicitly first`
+  } else {
+    for (const [name, field] of entries) {
+      if (await db.schema.hasColumn(model.tableName, columnName(name, field))) continue;
+      const populated: unknown = await db(model.tableName).first('id');
+      if (populated && ((field.required && field.default === undefined) || field.unique)) {
+        throw new Error(
+          `Cannot safely add ${model.modelName}.${name} to an existing populated table; backfill explicitly first`
+        );
+      }
+      await db.schema.alterTable(model.tableName, (table) =>
+        addField(table, name, field, db.client.config.client !== 'better-sqlite3')
       );
     }
-    await db.schema.alterTable(model.tableName, (table) => addField(table, name, field));
+  }
+
+  const indexes = [
+    ['active', 'id'],
+    ['create_uid'],
+    ...entries.flatMap(([name, field]) =>
+      field.kind === 'belongsTo' ? [[columnName(name, field)]] : []
+    ),
+  ];
+  for (const columns of indexes) {
+    const suffix = createHash('sha256')
+      .update(`${model.tableName}.${columns.join('.')}`)
+      .digest('hex')
+      .slice(0, 12);
+    const indexName = `mw_idx_${suffix}`;
+    const identifiers = columns.map(() => '??').join(', ');
+    await db.raw(`CREATE INDEX IF NOT EXISTS ?? ON ?? (${identifiers})`, [
+      indexName,
+      model.tableName,
+      ...columns,
+    ]);
+  }
+  for (const constraint of model.uniqueConstraints) {
+    if (constraint.length === 0) throw new Error(`Empty unique constraint on ${model.modelName}`);
+    const columns = constraint.map((name) => {
+      const field = model.fields[name];
+      if (!field) throw new Error(`Unknown unique field: ${model.modelName}.${name}`);
+      return columnName(name, field);
+    });
+    const suffix = createHash('sha256')
+      .update(`${model.tableName}.unique.${columns.join('.')}`)
+      .digest('hex')
+      .slice(0, 12);
+    const indexName = `mw_uq_${suffix}`;
+    const identifiers = columns.map(() => '??').join(', ');
+    await db.raw(`CREATE UNIQUE INDEX IF NOT EXISTS ?? ON ?? (${identifiers})`, [
+      indexName,
+      model.tableName,
+      ...columns,
+    ]);
   }
 }
 
@@ -150,6 +220,22 @@ async function installData(db: Knex.Transaction, data: readonly SeedRecord[]) {
   const pending = new Map(data.map((record) => [record.id, record]));
   if (pending.size !== data.length) throw new Error('Duplicate external data ID');
   const resolving = new Set<string>();
+  async function resolveValues(
+    record: SeedRecord
+  ): Promise<Record<string, string | number | boolean | null>> {
+    const values: Record<string, string | number | boolean | null> = {};
+    for (const [name, value] of Object.entries(record.values)) {
+      const field = record.model.fields[name];
+      if (!field) throw new Error(`Unknown seed field: ${record.model.modelName}.${name}`);
+      if (typeof value === 'object' && value !== null) {
+        const linked = await ensure(value.$ref);
+        if (field.target?.modelName !== linked.model)
+          throw new Error(`Invalid relation for ${record.id}.${name}`);
+        values[columnName(name, field)] = linked.record_id;
+      } else values[columnName(name, field)] = value;
+    }
+    return values;
+  }
   async function ensure(id: string): Promise<ExternalRecord> {
     const known = await db<ExternalRecord>('_orm_data').where({ id }).first();
     const record = pending.get(id);
@@ -162,22 +248,27 @@ async function installData(db: Knex.Transaction, data: readonly SeedRecord[]) {
       ) {
         throw new Error(`Seed record ${id} was deleted; restore it explicitly`);
       }
+      if (record) {
+        const defaults = await resolveValues(record);
+        for (const [field, value] of Object.entries(defaults)) {
+          const current = await db<Identity & Record<string, unknown>>(record.model.tableName)
+            .where({ id: known.record_id })
+            .select(field)
+            .first();
+          if (current?.[field] === null || current?.[field] === undefined) {
+            await db(record.model.tableName)
+              .where({ id: known.record_id })
+              .whereNull(field)
+              .update({ [field]: value, write_date: new Date() });
+          }
+        }
+      }
       return known;
     }
     if (!record) throw new Error(`Unknown data reference: ${id}`);
     if (resolving.has(id)) throw new Error(`Circular data reference: ${id}`);
     resolving.add(id);
-    const values: Record<string, string | number | boolean | null> = {};
-    for (const [name, value] of Object.entries(record.values)) {
-      const field = record.model.fields[name];
-      if (!field) throw new Error(`Unknown seed field: ${record.model.modelName}.${name}`);
-      if (typeof value === 'object' && value !== null) {
-        const linked = await ensure(value.$ref);
-        if (field.target?.modelName !== linked.model)
-          throw new Error(`Invalid relation for ${id}.${name}`);
-        values[columnName(name, field)] = linked.record_id;
-      } else values[columnName(name, field)] = value;
-    }
+    const values = await resolveValues(record);
     // Adopt existing default records once, then track only immutable external IDs.
     let existing: Identity | undefined;
     for (const [name, field] of Object.entries(record.model.fields)) {
@@ -222,10 +313,44 @@ export async function installAddons(db: Knex, addons: readonly Addon[]): Promise
   }
   await db.transaction(async (trx) => {
     for (const model of models) await syncModel(trx, model);
+    if (!(await trx.schema.hasTable('_orm_addons'))) {
+      await trx.schema.createTable('_orm_addons', (table) => {
+        table.string('name').primary();
+        table.string('version').notNullable();
+        table.timestamp('installed_at').notNullable().defaultTo(trx.fn.now());
+        table.timestamp('upgraded_at').notNullable().defaultTo(trx.fn.now());
+      });
+    }
+    for (const addon of ordered) {
+      const installed = await trx<InstalledAddon>('_orm_addons')
+        .where({ name: addon.name })
+        .first();
+      if (installed && compareVersions(addon.version, installed.version) < 0) {
+        throw new Error(
+          `Addon downgrade rejected for '${addon.name}': ${installed.version} -> ${addon.version}`
+        );
+      }
+      if (installed && compareVersions(addon.version, installed.version) > 0) {
+        await addon.upgrade?.[installed.version]?.(trx);
+      }
+    }
     await installData(trx, data);
+    for (const addon of ordered) {
+      await trx<InstalledAddon>('_orm_addons')
+        .insert({ name: addon.name, version: addon.version })
+        .onConflict('name')
+        .merge({ version: addon.version, upgraded_at: trx.fn.now() });
+    }
   });
   for (const model of models) {
     model.knex(db);
     Registry.register(model);
+  }
+  for (const addon of ordered) {
+    for (const view of addon.views ?? []) {
+      if (!models.some((model) => model.modelName === view.model))
+        throw new Error(`View model not installed: ${view.model}`);
+      registerView(view);
+    }
   }
 }
