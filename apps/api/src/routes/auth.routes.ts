@@ -252,14 +252,9 @@ export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (fastify,
     async (req, reply) => {
       if (!req.auth)
         return reply.code(401).send({ success: false, error: 'Authentication required' });
-      let timezoneIsValid = false;
       try {
         new Intl.DateTimeFormat('en-US', { timeZone: req.body.timezone });
-        timezoneIsValid = true;
       } catch {
-        timezoneIsValid = false;
-      }
-      if (!timezoneIsValid) {
         return reply.code(400).send({ success: false, error: 'Invalid timezone' });
       }
 

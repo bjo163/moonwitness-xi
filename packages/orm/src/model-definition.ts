@@ -160,7 +160,6 @@ export function defineModel<const F extends FieldMap>(
   if (!/^[a-z][a-z0-9_]*$/.test(tableName)) throw new Error(`Invalid table name: ${tableName}`);
   const properties = { ...standardProperties };
   const required: string[] = [];
-  const relations: RelationMappings = {};
   for (const [key, field] of Object.entries(definition.fields)) {
     const column = columnName(key, field);
     if (!/^[a-z][a-z0-9_]*$/.test(key) || column in properties) {
