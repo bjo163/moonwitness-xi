@@ -96,6 +96,48 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
     expect(Registry.has('test.item')).toBe(true);
   });
 
+  it('does not expose password hashes in database error responses', async () => {
+    const payload = { login: 'superadmin', partner_id: 2, password: 'test-error-password' };
+    const response = await app.inject({ method: 'POST', url: '/api/base.user', payload });
+    expect(response.statusCode).toBe(409);
+    expect(response.payload).not.toContain('scrypt$');
+    expect(response.payload).not.toContain(payload.password);
+    const rpc = await app.inject({
+      method: 'POST',
+      url: '/jsonrpc',
+      payload: {
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'call',
+        params: {
+          service: 'object',
+          method: 'execute_kw',
+          args: ['base.user', 'create', [payload]],
+        },
+      },
+    });
+    expect(rpc.json<{ error: { message: string } }>().error.message).toBe('Execution error');
+    expect(rpc.payload).not.toContain('scrypt$');
+    expect(rpc.payload).not.toContain(payload.password);
+  });
+
+  it('serves seeded user profiles through the generic addon endpoint', async () => {
+    const response = await app.inject({ method: 'GET', url: '/api/base.user?with=partner' });
+    expect(response.statusCode).toBe(200);
+    const body = response.json<{
+      data: { login: string; partner: { name: string; email: string } }[];
+    }>();
+    expect(body.data).toHaveLength(2);
+    const admin = body.data.find((user) => user.login === 'superadmin');
+    expect(admin?.partner).toMatchObject({ name: 'Super Administrator' });
+    expect(admin).not.toHaveProperty('email');
+    expect(admin).not.toHaveProperty('name');
+    expect(admin).not.toHaveProperty('password');
+    expect(response.payload).not.toContain('scrypt$');
+    const privateField = await app.inject({ method: 'GET', url: '/api/base.user?fields=password' });
+    expect(privateField.statusCode).toBe(400);
+  });
+
   it('should create and search records with BaseModel', async () => {
     const env = new Environment({ userId: 1 });
     const Items = env.get<typeof TestItem>('test.item');

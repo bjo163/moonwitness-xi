@@ -21,6 +21,7 @@ export class BaseModel extends Model {
    */
   static defaultOrder: string = 'id desc';
   static exposedActions: readonly string[] = ['action_archive', 'action_unarchive'];
+  static hiddenFields: readonly string[] = [];
 
   /**
    * The Environment associated with this model class execution.
@@ -292,6 +293,14 @@ export class BaseModel extends Model {
     const qb = this.buildSearchQuery(domain, options);
 
     if (options.fields && options.fields.length > 0) {
+      if (
+        this.hiddenFields.length &&
+        options.fields.some(
+          (field) => !/^[a-z_][a-z0-9_]*$/i.test(field) || this.hiddenFields.includes(field)
+        )
+      ) {
+        throw Object.assign(new Error('Invalid or private field selection'), { statusCode: 400 });
+      }
       // Ensure 'id' is always selected
       const fields = Array.from(new Set(['id', ...options.fields]));
       qb.select(fields);

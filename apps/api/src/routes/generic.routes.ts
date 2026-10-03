@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
+import { databaseErrorCode } from '../database/errors.js';
 import { Registry, type BaseModel, type Domain } from '@moonwitness/orm';
 import type { JsonValue } from '@moonwitness/types';
 import type {
@@ -40,6 +41,7 @@ function isJsonValue(value: unknown): value is JsonValue {
 }
 
 function errorMessage(error: unknown, fallback: string): string {
+  if (databaseErrorCode(error)) return fallback;
   return error instanceof Error ? error.message : fallback;
 }
 

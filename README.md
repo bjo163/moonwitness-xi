@@ -42,14 +42,93 @@ moonwitness/
     │   │   ├── domain.ts       # Polish notation Domain Expression Parser
     │   │   ├── environment.ts  # Environment container (env, trx, context)
     │   │   ├── registry.ts     # Model Registry & decorator
+    │   │   ├── model-definition.ts # fields → types, validation and relations
+    │   │   ├── addon.ts        # Shared schema sync and external-ID seed loader
     │   │   ├── types.ts        # Re-export @moonwitness/types
     │   │   └── index.ts        # Package entrypoint
     │   └── tests/              # Unit tests domain parser
+    │
+    ├── orm-base/               # 🧩 Declarative base addon
+    │   └── src/
+    │       ├── manifest.ts     # Metadata, models and data
+    │       ├── models/user.ts  # Account fields and profile relation
+    │       ├── models/partner.ts # Profile fields
+    │       ├── data.ts         # Default records with stable external IDs
+    │       └── index.ts        # Public exports
     │
     └── eslint-config/          # 📦 @moonwitness/eslint-config (Centralized Linter)
         ├── package.json
         └── index.js            # Shared Flat ESLint rules
 ```
+
+## Addon dasar
+
+`@moonwitness/orm-base` hanya mendeklarasikan model, manifest, dan data. Field cukup
+ditulis sekali; mesin `@moonwitness/orm` menghasilkan tipe TypeScript, validasi,
+kolom database, constraint, dan relasi. Field `id`, `active`, dan audit diwarisi otomatis.
+
+```ts
+export const User = defineModel('base.user', {
+  table: 'users',
+  fields: {
+    login: fields.string({ required: true, unique: true }),
+    password: fields.password(),
+    partner: fields.belongsTo(Partner, { required: true, unique: true }),
+    role: fields.enum(['system', 'superadmin', 'user'], { default: 'user' }),
+  },
+});
+
+export const manifest = defineAddon({
+  name: 'base',
+  version: '1.0.0',
+  models: [Partner, User],
+  data,
+});
+```
+
+API cukup memanggil `await installAddons(db, [manifest])`. Installer mengurutkan
+dependensi addon/model, membuat tabel, menambah kolom yang aman, dan memasang data
+dalam satu transaksi. Tidak ada `schema.ts`, SQL migrasi, atau hook instalasi pada
+addon. Kolom lama tidak dihapus, diganti nama, atau diubah tipenya otomatis.
+Penambahan field wajib tanpa default, unik, atau relasi pada tabel berisi data
+ditolak; lakukan backfill eksplisit terlebih dahulu. Jalankan instalasi dari satu
+proses saat mengubah skema.
+
+Data menggunakan ID stabil dan referensi:
+
+```ts
+seed(User, 'base.user_system', {
+  login: 'system',
+  role: 'system',
+  partner: ref('base.partner_system'),
+});
+```
+
+Installer menyimpan pemetaan ID dalam tabel internal `_orm_data`. Perubahan email
+atau login tidak membuat record baru, dan nilai yang sudah diedit tidak ditimpa.
+Pada pemasangan pertama, record lama dapat diadopsi melalui field unik. Referensi
+yang hilang atau konflik identitas membatalkan transaksi.
+
+Data bisnis awal: **2 user** (`system`, `superadmin`) dan **10 partner**, total
+**12 record** (dua partner adalah profil user, delapan lainnya contoh kontak).
+Nama, email, dan telepon hanya disimpan di Partner. Profil dimuat melalui
+`GET /api/base.user?with=partner`. Role saat ini adalah metadata; autentikasi dan
+pemeriksaan hak akses belum diimplementasikan.
+
+### Password awal superadmin
+
+Atur `SUPERADMIN_PASSWORD` di `.env` root sebelum menjalankan API. Saat startup,
+password diterapkan pada akun dengan external ID `base.user_superadmin` hanya jika
+password-nya masih kosong, termasuk untuk instalasi lama. Mengganti nilai `.env`
+setelah password terisi tidak mereset password akun. Nilai kosong tidak mengaktifkan
+password; akun `system` tetap tanpa password awal.
+
+`fields.password()` otomatis mengubah input menjadi hash scrypt dengan salt acak
+pada insert/update ORM. Database hanya menyimpan hash pada kolom `users.password`;
+field ini tidak diserialisasikan ke JSON dan tidak dapat dipilih melalui parameter
+`fields` API. `verifyPassword(input, user.password)` dari paket ORM tersedia untuk
+verifikasi saat fitur login ditambahkan. Jangan menulis password melalui query Knex
+mentah karena jalur itu melewati hook hashing ORM.
 
 ---
 

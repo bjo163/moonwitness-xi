@@ -3,4 +3,7 @@ dist
 .env
 services/
 *.log
+logs/
+tmp-test-logs/
 .DS_Store
+
