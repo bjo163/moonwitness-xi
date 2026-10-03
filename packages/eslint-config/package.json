@@ -1,0 +1,18 @@
+{
+  "name": "@moonwitness/eslint-config",
+  "version": "1.0.0",
+  "description": "Shared ESLint flat configuration for MoonWitness monorepo",
+  "main": "./index.js",
+  "type": "module",
+  "exports": {
+    ".": "./index.js"
+  },
+  "dependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint-config-prettier": "^10.1.8",
+    "typescript-eslint": "^8.71.0"
+  },
+  "peerDependencies": {
+    "eslint": ">=9.0.0"
+  }
+}

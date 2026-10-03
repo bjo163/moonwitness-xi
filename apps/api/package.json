@@ -1,0 +1,45 @@
+{
+  "name": "@moonwitness/api",
+  "version": "1.0.0",
+  "description": "Fastify API service with dynamic REST CRUD and JSON-RPC built on @moonwitness/orm",
+  "main": "dist/server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "fastify",
+    "objection",
+    "knex",
+    "orm",
+    "api"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@fastify/cors": "^11.3.0",
+    "@fastify/sensible": "^6.0.6",
+    "@fastify/swagger": "^9.9.1",
+    "@fastify/swagger-ui": "^6.1.1",
+    "@moonwitness/orm": "workspace:*",
+    "@moonwitness/types": "workspace:*",
+    "dotenv": "^18.0.5",
+    "fastify": "^5.12.5",
+    "fastify-plugin": "^6.0.0",
+    "knex": "^3.3.0",
+    "objection": "^3.1.5",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^26.6.4",
+    "@types/pg": "^8.23.1",
+    "better-sqlite3": "^13.0.3",
+    "tsx": "^4.23.15",
+    "typescript": "~5.7.3",
+    "vitest": "^5.0.3"
+  }
+}

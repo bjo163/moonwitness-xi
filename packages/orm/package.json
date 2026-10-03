@@ -1,0 +1,27 @@
+{
+  "name": "@moonwitness/orm",
+  "version": "1.0.0",
+  "description": "Core Base ORM engine built on Objection.js and Knex with Polish notation domain parser and Environment container",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@moonwitness/types": "workspace:*",
+    "knex": "^3.3.0",
+    "objection": "^3.1.5"
+  },
+  "devDependencies": {
+    "typescript": "~5.7.3",
+    "vitest": "^5.0.3"
+  }
+}
