@@ -19,7 +19,9 @@ permissions:
 
 jobs:
   staging:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && vars.STAGING_BASE_URL != '')
     runs-on: ubuntu-latest
     environment: staging
     env:
