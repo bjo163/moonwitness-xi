@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Archive,
   ArrowDown,
@@ -8,6 +9,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Columns3,
   Download,
   Filter,
   LayoutGrid,
@@ -15,9 +17,12 @@ import {
   Plus,
   Search,
   Table,
+  Tag,
+  Upload,
   X,
 } from 'lucide-react';
 import type { Domain, ResolvedViews } from '@moonwitness/client';
+import { client } from '@/lib/client';
 import { useRecordMutations, useRecords } from '@/hooks/use-model';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +31,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Doodle, SpeedLines } from '@/components/manga/effects';
 import { cn } from '@/lib/utils';
 import { FieldCell, relationKey } from './fields';
+import { ImportWizardDialog } from './import-wizard-dialog';
+import { QueryBuilderDialog, type FilterRule } from './query-builder-dialog';
 
 interface CustomFilter {
   id: string;
@@ -42,12 +49,27 @@ interface ListViewProps {
   onCreateRecord: () => void;
 }
 
+function toSingular(title: string): string {
+  if (title.endsWith('ies')) {
+    return title.slice(0, -3) + 'y';
+  }
+  if (title.endsWith('ses')) {
+    return title.slice(0, -2);
+  }
+  if (title.endsWith('s') && !title.endsWith('ss')) {
+    return title.slice(0, -1);
+  }
+  return title;
+}
+
 export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilterIndex, setActiveFilterIndex] = useState<number | null>(0); // Default to first filter if available
-  const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'grid' | 'pipeline'>('table');
   const [page, setPage] = useState(1);
   const pageSize = 20;
+
+  const queryClient = useQueryClient();
 
   // Custom visual filter builder state
   const [customFilters, setCustomFilters] = useState<CustomFilter[]>([]);
@@ -55,6 +77,14 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
   const [builderField, setBuilderField] = useState(views.fields[0]?.name ?? '');
   const [builderOp, setBuilderOp] = useState<'=' | '!=' | 'ilike' | '>' | '<'>('ilike');
   const [builderVal, setBuilderVal] = useState('');
+
+  // Universal Import Wizard state
+  const [importWizardOpen, setImportWizardOpen] = useState(false);
+
+  // Advanced Query Builder state
+  const [queryBuilderOpen, setQueryBuilderOpen] = useState(false);
+  const [advancedRules, setAdvancedRules] = useState<FilterRule[]>([]);
+  const [advancedConjunction, setAdvancedConjunction] = useState<'all' | 'any'>('all');
 
   // Sorting state: initialized from views.list.order if present
   const [sortState, setSortState] = useState<{ col: string; dir: 'asc' | 'desc' } | null>(() => {
@@ -113,6 +143,40 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
         terms.push([cf.field, cf.operator, isNaN(numVal) ? cf.value : numVal]);
       }
     }
+    // Apply Advanced Query Builder rules
+    if (advancedRules.length > 0) {
+      const advClauses: [string, string, unknown][] = [];
+      for (const ar of advancedRules) {
+        if (ar.operator === 'is_set') {
+          advClauses.push([ar.field, '!=', null]);
+        } else if (ar.operator === 'is_null') {
+          advClauses.push([ar.field, '=', null]);
+        } else if (ar.operator === 'ilike') {
+          advClauses.push([ar.field, 'ilike', `%${ar.value}%`]);
+        } else if (ar.operator === '=' || ar.operator === '!=') {
+          let val: unknown = ar.value;
+          if (ar.value === 'true') val = true;
+          else if (ar.value === 'false') val = false;
+          else if (ar.value === 'null') val = null;
+          else if (/^\d+$/.test(ar.value)) val = Number(ar.value);
+          advClauses.push([ar.field, ar.operator, val]);
+        } else {
+          const numVal = Number(ar.value);
+          advClauses.push([ar.field, ar.operator, isNaN(numVal) ? ar.value : numVal]);
+        }
+      }
+
+      if (advClauses.length === 1 || advancedConjunction === 'all') {
+        terms.push(...advClauses);
+      } else {
+        // Polish notation prefix '|' for ANY (OR)
+        for (let i = 0; i < advClauses.length - 1; i++) {
+          terms.push('|');
+        }
+        terms.push(...advClauses);
+      }
+    }
+
     if (searchTerm.trim()) {
       const searchFields = views.search?.fields?.length
         ? views.search.fields
@@ -138,7 +202,15 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
       }
     }
     return terms;
-  }, [activeFilterIndex, filters, searchTerm, views]);
+  }, [
+    activeFilterIndex,
+    filters,
+    searchTerm,
+    views,
+    customFilters,
+    advancedRules,
+    advancedConjunction,
+  ]);
 
   // Eager load belongsTo relations present in columns
   const withRelations = useMemo(() => {
@@ -217,6 +289,108 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
     }
   };
 
+  // Pipeline Kanban Candidate Grouping Field
+  const groupingField = useMemo(() => {
+    return (
+      views.fields.find((f) => ['state', 'status', 'stage', 'activity_type'].includes(f.name)) ||
+      views.fields.find((f) => f.type === 'selection' || f.name.endsWith('_type')) ||
+      views.fields.find((f) => f.name === 'active') ||
+      null
+    );
+  }, [views.fields]);
+
+  // Unique stages extracted from field selection metadata, defaults, or dataset
+  const pipelineStages = useMemo(() => {
+    if (!groupingField) return [];
+    const stages: string[] = [];
+
+    // Priority 1: predefined selection/enum values from schema
+    if (groupingField.selection && groupingField.selection.length > 0) {
+      for (const item of groupingField.selection) {
+        if (!stages.includes(item.value)) {
+          stages.push(item.value);
+        }
+      }
+    } else if (groupingField.type === 'boolean') {
+      stages.push('true', 'false');
+    } else if (groupingField.name === 'state') {
+      stages.push('planned', 'done', 'cancelled');
+    }
+
+    // Merge any actual record values present on the page that might not be in selection
+    if (data?.records) {
+      for (const r of data.records) {
+        const val = r[groupingField.name];
+        if (val !== undefined && val !== null) {
+          const strVal = String(val);
+          if (!stages.includes(strVal)) {
+            stages.push(strVal);
+          }
+        }
+      }
+    }
+
+    return stages;
+  }, [groupingField, data?.records]);
+
+  const handleMoveStage = async (recordId: number, newStage: string) => {
+    if (!groupingField) return;
+    let val: unknown = newStage;
+    if (groupingField.type === 'boolean') {
+      val = newStage === 'true';
+    }
+    await mutations.save.mutateAsync({
+      id: recordId,
+      values: { [groupingField.name]: val },
+    });
+  };
+
+  // Mass Tagging State & Mutation
+  const [tagPopoverOpen, setTagPopoverOpen] = useState(false);
+  const [isMassTagging, setIsMassTagging] = useState(false);
+  const { data: availableTagsData } = useQuery({
+    queryKey: ['available_tags'],
+    queryFn: () =>
+      client
+        .model<{ id: number; name: string; color: string }>('base.tag')
+        .searchRead({ limit: 50, order: 'name asc' }),
+  });
+  const availableTags = availableTagsData?.records ?? [];
+
+  const handleMassTag = async (tagId: number) => {
+    if (selectedIds.length === 0) return;
+    setIsMassTagging(true);
+    try {
+      await Promise.all(
+        selectedIds.map(async (recordId) => {
+          try {
+            await client.model('base.tag_link').create({
+              tag_id: tagId,
+              resource_model: model,
+              resource_id: recordId,
+            });
+          } catch (err: unknown) {
+            // Ignore duplicate constraint if record is already tagged with this tag
+            const msg = err instanceof Error ? err.message : String(err);
+            const isConflict =
+              (err as { status?: number })?.status === 409 ||
+              msg.toLowerCase().includes('unique') ||
+              msg.toLowerCase().includes('conflict');
+            if (!isConflict) throw err;
+          }
+        })
+      );
+      queryClient.invalidateQueries({ queryKey: ['records', model] });
+      queryClient.invalidateQueries({ queryKey: ['records', 'base.tag_link'] });
+      setSelectedIds([]);
+      setTagPopoverOpen(false);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to tag selected records');
+    } finally {
+      setIsMassTagging(false);
+    }
+  };
+
   const handleExportCsv = () => {
     if (!data?.records.length) return;
     const recordsToExport =
@@ -278,15 +452,28 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
         </div>
 
         {views.permissions.create && (
-          <Button
-            id="btn-create-record"
-            onClick={onCreateRecord}
-            size="lg"
-            className="press gap-2 shadow-ink"
-          >
-            <Plus className="size-5" strokeWidth={3} />
-            <span className="font-display tracking-wider">New {views.title.replace(/s$/, '')}</span>
-          </Button>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Button
+              id="btn-import-records"
+              variant="outline"
+              size="lg"
+              onClick={() => setImportWizardOpen(true)}
+              className="press gap-2 shadow-ink-sm"
+              title="Import records from CSV"
+            >
+              <Upload className="size-5 text-lime" />
+              <span className="font-display tracking-wider">Import CSV</span>
+            </Button>
+            <Button
+              id="btn-create-record"
+              onClick={onCreateRecord}
+              size="lg"
+              className="press gap-2 shadow-ink"
+            >
+              <Plus className="size-5" strokeWidth={3} />
+              <span className="font-display tracking-wider">New {toSingular(views.title)}</span>
+            </Button>
+          </div>
         )}
       </div>
 
@@ -444,10 +631,49 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                 </PopoverContent>
               </Popover>
 
-              {customFilters.length > 0 && (
+              {/* Active Advanced Filter Stickers */}
+              {advancedRules.map((ar) => (
+                <span
+                  key={ar.id}
+                  className="sticker text-xs border-2 border-ink bg-lime text-on-accent font-bold"
+                >
+                  <span>
+                    {views.fields.find((f) => f.name === ar.field)?.label ?? ar.field} {ar.operator}{' '}
+                    {ar.operator !== 'is_set' && ar.operator !== 'is_null' ? `"${ar.value}"` : ''}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setAdvancedRules((prev) => prev.filter((r) => r.id !== ar.id))}
+                    className="ml-1 hover:text-pink transition-colors"
+                    title="Remove filter"
+                  >
+                    <X className="size-3" />
+                  </button>
+                </span>
+              ))}
+
+              {/* Advanced Query Builder Trigger Button */}
+              <button
+                type="button"
+                onClick={() => setQueryBuilderOpen(true)}
+                className="inline-flex items-center gap-1 border-2 border-dashed border-ink/40 bg-card px-2 py-0.5 font-mono text-xs font-semibold text-ink-faint hover:border-ink hover:text-ink hover:bg-paper-raised transition-colors"
+                title="Open Advanced Query Builder"
+              >
+                <Filter className="size-3 text-lime" /> Advanced Query
+                {advancedRules.length > 0 && (
+                  <span className="ml-1 border border-ink bg-ink px-1 text-[10px] text-paper">
+                    {advancedRules.length}
+                  </span>
+                )}
+              </button>
+
+              {(customFilters.length > 0 || advancedRules.length > 0) && (
                 <button
                   type="button"
-                  onClick={() => setCustomFilters([])}
+                  onClick={() => {
+                    setCustomFilters([]);
+                    setAdvancedRules([]);
+                  }}
                   className="font-mono text-[10px] uppercase text-ink-faint hover:text-pink underline"
                 >
                   Clear all
@@ -456,7 +682,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
             </div>
           )}
 
-          {/* Dual View Toggle */}
+          {/* Triple View Toggle: Table, Grid, Pipeline */}
           <div className="flex items-center border-2 border-ink bg-card p-0.5 shadow-ink-sm">
             <button
               type="button"
@@ -474,28 +700,141 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
             </button>
             <button
               type="button"
-              onClick={() => setViewMode('kanban')}
+              onClick={() => setViewMode('grid')}
               className={cn(
                 'flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase transition-all',
-                viewMode === 'kanban'
+                viewMode === 'grid'
                   ? 'border border-ink bg-lime text-on-accent shadow-[1.5px_1.5px_0_0_var(--ink)]'
                   : 'text-ink-soft hover:text-ink'
               )}
-              title="Kanban Cards View"
+              title="Cards Grid View"
             >
               <LayoutGrid className="size-3.5" />
-              <span className="hidden sm:inline">Cards</span>
+              <span className="hidden sm:inline">Grid</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('pipeline')}
+              className={cn(
+                'flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase transition-all',
+                viewMode === 'pipeline'
+                  ? 'border border-ink bg-lime text-on-accent shadow-[1.5px_1.5px_0_0_var(--ink)]'
+                  : 'text-ink-soft hover:text-ink'
+              )}
+              title="Kanban Pipeline Stages"
+            >
+              <Columns3 className="size-3.5" />
+              <span className="hidden sm:inline">Pipeline</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Main Content: Table or Kanban Cards */}
-      {viewMode === 'table' ? (
+      {/* Main Content: Table, Grid, or Pipeline */}
+      {viewMode === 'table' && (
         /* Manga Ink Table */
         <div className="ink-panel overflow-hidden bg-card">
+          <div className="space-y-3 p-3 sm:hidden">
+            {isLoading ? (
+              Array.from({ length: 5 }, (_, i) => (
+                <div key={i} className="h-24 animate-pulse border-2 border-ink/10 bg-ink/5" />
+              ))
+            ) : data?.records.length === 0 ? (
+              <div className="py-8 text-center">
+                <Doodle kind="sparkle" className="mx-auto size-8 text-lime" />
+                <p className="mt-2 font-display text-lg uppercase">No records found</p>
+                <p className="text-sm text-ink-soft">
+                  {searchTerm
+                    ? 'Try adjusting your search or active filter stickers.'
+                    : 'Be the first to create one!'}
+                </p>
+              </div>
+            ) : (
+              data?.records.map((row) => {
+                const titleField = columns.find(
+                  (field) =>
+                    field.name === 'name' ||
+                    field.name === 'login' ||
+                    field.name === 'summary' ||
+                    field.name === 'code' ||
+                    field.type === 'string'
+                );
+                const titleValue = titleField ? String(row[titleField.name] ?? '') : `#${row.id}`;
+                const detailFields = columns
+                  .filter((field) => field.name !== titleField?.name)
+                  .slice(0, 4);
+                const selected = selectedIds.includes(row.id as number);
+
+                return (
+                  <article
+                    key={row.id}
+                    onClick={() => onOpenRecord(row.id)}
+                    className={cn(
+                      'ink-panel cursor-pointer border-2 border-ink p-3',
+                      selected ? 'bg-lime/10' : 'bg-card'
+                    )}
+                  >
+                    <div className="flex min-w-0 items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-start gap-2">
+                        <input
+                          type="checkbox"
+                          aria-label={`Select record #${row.id}`}
+                          checked={selected}
+                          onClick={(event) => event.stopPropagation()}
+                          onChange={() => toggleSelect(row.id as number)}
+                          className="mt-1 size-4 shrink-0 cursor-pointer accent-lime"
+                        />
+                        <div className="min-w-0">
+                          <h2 className="break-words font-display text-lg uppercase leading-tight text-ink">
+                            {titleValue || `#${row.id}`}
+                          </h2>
+                          <p className="mt-1 font-mono text-[10px] uppercase text-ink-faint">
+                            #{row.id}
+                          </p>
+                        </div>
+                      </div>
+                      {row.active !== undefined && (
+                        <span className="shrink-0 border border-ink/30 px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase">
+                          {row.active !== false ? 'Active' : 'Archived'}
+                        </span>
+                      )}
+                    </div>
+                    {detailFields.length > 0 && (
+                      <dl className="mt-3 space-y-2 border-t border-dashed border-ink/20 pt-3">
+                        {detailFields.map((field) => (
+                          <div
+                            key={field.name}
+                            className="grid min-w-0 grid-cols-[5.5rem_minmax(0,1fr)] gap-2 text-xs"
+                          >
+                            <dt className="truncate font-mono text-[10px] uppercase text-ink-faint">
+                              {field.label}
+                            </dt>
+                            <dd className="min-w-0 truncate text-right text-ink">
+                              <FieldCell field={field} row={row} />
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    )}
+                    <div className="mt-3 flex justify-end border-t border-ink/10 pt-2">
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onOpenRecord(row.id);
+                        }}
+                      >
+                        Open →
+                      </Button>
+                    </div>
+                  </article>
+                );
+              })
+            )}
+          </div>
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left text-sm">
+            <table className="hidden w-full border-collapse text-left text-sm sm:table">
               <thead>
                 <tr className="border-b-2 border-ink bg-paper font-display uppercase tracking-wider text-ink">
                   <th className="w-10 px-4 py-3 text-center">
@@ -628,8 +967,10 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
             </table>
           </div>
         </div>
-      ) : (
-        /* Manga Ink Kanban Cards View */
+      )}
+
+      {/* 2. Manga Ink Cards Grid View */}
+      {viewMode === 'grid' && (
         <div className="space-y-4">
           {isLoading ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -767,6 +1108,187 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
         </div>
       )}
 
+      {/* 3. True Kanban Stage Pipeline View */}
+      {viewMode === 'pipeline' && (
+        <div>
+          {!groupingField ? (
+            <div className="border-2 border-ink bg-paper p-8 text-center shadow-ink">
+              <Doodle kind="sparkle" className="mx-auto size-8 text-pink mb-2" />
+              <h3 className="font-display text-lg uppercase text-ink">
+                No Workflow Pipeline Detected
+              </h3>
+              <p className="mt-1 font-mono text-xs text-ink-faint">
+                Model &apos;{views.title}&apos; does not contain a state or stage enum field to
+                organize columns.
+              </p>
+              <div className="mt-4 flex justify-center gap-3">
+                <Button variant="outline" size="sm" onClick={() => setViewMode('table')}>
+                  Switch to Table
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setViewMode('grid')}>
+                  Switch to Cards Grid
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-4 overflow-x-auto pb-6 pt-1 items-start">
+              {pipelineStages.map((stage, stageIdx) => {
+                const stageRecords =
+                  data?.records.filter((r) => String(r[groupingField.name] ?? '') === stage) ?? [];
+
+                return (
+                  <div
+                    key={stage}
+                    className="w-80 shrink-0 flex flex-col border-2 border-ink bg-paper shadow-ink"
+                  >
+                    {/* Stage Header */}
+                    <div className="flex items-center justify-between border-b-2 border-ink bg-paper-raised px-3 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="size-2.5 border border-ink bg-lime" />
+                        <span className="font-display text-xs uppercase tracking-wider text-ink font-bold">
+                          {stage}
+                        </span>
+                      </div>
+                      <span className="border border-ink bg-paper px-2 py-0.5 font-mono text-xs font-bold text-ink-soft">
+                        {stageRecords.length}
+                      </span>
+                    </div>
+
+                    {/* Cards Column Body */}
+                    <div className="flex-1 p-2 space-y-2.5 min-h-[350px] overflow-y-auto max-h-[600px] bg-paper/40">
+                      {stageRecords.length === 0 ? (
+                        <div className="p-6 text-center font-mono text-xs text-ink-faint border-2 border-dashed border-ink/20">
+                          Empty stage
+                        </div>
+                      ) : (
+                        stageRecords.map((row) => {
+                          const titleField = columns.find(
+                            (c) =>
+                              c.name === 'name' ||
+                              c.name === 'login' ||
+                              c.name === 'summary' ||
+                              c.name === 'code' ||
+                              c.type === 'string'
+                          );
+                          const titleVal = titleField ? row[titleField.name] : null;
+                          const detailCols = columns
+                            .filter(
+                              (c) =>
+                                c.name !== titleField?.name &&
+                                c.name !== 'active' &&
+                                c.name !== groupingField?.name
+                            )
+                            .slice(0, 3);
+
+                          return (
+                            <div
+                              key={row.id}
+                              onClick={() => onOpenRecord(row.id as number)}
+                              className="group cursor-pointer border-2 border-ink bg-paper-raised p-3 shadow-ink-sm hover:-translate-y-0.5 hover:shadow-ink transition-all"
+                            >
+                              <div className="flex items-center justify-between gap-2 border-b border-ink/15 pb-1.5">
+                                <span className="font-mono text-xs font-bold text-ink-soft">
+                                  #{row.id}
+                                </span>
+                                {row.active !== undefined && (
+                                  <span
+                                    className={cn(
+                                      'border px-1 py-0.2 font-mono text-[9px] font-bold uppercase',
+                                      row.active !== false
+                                        ? 'border-lime bg-lime/20 text-lime-800 dark:text-lime-300'
+                                        : 'border-ink/30 bg-card text-ink-faint'
+                                    )}
+                                  >
+                                    {row.active !== false ? 'Active' : 'Archived'}
+                                  </span>
+                                )}
+                              </div>
+
+                              <h4 className="mt-2 font-display text-sm uppercase tracking-wide text-ink group-hover:text-lime-600 transition-colors line-clamp-2">
+                                {titleVal ? String(titleVal) : `#${row.id}`}
+                              </h4>
+
+                              {/* Key Fields Preview */}
+                              <div className="mt-2 space-y-1 border-t border-dashed border-ink/15 pt-1.5 font-mono text-[11px]">
+                                {detailCols.map((col) => (
+                                  <div
+                                    key={col.name}
+                                    className="flex items-center justify-between gap-1 text-ink-soft"
+                                  >
+                                    <span className="text-[10px] text-ink-faint uppercase truncate max-w-[45%]">
+                                      {col.label}:
+                                    </span>
+                                    <div className="truncate text-right">
+                                      <FieldCell field={col} row={row} />
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* Card Actions: Prev Stage, Next Stage, Inspect */}
+                              <div
+                                className="mt-3 flex items-center justify-between border-t border-ink/15 pt-2"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <div className="flex items-center gap-1">
+                                  {stageIdx > 0 && (
+                                    <Button
+                                      variant="outline"
+                                      size="icon-xs"
+                                      title={`Move to ${pipelineStages[stageIdx - 1]}`}
+                                      disabled={mutations.save.isPending}
+                                      onClick={() =>
+                                        handleMoveStage(
+                                          row.id as number,
+                                          pipelineStages[stageIdx - 1]
+                                        )
+                                      }
+                                      className="size-6 text-xs hover:bg-lime hover:text-on-accent"
+                                    >
+                                      ←
+                                    </Button>
+                                  )}
+                                  {stageIdx < pipelineStages.length - 1 && (
+                                    <Button
+                                      variant="outline"
+                                      size="icon-xs"
+                                      title={`Move to ${pipelineStages[stageIdx + 1]}`}
+                                      disabled={mutations.save.isPending}
+                                      onClick={() =>
+                                        handleMoveStage(
+                                          row.id as number,
+                                          pipelineStages[stageIdx + 1]
+                                        )
+                                      }
+                                      className="size-6 text-xs hover:bg-lime hover:text-on-accent"
+                                    >
+                                      →
+                                    </Button>
+                                  )}
+                                </div>
+
+                                <Button
+                                  variant="ghost"
+                                  size="xs"
+                                  className="font-mono text-xs hover:bg-lime hover:text-on-accent"
+                                  onClick={() => onOpenRecord(row.id as number)}
+                                >
+                                  Inspect →
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Shared Pagination Footer */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-2 border-ink bg-paper px-4 py-3 font-mono text-xs shadow-ink">
         <div className="text-ink-soft">
@@ -844,6 +1366,54 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
             </Button>
           )}
 
+          {/* Mass Tagging Action */}
+          <Popover open={tagPopoverOpen} onOpenChange={setTagPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                disabled={isMassTagging}
+                title="Tag selected records"
+              >
+                {isMassTagging ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Tag className="size-3.5" />
+                )}
+                Tag Records
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="center" className="w-56 p-2 space-y-2 font-sans shadow-ink-lg">
+              <div className="flex items-center justify-between border-b border-ink/20 pb-1.5 px-1 font-display text-xs uppercase tracking-wider text-ink">
+                <span>Assign Sticker Tag</span>
+                <Tag className="size-3 text-lime" />
+              </div>
+              {availableTags.length === 0 ? (
+                <div className="p-3 text-center font-mono text-xs text-ink-faint">
+                  No tags available.
+                </div>
+              ) : (
+                <div className="max-h-48 overflow-y-auto space-y-1">
+                  {availableTags.map((tag) => (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => handleMassTag(tag.id)}
+                      className="w-full flex items-center gap-2 px-2 py-1.5 text-xs font-mono hover:bg-lime hover:text-on-accent text-left transition-colors border border-transparent hover:border-ink"
+                    >
+                      <span
+                        className="size-2.5 border border-ink shrink-0"
+                        style={{ backgroundColor: tag.color || '#E6FF00' }}
+                      />
+                      <span className="truncate">{tag.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
+
           <Button variant="outline" size="sm" onClick={handleExportCsv} className="gap-1.5">
             <Download className="size-3.5" />
             Export CSV
@@ -859,6 +1429,33 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
           </Button>
         </div>
       )}
+
+      {/* Universal CSV Import Wizard Dialog */}
+      <ImportWizardDialog
+        open={importWizardOpen}
+        onOpenChange={setImportWizardOpen}
+        model={model}
+        views={views}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['records', model] });
+          setPage(1);
+        }}
+      />
+
+      {/* Advanced Query Builder Dialog */}
+      <QueryBuilderDialog
+        open={queryBuilderOpen}
+        onOpenChange={setQueryBuilderOpen}
+        model={model}
+        views={views}
+        initialRules={advancedRules}
+        initialConjunction={advancedConjunction}
+        onApply={(rules, conj) => {
+          setAdvancedRules(rules);
+          setAdvancedConjunction(conj);
+          setPage(1);
+        }}
+      />
     </div>
   );
 }

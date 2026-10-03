@@ -2,10 +2,21 @@ import dotenv from 'dotenv';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { EnvConfig } from '@moonwitness/types';
+import { requireProductionDatabaseUrl } from './production.js';
 
 const apiDirectory = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(apiDirectory, '../../../../');
 dotenv.config({ path: path.join(repositoryRoot, '.env') });
+requireProductionDatabaseUrl(process.env);
+
+const nodeEnvironment = process.env.NODE_ENV ?? 'development';
+
+function optionalBoolean(value: string | undefined, fallback: boolean, name: string): boolean {
+  if (value === undefined || value === '') return fallback;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  throw new Error(`${name} must be true or false`);
+}
 
 const metricsToken = process.env.METRICS_TOKEN || undefined;
 if (metricsToken && metricsToken.length < 32) {
@@ -48,7 +59,7 @@ const databaseUrl = readDatabaseUrl(
 export const config: EnvConfig = {
   superadminPassword: process.env.SUPERADMIN_PASSWORD || undefined,
   metricsToken,
-  env: process.env.NODE_ENV ?? 'development',
+  env: nodeEnvironment,
   host: process.env.API_HOST ?? process.env.HOST ?? '0.0.0.0',
   port: readPort(process.env.API_PORT ?? process.env.PORT),
   db: {
@@ -59,8 +70,16 @@ export const config: EnvConfig = {
     level: process.env.LOG_LEVEL,
     dir: path.resolve(repositoryRoot, process.env.LOG_DIR || 'logs'),
     fileName: process.env.LOG_FILE_NAME || 'api.log',
-    enableFile: process.env.LOG_TO_FILE !== 'false',
-    prettyPrint: process.env.LOG_PRETTY !== 'false',
+    enableFile: optionalBoolean(
+      'LOG_TO_FILE' in process.env ? process.env.LOG_TO_FILE : undefined,
+      nodeEnvironment !== 'production',
+      'LOG_TO_FILE'
+    ),
+    prettyPrint: optionalBoolean(
+      'LOG_PRETTY' in process.env ? process.env.LOG_PRETTY : undefined,
+      nodeEnvironment !== 'production',
+      'LOG_PRETTY'
+    ),
   },
   auth: {
     jwtSecret: process.env.JWT_SECRET || undefined,

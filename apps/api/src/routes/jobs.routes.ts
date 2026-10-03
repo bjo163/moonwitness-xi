@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import type { Transaction } from 'objection';
 import { CronExpressionParser } from 'cron-parser';
-import { Cron, Job, JobRun, OutboxEvent, cancelJob } from '@moonwitness/jobs';
+import { Cron, Job, JobRun, OutboxEvent, cancelJob, enqueueJob } from '@moonwitness/jobs';
 import type { BaseModel } from '@moonwitness/orm';
 
 function isAdmin(role: string | undefined): boolean {
@@ -383,5 +383,30 @@ export const jobsRoutes: FastifyPluginAsync = async (fastify) => {
       success: true,
       data: updated,
     };
+  });
+
+  fastify.post<{ Params: { id: string } }>('/admin/crons/:id/trigger', async (req, reply) => {
+    if (!adminOnly(req.auth?.role)) return reply.code(403).send({ success: false });
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id < 1)
+      return reply.code(400).send({ success: false, error: 'Invalid cron ID' });
+    const cron = await Cron.query().findById(id);
+    if (!cron) return reply.code(404).send({ success: false, error: 'Cron not found' });
+    let payload: Record<string, unknown>;
+    try {
+      payload =
+        typeof cron.payload === 'string'
+          ? JSON.parse(cron.payload)
+          : ((cron.payload as Record<string, unknown>) ?? {});
+    } catch {
+      payload = {};
+    }
+    const jobId = await enqueueJob(cron.handler, payload, {
+      companyId: cron.company_id ?? undefined,
+      requestedBy: req.auth?.userId,
+      priority: 10,
+    });
+    await logAdminAction(req, 'base.cron', id, 'admin_trigger_now');
+    return { success: true, data: { jobId } };
   });
 };

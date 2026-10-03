@@ -5,6 +5,7 @@ import { initializeSuperadminPassword, manifest } from '@moonwitness/orm-base';
 import { manifest as authManifest } from '@moonwitness/auth';
 import { verifyDefaultBaseAccounts, verifyRequiredModels } from '../src/startup-checks.js';
 import { validateJwtSecret } from '../src/plugins/auth.plugin.js';
+import { requireProductionDatabaseUrl } from '../src/config/production.js';
 
 describe('startup checks', () => {
   let db: Knex | undefined;
@@ -46,5 +47,18 @@ describe('startup checks', () => {
     await expect(verifyDefaultBaseAccounts(db, true)).rejects.toThrow(
       'The seeded superadmin has no password'
     );
+  });
+
+  it('requires an explicit database URL in production while leaving development defaults available', () => {
+    expect(() => requireProductionDatabaseUrl({ NODE_ENV: 'production' })).toThrow(
+      'DATABASE_URL is required when NODE_ENV=production'
+    );
+    expect(() =>
+      requireProductionDatabaseUrl({
+        NODE_ENV: 'production',
+        DATABASE_URL: 'postgresql://app:secret@db.example/moonwitness',
+      })
+    ).not.toThrow();
+    expect(() => requireProductionDatabaseUrl({ NODE_ENV: 'development' })).not.toThrow();
   });
 });

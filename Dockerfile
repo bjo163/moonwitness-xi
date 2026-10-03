@@ -1,0 +1,44 @@
+FROM node:22-bookworm-slim AS build
+
+RUN corepack enable && corepack prepare pnpm@11 --activate
+WORKDIR /workspace
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/api/package.json ./apps/api/package.json
+COPY apps/board/package.json ./apps/board/package.json
+COPY packages/auth/package.json ./packages/auth/package.json
+COPY packages/client/package.json ./packages/client/package.json
+COPY packages/eslint-config/package.json ./packages/eslint-config/package.json
+COPY packages/jobs/package.json ./packages/jobs/package.json
+COPY packages/logger/package.json ./packages/logger/package.json
+COPY packages/orm-base/package.json ./packages/orm-base/package.json
+COPY packages/orm/package.json ./packages/orm/package.json
+COPY packages/types/package.json ./packages/types/package.json
+RUN --mount=type=cache,id=moonwitness-pnpm-store,target=/root/.local/share/pnpm/store/v11 \
+    pnpm install --frozen-lockfile
+COPY . .
+RUN pnpm build
+RUN pnpm --filter @moonwitness/api deploy --prod /deploy/api
+
+FROM node:22-bookworm-slim AS runtime
+ENV NODE_ENV=production \
+    API_HOST=0.0.0.0 \
+    API_PORT=3000 \
+    LOG_TO_FILE=false \
+    LOG_PRETTY=false
+WORKDIR /app
+COPY --from=build --chown=node:node /deploy/api ./
+USER node
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:3000/readyz').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
+CMD ["node", "dist/server.js"]
+
+FROM build AS board-build
+RUN pnpm --filter @moonwitness/board build && mkdir -p /deploy/board && cp -r apps/board/dist /deploy/board/dist
+
+FROM nginx:1.27-alpine AS board-runtime
+COPY --from=board-build /deploy/board/dist /usr/share/nginx/html
+COPY deploy/nginx-board.conf /etc/nginx/conf.d/default.conf
+EXPOSE 8080
+
+FROM runtime AS api

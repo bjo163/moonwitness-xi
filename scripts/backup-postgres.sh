@@ -19,6 +19,7 @@ backup="$backup_dir/${base}.dump"
 trap 'rm -f "$temporary"' EXIT
 
 pg_dump --format=custom --no-owner --no-acl --dbname="$DATABASE_URL" --file="$temporary"
+pg_restore --list "$temporary" >/dev/null
 chmod 600 "$temporary"
 mv "$temporary" "$backup"
 find "$backup_dir" -type f -name 'moonwitness-*.dump' -mtime "+$retention_days" -delete

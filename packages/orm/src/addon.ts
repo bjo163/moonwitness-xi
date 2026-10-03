@@ -312,6 +312,14 @@ export async function installAddons(db: Knex, addons: readonly Addon[]): Promise
       throw new Error(`Seed model not installed: ${record.model.modelName}`);
   }
   await db.transaction(async (trx) => {
+    // API and worker replicas can start together during a rolling deployment.
+    // Serialize schema/seed installation per database before inspecting tables.
+    if (db.client.config.client === 'pg') {
+      await trx.raw('select pg_advisory_xact_lock(?, hashtext(?))', [
+        1297564238,
+        'moonwitness.addon.install',
+      ]);
+    }
     for (const model of models) await syncModel(trx, model);
     if (!(await trx.schema.hasTable('_orm_addons'))) {
       await trx.schema.createTable('_orm_addons', (table) => {

@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from 'react-router';
+import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { useViews } from '@/hooks/use-model';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Doodle } from '@/components/manga/effects';
@@ -8,10 +8,11 @@ import { FormView } from '@/components/views/form-view';
 
 export function ModelPage() {
   const { model = '', id } = useParams<{ model: string; id?: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { data: views, isLoading, error } = useViews(model);
 
-  const isCreate = id === 'new';
+  const isCreate = id === 'new' || searchParams.get('create') === '1';
   const isEdit = !isCreate && Boolean(id);
   const recordId = isEdit && id ? parseInt(id, 10) : undefined;
 

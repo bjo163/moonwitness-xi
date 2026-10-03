@@ -1,6 +1,6 @@
 {
   "name": "@moonwitness/auth",
-  "version": "1.0.0",
+  "version": "1.0.0-rc.1",
   "description": "Authentication addon for MoonWitness: credential login and rotating refresh tokens",
   "type": "module",
   "main": "./dist/index.js",

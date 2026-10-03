@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 
 /** Brutalist buttons: thick ink border, hard shadow that "presses" on click (see .press). */
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-sm border-2 border-ink text-sm font-bold uppercase tracking-wide whitespace-nowrap outline-none select-none disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-pink [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-none border-2 border-ink text-sm font-bold uppercase tracking-wide whitespace-nowrap outline-none select-none disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-pink [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {

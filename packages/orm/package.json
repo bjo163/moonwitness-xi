@@ -1,6 +1,6 @@
 {
   "name": "@moonwitness/orm",
-  "version": "1.0.0",
+  "version": "1.0.0-rc.1",
   "description": "Core Base ORM engine built on Objection.js and Knex with Polish notation domain parser and Environment container",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

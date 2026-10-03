@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import type { FastifyBaseLogger, FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import sensible from '@fastify/sensible';
 import swagger from '@fastify/swagger';
@@ -39,7 +40,7 @@ export interface BuildAppOptions {
   metricsToken?: string;
 }
 
-export async function buildApp(options: BuildAppOptions = {}) {
+export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
   const authConfig = config.auth ?? {
     accessTtlSeconds: 15 * 60,
     refreshTtlSeconds: 14 * 24 * 60 * 60,
@@ -59,7 +60,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
     if (!options.db) await db.destroy();
     throw error;
   }
-  const appLogger = createLogger({
+  const appLogger: FastifyBaseLogger = createLogger({
     name: 'api',
     level: (config.log?.level as LogLevel) ?? (config.env === 'test' ? 'silent' : 'info'),
     logDir: config.log?.dir,

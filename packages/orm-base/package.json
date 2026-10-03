@@ -1,6 +1,6 @@
 {
   "name": "@moonwitness/orm-base",
-  "version": "1.0.0",
+  "version": "1.0.0-rc.1",
   "description": "Core user and partner addon for MoonWitness",
   "type": "module",
   "main": "./dist/index.js",

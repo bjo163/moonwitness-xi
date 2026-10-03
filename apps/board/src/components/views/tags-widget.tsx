@@ -130,7 +130,7 @@ export function TagsWidget({ model, recordId }: TagsWidgetProps) {
             className="sticker group relative flex items-center gap-1.5 border-2 border-ink bg-paper-raised px-2.5 py-0.5 font-mono text-xs font-bold text-ink shadow-[2px_2px_0_0_var(--ink)]"
             style={{ '--tilt': `${(idx % 3) - 1.2}deg` } as React.CSSProperties}
           >
-            <span className="size-2 rounded-full border border-ink bg-lime" />
+            <span className="size-2 border border-ink bg-lime" />
             <span>{tagName}</span>
             <button
               type="button"
@@ -187,7 +187,7 @@ export function TagsWidget({ model, recordId }: TagsWidgetProps) {
                   onClick={() => handleAttachTag(tag.id)}
                   className="w-full flex items-center gap-2 border border-ink/20 bg-paper px-2 py-1 text-left text-xs transition-colors hover:border-ink hover:bg-lime hover:text-on-accent"
                 >
-                  <span className="size-2 rounded-full border border-ink bg-lime shrink-0" />
+                  <span className="size-2 border border-ink bg-lime shrink-0" />
                   <span className="truncate font-bold">{tag.name}</span>
                 </button>
               ))

@@ -1,6 +1,6 @@
 {
   "name": "@moonwitness/jobs",
-  "version": "1.0.0",
+  "version": "1.0.0-rc.1",
   "description": "Database-backed, typed job queue and recurring scheduler for MoonWitness",
   "type": "module",
   "main": "./dist/index.js",

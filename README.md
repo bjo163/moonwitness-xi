@@ -334,6 +334,14 @@ model addon base, dan dua akun default siap. Gunakan kredensial PostgreSQL
 terkelola, dan tetapkan `SUPERADMIN_PASSWORD` hanya untuk bootstrap. Jangan gunakan
 credential default pada `docker-compose.yml` di luar development.
 
+Untuk production, `DATABASE_URL` wajib eksplisit; API menolak URL database fallback
+lokal. Logging default production berupa JSON ke stdout, sedangkan development tetap
+memakai file dan output pretty. Kosongkan `LOG_TO_FILE`/`LOG_PRETTY` agar default
+environment berlaku, atau tetapkan `false` secara eksplisit. Installer addon memakai
+PostgreSQL advisory lock supaya replica API/worker yang start bersamaan tidak berlomba
+membuat tabel dan seed. Upgrade tetap mengikuti batasan additive dan hook programmatic
+di atas.
+
 Board merupakan SPA statis di `apps/board/dist`; host dengan fallback route ke
 `index.html`, atau sajikan bersama reverse proxy yang meneruskan `/api`, `/auth`,
 `/jsonrpc`, dan `/health` ke API. `BOARD_API_TARGET` hanya diperlukan untuk proxy
@@ -359,7 +367,45 @@ memiliki izin terbatas. Pulihkan dengan menjalankan `bash scripts/restore-postgr
 setelah mengatur `BACKUP_FILE`, `DATABASE_URL`, dan
 `ALLOW_DATABASE_RESTORE=true`; skrip meminta operator mengetik nama database target
 sebelum mengubahnya. Uji pemulihan rutin ke database sementara; CI menjalankan dump,
-restore, lalu memverifikasi row contoh pada setiap build.
+skrip restore yang sama (termasuk konfirmasi target yang salah), lalu memverifikasi row
+contoh pada setiap build. Simpan salinan backup di luar server/database utama dan
+gunakan enkripsi storage yang dikelola infrastruktur.
+
+### Image container dan rilis
+
+Repository menyediakan Docker image API dan Compose untuk empat proses terpisah: API,
+job worker, scheduler, dan outbox worker. Database production tetap eksternal/terkelola.
+Salin `.env.production.example` ke `.env.production`, isi `DATABASE_URL`, `JWT_SECRET`
+(minimal 32 karakter acak), dan password bootstrap, lalu lindungi file itu di host.
+Jalankan:
+
+```sh
+docker compose --env-file .env.production -f docker-compose.production.yml up -d --build
+docker compose --env-file .env.production -f docker-compose.production.yml ps
+docker compose --env-file .env.production -f docker-compose.production.yml logs -f api jobs-worker jobs-scheduler outbox-worker
+```
+
+API hanya bind ke loopback host; pasang reverse proxy HTTPS di depannya. Container
+berjalan sebagai user non-root, filesystem read-only, tanpa Linux capabilities, dan
+menulis log ke stdout. Worker diberi waktu drain sebelum dihentikan. Tambahkan handler
+domain ke image dan isi `JOB_HANDLERS_MODULE`/`OUTBOX_HANDLERS_MODULE` dengan path modul
+di dalam image. Endpoint readiness akan tetap gagal sampai PostgreSQL siap.
+
+Urutan rilis yang aman: pastikan CI lulus (termasuk PostgreSQL, backup/restore, dan
+build image), buat backup terverifikasi, deploy staging, periksa `/readyz`, `/livez`,
+login, alur mutasi, job/outbox, dan log, lalu promosikan image yang sama ke production.
+Catat tag image, commit, waktu deploy, hasil backup, dan hasil smoke test. Saat rollback,
+gunakan image sebelumnya hanya jika schema/data baru masih kompatibel dengannya; hook
+upgrade tidak dibalik otomatis. Pemulihan database adalah tindakan terpisah dan
+destruktif: lakukan ke target yang dipilih dengan backup yang telah diuji, ikuti
+konfirmasi nama database, lalu jalankan smoke test sebelum membuka traffic kembali.
+
+Untuk respons insiden, kurangi traffic atau hentikan proses yang terdampak, simpan log
+dan metrik, periksa status readiness serta dead-letter job/outbox, dan jangan menghapus
+record antrean sebelum payload/penyebab ditinjau. Jika credential bocor, rotasi secret
+di pengelola environment dan cabut sesi refresh; rotasi `JWT_SECRET` juga membatalkan
+semua access token yang sedang berlaku. Setelah pemulihan, dokumentasikan penyebab,
+rentang waktu, data yang dipulihkan, dan tindakan pencegahan.
 
 Addon memasang indeks idempotent untuk `(active, id)`, `create_uid`, dan setiap foreign
 key. Endpoint collection mendukung keyset pagination dengan `?cursor=0&limit=80`; lanjutkan

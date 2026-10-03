@@ -211,11 +211,13 @@ function Many2oneWidget({
 
   const { data, isFetching, error } = useQuery({
     queryKey: ['m2o', target, term],
-    queryFn: () =>
-      client.model<Row>(target).searchRead({
-        domain: term ? [['name', 'ilike', `%${term}%`]] : [],
+    queryFn: () => {
+      const searchField = target === 'base.user' ? 'login' : 'name';
+      return client.model<Row>(target).searchRead({
+        domain: term ? [[searchField, 'ilike', `%${term}%`]] : [],
         limit: 20,
-      }),
+      });
+    },
     enabled: open,
     staleTime: 30_000,
   });
@@ -231,7 +233,7 @@ function Many2oneWidget({
           disabled={disabled}
           aria-invalid={aria['aria-invalid']}
           className={cn(
-            'flex h-10 w-full items-center gap-2 rounded-sm border-2 border-ink bg-paper-raised px-3 text-left text-sm disabled:opacity-50 aria-invalid:border-pink',
+            'flex h-10 w-full items-center gap-2 rounded-none border-2 border-ink bg-paper-raised px-3 text-left text-sm disabled:opacity-50 aria-invalid:border-pink',
             !value && 'text-ink-faint'
           )}
         >

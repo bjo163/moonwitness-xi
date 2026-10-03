@@ -113,9 +113,18 @@ export function FormView({ model, views, recordId, onBack, onSaved }: FormViewPr
     }
 
     try {
+      const cleanValues: Record<string, unknown> = {};
+      for (const [key, val] of Object.entries(formData)) {
+        if (['id', 'create_date', 'write_date', 'create_uid', 'write_uid'].includes(key)) continue;
+        const field = fieldMap.get(key);
+        if (field && (field.readonly || field.type === 'one2many')) continue;
+        if (typeof val === 'object' && val !== null && !Array.isArray(val) && !field) continue;
+        cleanValues[key] = val;
+      }
+
       const saved = await mutations.save.mutateAsync({
         id: recordId,
-        values: formData,
+        values: cleanValues,
       });
       setDirty(false);
       setSuccessMsg('Record saved successfully!');

@@ -17,6 +17,7 @@ import {
   manifest,
 } from '@moonwitness/orm-base';
 import { createAuthService, manifest as authManifest } from '@moonwitness/auth';
+import { jobsManifest } from '@moonwitness/jobs';
 import { buildApp } from '../src/app.js';
 import { verifyDefaultBaseAccounts } from '../src/startup-checks.js';
 
@@ -186,6 +187,30 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     ).resolves.toMatchObject({
       userId: session.userId,
     });
+  }, 30000);
+
+  it('serializes concurrent addon installation during multi-replica startup', async () => {
+    const concurrentSchema = `mw_lock_test_${randomUUID().replaceAll('-', '')}`;
+    await adminDb.raw('create schema ??', [concurrentSchema]);
+    const concurrentDb = knex({
+      client: 'pg',
+      connection: connectionString,
+      searchPath: [concurrentSchema],
+      pool: { min: 0, max: 4 },
+    });
+    try {
+      await Promise.all([
+        installAddons(concurrentDb, [manifest, authManifest, jobsManifest]),
+        installAddons(concurrentDb, [manifest, authManifest, jobsManifest]),
+      ]);
+      expect(Number((await concurrentDb('_orm_addons').count({ count: '*' }).first())?.count)).toBe(
+        3
+      );
+      expect(Number((await concurrentDb('users').count({ count: '*' }).first())?.count)).toBe(2);
+    } finally {
+      await concurrentDb.destroy();
+      await adminDb.raw('drop schema if exists ?? cascade', [concurrentSchema]);
+    }
   }, 30000);
 
   it('runs login, user list/count, profile update and password reset through the PostgreSQL API', async () => {

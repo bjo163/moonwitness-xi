@@ -1,6 +1,6 @@
 {
   "name": "@moonwitness/client",
-  "version": "1.0.0",
+  "version": "1.0.0-rc.1",
   "description": "TypeScript SDK and browser/Node client for MoonWitness API with auth lifecycle and data-driven view support",
   "type": "module",
   "main": "./dist/index.js",

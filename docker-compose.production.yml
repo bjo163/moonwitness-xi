@@ -1,0 +1,115 @@
+services:
+  board:
+    build:
+      context: .
+      target: board-runtime
+    image: moonwitness-board:production
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+      - /var/cache/nginx:size=16m
+      - /var/run:size=1m
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETUID, SETGID]
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - '127.0.0.1:${BOARD_PORT:-4174}:8080'
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, --quiet, --tries=1, --spider, http://127.0.0.1:8080/]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+  api:
+    build: .
+    image: moonwitness-api:production
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 45s
+    ports:
+      - '127.0.0.1:${API_PORT:-3000}:3000'
+    environment: &app_environment
+      NODE_ENV: production
+      API_HOST: 0.0.0.0
+      API_PORT: 3000
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL to the managed PostgreSQL connection URL}
+      JWT_SECRET: ${JWT_SECRET:?Set a persistent random JWT_SECRET of at least 32 characters}
+      SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-}
+      METRICS_TOKEN: ${METRICS_TOKEN:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_TO_FILE: 'false'
+      LOG_PRETTY: 'false'
+      PRINT_ROUTES: 'false'
+      JOB_HANDLERS_MODULE: ${JOB_HANDLERS_MODULE:-}
+      OUTBOX_HANDLERS_MODULE: ${OUTBOX_HANDLERS_MODULE:-}
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/readyz').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+  jobs-worker:
+    image: moonwitness-api:production
+    command: ['node', 'dist/commands/jobs-worker.js']
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 2m
+    healthcheck:
+      disable: true
+    environment: *app_environment
+
+  jobs-scheduler:
+    image: moonwitness-api:production
+    command: ['node', 'dist/commands/jobs-scheduler.js']
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 30s
+    healthcheck:
+      disable: true
+    environment: *app_environment
+
+  outbox-worker:
+    image: moonwitness-api:production
+    command: ['node', 'dist/commands/outbox-worker.js']
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 2m
+    healthcheck:
+      disable: true
+    environment: *app_environment

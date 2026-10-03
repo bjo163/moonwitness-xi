@@ -44,14 +44,31 @@ async function main() {
 
     app.log.info('Startup checks passed: database, base addon and default accounts.');
 
-    // Graceful shutdown
+    // Stop accepting traffic and let Fastify drain requests before closing the pool.
+    let shutdownInProgress = false;
+    const shutdown = async (signal: NodeJS.Signals) => {
+      if (shutdownInProgress) return;
+      shutdownInProgress = true;
+      app.log.info({ signal }, 'Shutting down gracefully');
+      const forceClose = setTimeout(() => {
+        app.log.error('Graceful shutdown exceeded 30 seconds; forcing connection close');
+        app.server.closeAllConnections();
+      }, 30_000);
+      forceClose.unref();
+      try {
+        await app.close();
+        app.log.info('API server shutdown complete');
+      } catch (error) {
+        app.log.error({ err: startupErrorContext(error) }, 'API shutdown failed');
+        process.exitCode = 1;
+      } finally {
+        clearTimeout(forceClose);
+      }
+    };
+
     const signals: NodeJS.Signals[] = ['SIGINT', 'SIGTERM'];
     for (const signal of signals) {
-      process.on(signal, async () => {
-        app.log.info({ signal }, 'Shutting down gracefully');
-        await app.close();
-        process.exit(0);
-      });
+      process.once(signal, () => void shutdown(signal));
     }
   } catch (err) {
     console.error('API startup failed:', startupErrorContext(err));

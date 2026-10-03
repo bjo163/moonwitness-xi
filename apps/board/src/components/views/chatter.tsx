@@ -294,7 +294,7 @@ export function Chatter({ model, recordId }: ChatterProps) {
             <Clock className="size-3.5" />
             Activities
             {plannedCount > 0 && (
-              <span className="grid size-4 place-items-center rounded-full bg-pink text-[10px] font-bold text-white">
+              <span className="grid size-4 place-items-center border border-ink bg-pink text-[10px] font-bold text-white shadow-[1px_1px_0_0_var(--ink)]">
                 {plannedCount}
               </span>
             )}

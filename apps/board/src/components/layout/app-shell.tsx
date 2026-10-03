@@ -3,10 +3,12 @@ import { NavLink, Outlet, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import {
   Building2,
+  Calendar,
   Check,
   Globe,
   Keyboard,
   LogOut,
+  Menu,
   Moon,
   Search,
   Sun,
@@ -41,22 +43,27 @@ import {
 import { Logo } from '@/components/manga/logo';
 import { Doodle } from '@/components/manga/effects';
 import { ShortcutsDialog } from '@/components/manga/shortcuts-dialog';
+import { ActivityBell } from './activity-bell';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 function NavItem({
   to,
   label,
   icon: Icon,
   tilt,
+  onNavigate,
 }: {
   to: string;
   label: string;
   icon: typeof DashboardIcon;
   tilt: number;
+  onNavigate?: () => void;
 }) {
   return (
     <NavLink
       to={to}
       end={to === '/'}
+      onClick={onNavigate}
       className={({ isActive }) =>
         cn(
           'group relative flex items-center gap-3 px-3 py-2 font-display text-lg uppercase tracking-wide text-ink/70 transition-colors hover:text-ink',
@@ -82,12 +89,48 @@ function NavItem({
   );
 }
 
+function ModelNavigation({
+  groups,
+  isLoading,
+  onNavigate,
+}: {
+  groups: Array<[string, string[]]>;
+  isLoading: boolean;
+  onNavigate?: () => void;
+}) {
+  return (
+    <nav aria-label="Models" className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
+      <NavItem to="/" label="Dashboard" icon={DashboardIcon} tilt={-1.5} onNavigate={onNavigate} />
+      {isLoading &&
+        Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-8 bg-ink/10" />)}
+      {groups.map(([addon, names]) => (
+        <div key={addon} className="space-y-1">
+          <p className="px-3 pb-1 font-mono text-[11px] uppercase tracking-[0.2em] text-ink-faint">
+            {addon}
+          </p>
+          {names.map((model, i) => (
+            <NavItem
+              key={model}
+              to={`/m/${model}`}
+              label={modelLabel(model)}
+              icon={modelIcon(model)}
+              tilt={i % 2 ? 1.2 : -1.5}
+              onNavigate={onNavigate}
+            />
+          ))}
+        </div>
+      ))}
+    </nav>
+  );
+}
+
 export function AppShell() {
   const { user, logout } = useAuth();
   const { theme, toggle } = useTheme();
   const { data: models, isLoading } = useModels();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [paletteQuery, setPaletteQuery] = useState('');
   const [activeCompanyId, setActiveCompanyId] = useState<number | undefined>(() =>
     client.getCompanyId()
@@ -122,7 +165,7 @@ export function AppShell() {
     queryFn: async () => {
       const q = paletteQuery.trim();
       if (!q) return [];
-      const [partners, users, comps] = await Promise.all([
+      const [partners, users, comps, activities] = await Promise.all([
         client
           .model<{ id: number; name: string }>('base.partner')
           .searchRead({
@@ -144,13 +187,27 @@ export function AppShell() {
             limit: 5,
           })
           .catch(() => ({ records: [] })),
+        client
+          .model<{
+            id: number;
+            summary: string;
+            activity_type: string;
+            resource_model: string;
+            resource_id: number;
+          }>('base.activity')
+          .searchRead({
+            domain: [['summary', 'ilike', `%${q}%`]],
+            limit: 5,
+          })
+          .catch(() => ({ records: [] })),
       ]);
 
       const items: Array<{
         id: number;
         model: string;
         title: string;
-        type: 'partner' | 'user' | 'company';
+        type: 'partner' | 'user' | 'company' | 'activity';
+        targetUrl?: string;
       }> = [];
 
       for (const p of partners.records) {
@@ -161,6 +218,15 @@ export function AppShell() {
       }
       for (const c of comps.records) {
         items.push({ id: c.id, model: 'base.company', title: c.name, type: 'company' });
+      }
+      for (const a of activities.records) {
+        items.push({
+          id: a.id,
+          model: 'base.activity',
+          title: a.summary,
+          type: 'activity',
+          targetUrl: `/m/${a.resource_model}/${a.resource_id}`,
+        });
       }
       return items;
     },
@@ -192,54 +258,64 @@ export function AppShell() {
   }, []);
 
   return (
-    <div className="grid min-h-dvh grid-cols-[16rem_1fr]">
+    <div className="grid min-h-dvh grid-cols-1 lg:grid-cols-[16rem_minmax(0,1fr)]">
       {/* Sidebar: scoped .dark tokens keep it ink-black with light ink in BOTH themes. */}
-      <aside className="dark sticky top-0 flex h-dvh flex-col border-r-4 border-[#0d0d0d] bg-[#0d0d0d] text-ink">
+      <aside className="dark sticky top-0 hidden h-dvh flex-col border-r-4 border-[#0d0d0d] bg-[#0d0d0d] text-ink lg:flex">
         <div className="relative border-b-2 border-dashed border-ink/20 px-5 py-5">
           <Logo />
         </div>
-        <nav aria-label="Models" className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
-          <NavItem to="/" label="Dashboard" icon={DashboardIcon} tilt={-1.5} />
-          {isLoading &&
-            Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-8 bg-ink/10" />)}
-          {groups.map(([addon, names]) => (
-            <div key={addon} className="space-y-1">
-              <p className="px-3 pb-1 font-mono text-[11px] uppercase tracking-[0.2em] text-ink-faint">
-                {addon}
-              </p>
-              {names.map((model, i) => (
-                <NavItem
-                  key={model}
-                  to={`/m/${model}`}
-                  label={modelLabel(model)}
-                  icon={modelIcon(model)}
-                  tilt={i % 2 ? 1.2 : -1.5}
-                />
-              ))}
-            </div>
-          ))}
-        </nav>
+        <ModelNavigation groups={groups} isLoading={isLoading} />
         <div className="flex items-center gap-2 border-t-2 border-dashed border-ink/20 px-5 py-4 font-mono text-[11px] uppercase tracking-widest text-ink-faint">
           <Doodle kind="bolt" className="size-4" /> +1 every day
         </div>
       </aside>
 
       <div className="flex min-w-0 flex-col">
-        <header className="sticky top-0 z-20 flex items-center gap-3 border-b-2 border-ink bg-paper/90 px-6 py-3 backdrop-blur">
+        <header className="sticky top-0 z-20 flex min-w-0 items-center gap-2 border-b-2 border-ink bg-paper/90 px-3 py-3 backdrop-blur sm:gap-3 sm:px-6">
+          <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+            <SheetTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="shrink-0 lg:hidden"
+                aria-label="Open model navigation"
+              >
+                <Menu className="size-4" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent
+              side="left"
+              className="dark w-[min(18rem,85vw)] gap-0 border-r-4 border-[#0d0d0d] bg-[#0d0d0d] p-0 text-ink"
+              aria-label="Model navigation"
+            >
+              <div className="border-b-2 border-dashed border-ink/20 px-5 py-5">
+                <Logo />
+              </div>
+              <ModelNavigation
+                groups={groups}
+                isLoading={isLoading}
+                onNavigate={() => setMobileNavOpen(false)}
+              />
+              <div className="flex items-center gap-2 border-t-2 border-dashed border-ink/20 px-5 py-4 font-mono text-[11px] uppercase tracking-widest text-ink-faint">
+                <Doodle kind="bolt" className="size-4" /> +1 every day
+              </div>
+            </SheetContent>
+          </Sheet>
+
           {/* Omnisearch trigger button */}
           <button
             id="open-command-palette"
             onClick={() => setPaletteOpen(true)}
-            className="press flex h-10 w-full max-w-md items-center gap-2 rounded-sm border-2 border-ink bg-paper-raised px-3 text-left text-sm text-ink-faint shadow-ink-sm"
+            className="press flex h-10 min-w-0 flex-1 items-center gap-2 overflow-hidden rounded-none border-2 border-ink bg-paper-raised px-2 text-left text-sm text-ink-faint shadow-ink-sm sm:max-w-md sm:px-3"
           >
-            <Search className="size-4 text-ink" strokeWidth={2.6} />
-            Search records, models, commands…
-            <kbd className="ml-auto border border-ink px-1.5 font-mono text-[11px] text-ink">
+            <Search className="size-4 shrink-0 text-ink" strokeWidth={2.6} />
+            <span className="truncate">Search records, models, commands…</span>
+            <kbd className="ml-auto hidden shrink-0 border border-ink px-1.5 font-mono text-[11px] text-ink sm:block">
               Ctrl K
             </kbd>
           </button>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
             {/* Tenant / Company Switcher */}
             {companies.length > 0 && (
               <DropdownMenu>
@@ -247,11 +323,11 @@ export function AppShell() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-2 border-2 border-ink font-mono text-xs shadow-ink-sm"
+                    className="gap-1.5 border-2 border-ink px-2 font-mono text-xs shadow-ink-sm sm:gap-2 sm:px-3"
                   >
                     <Building2 className="size-3.5 text-lime-600 dark:text-lime" />
                     <span className="hidden sm:inline">Tenant:</span>
-                    <span className="font-bold truncate max-w-[120px]">
+                    <span className="hidden max-w-[120px] truncate font-bold md:inline">
                       {currentCompany ? currentCompany.name : 'Global Scope'}
                     </span>
                   </Button>
@@ -289,11 +365,15 @@ export function AppShell() {
               </DropdownMenu>
             )}
 
+            {/* Activity Notification Center */}
+            <ActivityBell />
+
             {/* Keyboard Shortcuts Trigger */}
             <Button
               id="shortcuts-btn"
               variant="outline"
               size="icon"
+              className="hidden md:inline-flex"
               onClick={() => setShortcutsOpen(true)}
               aria-label="Keyboard Shortcuts"
               title="Keyboard Shortcuts (Ctrl + /)"
@@ -315,11 +395,15 @@ export function AppShell() {
             {/* User Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button id="user-menu" variant="outline" className="gap-2 normal-case">
+                <Button
+                  id="user-menu"
+                  variant="outline"
+                  className="gap-1.5 px-2 normal-case sm:gap-2 sm:px-3"
+                >
                   <span className="grid size-6 place-items-center border-2 border-ink bg-lime font-display text-xs text-on-accent">
                     {user?.login.slice(0, 1).toUpperCase()}
                   </span>
-                  {user?.login}
+                  <span className="hidden sm:inline">{user?.login}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
@@ -338,7 +422,7 @@ export function AppShell() {
           </div>
         </header>
 
-        <main className="flex-1 px-6 py-8 lg:px-10">
+        <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-10">
           <Outlet />
         </main>
       </div>
@@ -358,7 +442,13 @@ export function AppShell() {
             <CommandGroup heading="Direct Records">
               {searchResults.map((item) => {
                 const ItemIcon =
-                  item.type === 'partner' ? Users : item.type === 'user' ? User : Building2;
+                  item.type === 'partner'
+                    ? Users
+                    : item.type === 'user'
+                      ? User
+                      : item.type === 'activity'
+                        ? Calendar
+                        : Building2;
 
                 return (
                   <CommandItem
@@ -367,7 +457,7 @@ export function AppShell() {
                     onSelect={() => {
                       setPaletteOpen(false);
                       setPaletteQuery('');
-                      navigate(`/m/${item.model}/${item.id}`);
+                      navigate(item.targetUrl ?? `/m/${item.model}/${item.id}`);
                     }}
                     className="flex items-center gap-2 cursor-pointer"
                   >

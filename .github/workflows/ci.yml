@@ -39,6 +39,15 @@ jobs:
       - run: pnpm format:check
       - run: pnpm build
       - run: pnpm test
+      - name: Build production container
+        run: docker build --tag moonwitness-api:ci .
+      - name: Build production Board container
+        run: docker build --target board-runtime --tag moonwitness-board:ci .
+      - name: Validate production Compose configuration
+        env:
+          DATABASE_URL: postgresql://moonwitness:ci-password@postgres.example:5432/moonwitness
+          JWT_SECRET: ci-only-secret-that-is-at-least-32-characters-long
+        run: docker compose -f docker-compose.production.yml config --quiet
       - name: Verify PostgreSQL backup and restore
         run: |
           sudo apt-get update
@@ -50,6 +59,10 @@ jobs:
           createdb --maintenance-db="$POSTGRES_TEST_URL" "$restore_db"
           trap 'dropdb --maintenance-db="$POSTGRES_TEST_URL" "$restore_db" || true' EXIT
           restore_url="${POSTGRES_TEST_URL%/*}/$restore_db"
-          pg_restore --exit-on-error --no-owner --no-acl --dbname="$restore_url" "$backup_file"
+          if printf 'wrong-database-name\n' | DATABASE_URL="$restore_url" BACKUP_FILE="$backup_file" ALLOW_DATABASE_RESTORE=true bash scripts/restore-postgres.sh; then
+            echo "Restore accepted a mismatched database confirmation" >&2
+            exit 1
+          fi
+          printf '%s\n' "$restore_db" | DATABASE_URL="$restore_url" BACKUP_FILE="$backup_file" ALLOW_DATABASE_RESTORE=true bash scripts/restore-postgres.sh
           restored="$(psql "$restore_url" -X -A -t -v ON_ERROR_STOP=1 -c 'SELECT value FROM public.backup_verification')"
           test "$restored" = 'restore-ok'

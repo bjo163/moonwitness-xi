@@ -1,6 +1,6 @@
 {
   "name": "@moonwitness/eslint-config",
-  "version": "1.0.0",
+  "version": "1.0.0-rc.1",
   "description": "Shared ESLint flat configuration for MoonWitness monorepo",
   "main": "./index.js",
   "type": "module",

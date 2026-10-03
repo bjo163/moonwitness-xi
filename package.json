@@ -1,6 +1,7 @@
 {
   "name": "moonwitness-monorepo",
   "private": true,
+  "version": "1.0.0-rc.1",
   "type": "module",
   "scripts": {
     "dev": "pnpm --filter @moonwitness/api dev",
@@ -14,7 +15,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "release:check": "node scripts/check-release.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
