@@ -1,0 +1,1190 @@
+{
+  "schemaVersion": 1,
+  "description": "Planning index: task identity, prerequisites, detail file and output. ROADMAP.md owns accepted task completion; evidence proves it. GitHub Issues is a managed projection with separate discussion and delivery lifecycle. See ISSUE-SYNC-CONTRACT.md.",
+  "tasks": [
+    {
+      "id": "M0.01",
+      "title": "Inventarisasi package, model, endpoint, view, menu, akses, seed, scheduler, worker, outbox, import/export, dan attachment yang benar-benar tersedia.",
+      "milestone": "M0",
+      "dependsOn": [],
+      "output": "docs/engineering/inventory.md",
+      "detailFile": "docs/roadmap/00-baseline.md"
+    },
+    {
+      "id": "M0.02",
+      "title": "Buat matriks fitur → role/company → skenario sukses/gagal → unit/integration/E2E → bukti → gap.",
+      "milestone": "M0",
+      "dependsOn": ["M0.01"],
+      "output": "docs/engineering/feature-matrix.md",
+      "detailFile": "docs/roadmap/00-baseline.md"
+    },
+    {
+      "id": "M0.03",
+      "title": "Rekam baseline typecheck, lint, format, build, test, coverage, bundle, performa, dan warning. Pisahkan kegagalan dari test yang skipped.",
+      "milestone": "M0",
+      "dependsOn": [],
+      "output": "docs/engineering/baseline.md",
+      "detailFile": "docs/roadmap/00-baseline.md"
+    },
+    {
+      "id": "M0.04",
+      "title": "Audit GitHub settings, workflows, permissions, Pages, registry, rulesets, status checks, dan ketersediaan fitur akun tanpa menampilkan secret.",
+      "milestone": "M0",
+      "dependsOn": [],
+      "output": "docs/engineering/github-capabilities.md",
+      "detailFile": "docs/roadmap/00-baseline.md"
+    },
+    {
+      "id": "M0.05",
+      "title": "Inventarisasi duplikasi, komponen besar, dependency tidak terpakai, siklus import, dan tanggung jawab yang masih membebani apps/api atau Board.",
+      "milestone": "M0",
+      "dependsOn": ["M0.01"],
+      "output": "docs/engineering/refactor-map.md",
+      "detailFile": "docs/roadmap/00-baseline.md"
+    },
+    {
+      "id": "M0.06",
+      "title": "Tetapkan versi runtime/database/browser yang didukung, anggaran durasi CI, retensi artefak, serta baseline performa yang terukur.",
+      "milestone": "M0",
+      "dependsOn": ["M0.03"],
+      "output": "docs/engineering/support-policy.md",
+      "detailFile": "docs/roadmap/00-baseline.md"
+    },
+    {
+      "id": "M0.07",
+      "title": "Dokumentasikan keputusan arsitektur: versi monorepo bersama, dua branch, model promosi, sumber metadata, dan batas package.",
+      "milestone": "M0",
+      "dependsOn": ["M0.01", "M0.04"],
+      "output": "docs/decisions/0001-platform-contracts.md",
+      "detailFile": "docs/roadmap/00-baseline.md"
+    },
+    {
+      "id": "M0.08",
+      "title": "Verifikasi ulang jumlah seed yang diminta: dua user default dan total 12 partner sesuai kebutuhan; selesaikan ketidaksesuaian nama test, jumlah aktual, dan dokumentasi tanpa menggandakan data existing.",
+      "milestone": "M0",
+      "dependsOn": ["M0.01"],
+      "output": "Seed contract dan test regresi pada packages/orm-base/tests",
+      "detailFile": "docs/roadmap/00-baseline.md"
+    },
+    {
+      "id": "M1.01",
+      "title": "Buat `dev` dari commit `main` yang tervalidasi, setelah memeriksa branch remote aktual.",
+      "milestone": "M1",
+      "dependsOn": ["M0.04"],
+      "output": "dev terinisialisasi dan catatan bootstrap",
+      "detailFile": "docs/roadmap/01-governance.md"
+    },
+    {
+      "id": "M1.02",
+      "title": "Batasi pembuatan branch selain `main`/`dev` melalui ruleset yang didukung repository.",
+      "milestone": "M1",
+      "dependsOn": ["M1.01"],
+      "output": "docs/engineering/repository-policy.json dan applied ruleset evidence",
+      "detailFile": "docs/roadmap/01-governance.md"
+    },
+    {
+      "id": "M1.03",
+      "title": "Lindungi kedua branch dari deletion dan force-push; dokumentasikan akses darurat yang sempit dan dapat diaudit.",
+      "milestone": "M1",
+      "dependsOn": ["M1.01", "M0.04"],
+      "output": "Branch protection configuration dan emergency runbook",
+      "detailFile": "docs/roadmap/01-governance.md"
+    },
+    {
+      "id": "M1.04",
+      "title": "Batasi promosi `main` melalui PR `dev → main`; validasi sumber PR dengan check wajib.",
+      "milestone": "M1",
+      "dependsOn": ["M1.01", "M2.05"],
+      "output": "Promotion source check dan fixture tests",
+      "detailFile": "docs/roadmap/01-governance.md"
+    },
+    {
+      "id": "M1.05",
+      "title": "Buat satu PR promosi otomatis; gunakan merge commit dan jangan auto-delete `dev`.",
+      "milestone": "M1",
+      "dependsOn": ["M1.04", "M8.04"],
+      "output": "Workflow promotion.yml idempotent",
+      "detailFile": "docs/roadmap/01-governance.md"
+    },
+    {
+      "id": "M1.06",
+      "title": "Tetapkan required checks yang stabil dan tidak deadlock akibat filter path atau job skipped.",
+      "milestone": "M1",
+      "dependsOn": ["M2.05", "M1.04"],
+      "output": "Required checks policy",
+      "detailFile": "docs/roadmap/01-governance.md"
+    },
+    {
+      "id": "M1.07",
+      "title": "Atur CODEOWNERS untuk workflow, auth, akses, schema, dan release; tetapkan reviewer realistis sesuai jumlah maintainer.",
+      "milestone": "M1",
+      "dependsOn": ["M0.04"],
+      "output": " .github/CODEOWNERS dan review policy",
+      "detailFile": "docs/roadmap/01-governance.md"
+    },
+    {
+      "id": "M1.08",
+      "title": "Tentukan kebijakan promosi: patch/minor kompatibel bisa otomatis; breaking change, perubahan destruktif, dan perubahan kebijakan keamanan memerlukan persetujuan eksplisit.",
+      "milestone": "M1",
+      "dependsOn": ["M7.01", "M1.07"],
+      "output": "Promotion risk classifier dan tests",
+      "detailFile": "docs/roadmap/01-governance.md"
+    },
+    {
+      "id": "M1.09",
+      "title": "Sinkronkan `main → dev` tanpa force-push; perubahan bersamaan atau konflik menghasilkan laporan, bukan overwrite.",
+      "milestone": "M1",
+      "dependsOn": ["M1.05"],
+      "output": "Sync workflow/function dan conflict report",
+      "detailFile": "docs/roadmap/01-governance.md"
+    },
+    {
+      "id": "M1.10",
+      "title": "Lindungi tag release dari pemindahan/penghapusan rutin; periksa drift ruleset dan settings.",
+      "milestone": "M1",
+      "dependsOn": ["M0.04"],
+      "output": "Tag policy dan settings audit",
+      "detailFile": "docs/roadmap/01-governance.md"
+    },
+    {
+      "id": "M1.11",
+      "title": "Hapus alur staging/production deployment yang tidak digunakan; pertahankan smoke test lokal runner.",
+      "milestone": "M1",
+      "dependsOn": ["M0.04"],
+      "output": "Removal diff dan dokumentasi scope",
+      "detailFile": "docs/roadmap/01-governance.md"
+    },
+    {
+      "id": "M1.12",
+      "title": "Pastikan updater dependency, generator docs, dan release bot tidak membuat branch ketiga; dokumentasikan keterbatasan strict two-branch untuk kolaborasi.",
+      "milestone": "M1",
+      "dependsOn": ["M0.07"],
+      "output": "Branch creation audit",
+      "detailFile": "docs/roadmap/01-governance.md"
+    },
+    {
+      "id": "M2.01",
+      "title": "Sediakan reusable setup/workflow agar CI, release, dan scheduled checks memakai konfigurasi yang sama.",
+      "milestone": "M2",
+      "dependsOn": ["M0.03", "M0.06"],
+      "output": "Reusable setup dan verification workflow",
+      "detailFile": "docs/roadmap/02-ci.md"
+    },
+    {
+      "id": "M2.02",
+      "title": "Standarkan root scripts: typecheck, lint, format:check, test:unit, test:integration, test:e2e, docs:check, verify.",
+      "milestone": "M2",
+      "dependsOn": ["M0.01", "M0.03"],
+      "output": "Root command contract dan scripts",
+      "detailFile": "docs/roadmap/02-ci.md"
+    },
+    {
+      "id": "M2.03",
+      "title": "Sertakan typecheck dan lint Board secara eksplisit; selaraskan ESLint/Oxlint agar aturan tidak saling bertentangan.",
+      "milestone": "M2",
+      "dependsOn": ["M0.03"],
+      "output": "Lint config dan cleanup terukur",
+      "detailFile": "docs/roadmap/02-ci.md"
+    },
+    {
+      "id": "M2.04",
+      "title": "Pisahkan job quality, unit, PostgreSQL integration, browser, security, docs, container, dan release integrity.",
+      "milestone": "M2",
+      "dependsOn": ["M2.01", "M2.02"],
+      "output": "CI job graph",
+      "detailFile": "docs/roadmap/02-ci.md"
+    },
+    {
+      "id": "M2.05",
+      "title": "Tambahkan `ci-gate` yang memahami success/failure/cancelled/skipped dan menjadi keputusan akhir.",
+      "milestone": "M2",
+      "dependsOn": ["M2.04"],
+      "output": "ci-gate dan decision tests",
+      "detailFile": "docs/roadmap/02-ci.md"
+    },
+    {
+      "id": "M2.06",
+      "title": "Required PostgreSQL tests harus gagal jika konfigurasi test hilang; tidak boleh diam-diam skipped pada CI wajib.",
+      "milestone": "M2",
+      "dependsOn": ["M0.03"],
+      "output": "Strict integration preflight",
+      "detailFile": "docs/roadmap/02-ci.md"
+    },
+    {
+      "id": "M2.07",
+      "title": "Pakai database dan akun fixture terisolasi per run; seed deterministik, cleanup, dan jangan menyentuh database pengguna.",
+      "milestone": "M2",
+      "dependsOn": ["M0.01"],
+      "output": "Shared test environment helpers",
+      "detailFile": "docs/roadmap/02-ci.md"
+    },
+    {
+      "id": "M2.08",
+      "title": "Cache dependency/build; affected testing memperhitungkan transitive dependents dan shared config. Promosi menjalankan suite penuh.",
+      "milestone": "M2",
+      "dependsOn": ["M2.04", "M0.01"],
+      "output": "Affected selection dan cache config",
+      "detailFile": "docs/roadmap/02-ci.md"
+    },
+    {
+      "id": "M2.09",
+      "title": "Atur timeout, concurrency, pembatalan run usang, dan serialisasi penulisan branch/release.",
+      "milestone": "M2",
+      "dependsOn": ["M2.04"],
+      "output": "Concurrency policy dan race test",
+      "detailFile": "docs/roadmap/02-ci.md"
+    },
+    {
+      "id": "M2.10",
+      "title": "Hasilkan test report, coverage, job summary, serta log/trace yang disanitasi dengan retensi terbatas.",
+      "milestone": "M2",
+      "dependsOn": ["M2.04"],
+      "output": "Test artifact layout dan summary generator",
+      "detailFile": "docs/roadmap/02-ci.md"
+    },
+    {
+      "id": "M2.11",
+      "title": "Validasi YAML/workflow dan shell scripts; periksa lockfile frozen dan reproducibility generator.",
+      "milestone": "M2",
+      "dependsOn": ["M2.01"],
+      "output": "Automation lint job",
+      "detailFile": "docs/roadmap/02-ci.md"
+    },
+    {
+      "id": "M2.12",
+      "title": "Terapkan kebijakan flaky tests: diagnosis, pemilik, tenggat; retry terbatas tidak boleh menyembunyikan regresi.",
+      "milestone": "M2",
+      "dependsOn": ["M2.10"],
+      "output": "Flake policy dan tracking",
+      "detailFile": "docs/roadmap/02-ci.md"
+    },
+    {
+      "id": "M2.13",
+      "title": "Ukur baseline coverage bagian kritis dan tetapkan threshold bertahap yang bermakna, bukan angka global arbitrer.",
+      "milestone": "M2",
+      "dependsOn": ["M0.03"],
+      "output": "Coverage policy dan CI threshold",
+      "detailFile": "docs/roadmap/02-ci.md"
+    },
+    {
+      "id": "M3.01",
+      "title": "Siapkan browser automation yang dapat dijalankan lokal dan GitHub runner; gunakan API dan PostgreSQL sungguhan untuk alur kritis.",
+      "milestone": "M3",
+      "dependsOn": ["M2.07"],
+      "output": "E2E config, fixtures dan smoke test",
+      "detailFile": "docs/roadmap/03-board.md"
+    },
+    {
+      "id": "M3.02",
+      "title": "Audit desktop/mobile, light/dark, overflow, fokus keyboard, kontras, label, dan navigasi screen reader dasar.",
+      "milestone": "M3",
+      "dependsOn": ["M3.01"],
+      "output": "Visual audit report dan fixes",
+      "detailFile": "docs/roadmap/03-board.md"
+    },
+    {
+      "id": "M3.03",
+      "title": "Test login sukses/gagal, logout, reload, expiry, refresh bersamaan, sesi dicabut, dan user nonaktif.",
+      "milestone": "M3",
+      "dependsOn": ["M3.01"],
+      "output": "auth-session E2E spec",
+      "detailFile": "docs/roadmap/03-board.md"
+    },
+    {
+      "id": "M3.04",
+      "title": "Test sidebar, command palette, dashboard, direct URL, Development Mode dan persistensinya; semua mengikuti metadata/akses yang sama.",
+      "milestone": "M3",
+      "dependsOn": ["M3.01"],
+      "output": "navigation-access E2E spec",
+      "detailFile": "docs/roadmap/03-board.md"
+    },
+    {
+      "id": "M3.05",
+      "title": "Test profil sendiri, language/timezone, ganti password, login ulang, dan error validasi.",
+      "milestone": "M3",
+      "dependsOn": ["M3.01"],
+      "output": "account-settings E2E spec",
+      "detailFile": "docs/roadmap/03-board.md"
+    },
+    {
+      "id": "M3.06",
+      "title": "Test list/search/filter/sort/pagination/count, termasuk regresi `partner,language` dan count PostgreSQL.",
+      "milestone": "M3",
+      "dependsOn": ["M3.01", "M2.06"],
+      "output": "data-list E2E regression",
+      "detailFile": "docs/roadmap/03-board.md"
+    },
+    {
+      "id": "M3.07",
+      "title": "Test create/edit/archive/delete sesuai kebijakan model, field relasi, serta filter country/state.",
+      "milestone": "M3",
+      "dependsOn": ["M3.01"],
+      "output": "record-edit E2E spec",
+      "detailFile": "docs/roadmap/03-board.md"
+    },
+    {
+      "id": "M3.08",
+      "title": "Test import/export, attachment, activities, dan fitur Board lain jika ditemukan dalam inventarisasi.",
+      "milestone": "M3",
+      "dependsOn": ["M3.01", "M0.01"],
+      "output": "extended-board E2E specs",
+      "detailFile": "docs/roadmap/03-board.md"
+    },
+    {
+      "id": "M3.09",
+      "title": "Uji error/empty/loading states, jaringan terputus, stale data, double submit, dan pencegahan kebocoran cache antar-user/company.",
+      "milestone": "M3",
+      "dependsOn": ["M3.01"],
+      "output": "resilience E2E dan cache fixes",
+      "detailFile": "docs/roadmap/03-board.md"
+    },
+    {
+      "id": "M3.10",
+      "title": "Simpan screenshot/trace saat gagal; buat visual baseline setelah audit manusia dan jangan auto-accept perubahan baseline.",
+      "milestone": "M3",
+      "dependsOn": ["M3.02"],
+      "output": "Visual regression suite",
+      "detailFile": "docs/roadmap/03-board.md"
+    },
+    {
+      "id": "M3.11",
+      "title": "Jalankan browser utama pada perubahan rutin dan browser tambahan pada regresi terjadwal; dokumentasikan coverage browser.",
+      "milestone": "M3",
+      "dependsOn": ["M3.03", "M3.06", "M0.06"],
+      "output": "Browser matrix workflow",
+      "detailFile": "docs/roadmap/03-board.md"
+    },
+    {
+      "id": "M4.01",
+      "title": "Validasi semua model/field/relasi/view/menu/access dan kebijakan seed melalui matriks metadata.",
+      "milestone": "M4",
+      "dependsOn": ["M0.01"],
+      "output": "Metadata integrity tests",
+      "detailFile": "docs/roadmap/04-backend.md"
+    },
+    {
+      "id": "M4.02",
+      "title": "Test instalasi bersih, restart idempotent, upgrade legacy, seed reference, pelestarian edit pengguna, dan startup multi-replica.",
+      "milestone": "M4",
+      "dependsOn": ["M2.07"],
+      "output": "Addon install/upgrade regression suite",
+      "detailFile": "docs/roadmap/04-backend.md"
+    },
+    {
+      "id": "M4.03",
+      "title": "Verifikasi default system/superadmin, password awal dari konfigurasi, reset CLI/root script, dan tidak menimpa password yang sudah diubah.",
+      "milestone": "M4",
+      "dependsOn": ["M2.07"],
+      "output": "Password initialization/reset tests",
+      "detailFile": "docs/roadmap/04-backend.md"
+    },
+    {
+      "id": "M4.04",
+      "title": "Verifikasi company default, reference countries, states, banks, partner bank, serta provenance/update policy data referensi; jangan mengklaim states lengkap bila hanya subset.",
+      "milestone": "M4",
+      "dependsOn": ["M0.08"],
+      "output": "Reference-data policy dan tests",
+      "detailFile": "docs/roadmap/04-backend.md"
+    },
+    {
+      "id": "M4.05",
+      "title": "Audit autentikasi: hashing, enumeration, throttling, refresh replay/concurrency, perubahan role/password, dan batas waktu revocation access token.",
+      "milestone": "M4",
+      "dependsOn": ["M0.02"],
+      "output": "Auth threat cases dan regression tests",
+      "detailFile": "docs/roadmap/04-backend.md"
+    },
+    {
+      "id": "M4.06",
+      "title": "Test izin negatif CRUD/count/export/direct API dan isolasi company, termasuk relasi lintas-company.",
+      "milestone": "M4",
+      "dependsOn": ["M2.07", "M0.02"],
+      "output": "Authorization matrix tests",
+      "detailFile": "docs/roadmap/04-backend.md"
+    },
+    {
+      "id": "M4.07",
+      "title": "Batasi pagination, query cost, kedalaman eager relations, payload, sorting, dan filter; cegah mass assignment.",
+      "milestone": "M4",
+      "dependsOn": ["M0.01"],
+      "output": "Query/input guardrails dan tests",
+      "detailFile": "docs/roadmap/04-backend.md"
+    },
+    {
+      "id": "M4.08",
+      "title": "Pastikan field sensitif tidak muncul dalam JSON, export, audit, error, atau log.",
+      "milestone": "M4",
+      "dependsOn": ["M0.01"],
+      "output": "Redaction/serialization regression",
+      "detailFile": "docs/roadmap/04-backend.md"
+    },
+    {
+      "id": "M4.09",
+      "title": "Audit transaksi, constraint, indexes, concurrency edits, timezone, error mapping, dan rollback kegagalan upgrade programatis.",
+      "milestone": "M4",
+      "dependsOn": ["M4.02"],
+      "output": "Data integrity tests dan policy",
+      "detailFile": "docs/roadmap/04-backend.md"
+    },
+    {
+      "id": "M4.10",
+      "title": "Scheduler/worker: claim atomik, lease, heartbeat, retry/backoff, recovery setelah crash, cancellation, dead-letter, dan job history.",
+      "milestone": "M4",
+      "dependsOn": ["M0.01", "M2.07"],
+      "output": "Jobs failure-mode suite",
+      "detailFile": "docs/roadmap/04-backend.md"
+    },
+    {
+      "id": "M4.11",
+      "title": "Outbox: transactional enqueue, delivery retries, deduplication/idempotency, dan pengujian efek eksternal ganda; jangan mengklaim exactly-once tanpa bukti.",
+      "milestone": "M4",
+      "dependsOn": ["M4.10"],
+      "output": "Outbox integration suite",
+      "detailFile": "docs/roadmap/04-backend.md"
+    },
+    {
+      "id": "M4.12",
+      "title": "Attachment: izin upload/download, size/MIME, filename/path traversal, storage ownership, dan retensi.",
+      "milestone": "M4",
+      "dependsOn": ["M0.01"],
+      "output": "Attachment hardening tests",
+      "detailFile": "docs/roadmap/04-backend.md"
+    },
+    {
+      "id": "M4.13",
+      "title": "Operasional: graceful shutdown, DB pools/timeouts, request ID, redaksi log, readiness/liveness API dan worker.",
+      "milestone": "M4",
+      "dependsOn": ["M0.01"],
+      "output": "Runtime lifecycle tests",
+      "detailFile": "docs/roadmap/04-backend.md"
+    },
+    {
+      "id": "M4.14",
+      "title": "Restore drill dengan data aplikasi, relasi, akun test dan integrity checks; tetapkan target pemulihan berbasis hasil pengukuran.",
+      "milestone": "M4",
+      "dependsOn": ["M4.02", "M4.03"],
+      "output": "Application restore drill report",
+      "detailFile": "docs/roadmap/04-backend.md"
+    },
+    {
+      "id": "M4.15",
+      "title": "Tambahkan baseline load/query tests dan budget regresi realistis; ukur N+1 serta operasi yang memperbesar penggunaan memori.",
+      "milestone": "M4",
+      "dependsOn": ["M0.03", "M0.06"],
+      "output": "Performance fixtures dan report",
+      "detailFile": "docs/roadmap/04-backend.md"
+    },
+    {
+      "id": "M4.16",
+      "title": "Dokumentasikan compatibility policy API/addon, deprecation, dan upgrade guidance.",
+      "milestone": "M4",
+      "dependsOn": ["M0.07"],
+      "output": "Compatibility policy dan contract tests",
+      "detailFile": "docs/roadmap/04-backend.md"
+    },
+    {
+      "id": "M5.01",
+      "title": "Inventarisasi UI Board; tentukan arah visual MoonWitness dan audit contoh halaman representatif sebelum migrasi massal.",
+      "milestone": "M5",
+      "dependsOn": ["M0.05"],
+      "output": "docs/design/visual-direction.md",
+      "detailFile": "docs/roadmap/05-design-system.md"
+    },
+    {
+      "id": "M5.02",
+      "title": "Buat `@moonwitness/assets`: logo simbol/wordmark/lockup, versi terang/gelap/monokrom, favicon dan social image.",
+      "milestone": "M5",
+      "dependsOn": ["M5.01"],
+      "output": "packages/assets/brand dan export manifest",
+      "detailFile": "docs/roadmap/05-design-system.md"
+    },
+    {
+      "id": "M5.03",
+      "title": "Buat tokens warna/semantik, tipografi, spacing, radius, shadow, motion, dan reduced-motion; dokumentasikan aturan penggunaan.",
+      "milestone": "M5",
+      "dependsOn": ["M5.01"],
+      "output": "packages/ui/src/styles/tokens.css dan token guide",
+      "detailFile": "docs/roadmap/05-design-system.md"
+    },
+    {
+      "id": "M5.04",
+      "title": "Buat ikon SVG konsisten untuk domain inti dan aksi umum; audit keterbacaan ukuran kecil serta identitas yang berbeda dari brand lain.",
+      "milestone": "M5",
+      "dependsOn": ["M5.01"],
+      "output": "packages/assets/icons/*.svg dan icon inventory",
+      "detailFile": "docs/roadmap/05-design-system.md"
+    },
+    {
+      "id": "M5.05",
+      "title": "Sediakan ikon React typed dengan currentColor, ukuran, title, dan aksesibilitas; gunakan static SVG untuk README.",
+      "milestone": "M5",
+      "dependsOn": ["M5.04", "M5.08"],
+      "output": "packages/ui/src/icons",
+      "detailFile": "docs/roadmap/05-design-system.md"
+    },
+    {
+      "id": "M5.06",
+      "title": "Buat ilustrasi original empty/search/error/access denied/offline/onboarding serta pola latar ringan.",
+      "milestone": "M5",
+      "dependsOn": ["M5.02", "M5.03"],
+      "output": "packages/assets/illustrations dan usage guide",
+      "detailFile": "docs/roadmap/05-design-system.md"
+    },
+    {
+      "id": "M5.07",
+      "title": "Catat sumber/lisensi font dan asset; optimasi SVG, validasi script/external refs, dan cegah ID collision.",
+      "milestone": "M5",
+      "dependsOn": ["M5.02"],
+      "output": "Asset validation script dan licenses manifest",
+      "detailFile": "docs/roadmap/05-design-system.md"
+    },
+    {
+      "id": "M5.08",
+      "title": "Buat `@moonwitness/ui` dengan exports jelas, tanpa dependency API/router/auth aplikasi dan tanpa side effect yang tidak terdokumentasi.",
+      "milestone": "M5",
+      "dependsOn": ["M0.07"],
+      "output": "packages/ui scaffold dan consumer smoke test",
+      "detailFile": "docs/roadmap/05-design-system.md"
+    },
+    {
+      "id": "M5.09",
+      "title": "Komponen dasar: button/input/select/checkbox/badge/avatar; interaksi: dialog/dropdown/tabs/tooltip/toast.",
+      "milestone": "M5",
+      "dependsOn": ["M5.08", "M5.03"],
+      "output": "UI primitives dan interaction stories",
+      "detailFile": "docs/roadmap/05-design-system.md"
+    },
+    {
+      "id": "M5.10",
+      "title": "Komponen komposisi: field/help/error, card/skeleton/empty/error state, page header/toolbar/panel, pagination/table primitives.",
+      "milestone": "M5",
+      "dependsOn": ["M5.09"],
+      "output": "UI composition components",
+      "detailFile": "docs/roadmap/05-design-system.md"
+    },
+    {
+      "id": "M5.11",
+      "title": "Tetapkan theming dan compatibility policy komponen; hindari boolean props berlebihan dan barrel export yang membesarkan bundle.",
+      "milestone": "M5",
+      "dependsOn": ["M5.08"],
+      "output": "UI API contract dan export tests",
+      "detailFile": "docs/roadmap/05-design-system.md"
+    },
+    {
+      "id": "M5.12",
+      "title": "Grafik data: tema, tooltip/legend, locale/timezone, loading/empty/error, tabel alternatif, dan responsivitas. Bentuk `@moonwitness/charts` hanya ketika reuse membenarkannya.",
+      "milestone": "M5",
+      "dependsOn": ["M5.03", "M5.08"],
+      "output": "Chart components; ADR ekstraksi packages/charts",
+      "detailFile": "docs/roadmap/05-design-system.md"
+    },
+    {
+      "id": "M5.13",
+      "title": "Diagram arsitektur/relasi/alur: generate dari metadata bila tepat; kurasi diagram penjelasan agar terbaca.",
+      "milestone": "M5",
+      "dependsOn": ["M0.07", "M4.01"],
+      "output": "docs/architecture/diagrams dan static exports",
+      "detailFile": "docs/roadmap/05-design-system.md"
+    },
+    {
+      "id": "M5.14",
+      "title": "Migrasikan shell/login/profile/settings/list/form Board bertahap; hapus duplikasi dan dependency yang benar-benar tidak terpakai.",
+      "milestone": "M5",
+      "dependsOn": ["M5.09", "M5.10", "M3.01"],
+      "output": "Board UI migration dan removal inventory",
+      "detailFile": "docs/roadmap/05-design-system.md"
+    },
+    {
+      "id": "M5.15",
+      "title": "Gunakan sumber asset/tokens yang sama pada README dan Pages; ekspor statis sesuai kemampuan platform.",
+      "milestone": "M5",
+      "dependsOn": ["M5.02", "M5.07"],
+      "output": "Branded README dan Pages assets",
+      "detailFile": "docs/roadmap/05-design-system.md"
+    },
+    {
+      "id": "M5.16",
+      "title": "Buat katalog komponen dengan variasi panjang teks, states, themes, keyboard dan ukuran layar; publikasikan bersama dokumentasi.",
+      "milestone": "M5",
+      "dependsOn": ["M5.09"],
+      "output": "Storybook atau katalog setara yang dipilih dalam ADR",
+      "detailFile": "docs/roadmap/05-design-system.md"
+    },
+    {
+      "id": "M5.17",
+      "title": "CI UI: typecheck, interaction/a11y, visual regression, SVG validation, export checks, dan bundle budget.",
+      "milestone": "M5",
+      "dependsOn": ["M5.16", "M2.04"],
+      "output": "UI CI job dan report",
+      "detailFile": "docs/roadmap/05-design-system.md"
+    },
+    {
+      "id": "M6.01",
+      "title": "Buat struktur docs: quickstart, architecture, addon development, API, models, Board, jobs/outbox, security, troubleshooting, recovery, release/upgrade.",
+      "milestone": "M6",
+      "dependsOn": ["M0.07"],
+      "output": "docs content tree dan navigation config",
+      "detailFile": "docs/roadmap/06-documentation.md"
+    },
+    {
+      "id": "M6.02",
+      "title": "Buat generator deterministik package/scripts/env schema/model/field/relasi/menu/access/seed dan referensi endpoint yang benar-benar valid.",
+      "milestone": "M6",
+      "dependsOn": ["M0.01", "M4.01"],
+      "output": "scripts/docs generation modules dan generated references",
+      "detailFile": "docs/roadmap/06-documentation.md"
+    },
+    {
+      "id": "M6.03",
+      "title": "Pisahkan blok generated README dari penjelasan manual; jangan overwrite seluruh dokumen.",
+      "milestone": "M6",
+      "dependsOn": ["M6.02"],
+      "output": "README partial generator",
+      "detailFile": "docs/roadmap/06-documentation.md"
+    },
+    {
+      "id": "M6.04",
+      "title": "Standardisasi docs:generate, docs:check, docs:build, docs:links; gagal saat hasil generator stale.",
+      "milestone": "M6",
+      "dependsOn": ["M6.02", "M6.03"],
+      "output": "Root docs command contract",
+      "detailFile": "docs/roadmap/06-documentation.md"
+    },
+    {
+      "id": "M6.05",
+      "title": "Uji contoh executable dan tautan internal; link eksternal memakai kebijakan retry agar gangguan pihak lain tidak membuat flakiness berlebihan.",
+      "milestone": "M6",
+      "dependsOn": ["M6.01"],
+      "output": "Docs examples tests dan link checker",
+      "detailFile": "docs/roadmap/06-documentation.md"
+    },
+    {
+      "id": "M6.06",
+      "title": "Buat portal responsif dengan search, base path repository, 404, branding, dan katalog UI.",
+      "milestone": "M6",
+      "dependsOn": ["M6.01", "M5.02", "M5.03"],
+      "output": "Documentation portal",
+      "detailFile": "docs/roadmap/06-documentation.md"
+    },
+    {
+      "id": "M6.07",
+      "title": "Gunakan Actions artifact untuk Pages tanpa branch tambahan; dev hanya menghasilkan preview artifact.",
+      "milestone": "M6",
+      "dependsOn": ["M6.06", "M0.04"],
+      "output": "pages.yml dan verified Pages configuration",
+      "detailFile": "docs/roadmap/06-documentation.md"
+    },
+    {
+      "id": "M6.08",
+      "title": "Publikasikan dokumentasi stable yang sesuai release; tentukan retensi versi dokumentasi dan URL latest.",
+      "milestone": "M6",
+      "dependsOn": ["M7.02", "M6.06"],
+      "output": "Docs version manifest",
+      "detailFile": "docs/roadmap/06-documentation.md"
+    },
+    {
+      "id": "M6.09",
+      "title": "Scan konten publik agar tidak berisi secret, data pribadi, real environment values, atau internal artifacts.",
+      "milestone": "M6",
+      "dependsOn": ["M6.04", "M6.06"],
+      "output": "Docs publication safety check",
+      "detailFile": "docs/roadmap/06-documentation.md"
+    },
+    {
+      "id": "M6.10",
+      "title": "Docs-only changes dapat dipublikasikan setelah verifikasi tanpa memaksa release aplikasi; source SHA harus terlacak.",
+      "milestone": "M6",
+      "dependsOn": ["M6.07", "M7.01"],
+      "output": "Docs-only publishing path",
+      "detailFile": "docs/roadmap/06-documentation.md"
+    },
+    {
+      "id": "M6.11",
+      "title": "Pisahkan retry Pages dari release aplikasi; kegagalan docs tercatat dan tidak menghasilkan tag/version baru.",
+      "milestone": "M6",
+      "dependsOn": ["M6.07", "M7.13"],
+      "output": "Pages retry runbook dan test fixtures",
+      "detailFile": "docs/roadmap/06-documentation.md"
+    },
+    {
+      "id": "M7.01",
+      "title": "Terapkan Conventional Commits dan definisi patch/minor/major/non-release secara konsisten.",
+      "milestone": "M7",
+      "dependsOn": ["M0.07"],
+      "output": "Release classification module/tests",
+      "detailFile": "docs/roadmap/07-release.md"
+    },
+    {
+      "id": "M7.02",
+      "title": "Tetapkan satu versi monorepo bersama; sinkronkan root/workspaces/lockfile/metadata yang relevan.",
+      "milestone": "M7",
+      "dependsOn": ["M7.01"],
+      "output": "Version updater dan consistency tests",
+      "detailFile": "docs/roadmap/07-release.md"
+    },
+    {
+      "id": "M7.03",
+      "title": "Putuskan transisi `1.0.0-rc.1` ke stable secara eksplisit; jangan auto-publish stable hanya karena automation baru aktif.",
+      "milestone": "M7",
+      "dependsOn": ["M0.04", "M7.01"],
+      "output": "First stable release decision record",
+      "detailFile": "docs/roadmap/07-release.md"
+    },
+    {
+      "id": "M7.04",
+      "title": "Hitung versi dari release terakhir dan perubahan fungsional; abaikan commit generator/sync untuk mencegah release loop.",
+      "milestone": "M7",
+      "dependsOn": ["M7.01", "M7.03"],
+      "output": "Deterministic release planner",
+      "detailFile": "docs/roadmap/07-release.md"
+    },
+    {
+      "id": "M7.05",
+      "title": "Siapkan version/changelog/docs pada dev tanpa release branch; persiapan berulang harus idempotent.",
+      "milestone": "M7",
+      "dependsOn": ["M7.02", "M7.04", "M6.04", "M7.08"],
+      "output": "Prepare-release automation",
+      "detailFile": "docs/roadmap/07-release.md"
+    },
+    {
+      "id": "M7.06",
+      "title": "Changelog berisi fitur/fix/security/breaking/upgrade dan tautan commit/PR; breaking notes divalidasi.",
+      "milestone": "M7",
+      "dependsOn": ["M7.04"],
+      "output": "Changelog generator/templates/tests",
+      "detailFile": "docs/roadmap/07-release.md"
+    },
+    {
+      "id": "M7.07",
+      "title": "Jalankan CI lengkap pada commit hasil persiapan; verifikasi lagi main merge SHA sebelum publikasi.",
+      "milestone": "M7",
+      "dependsOn": ["M2.05"],
+      "output": "Verified source gate",
+      "detailFile": "docs/roadmap/07-release.md"
+    },
+    {
+      "id": "M7.08",
+      "title": "Gunakan concurrency lock dan pengecekan expected SHA sebelum bot menulis; perubahan dev baru membatalkan rencana lama.",
+      "milestone": "M7",
+      "dependsOn": ["M2.09", "M8.04"],
+      "output": "Write coordination dan race fixture",
+      "detailFile": "docs/roadmap/07-release.md"
+    },
+    {
+      "id": "M7.09",
+      "title": "Bangun sekali artefak release dari SHA tervalidasi lalu promosikan artefak yang sama; jangan rebuild tanpa verifikasi identitas.",
+      "milestone": "M7",
+      "dependsOn": ["M7.07", "M4.13"],
+      "output": "Build-once artifact flow",
+      "detailFile": "docs/roadmap/07-release.md"
+    },
+    {
+      "id": "M7.10",
+      "title": "Buat tag immutable, draft/release completion flow, changelog, checksums, GHCR API/Board, SBOM dan provenance attestations.",
+      "milestone": "M7",
+      "dependsOn": ["M7.09", "M7.06", "M8.01"],
+      "output": "Release manifest, draft flow dan publishing jobs",
+      "detailFile": "docs/roadmap/07-release.md"
+    },
+    {
+      "id": "M7.11",
+      "title": "Tag image memakai versi/SHA; update latest hanya setelah seluruh artefak wajib berhasil. Tidak deploy aplikasi.",
+      "milestone": "M7",
+      "dependsOn": ["M7.10"],
+      "output": "Registry promotion policy dan tests",
+      "detailFile": "docs/roadmap/07-release.md"
+    },
+    {
+      "id": "M7.12",
+      "title": "Verifikasi provenance/digest dan dokumentasikan cara konsumen memeriksanya.",
+      "milestone": "M7",
+      "dependsOn": ["M7.10"],
+      "output": "Provenance verification instructions",
+      "detailFile": "docs/roadmap/07-release.md"
+    },
+    {
+      "id": "M7.13",
+      "title": "Retry release yang sama melanjutkan aset kurang tanpa bump/tag/release duplikat atau overwrite aset berbeda.",
+      "milestone": "M7",
+      "dependsOn": ["M7.10"],
+      "output": "Idempotent publication reconciler",
+      "detailFile": "docs/roadmap/07-release.md"
+    },
+    {
+      "id": "M7.14",
+      "title": "Uji race, partial publish, upload gagal, token expired, tidak ada perubahan releasable, dan kegagalan sinkronisasi branch.",
+      "milestone": "M7",
+      "dependsOn": ["M7.13", "M7.08"],
+      "output": "Release fault-injection suite",
+      "detailFile": "docs/roadmap/07-release.md"
+    },
+    {
+      "id": "M7.15",
+      "title": "Rancang trigger eksplisit melalui reusable workflow/dispatch; jangan mengandalkan event GITHUB_TOKEN yang tidak memicu workflow berikutnya.",
+      "milestone": "M7",
+      "dependsOn": ["M8.04", "M2.01"],
+      "output": "Trigger graph dan trust validation",
+      "detailFile": "docs/roadmap/07-release.md"
+    },
+    {
+      "id": "M7.16",
+      "title": "Sediakan dry-run/release-plan artifact sebelum publikasi pertama dan tautkan seluruh bukti ke release.",
+      "milestone": "M7",
+      "dependsOn": ["M7.05", "M7.06", "M7.14", "M7.15", "M1.08"],
+      "output": "Dry-run report dan activation checklist",
+      "detailFile": "docs/roadmap/07-release.md"
+    },
+    {
+      "id": "M8.01",
+      "title": "Default workflow read-only; scoped writes untuk bot/promosi/release/Pages dan gunakan GitHub App bila dibutuhkan.",
+      "milestone": "M8",
+      "dependsOn": ["M0.04"],
+      "output": "Workflow permission matrix",
+      "detailFile": "docs/roadmap/08-security-maintenance.md"
+    },
+    {
+      "id": "M8.02",
+      "title": "Pin external Actions ke SHA tervalidasi, perbarui berkala; pisahkan eksekusi kode tak tepercaya dari job berkredensial.",
+      "milestone": "M8",
+      "dependsOn": ["M8.01"],
+      "output": "Pinned workflows dan trust tests",
+      "detailFile": "docs/roadmap/08-security-maintenance.md"
+    },
+    {
+      "id": "M8.03",
+      "title": "Aktifkan code/dependency/secret scanning yang tersedia; scan container dan tetapkan severity policy serta exception beralasan dengan expiry.",
+      "milestone": "M8",
+      "dependsOn": ["M0.04", "M2.04"],
+      "output": "Security workflow dan policy",
+      "detailFile": "docs/roadmap/08-security-maintenance.md"
+    },
+    {
+      "id": "M8.04",
+      "title": "Simpan dokumentasi satu kali konfigurasi App/settings; jangan menyimpan credential bot dalam repo.",
+      "milestone": "M8",
+      "dependsOn": ["M0.04", "M8.01"],
+      "output": "docs/operations/github-bootstrap.md",
+      "detailFile": "docs/roadmap/08-security-maintenance.md"
+    },
+    {
+      "id": "M8.05",
+      "title": "Updater mingguan menyiapkan dependency runtime/dev/actions dalam kelompok; tidak membuat branch ketiga.",
+      "milestone": "M8",
+      "dependsOn": ["M0.01", "M1.12"],
+      "output": "Dependency update planner",
+      "detailFile": "docs/roadmap/08-security-maintenance.md"
+    },
+    {
+      "id": "M8.06",
+      "title": "Uji kandidat update sebelum menulis ke dev; periksa SHA asal, serialisasi bot writes, dan jangan mencampur beberapa major upgrade.",
+      "milestone": "M8",
+      "dependsOn": ["M8.05", "M7.08", "M2.05"],
+      "output": "Dependency candidate executor",
+      "detailFile": "docs/roadmap/08-security-maintenance.md"
+    },
+    {
+      "id": "M8.07",
+      "title": "Patch/minor tetap melewati suite penuh dan promosi; major update menghasilkan laporan kompatibilitas sebelum diterapkan.",
+      "milestone": "M8",
+      "dependsOn": ["M8.06", "M1.08"],
+      "output": "Dependency promotion policy",
+      "detailFile": "docs/roadmap/08-security-maintenance.md"
+    },
+    {
+      "id": "M8.08",
+      "title": "Scheduled regression: browser tambahan, schema upgrade, jobs recovery, application restore drill, dan security rescan.",
+      "milestone": "M8",
+      "dependsOn": ["M3.11", "M4.10", "M4.14"],
+      "output": "Scheduled regression workflow",
+      "detailFile": "docs/roadmap/08-security-maintenance.md"
+    },
+    {
+      "id": "M8.09",
+      "title": "Jadwalkan issue pemeliharaan tanpa spam; deduplikasi failure issue, perbarui recovery, dan jangan auto-close laporan keamanan hanya karena sudah lama.",
+      "milestone": "M8",
+      "dependsOn": ["M2.10", "M8.01"],
+      "output": "Maintenance issue reconciler",
+      "detailFile": "docs/roadmap/08-security-maintenance.md"
+    },
+    {
+      "id": "M8.10",
+      "title": "Audit retensi artifacts/logs, registry growth, biaya Actions, permission drift, dan toolchain end-of-support.",
+      "milestone": "M8",
+      "dependsOn": ["M0.06", "M8.01"],
+      "output": "Monthly platform audit",
+      "detailFile": "docs/roadmap/08-security-maintenance.md"
+    },
+    {
+      "id": "M8.11",
+      "title": "Definisikan security reporting, incident response, credential rotation, dan release correction procedure.",
+      "milestone": "M8",
+      "dependsOn": ["M4.05", "M8.04"],
+      "output": "SECURITY.md dan incident runbooks",
+      "detailFile": "docs/roadmap/08-security-maintenance.md"
+    },
+    {
+      "id": "M9.01",
+      "title": "Evaluasi `orm-notification`: preferences, templates, inbox, delivery status; reuse jobs/outbox dan cegah pengiriman contoh ke penerima nyata.",
+      "milestone": "M9",
+      "dependsOn": ["M4.11", "M4.06"],
+      "output": "orm-notification minimal addon atau ADR reuse existing",
+      "detailFile": "docs/roadmap/09-addons.md"
+    },
+    {
+      "id": "M9.02",
+      "title": "Evaluasi `orm-storage`: storage adapters, attachment ownership/download/retention; migrasikan dengan kompatibilitas data existing.",
+      "milestone": "M9",
+      "dependsOn": ["M4.12", "M4.16"],
+      "output": "orm-storage adapter contract dan migration guide",
+      "detailFile": "docs/roadmap/09-addons.md"
+    },
+    {
+      "id": "M9.03",
+      "title": "Evaluasi `orm-workflow`: state transition, approval policy, authorization, history, timeout, dan audit.",
+      "milestone": "M9",
+      "dependsOn": ["M4.06", "M4.10"],
+      "output": "orm-workflow minimal engine dan example",
+      "detailFile": "docs/roadmap/09-addons.md"
+    },
+    {
+      "id": "M9.04",
+      "title": "Evaluasi `orm-integration`: webhook subscriptions, scoped credential references, signing, idempotency, delivery/retry; validasi tujuan request untuk menghindari SSRF.",
+      "milestone": "M9",
+      "dependsOn": ["M4.11", "M8.11"],
+      "output": "orm-integration minimal webhook addon",
+      "detailFile": "docs/roadmap/09-addons.md"
+    },
+    {
+      "id": "M9.05",
+      "title": "Evaluasi `orm-organization`: departments, teams, positions, memberships dan manager berdasarkan kebutuhan produk.",
+      "milestone": "M9",
+      "dependsOn": ["M4.06"],
+      "output": "orm-organization minimal addon",
+      "detailFile": "docs/roadmap/09-addons.md"
+    },
+    {
+      "id": "M9.06",
+      "title": "Bangun satu addon bisnis contoh (request/approval atau CRM sederhana) untuk membuktikan extensibility tanpa perubahan core berulang.",
+      "milestone": "M9",
+      "dependsOn": ["M9.01", "M9.03", "M9.07"],
+      "output": "Sample request addon dengan demo dataset",
+      "detailFile": "docs/roadmap/09-addons.md"
+    },
+    {
+      "id": "M9.07",
+      "title": "Untuk tiap addon: manifest/dependencies, minimal public API, access isolation, views/menu, required/demo seeds, docs, upgrade path, tests, dan compatibility policy.",
+      "milestone": "M9",
+      "dependsOn": ["M4.01", "M4.02", "M4.16"],
+      "output": "Reusable addon conformance suite",
+      "detailFile": "docs/roadmap/09-addons.md"
+    },
+    {
+      "id": "M9.08",
+      "title": "Audit ukuran base/API/Board setelah ekstraksi; package baru harus mengurangi coupling atau menghasilkan reuse yang terbukti.",
+      "milestone": "M9",
+      "dependsOn": ["M0.05", "M9.06"],
+      "output": "Post-extraction architecture review",
+      "detailFile": "docs/roadmap/09-addons.md"
+    },
+    {
+      "id": "M10.01",
+      "title": "Semua fitur inventarisasi punya status coverage; gap eksplisit mempunyai pemilik dan prioritas.",
+      "milestone": "M10",
+      "dependsOn": ["M0.02", "M3.08", "M4.16"],
+      "output": "Final feature coverage report",
+      "detailFile": "docs/roadmap/10-acceptance.md"
+    },
+    {
+      "id": "M10.02",
+      "title": "Audit visual Board selesai dan bukti screenshot tersimpan; browser E2E tidak sekadar mengecek halaman terbuka.",
+      "milestone": "M10",
+      "dependsOn": ["M3.10", "M5.14", "M5.17"],
+      "output": "Final Board acceptance report",
+      "detailFile": "docs/roadmap/10-acceptance.md"
+    },
+    {
+      "id": "M10.03",
+      "title": "Lint/types/build/tests dan seluruh required checks lolos pada commit yang dipromosikan.",
+      "milestone": "M10",
+      "dependsOn": ["M2.05", "M7.07"],
+      "output": "Final CI evidence manifest",
+      "detailFile": "docs/roadmap/10-acceptance.md"
+    },
+    {
+      "id": "M10.04",
+      "title": "PostgreSQL integration benar-benar berjalan; upgrade, relasi/count, seed, dan izin negatif teruji.",
+      "milestone": "M10",
+      "dependsOn": ["M2.06", "M4.02", "M4.06"],
+      "output": "PostgreSQL acceptance evidence",
+      "detailFile": "docs/roadmap/10-acceptance.md"
+    },
+    {
+      "id": "M10.05",
+      "title": "Image API/Board berjalan pada runner; health/readiness/shutdown dan konfigurasi container terverifikasi.",
+      "milestone": "M10",
+      "dependsOn": ["M7.09"],
+      "output": "Container smoke evidence",
+      "detailFile": "docs/roadmap/10-acceptance.md"
+    },
+    {
+      "id": "M10.06",
+      "title": "Simulasi gagal membuktikan promosi/release diblokir; rerun tidak membuat duplikasi atau workflow loop.",
+      "milestone": "M10",
+      "dependsOn": ["M7.14"],
+      "output": "Automation failure acceptance report",
+      "detailFile": "docs/roadmap/10-acceptance.md"
+    },
+    {
+      "id": "M10.07",
+      "title": "Satu siklus dev → main → version/tag/release/artifacts/Pages → sync dev terbukti dengan bukti SHA dan run URL.",
+      "milestone": "M10",
+      "dependsOn": ["M7.16", "M6.07", "M1.09", "M10.03", "M10.04", "M10.05", "M10.06"],
+      "output": "End-to-end release trace",
+      "detailFile": "docs/roadmap/10-acceptance.md"
+    },
+    {
+      "id": "M10.08",
+      "title": "Hanya main/dev ada pada repository asal; tidak ada workflow deployment aplikasi yang aktif.",
+      "milestone": "M10",
+      "dependsOn": ["M1.02", "M1.11", "M1.12"],
+      "output": "Governance acceptance snapshot",
+      "detailFile": "docs/roadmap/10-acceptance.md"
+    },
+    {
+      "id": "M10.09",
+      "title": "README/Pages/asset catalog sesuai source dan release; tidak ada secret atau data pengguna dalam output publik.",
+      "milestone": "M10",
+      "dependsOn": ["M6.09", "M5.15", "M10.07"],
+      "output": "Documentation publication acceptance",
+      "detailFile": "docs/roadmap/10-acceptance.md"
+    },
+    {
+      "id": "M10.10",
+      "title": "Tetapkan recurring maintenance di bawah dan catat keterbatasan tersisa sebelum milestone dinyatakan selesai.",
+      "milestone": "M10",
+      "dependsOn": ["M8.08", "M8.09", "M8.10", "M10.01", "M10.02", "M10.08", "M10.09"],
+      "output": "Handoff report dan maintained roadmap",
+      "detailFile": "docs/roadmap/10-acceptance.md"
+    },
+    {
+      "id": "M11.01",
+      "title": "Tetapkan kontrak sinkronisasi roadmap ↔ GitHub Issues dan otoritas setiap field.",
+      "milestone": "M11",
+      "dependsOn": ["M0.02", "M0.04"],
+      "output": "docs/engineering/issue-sync-policy.md",
+      "detailFile": "docs/roadmap/11-issues-delivery.md"
+    },
+    {
+      "id": "M11.02",
+      "title": "Buat schema task tracking, identitas issue stabil, dan validator silang dokumen.",
+      "milestone": "M11",
+      "dependsOn": ["M11.01"],
+      "output": "Task schema, validator dan fixture tests",
+      "detailFile": "docs/roadmap/11-issues-delivery.md"
+    },
+    {
+      "id": "M11.03",
+      "title": "Buat planner dry-run dan apply mode untuk create/update issue tanpa duplikasi.",
+      "milestone": "M11",
+      "dependsOn": ["M11.02", "M8.01"],
+      "output": "scripts/roadmap sync planner/executor dan tests",
+      "detailFile": "docs/roadmap/11-issues-delivery.md"
+    },
+    {
+      "id": "M11.04",
+      "title": "Sinkronkan isi issue lengkap, milestone, labels dan dependencies yang dapat ditelusuri.",
+      "milestone": "M11",
+      "dependsOn": ["M11.03"],
+      "output": "Issue templates dan metadata renderer",
+      "detailFile": "docs/roadmap/11-issues-delivery.md"
+    },
+    {
+      "id": "M11.05",
+      "title": "Pelihara catatan manusia saat bot memperbarui issue.",
+      "milestone": "M11",
+      "dependsOn": ["M11.03", "M11.04"],
+      "output": "Safe body reconciliation tests",
+      "detailFile": "docs/roadmap/11-issues-delivery.md"
+    },
+    {
+      "id": "M11.06",
+      "title": "Buat workflow sync terjadwal, push-triggered dan manual dengan batching/rate-limit handling.",
+      "milestone": "M11",
+      "dependsOn": ["M11.03", "M11.05", "M8.04"],
+      "output": "roadmap-sync workflow dan recovery report",
+      "detailFile": "docs/roadmap/11-issues-delivery.md"
+    },
+    {
+      "id": "M11.07",
+      "title": "Implementasikan lifecycle issue berdasarkan evidence, commit, CI, promosi dan release.",
+      "milestone": "M11",
+      "dependsOn": ["M11.01", "M11.06", "M2.10"],
+      "output": "Issue lifecycle reconciler dan transition tests",
+      "detailFile": "docs/roadmap/11-issues-delivery.md"
+    },
+    {
+      "id": "M11.08",
+      "title": "Terima perubahan status dari maintainer tanpa memberikan eksekusi kode melalui issue.",
+      "milestone": "M11",
+      "dependsOn": ["M11.01", "M11.05", "M8.04"],
+      "output": "Trusted issue intake dan anti-loop tests",
+      "detailFile": "docs/roadmap/11-issues-delivery.md"
+    },
+    {
+      "id": "M11.09",
+      "title": "Buat dashboard kemajuan dan GitHub Projects projection bila tersedia.",
+      "milestone": "M11",
+      "dependsOn": ["M11.04", "M11.07", "M0.04"],
+      "output": "Progress summary dan optional Projects sync",
+      "detailFile": "docs/roadmap/11-issues-delivery.md"
+    },
+    {
+      "id": "M11.10",
+      "title": "Buat/perbarui PR dev → main otomatis dengan daftar task, hasil test, release plan dan risiko.",
+      "milestone": "M11",
+      "dependsOn": ["M1.05", "M11.04", "M7.06"],
+      "output": "Promotion PR report renderer",
+      "detailFile": "docs/roadmap/11-issues-delivery.md"
+    },
+    {
+      "id": "M11.11",
+      "title": "Aktifkan auto-merge profesional dengan expected SHA, required checks dan review policy.",
+      "milestone": "M11",
+      "dependsOn": ["M1.06", "M1.08", "M11.10", "M7.07"],
+      "output": "Auto-merge coordinator dan negative tests",
+      "detailFile": "docs/roadmap/11-issues-delivery.md"
+    },
+    {
+      "id": "M11.12",
+      "title": "Terapkan aturan commit dan push per unit pekerjaan yang selesai.",
+      "milestone": "M11",
+      "dependsOn": ["M1.01", "M2.02"],
+      "output": "Delivery protocol dan handoff fields",
+      "detailFile": "docs/roadmap/11-issues-delivery.md"
+    },
+    {
+      "id": "M11.13",
+      "title": "Gabungkan commit/push, version bump, docs dan issue sync tanpa release loop.",
+      "milestone": "M11",
+      "dependsOn": ["M11.06", "M11.12", "M7.04", "M7.15"],
+      "output": "Unified event graph dan loop regression tests",
+      "detailFile": "docs/roadmap/11-issues-delivery.md"
+    },
+    {
+      "id": "M11.14",
+      "title": "Uji seluruh siklus roadmap → issue → commit → CI → PR → merge → release → status.",
+      "milestone": "M11",
+      "dependsOn": ["M11.07", "M11.08", "M11.11", "M11.13", "M7.14"],
+      "output": "Issue/PR lifecycle fault-injection report",
+      "detailFile": "docs/roadmap/11-issues-delivery.md"
+    },
+    {
+      "id": "M11.15",
+      "title": "Sediakan runbook audit/recovery dan pemeriksaan drift issue/roadmap.",
+      "milestone": "M11",
+      "dependsOn": ["M11.14", "M8.09"],
+      "output": "docs/operations/roadmap-sync.md dan recurring audit",
+      "detailFile": "docs/roadmap/11-issues-delivery.md"
+    }
+  ]
+}
