@@ -6,6 +6,7 @@ import { defineAddon, defineModel, fields, installAddons, ref, seed } from '@moo
 import {
   Company,
   Country,
+  CountryState,
   Currency,
   Language,
   Partner,
@@ -97,7 +98,7 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     const legacy = defineAddon({
       name: 'base',
       version: '0.9.0',
-      models: [Country, Currency, Language, LegacyCompany, LegacyPartner, LegacyUser],
+      models: [Country, CountryState, Currency, Language, LegacyCompany, LegacyPartner, LegacyUser],
       data: [
         seed(Country, 'base.country_us', { code: 'US', name: 'United States' }),
         seed(Currency, 'base.currency_usd', { code: 'USD', name: 'US Dollar', symbol: '$' }),
