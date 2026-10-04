@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Version to verify for a non-publishing branch dry run
+        description: Version to verify for a non-publishing branch dry run (with or without the v prefix)
         required: false
         type: string
       publish:
@@ -53,7 +53,10 @@ jobs:
       - name: Verify workspace release version
         env:
           RELEASE_VERSION: ${{ inputs.version || github.ref_name }}
-        run: pnpm release:check "$RELEASE_VERSION"
+        run: |
+          version="$RELEASE_VERSION"
+          if [[ "$version" != v* ]]; then version="v$version"; fi
+          pnpm release:check "$version"
       - run: pnpm lint
       - run: pnpm format:check
       - run: pnpm typecheck
