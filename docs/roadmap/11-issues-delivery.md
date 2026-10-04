@@ -1,0 +1,273 @@
+# M11 — GitHub Issues, delivery dan promotion automation
+
+Jalur F dapat berjalan paralel dengan A–E setelah prasyarat kartu tersedia. Integrasikan dengan M1/M7/M8 yang sudah ada; jangan membuat sistem promosi/release kedua. Baca [kontrak sinkronisasi](ISSUE-SYNC-CONTRACT.md) dan [protokol eksekusi](EXECUTION.md).
+
+## M11.01 — Tetapkan kontrak sinkronisasi roadmap ↔ GitHub Issues dan otoritas setiap field.
+
+- **Prasyarat:** M0.02, M0.04.
+- **Baca/periksa:** ROADMAP.md; docs/roadmap/tasks.json; detail cards; GitHub Issues API.
+- **Deliverable:** docs/engineering/issue-sync-policy.md.
+
+### Langkah pelaksanaan
+
+1. Pisahkan source-controlled title/scope/dependencies/acceptance dari issue-owned assignee/discussion.
+2. Tentukan lifecycle planned/in-progress/blocked/verified-dev/in-main/released; checkbox master berarti acceptance task selesai, bukan otomatis released.
+3. Dokumentasikan siapa boleh mengubah field, aturan konflik dan bagaimana issue request diterima kembali ke dev.
+
+### Verifikasi dan syarat selesai
+
+Issue manual close tidak mencentang roadmap tanpa evidence; title edit manusia di generated section ditangani tanpa merusak notes.
+
+Simpan bukti aktual di `docs/roadmap/evidence/M11.01.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.
+
+## M11.02 — Buat schema task tracking, identitas issue stabil, dan validator silang dokumen.
+
+- **Prasyarat:** M11.01.
+- **Baca/periksa:** tasks.json; master checklist; evidence folder.
+- **Deliverable:** Task schema, validator dan fixture tests.
+
+### Langkah pelaksanaan
+
+1. Definisikan schema typed untuk id, milestone, detailFile, dependsOn, labels, priority dan optional assignee.
+2. Gunakan marker machine-readable repo+task ID pada issue; nomor issue dicari dari remote, bukan hardcoded source utama.
+3. Validasi unique ID, missing card, dependency cycle, checkbox/evidence mismatch serta paths aman.
+
+### Verifikasi dan syarat selesai
+
+Task invalid menolak sync sebelum API write; rename title tidak membuat issue baru.
+
+Simpan bukti aktual di `docs/roadmap/evidence/M11.02.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.
+
+## M11.03 — Buat planner dry-run dan apply mode untuk create/update issue tanpa duplikasi.
+
+- **Prasyarat:** M11.02, M8.01.
+- **Baca/periksa:** Task schema; GitHub API adapter; planned scripts/roadmap.
+- **Deliverable:** scripts/roadmap sync planner/executor dan tests.
+
+### Langkah pelaksanaan
+
+1. Enumerasi semua managed issues open/closed memakai pagination dan filter PR entries.
+2. Hitung operations create/update/no-op berdasarkan stable ID dan normalized generated block.
+3. Sediakan plan-only default, apply eksplisit, source SHA report dan no-delete behavior.
+
+### Verifikasi dan syarat selesai
+
+Dua apply identik hanya membuat satu issue per ID; timeout create lalu retry menemukan issue yang sudah terbuat.
+
+Simpan bukti aktual di `docs/roadmap/evidence/M11.03.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.
+
+## M11.04 — Sinkronkan isi issue lengkap, milestone, labels dan dependencies yang dapat ditelusuri.
+
+- **Prasyarat:** M11.03.
+- **Baca/periksa:** Kartu per task; milestone definitions; labels API.
+- **Deliverable:** Issue templates dan metadata renderer.
+
+### Langkah pelaksanaan
+
+1. Render title [Mxx.yy], tujuan, source SHA/card link, langkah, acceptance, dependencies dan evidence link.
+2. Upsert milestone/managed labels yang diperlukan tanpa menghapus label manusia; resolve assignee hanya akun valid.
+3. Gunakan parent/sub-issue/dependency API jika didukung; fallback references/link list jika tidak tanpa memblokir core sync.
+
+### Verifikasi dan syarat selesai
+
+Setiap issue menunjuk kartu tepat dan prerequisites yang ada; descriptions tetap readable tanpa fitur Projects berbayar.
+
+Simpan bukti aktual di `docs/roadmap/evidence/M11.04.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.
+
+## M11.05 — Pelihara catatan manusia saat bot memperbarui issue.
+
+- **Prasyarat:** M11.03, M11.04.
+- **Baca/periksa:** Issue body renderer; managed markers; API update adapter.
+- **Deliverable:** Safe body reconciliation tests.
+
+### Langkah pelaksanaan
+
+1. Batasi bot menulis di BEGIN/END managed block; notes di luar marker dipertahankan.
+2. Re-read sebelum patch dan deteksi edit bersamaan pada body; retry merge blok terbaru secara terbatas.
+3. Jika markers rusak/duplikat, laporkan conflict tanpa overwrite; hindari timestamp berubah yang membuat update tiap run.
+
+### Verifikasi dan syarat selesai
+
+Manual notes dan labels tidak hilang; unchanged task tidak memicu PATCH/comment baru.
+
+Simpan bukti aktual di `docs/roadmap/evidence/M11.05.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.
+
+## M11.06 — Buat workflow sync terjadwal, push-triggered dan manual dengan batching/rate-limit handling.
+
+- **Prasyarat:** M11.03, M11.05, M8.04.
+- **Baca/periksa:** GitHub Actions workflow; API rate limit response; App/token policy.
+- **Deliverable:** roadmap-sync workflow dan recovery report.
+
+### Langkah pelaksanaan
+
+1. Trigger trusted dev changes pada roadmap/evidence dan workflow_dispatch; periodic reconciliation untuk missing events.
+2. Paginate read, serialize mutations, honor Retry-After/reset headers dan batasi batch untuk initial import.
+3. Simpan resumable progress dari remote identity; re-check desired state ketika job dijalankan ulang.
+
+### Verifikasi dan syarat selesai
+
+Bulk import terhenti lalu resume tidak duplicate; 403 permission dibedakan dari throttling; tidak publish secret.
+
+Simpan bukti aktual di `docs/roadmap/evidence/M11.06.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.
+
+## M11.07 — Implementasikan lifecycle issue berdasarkan evidence, commit, CI, promosi dan release.
+
+- **Prasyarat:** M11.01, M11.06, M2.10.
+- **Baca/periksa:** Evidence template; CI result identity; promotion/release manifests.
+- **Deliverable:** Issue lifecycle reconciler dan transition tests.
+
+### Langkah pelaksanaan
+
+1. Tetapkan status verified-dev hanya saat evidence pada pushed dev SHA cocok dan required checks sukses.
+2. Tautkan commit dan PR; bedakan in-main/released dari implementasi selesai.
+3. Close issue hanya saat acceptance task terbukti; lifecycle release dicatat terpisah dan close tidak dipicu commit message otomatis.
+
+### Verifikasi dan syarat selesai
+
+Task code verified di dev tidak diklaim released; task aktivasi remote tidak closed sebelum remote evidence.
+
+Simpan bukti aktual di `docs/roadmap/evidence/M11.07.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.
+
+## M11.08 — Terima perubahan status dari maintainer tanpa memberikan eksekusi kode melalui issue.
+
+- **Prasyarat:** M11.01, M11.05, M8.04.
+- **Baca/periksa:** Issue events; actor permissions; bot identity.
+- **Deliverable:** Trusted issue intake dan anti-loop tests.
+
+### Langkah pelaksanaan
+
+1. Proses hanya events managed issue dan aktor maintainer yang diverifikasi; ignore bot echoes.
+2. Izinkan triage/assignee/blocked reason di Issues; perubahan acceptance/scope dibuat sebagai proposal diff untuk dev melalui writer coordinator.
+3. Tolak command shell/ref/URL arbitrary dari issue text; close/reopen manual menjadi review request bila evidence belum cocok.
+
+### Verifikasi dan syarat selesai
+
+User tanpa write tidak dapat memicu push/publish; status update tidak menyebabkan infinite issue↔git loop.
+
+Simpan bukti aktual di `docs/roadmap/evidence/M11.08.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.
+
+## M11.09 — Buat dashboard kemajuan dan GitHub Projects projection bila tersedia.
+
+- **Prasyarat:** M11.04, M11.07, M0.04.
+- **Baca/periksa:** Task/issue lifecycle; optional Projects API capabilities.
+- **Deliverable:** Progress summary dan optional Projects sync.
+
+### Langkah pelaksanaan
+
+1. Bangun summary per milestone: todo/running/blocked/verified/main/released dengan source timestamp.
+2. Jika Projects tersedia, petakan fields status/priority/lane/task ID dan upsert item per issue node ID.
+3. Jika Projects unavailable, publish issue/dashboard summary setara; jangan membuat branch tambahan.
+
+### Verifikasi dan syarat selesai
+
+Progress tidak menghitung docs-only checklist centang sebagai released; project rerun tidak duplicate items.
+
+Simpan bukti aktual di `docs/roadmap/evidence/M11.09.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.
+
+## M11.10 — Buat/perbarui PR dev → main otomatis dengan daftar task, hasil test, release plan dan risiko.
+
+- **Prasyarat:** M1.05, M11.04, M7.06.
+- **Baca/periksa:** Promotion PR workflow; managed issue map; prepared commit range.
+- **Deliverable:** Promotion PR report renderer.
+
+### Langkah pelaksanaan
+
+1. Temukan satu PR dev→main; refresh generated summary dari source range dan task evidence.
+2. Sertakan refs issue, perubahan version/changelog, checks, risk flags, upgrade notes dan incomplete tasks.
+3. Jangan memakai Closes/Fixes untuk semua issues sekaligus; preserve reviewer/manual PR body sections.
+
+### Verifikasi dan syarat selesai
+
+Dua push memperbarui satu PR; incomplete issues tidak auto-close saat merge; source SHA perubahan tercatat.
+
+Simpan bukti aktual di `docs/roadmap/evidence/M11.10.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.
+
+## M11.11 — Aktifkan auto-merge profesional dengan expected SHA, required checks dan review policy.
+
+- **Prasyarat:** M1.06, M1.08, M11.10, M7.07.
+- **Baca/periksa:** Repository auto-merge setting; PR checks/reviews; main rulesets.
+- **Deliverable:** Auto-merge coordinator dan negative tests.
+
+### Langkah pelaksanaan
+
+1. Aktifkan auto-merge repo setelah checks/rulesets terbukti; gunakan merge commit, bukan admin bypass.
+2. Periksa expected head SHA dan risk policy; jika head/diff berubah, evaluasi ulang dan disable queued auto-merge bila tidak lagi eligible.
+3. Untuk PR sudah langsung mergeable, tetap verifikasi gate dan expected SHA; konflik/stale approval berarti menunggu, bukan memaksa merge.
+
+### Verifikasi dan syarat selesai
+
+Critical change tidak auto-merge tanpa review; new failed commit membatalkan eligibility; dev tidak dihapus setelah merge.
+
+Simpan bukti aktual di `docs/roadmap/evidence/M11.11.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.
+
+## M11.12 — Terapkan aturan commit dan push per unit pekerjaan yang selesai.
+
+- **Prasyarat:** M1.01, M2.02.
+- **Baca/periksa:** EXECUTION.md; git status/diff; root verification scripts.
+- **Deliverable:** Delivery protocol dan handoff fields.
+
+### Langkah pelaksanaan
+
+1. Agen yang selesai satu unit logis menjalankan checks relevan, menulis evidence, lalu stage hanya file task yang diperiksa.
+2. Commit Conventional Commit berisi task ID dan issue Ref bila tersedia; push ke dev normal lalu cek remote SHA.
+3. No-op tidak membuat empty commit; gagal push dicatat sebagai not-delivered dan ditangani tanpa force; main hanya melalui promotion.
+
+### Verifikasi dan syarat selesai
+
+Completed unit memiliki local/remote SHA sama; untracked file pengguna tidak ikut staged; failure tidak diklaim delivered.
+
+Simpan bukti aktual di `docs/roadmap/evidence/M11.12.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.
+
+## M11.13 — Gabungkan commit/push, version bump, docs dan issue sync tanpa release loop.
+
+- **Prasyarat:** M11.06, M11.12, M7.04, M7.15.
+- **Baca/periksa:** Release classifier; issue sync events; generator writes.
+- **Deliverable:** Unified event graph dan loop regression tests.
+
+### Langkah pelaksanaan
+
+1. Pisahkan substantive code commits dari docs/status/sync/generated changes memakai provenance tervalidasi.
+2. Satu batch release menghitung version dari last release dan substantive commits; setiap task tetap committed tetapi bukan berarti setiap commit membuat release.
+3. Generated issue mapping/lifecycle tidak ditulis bolak-balik ke git setiap status berubah; simpan remote projection dan source evidence minimal.
+
+### Verifikasi dan syarat selesai
+
+Status-only push tidak bump; retry prepare tidak bump lagi; satu code change menghasilkan satu stable version per promotion batch.
+
+Simpan bukti aktual di `docs/roadmap/evidence/M11.13.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.
+
+## M11.14 — Uji seluruh siklus roadmap → issue → commit → CI → PR → merge → release → status.
+
+- **Prasyarat:** M11.07, M11.08, M11.11, M11.13, M7.14.
+- **Baca/periksa:** Fake GitHub adapter; workflow fixtures; task evidence fixtures.
+- **Deliverable:** Issue/PR lifecycle fault-injection report.
+
+### Langkah pelaksanaan
+
+1. Uji initial import, task update, manual notes, renamed task title, deleted task, duplicate marker dan API timeout.
+2. Uji CI fail, stale head, blocked dependency, manual close tanpa evidence, permission revoked dan out-of-order events.
+3. Lakukan dry-run terhadap repo read-only, lalu satu task pilot nyata sebelum bulk import setelah activation diotorisasi.
+
+### Verifikasi dan syarat selesai
+
+Semua event idempotent; no premature close/version; expected one issue/task dan one promotion PR; no third branch.
+
+Simpan bukti aktual di `docs/roadmap/evidence/M11.14.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.
+
+## M11.15 — Sediakan runbook audit/recovery dan pemeriksaan drift issue/roadmap.
+
+- **Prasyarat:** M11.14, M8.09.
+- **Baca/periksa:** Managed issues; tasks index; lifecycle evidence.
+- **Deliverable:** docs/operations/roadmap-sync.md dan recurring audit.
+
+### Langkah pelaksanaan
+
+1. Audit missing/duplicate/orphan issues, invalid labels, stale milestone dan dead links.
+2. Task dihapus dari source tidak otomatis dihapus dari GitHub; tandai needs-triage dengan penjelasan.
+3. Sediakan rebuild projection/dry-run/resume commands dan laporan ringkas tanpa spam; manual override punya alasan/expiry.
+
+### Verifikasi dan syarat selesai
+
+Recovery import menjaga diskusi; stale roadmap projection terdeteksi; unresolved conflict tetap terlihat.
+
+Simpan bukti aktual di `docs/roadmap/evidence/M11.15.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.

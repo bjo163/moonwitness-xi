@@ -34,16 +34,13 @@ jobs:
     env:
       POSTGRES_TEST_URL: postgresql://postgres:postgres@127.0.0.1:5432/moonwitness_test
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/moonwitness_test
+      REQUIRE_POSTGRES_TESTS: 'true'
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: ./.github/actions/setup-pnpm
         with:
-          version: 11
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          node-version: '22'
+          pnpm-version: '11'
       - run: pnpm release:check "$GITHUB_REF_NAME"
       - run: pnpm lint
       - run: pnpm format:check
@@ -74,17 +71,17 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish API image to GitHub Container Registry
         env:
-          IMAGE: ghcr.io/${{ github.repository }}
+          IMAGE_URI: ghcr.io/${{ github.repository }}
           TAG: ${{ github.ref_name }}
         run: |
-          image="$(printf '%s' "$IMAGE" | tr '[:upper:]' '[:lower:]')"
+          image="$(printf '%s' "$IMAGE_URI" | tr '[:upper:]' '[:lower:]')"
           docker buildx build --push --tag "$image:$TAG" --tag "$image:latest" .
       - name: Publish Board image to GitHub Container Registry
         env:
-          IMAGE: ghcr.io/${{ github.repository }}-board
+          IMAGE_URI: ghcr.io/${{ github.repository }}-board
           TAG: ${{ github.ref_name }}
         run: |
-          image="$(printf '%s' "$IMAGE" | tr '[:upper:]' '[:lower:]')"
+          image="$(printf '%s' "$IMAGE_URI" | tr '[:upper:]' '[:lower:]')"
           docker buildx build --target board-runtime --push --tag "$image:$TAG" --tag "$image:latest" .
       - name: Create GitHub release
         env:

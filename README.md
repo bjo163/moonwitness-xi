@@ -1,5 +1,7 @@
 # MoonWitness Monorepo
 
+Rencana pengembangan dan checklist jangka panjang: [Master Roadmap](ROADMAP.md).
+
 Arsitektur monorepo berkinerja tinggi menggunakan **pnpm workspaces** yang memisahkan core ORM, shared types, konfigurasi linter, dan service API.
 
 ---

@@ -2,11 +2,45 @@ name: CI
 
 on:
   pull_request:
+    branches: [dev, main]
   push:
-    branches: [main]
+    branches: [dev, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  verify:
+  quality:
+    name: quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          node-version: '22'
+          pnpm-version: '11'
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm build
+      - name: Typecheck Board
+        run: pnpm --filter @moonwitness/board typecheck
+      - name: Lint Board
+        run: pnpm --filter @moonwitness/board lint
+
+  automation:
+    name: automation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate GitHub workflows
+        run: docker run --rm -v "$PWD:/work" -w /work rhysd/actionlint:1.7.7 -color .github/workflows/ci.yml .github/workflows/release.yml .github/workflows/promote.yml
+
+  integration:
+    name: integration
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -25,30 +59,18 @@ jobs:
     env:
       POSTGRES_TEST_URL: postgresql://postgres:postgres@127.0.0.1:5432/moonwitness_test
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/moonwitness_test
+      REQUIRE_POSTGRES_TESTS: 'true'
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: ./.github/actions/setup-pnpm
         with:
-          version: 11
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm format:check
+          node-version: '22'
+          pnpm-version: '11'
       - run: pnpm build
       - run: pnpm test
-      - name: Build production container
-        run: docker build --tag moonwitness-api:ci .
-      - name: Build production Board container
-        run: docker build --target board-runtime --tag moonwitness-board:ci .
-      - name: Validate production Compose configuration
-        env:
-          DATABASE_URL: postgresql://moonwitness:ci-password@postgres.example:5432/moonwitness
-          JWT_SECRET: ci-only-secret-that-is-at-least-32-characters-long
-        run: docker compose -f docker-compose.production.yml config --quiet
       - name: Verify PostgreSQL backup and restore
+        env:
+          PGPASSWORD: postgres
         run: |
           sudo apt-get update
           sudo apt-get install --yes postgresql-client-16
@@ -66,3 +88,43 @@ jobs:
           printf '%s\n' "$restore_db" | DATABASE_URL="$restore_url" BACKUP_FILE="$backup_file" ALLOW_DATABASE_RESTORE=true bash scripts/restore-postgres.sh
           restored="$(psql "$restore_url" -X -A -t -v ON_ERROR_STOP=1 -c 'SELECT value FROM public.backup_verification')"
           test "$restored" = 'restore-ok'
+
+  containers:
+    name: containers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build production API container
+        run: docker build --tag moonwitness-api:ci .
+      - name: Build production Board container
+        run: docker build --target board-runtime --tag moonwitness-board:ci .
+      - name: Validate production Compose configuration
+        env:
+          DATABASE_URL: postgresql://moonwitness:ci-password@postgres.example:5432/moonwitness
+          JWT_SECRET: ci-only-secret-that-is-at-least-32-characters-long
+        run: docker compose -f docker-compose.production.yml config --quiet
+  ci-gate:
+    name: ci-gate
+    if: always()
+    needs: [quality, integration, containers, automation]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          node-version: '22'
+          pnpm-version: '11'
+      - name: Test CI gate decisions
+        run: pnpm test:ci-gate
+      - name: Require every mandatory job to succeed
+        env:
+          QUALITY_RESULT: ${{ needs.quality.result }}
+          INTEGRATION_RESULT: ${{ needs.integration.result }}
+          CONTAINERS_RESULT: ${{ needs.containers.result }}
+          AUTOMATION_RESULT: ${{ needs.automation.result }}
+        run: |
+          QUALITY_RESULT="$QUALITY_RESULT" \
+          INTEGRATION_RESULT="$INTEGRATION_RESULT" \
+          CONTAINERS_RESULT="$CONTAINERS_RESULT" \
+          AUTOMATION_RESULT="$AUTOMATION_RESULT" \
+          node scripts/ci-gate.mjs

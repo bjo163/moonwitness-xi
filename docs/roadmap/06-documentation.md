@@ -1,0 +1,201 @@
+# M6 — Kartu kerja terperinci
+
+Baca [protokol eksekusi](EXECUTION.md) terlebih dahulu. Status resmi tetap di [master checklist](../../ROADMAP.md); dokumen ini menjelaskan pekerjaan, bukan bukti bahwa fitur sudah ada. Path output yang belum ada adalah usulan deliverable. Semua path kode relatif terhadap root repository.
+
+## M6.01 — Buat struktur docs: quickstart, architecture, addon development, API, models, Board, jobs/outbox, security, troubleshooting, recovery, release/upgrade.
+
+- **Prasyarat:** M0.07
+- **Baca/periksa:** README; package READMEs; ADR; feature matrix.
+- **Deliverable:** docs content tree dan navigation config.
+
+### Langkah pelaksanaan
+
+1. Buat navigasi docs yang memisahkan tutorial/how-to/reference/explanation.
+2. Untuk setiap halaman catat pembaca, prasyarat, commands dan expected output.
+3. Tulis minimal quickstart/architecture/addon tutorial/troubleshooting sebelum referensi otomatis.
+
+### Verifikasi dan syarat selesai
+
+Pengguna baru dapat mengikuti quickstart dengan test env; halaman tidak hanya placeholder headings.
+
+Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M6.01.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
+
+## M6.02 — Buat generator deterministik package/scripts/env schema/model/field/relasi/menu/access/seed dan referensi endpoint yang benar-benar valid.
+
+- **Prasyarat:** M0.01, M4.01
+- **Baca/periksa:** Manifest/model definitions; env schema; route schemas; package scripts.
+- **Deliverable:** scripts/docs generation modules dan generated references.
+
+### Langkah pelaksanaan
+
+1. Bangun extractor tanpa start app, connect DB, load real .env atau mutate registry secara tak terkendali.
+2. Urutkan output stabil; redact defaults yang sensitif; derive reference dari schema yang benar.
+3. Tambahkan fixture generator untuk unknown type/optional/relations dan consistency API.
+
+### Verifikasi dan syarat selesai
+
+Dua run sama menghasilkan byte sama; field/endpoint docs cocok source; invalid extraction gagal jelas.
+
+Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M6.02.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
+
+## M6.03 — Pisahkan blok generated README dari penjelasan manual; jangan overwrite seluruh dokumen.
+
+- **Prasyarat:** M6.02
+- **Baca/periksa:** README manual sections; docs generator.
+- **Deliverable:** README partial generator.
+
+### Langkah pelaksanaan
+
+1. Tentukan marker BEGIN/END GENERATED untuk packages/scripts/version references.
+2. Ganti hanya isi marker dan fail jika marker hilang/duplikat.
+3. Pertahankan bahasa/overview/manual quickstart di luar marker.
+
+### Verifikasi dan syarat selesai
+
+Test before/after menjaga teks manual identik; missing markers tidak menyebabkan overwrite file.
+
+Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M6.03.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
+
+## M6.04 — Standardisasi docs:generate, docs:check, docs:build, docs:links; gagal saat hasil generator stale.
+
+- **Prasyarat:** M6.02, M6.03
+- **Baca/periksa:** Generator M6.02/M6.03; root scripts.
+- **Deliverable:** Root docs command contract.
+
+### Langkah pelaksanaan
+
+1. Tambahkan generate/check/build/links yang dapat berjalan lokal dan CI.
+2. Mode check render ke temp lalu bandingkan tanpa memperbarui tracked file.
+3. Kembalikan exit nonzero untuk stale output dan list file yang perlu generate.
+
+### Verifikasi dan syarat selesai
+
+Ubah schema fixture membuat docs:check fail; generate lalu check pass.
+
+Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M6.04.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
+
+## M6.05 — Uji contoh executable dan tautan internal; link eksternal memakai kebijakan retry agar gangguan pihak lain tidak membuat flakiness berlebihan.
+
+- **Prasyarat:** M6.01
+- **Baca/periksa:** Docs code fences/examples; link map.
+- **Deliverable:** Docs examples tests dan link checker.
+
+### Langkah pelaksanaan
+
+1. Pindahkan runnable examples ke fixtures yang diimport/test agar tidak drift.
+2. Validasi local paths/anchors saat build; jadwalkan external link checks dengan retry terbatas.
+3. Laporkan unreachable external URL berbeda dari broken internal link.
+
+### Verifikasi dan syarat selesai
+
+Contoh addon compile/install pada DB test; typo internal anchor gagal CI.
+
+Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M6.05.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
+
+## M6.06 — Buat portal responsif dengan search, base path repository, 404, branding, dan katalog UI.
+
+- **Prasyarat:** M6.01, M5.02, M5.03
+- **Baca/periksa:** Docs framework pilihan; assets/ui; repository path.
+- **Deliverable:** Documentation portal.
+
+### Langkah pelaksanaan
+
+1. Pilih static documentation stack yang cocok reuse React UI dan catat tradeoff.
+2. Implementasikan search, sidebar, 404, responsive layout dan base /moonwitness-xi/.
+3. Pisahkan docs branding dari Board business code.
+
+### Verifikasi dan syarat selesai
+
+Nested URL reload, search keyboard dan 404 bekerja pada static preview.
+
+Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M6.06.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
+
+## M6.07 — Gunakan Actions artifact untuk Pages tanpa branch tambahan; dev hanya menghasilkan preview artifact.
+
+- **Prasyarat:** M6.06, M0.04
+- **Baca/periksa:** .github/workflows; Pages repository settings.
+- **Deliverable:** pages.yml dan verified Pages configuration.
+
+### Langkah pelaksanaan
+
+1. Konfigurasi Pages source GitHub Actions dan workflow upload/deploy artifact dengan permissions sempit.
+2. Dev build artifact saja; trusted main/release mempublikasikan.
+3. Atur concurrency Pages agar publish lama tidak menimpa lebih baru; tidak create gh-pages.
+
+### Verifikasi dan syarat selesai
+
+Workflow artifact memiliki index dan base paths benar; published source SHA sesuai yang dipilih.
+
+Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M6.07.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
+
+## M6.08 — Publikasikan dokumentasi stable yang sesuai release; tentukan retensi versi dokumentasi dan URL latest.
+
+- **Prasyarat:** M7.02, M6.06
+- **Baca/periksa:** Release version contract; docs portal.
+- **Deliverable:** Docs version manifest.
+
+### Langkah pelaksanaan
+
+1. Tetapkan URL stable/latest dan versioned docs; tentukan versi yang disimpan sesuai ukuran.
+2. Build dari tag/source SHA tertentu dan tampilkan versi+link source.
+3. Jangan mengklaim dev docs sebagai stable; preserve older version paths yang didukung.
+
+### Verifikasi dan syarat selesai
+
+Memilih versi membawa reference sesuai schema versi itu; latest hanya stable published.
+
+Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M6.08.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
+
+## M6.09 — Scan konten publik agar tidak berisi secret, data pribadi, real environment values, atau internal artifacts.
+
+- **Prasyarat:** M6.04, M6.06
+- **Baca/periksa:** Generated docs; stories; built site output.
+- **Deliverable:** Docs publication safety check.
+
+### Langkah pelaksanaan
+
+1. Scan output termasuk source maps/JSON/static examples untuk sentinel secrets dan private fixtures.
+2. Jangan copy .env, auth state, internal logs atau database dumps ke public output.
+3. Gunakan fabricated identities dan jelaskan sample values.
+
+### Verifikasi dan syarat selesai
+
+Injected secret fixture menyebabkan publish check fail; output public allowlist terverifikasi.
+
+Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M6.09.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
+
+## M6.10 — Docs-only changes dapat dipublikasikan setelah verifikasi tanpa memaksa release aplikasi; source SHA harus terlacak.
+
+- **Prasyarat:** M6.07, M7.01
+- **Baca/periksa:** Changed paths; version classifier; Pages flow.
+- **Deliverable:** Docs-only publishing path.
+
+### Langkah pelaksanaan
+
+1. Klasifikasikan docs-only tanpa memperlakukan perubahan executable generator sebagai konten saja.
+2. Uji docs updates dan publish dari verified main SHA tanpa app version bump.
+3. Catat source SHA pada site metadata walau version sama.
+
+### Verifikasi dan syarat selesai
+
+Docs typo fix tidak membuat tag aplikasi; code change tetap full gate.
+
+Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M6.10.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
+
+## M6.11 — Pisahkan retry Pages dari release aplikasi; kegagalan docs tercatat dan tidak menghasilkan tag/version baru.
+
+- **Prasyarat:** M6.07, M7.13
+- **Baca/periksa:** Pages workflow; release state manifest.
+- **Deliverable:** Pages retry runbook dan test fixtures.
+
+### Langkah pelaksanaan
+
+1. Pisahkan docs publish status dari image/tag assets dan sediakan dispatch retry pada release SHA.
+2. Retry menggunakan artefak yang sama atau rebuild terdokumentasi dari source immutable.
+3. Laporkan failure ke summary/issue yang sama tanpa release bump.
+
+### Verifikasi dan syarat selesai
+
+Simulasi deploy-pages gagal lalu retry menghasilkan site benar dan hanya satu release.
+
+Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M6.11.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
