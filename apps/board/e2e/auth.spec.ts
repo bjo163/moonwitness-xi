@@ -29,36 +29,26 @@ test('superadmin can log in, open dashboard, and log out', async ({ page }) => {
   ).toBeAttached();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByRole('img', { name: 'Background job status distribution' })).toBeVisible();
-  await expect
-    .poll(
-      () =>
-        page.evaluate(() => {
-          const clientWidth = document.documentElement.clientWidth;
-          const scrollWidth = document.documentElement.scrollWidth;
-          const elements = Array.from(document.querySelectorAll<HTMLElement>('*'))
-            .map((element) => ({
-              tag: element.tagName.toLowerCase(),
-              className: typeof element.className === 'string' ? element.className : '',
-              right: Math.round(element.getBoundingClientRect().right),
-              width: Math.round(element.getBoundingClientRect().width),
-              scrollWidth: element.scrollWidth,
-              clientWidth: element.clientWidth,
-            }))
-            .filter(
-              ({ right, scrollWidth: elementScrollWidth, clientWidth: elementClientWidth }) =>
-                right > clientWidth || elementScrollWidth > elementClientWidth
-            )
-            .slice(0, 12);
-          return {
-            hasHorizontalOverflow: scrollWidth > clientWidth,
-            clientWidth,
-            scrollWidth,
-            elements,
-          };
-        }),
-      { message: 'mobile dashboard settles without horizontal overflow' }
-    )
-    .toMatchObject({ hasHorizontalOverflow: false });
+  const mobileOverflow = await page.evaluate(() => {
+    const clientWidth = document.documentElement.clientWidth;
+    const scrollWidth = document.documentElement.scrollWidth;
+    const elements = Array.from(document.querySelectorAll<HTMLElement>('*'))
+      .map((element) => ({
+        tag: element.tagName.toLowerCase(),
+        className: typeof element.className === 'string' ? element.className : '',
+        right: Math.round(element.getBoundingClientRect().right),
+        width: Math.round(element.getBoundingClientRect().width),
+        scrollWidth: element.scrollWidth,
+        clientWidth: element.clientWidth,
+      }))
+      .filter(
+        ({ right, scrollWidth: elementScrollWidth, clientWidth: elementClientWidth }) =>
+          right > clientWidth || elementScrollWidth > elementClientWidth
+      )
+      .slice(0, 12);
+    return { hasHorizontalOverflow: scrollWidth > clientWidth, clientWidth, scrollWidth, elements };
+  });
+  expect(mobileOverflow.hasHorizontalOverflow, JSON.stringify(mobileOverflow)).toBe(false);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByRole('button', { name: 'superadmin' }).click();
   await expect(page.getByRole('menuitem', { name: 'Sign out' })).toBeVisible();
