@@ -483,7 +483,7 @@
     {
       "id": "M4.13",
       "title": "Operasional: graceful shutdown, DB pools/timeouts, request ID, redaksi log, readiness/liveness API dan worker.",
-      "status": "in_progress",
+      "status": "complete",
       "milestone": "M4",
       "dependsOn": ["M0.01"],
       "output": "Bounded PostgreSQL runtime, drained API/worker lifecycle, internal probes, and operational runbook",
@@ -493,9 +493,11 @@
     {
       "id": "M4.14",
       "title": "Restore drill dengan data aplikasi, relasi, akun test dan integrity checks; tetapkan target pemulihan berbasis hasil pengukuran.",
+      "status": "in_progress",
       "milestone": "M4",
       "dependsOn": ["M4.02", "M4.03"],
-      "output": "Application restore drill report",
+      "output": "Isolated PostgreSQL application backup/restore drill, integrity report, and measured recovery scope",
+      "evidence": "docs/roadmap/evidence/M4.14.md",
       "detailFile": "docs/roadmap/04-backend.md"
     },
     {

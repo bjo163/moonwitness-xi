@@ -368,10 +368,17 @@ terenkripsi/terpisah, dan `BACKUP_RETENTION_DAYS` (default 14). File custom-form
 memiliki izin terbatas. Pulihkan dengan menjalankan `bash scripts/restore-postgres.sh`
 setelah mengatur `BACKUP_FILE`, `DATABASE_URL`, dan
 `ALLOW_DATABASE_RESTORE=true`; skrip meminta operator mengetik nama database target
-sebelum mengubahnya. Uji pemulihan rutin ke database sementara; CI menjalankan dump,
-skrip restore yang sama (termasuk konfirmasi target yang salah), lalu memverifikasi row
-contoh pada setiap build. Simpan salinan backup di luar server/database utama dan
-gunakan enkripsi storage yang dikelola infrastruktur.
+sebelum mengubahnya. CI menjalankan `pnpm test:restore-drill` dengan dua database bernama
+acak: addon dan data aplikasi sintetis di-dump, lalu dipulihkan menggunakan skrip yang sama
+ke target terpisah. Drill membuktikan mismatch confirmation ditolak tanpa mengubah sentinel
+target, membandingkan jumlah row dan ID, memeriksa relasi/membership, dan mencoba login
+sesudah pemulihan; durasi dump
+dan restore dicatat sebagai pengukuran fixture CI. Untuk menjalankannya sendiri, siapkan
+`POSTGRES_TEST_URL` dan PostgreSQL client utilities (`pg_dump`, `pg_restore`, `createdb`,
+`dropdb`, `psql`). Drill satu kali ini tidak menetapkan RPO atau RTO produksi: frekuensi
+backup off-host dan waktu provisioning/cutover harus ditetapkan serta diukur oleh operator.
+Simpan backup produksi di luar server/database utama dan gunakan enkripsi storage yang
+dikelola infrastruktur.
 
 ### Image container dan rilis
 

@@ -147,26 +147,11 @@ jobs:
             test-results/coverage/
           if-no-files-found: ignore
           retention-days: 14
-      - name: Verify PostgreSQL backup and restore
-        env:
-          PGPASSWORD: postgres
+      - name: Run isolated application backup and restore drill
         run: |
           sudo apt-get update
           sudo apt-get install --yes postgresql-client-16
-          psql "$POSTGRES_TEST_URL" -X -v ON_ERROR_STOP=1 -c 'CREATE TABLE public.backup_verification (value text NOT NULL)'
-          psql "$POSTGRES_TEST_URL" -X -v ON_ERROR_STOP=1 -c "INSERT INTO public.backup_verification VALUES ('restore-ok')"
-          backup_file="$(BACKUP_DIR="$RUNNER_TEMP/moonwitness-backups" bash scripts/backup-postgres.sh)"
-          restore_db="moonwitness_restore_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}"
-          createdb --maintenance-db="$POSTGRES_TEST_URL" "$restore_db"
-          trap 'dropdb --maintenance-db="$POSTGRES_TEST_URL" "$restore_db" || true' EXIT
-          restore_url="${POSTGRES_TEST_URL%/*}/$restore_db"
-          if printf 'wrong-database-name\n' | DATABASE_URL="$restore_url" BACKUP_FILE="$backup_file" ALLOW_DATABASE_RESTORE=true bash scripts/restore-postgres.sh; then
-            echo "Restore accepted a mismatched database confirmation" >&2
-            exit 1
-          fi
-          printf '%s\n' "$restore_db" | DATABASE_URL="$restore_url" BACKUP_FILE="$backup_file" ALLOW_DATABASE_RESTORE=true bash scripts/restore-postgres.sh
-          restored="$(psql "$restore_url" -X -A -t -v ON_ERROR_STOP=1 -c 'SELECT value FROM public.backup_verification')"
-          test "$restored" = 'restore-ok'
+          pnpm test:restore-drill
 
   browser:
     name: browser

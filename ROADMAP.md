@@ -101,8 +101,8 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 - [x] M4.10 Scheduler/worker: claim atomik, lease, heartbeat, retry/backoff, recovery setelah crash, cancellation, dead-letter, dan job history. Bukti: [M4.10](docs/roadmap/evidence/M4.10.md); 9 jobs tests + 4 PostgreSQL integration tests memeriksa claim/reclaim/fencing, retry, cancellation, DST, dan concurrent workers.
 - [x] M4.11 Outbox: transactional enqueue, delivery retries, deduplication/idempotency, dan pengujian efek eksternal ganda; jangan mengklaim exactly-once tanpa bukti. Bukti: [M4.11](docs/roadmap/evidence/M4.11.md); business/outbox rollback dan pengiriman ulang stable ID dengan receiver dedup dibuktikan.
 - [x] M4.12 Attachment: izin upload/download, size/MIME, filename/path traversal, storage ownership, dan retensi. Bukti: [M4.12](docs/roadmap/evidence/M4.12.md); byte upload/download, scope parent, cleanup transaksi, archive/restore, dan hard-delete diuji.
-- [ ] M4.13 Operasional: graceful shutdown, DB pools/timeouts, request ID, redaksi log, readiness/liveness API dan worker. [Evidence](docs/roadmap/evidence/M4.13.md)
-- [ ] M4.14 Restore drill dengan data aplikasi, relasi, akun test dan integrity checks; tetapkan target pemulihan berbasis hasil pengukuran.
+- [x] M4.13 Operasional: graceful shutdown, DB pools/timeouts, request ID, redaksi log, readiness/liveness API dan worker. [Evidence](docs/roadmap/evidence/M4.13.md)
+- [ ] M4.14 Restore drill dengan data aplikasi, relasi, akun test dan integrity checks; tetapkan target pemulihan berbasis hasil pengukuran. [Evidence](docs/roadmap/evidence/M4.14.md)
 - [ ] M4.15 Tambahkan baseline load/query tests dan budget regresi realistis; ukur N+1 serta operasi yang memperbesar penggunaan memori.
 - [ ] M4.16 Dokumentasikan compatibility policy API/addon, deprecation, dan upgrade guidance.
 

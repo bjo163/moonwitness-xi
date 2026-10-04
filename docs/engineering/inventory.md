@@ -53,7 +53,7 @@ Dynamic generic operations are behavior families, not one route per model. Test 
 
 - Existing test families: ORM/client domains, logger, auth, jobs, base addon/password/extensions, API auth/client/database errors/jobs/observability/ORM/record rules/startup/ratelimit/views, optional PostgreSQL upgrade/auth integration.
 - Root pnpm test runs recursive workspace tests. API PostgreSQL tests currently skip without POSTGRES_TEST_URL; M2.06 must fail closed in required CI mode.
-- Existing CI is .github/workflows/ci.yml; PostgreSQL service, lint, format, build, tests, container builds, Compose validation and backup/restore. At baseline push trigger names main only; PR trigger is unfiltered.
+- CI is .github/workflows/ci.yml; PostgreSQL service, lint, format, build, tests, container builds, Compose validation and an isolated application backup/restore drill. See M4.14 evidence for exactly which integrity checks run and the measured RPO/RTO limits.
 - Existing release is .github/workflows/release.yml, tag/workflow_dispatch with explicit publish boolean.
 - Existing deploy file is .github/workflows/deploy.yml and had staging/optional production behavior at baseline; remove app deployment per user scope.
 - GitHub default branch is main, repo is public and Issues enabled; remote branches at bootstrap were main and dev. Initial rulesets API read returned none. Read branch protection, Pages and auto-merge settings before activation.

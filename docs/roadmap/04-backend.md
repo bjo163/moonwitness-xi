@@ -245,23 +245,27 @@ Batas dukungan provider dan pekerjaan storage terdistribusi dicatat eksplisit pa
 
 Tes membuktikan deadline shutdown/socket close, drain job aktif, probe liveness/readiness API dan worker, invalid request ID fallback, batas pool/query, database-unavailable 503, dan tidak adanya secret pada log.
 
-Implementasi dan hasil lokal dicatat dalam [evidence M4.13](evidence/M4.13.md). Tandai selesai setelah push ke `dev` dan hosted CI pada SHA yang sama lulus. Probe worker opsional dan default-nya nonaktif; operator perlu mengaktifkannya pada jaringan privat bila orkestrator membutuhkannya.
+Implementasi dan hasil CI dicatat dalam [evidence M4.13](evidence/M4.13.md). Probe worker opsional dan default-nya nonaktif; operator perlu mengaktifkannya pada jaringan privat bila orkestrator membutuhkannya. Promosi ke `main` tetap mengikuti CODEOWNER gate.
 
 ## M4.14 — Restore drill dengan data aplikasi, relasi, akun test dan integrity checks; tetapkan target pemulihan berbasis hasil pengukuran.
 
 - **Prasyarat:** M4.02, M4.03
 - **Baca/periksa:** backup-postgres.sh; restore-postgres.sh; PostgreSQL fixture.
-- **Deliverable:** Application restore drill report.
+- **Deliverable:** Isolated application restore drill in CI and a report of measured backup/restore duration, validated integrity, and explicit RPO/RTO scope.
 
 ### Langkah pelaksanaan
 
-1. Seed company/users/partners/relations dengan credential sintetis; backup ke temp dir.
-2. Restore ke database baru terisolasi dengan confirmation safeguards.
-3. Verifikasi counts/external IDs/relations dan login fixture; ukur durasi backup/restore.
+1. Buat dua database dengan nama acak pada PostgreSQL CI service; fixture hanya menerima URL database source/target yang diturunkan dari maintenance URL.
+2. Instal Base/Auth/Jobs secara programatik pada source, set password admin sintetis acak, lalu buat akun fixture melalui alur auth normal, partner parent/child, alamat primary, company membership, dan group membership.
+3. Catat jumlah row pada tabel aplikasi, external ID default company/user, dan ID fixture; buat custom-format dump di direktori sementara dengan permission terbatas.
+4. Jalankan restore ke target kosong melalui skrip operasional yang sama. Kirim konfirmasi nama target yang salah lebih dahulu dan wajibkan skrip menolaknya sebelum mengirim nama target yang tepat.
+5. Pada target, bandingkan count dan seluruh ID, periksa foreign-key references company/partner/address/membership, lalu login akun sintetis untuk membuktikan password hash dan data auth benar-benar pulih.
+6. Ukur waktu dump dan restore pada dataset fixture, laporkan sebagai pengukuran run tersebut saja; bersihkan database, dump, dan file ekspektasi pada jalur sukses maupun gagal.
+7. Jangan mengklaim RPO atau RTO produksi dari CI. RPO bergantung pada frekuensi serta keberhasilan backup off-host; RTO operasional juga mencakup provision, recovery decision, traffic cutover, dan validasi layanan.
 
 ### Verifikasi dan syarat selesai
 
-Restore mismatch confirmation ditolak; restored app integrity pass; tidak menyentuh DB sumber.
+Restore mismatch confirmation ditolak; database source/target bernama acak dan hanya source fixture yang di-dump; integrity counts/IDs/relations serta login fixture pass; waktu dump/restore dilaporkan; cleanup tidak meninggalkan database atau dump. Bukti menyatakan RPO/RTO produksi belum ditetapkan bila frekuensi backup off-host dan waktu cutover belum terukur.
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M4.14.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 

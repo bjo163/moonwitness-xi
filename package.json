@@ -15,6 +15,7 @@
     "test:unit": "pnpm build && pnpm --filter @moonwitness/api exec vitest run --exclude tests/postgres.integration.test.ts && pnpm --filter @moonwitness/auth test && pnpm --filter @moonwitness/client test && pnpm --filter @moonwitness/jobs test && pnpm --filter @moonwitness/logger test && pnpm --filter @moonwitness/orm test && pnpm --filter @moonwitness/orm-base test",
     "test:unit:ci": "node scripts/run-unit-tests.mjs",
     "test:integration": "node scripts/run-postgres-tests.mjs",
+    "test:restore-drill": "node scripts/verify-application-restore.mjs",
     "test:e2e": "node scripts/run-e2e.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
