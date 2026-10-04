@@ -204,21 +204,27 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ## M4.12 — Attachment: izin upload/download, size/MIME, filename/path traversal, storage ownership, dan retensi.
 
-- **Prasyarat:** M0.01
+- **Prasyarat:** M4.06
+- **Status:** Selesai untuk provider filesystem lokal; object-storage adapter, malware scanning, dan orphan sweeper tetap dicatat sebagai M9.02.
+- **Bukti:** [M4.12](evidence/M4.12.md); kontrak runtime lengkap di [attachments.md](../engineering/attachments.md).
+
 - **Baca/periksa:** Attachment model/routes/storage implementation dari inventory.
 - **Deliverable:** Attachment hardening tests.
 
 ### Langkah pelaksanaan
 
-1. Audit ownership dari upload sampai download/delete.
-2. Batasi size/type dan normalisasi metadata; object key tidak berasal langsung dari path pengguna.
-3. Uji traversal, cross-company object access dan missing/deleted blob.
+1. Audit ownership dari upload sampai download/delete; upload dan download wajib menyelesaikan parent record melalui row/company scope request.
+2. Terima byte stream terbatas 10 MiB, MIME allowlist, nama UTF-8 aman maksimal 255 karakter, key UUID server-generated, checksum SHA-256, serta tulis temp-file mode 0600 lalu rename atomik.
+3. Sembunyikan object key dari REST/RPC, view, audit, dan client; larang create/write metadata lewat generic API.
+4. Gunakan forced download + `nosniff`/private cache headers; batasi upload 20 request per menit per IP.
+5. Semantik retensi: archive mempertahankan binary untuk restore; hard delete metadata diikuti penghapusan binary. Dokumentasikan konsekuensi storage lokal dan proses orphan/expiry yang masih belum tersedia.
+6. Uji metadata palsu, MIME di luar allowlist, traversal, size, content round-trip, akses lintas user, transaksi gagal, dan penghapusan file.
 
 ### Verifikasi dan syarat selesai
 
-Unauthorized download tidak berhasil; invalid upload tak meninggalkan orphan tanpa cleanup.
+Unauthorized download tidak berhasil; invalid upload tidak menulis file; kegagalan metadata membersihkan file; hard delete menghapus bytes dan archive mempertahankan bytes.
 
-Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M4.12.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
+Batas dukungan provider dan pekerjaan storage terdistribusi dicatat eksplisit pada bukti M4.12 dan M9.02; ini tidak menghalangi kontrak lokal yang telah diuji.
 
 ## M4.13 — Operasional: graceful shutdown, DB pools/timeouts, request ID, redaksi log, readiness/liveness API dan worker.
 

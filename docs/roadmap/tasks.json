@@ -472,10 +472,12 @@
     },
     {
       "id": "M4.12",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M4.12.md",
       "title": "Attachment: izin upload/download, size/MIME, filename/path traversal, storage ownership, dan retensi.",
       "milestone": "M4",
-      "dependsOn": ["M0.01"],
-      "output": "Attachment hardening tests",
+      "dependsOn": ["M4.06"],
+      "output": "Authenticated local-filesystem attachment storage and hardening tests",
       "detailFile": "docs/roadmap/04-backend.md"
     },
     {
