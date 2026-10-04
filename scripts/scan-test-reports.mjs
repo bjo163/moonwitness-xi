@@ -18,8 +18,15 @@ export function assertReportsAreSanitized(contents) {
 }
 
 export function assertRequiredTestReports(files) {
-  if (files.includes('board-e2e.xml') && !files.includes('board-e2e-retries.json')) {
+  const basenames = files.map((file) => path.basename(file));
+  if (basenames.includes('board-e2e.xml') && !basenames.includes('board-e2e-retries.json')) {
     throw new Error('Playwright JUnit exists but its retry-diagnostics report is missing.');
+  }
+  if (
+    basenames.includes('postgres.xml') &&
+    !files.some((file) => file.replaceAll('\\', '/').endsWith('performance/m4.15.json'))
+  ) {
+    throw new Error('PostgreSQL JUnit exists but the M4.15 performance report is missing.');
   }
 }
 
@@ -36,7 +43,9 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const files = await listReports(artifactDirectory);
   const junitFiles = files.filter((file) => file.endsWith('.xml'));
   if (junitFiles.length === 0) throw new Error('No JUnit reports were generated.');
-  assertRequiredTestReports(files.map((file) => path.basename(file)));
+  assertRequiredTestReports(
+    files.map((file) => path.relative(artifactDirectory, file).replaceAll('\\', '/'))
+  );
   for (const file of files) assertReportsAreSanitized(await readFile(file, 'utf8'));
   process.stdout.write(
     `Scanned ${files.length} JUnit/coverage reports; no credential patterns found.\n`

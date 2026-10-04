@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { dirname, isAbsolute, resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import knex, { type Knex } from 'knex';
@@ -354,7 +354,7 @@ postgresDescribe('PostgreSQL query and job performance baseline', () => {
         interpretation:
           'Query-count budgets are structural gates. Latency and heap values are observations from a shared CI runner, not absolute service-level objectives.',
       };
-      const reportDirectory = resolve('test-results/performance');
+      const reportDirectory = resolve(process.cwd(), '../..', 'test-results/performance');
       await mkdir(reportDirectory, { recursive: true });
       await writeFile(
         resolve(reportDirectory, 'm4.15.json'),
@@ -366,8 +366,11 @@ postgresDescribe('PostgreSQL query and job performance baseline', () => {
       );
       const evidencePath = process.env.M4_15_EVIDENCE_PATH;
       if (evidencePath) {
-        await mkdir(resolve(evidencePath, '..'), { recursive: true });
-        await writeFile(resolve(evidencePath), `${JSON.stringify(report, null, 2)}\n`, {
+        const resolvedEvidencePath = isAbsolute(evidencePath)
+          ? evidencePath
+          : resolve(process.cwd(), '../..', evidencePath);
+        await mkdir(dirname(resolvedEvidencePath), { recursive: true });
+        await writeFile(resolvedEvidencePath, `${JSON.stringify(report, null, 2)}\n`, {
           encoding: 'utf8',
           mode: 0o600,
         });

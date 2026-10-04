@@ -27,3 +27,13 @@ test('requires retry diagnostics whenever a Playwright JUnit report exists', () 
   assert.doesNotThrow(() => assertRequiredTestReports(['board-e2e.xml', 'board-e2e-retries.json']));
   assert.doesNotThrow(() => assertRequiredTestReports(['api.xml']));
 });
+
+test('requires the M4.15 performance report whenever PostgreSQL integration JUnit exists', () => {
+  assert.throws(
+    () => assertRequiredTestReports(['junit/postgres.xml']),
+    /M4\.15 performance report/u
+  );
+  assert.doesNotThrow(() =>
+    assertRequiredTestReports(['junit/postgres.xml', 'performance/m4.15.json'])
+  );
+});
