@@ -21,6 +21,7 @@
     "format:check": "prettier --check .",
     "typecheck": "pnpm build && pnpm --filter @moonwitness/board typecheck",
     "docs:check": "node scripts/check-docs.mjs",
+    "audit:workspace": "node scripts/audit-workspace.mjs",
     "verify": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test:unit && pnpm docs:check",
     "release:check": "node scripts/check-release.mjs",
     "test:ci-gate": "node --test scripts/ci-gate.test.mjs",

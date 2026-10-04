@@ -24,3 +24,11 @@ This list is a review queue, not a mandate to split files by line count. Preserv
 ## Dependency and bundle follow-up
 
 Use pnpm workspace graph and consumer searches before removing dependencies. Vite reports lazy chunks; route-specific size must be recorded before/after. Do not confuse TS source lines, minified byte size and compressed initial transfer.
+
+## Dependency and cycle audit (2026-10-04)
+
+- Re-run the static workspace inventory with `pnpm audit:workspace`; implementation is in `scripts/audit-workspace.mjs` and uses the repository's TypeScript compiler, so it adds no analyzer dependency.
+- The audit covered 10 workspace packages plus the root and 153 source/config script files. It found no runtime import cycle and no workspace runtime dependency cycle.
+- Two reported file-level cycles are type-only edges around `BaseModel`, `Environment`, and `Registry`. `BaseModel` imports `Environment` at runtime; the back-references from `Environment` and `Registry` are `import type`, so they do not create a runtime cycle. Keep this coupling visible and reassess if the ORM public types are refactored.
+- The Board declared `@tanstack/react-table` and `cn` without importing either. The table dependency was unused; the app's `cn` helper is implemented locally in `src/lib/utils.ts` using `clsx` and `tailwind-merge`. Both direct dependencies and their now-unreachable lockfile packages were removed.
+- The command deliberately reports unused dependency _candidates_, not automatic removals. TypeScript ambient types, CSS/config imports, package scripts, ORM dialect adapters (`pg`), and peer contracts can be invisible to a source-import scan. Review each candidate against its package scripts/config and runtime role before removal.
