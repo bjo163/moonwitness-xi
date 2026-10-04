@@ -25,6 +25,9 @@ engineering notes menjelaskan alasan serta batas sistem.
 
 - [Kontrak API](reference/api.md)
 - [Model dan metadata runtime](reference/models.md)
+- [API routes yang diekstrak dari source](reference/generated-api.md)
+- [Model, addon, menu, akses, dan cakupan seed](reference/generated-models.md)
+- [Paket, perintah, dan konfigurasi](reference/generated-platform.md)
 - [Engineering feature matrix](../engineering/feature-matrix.md)
 - [Kebijakan kompatibilitas](../engineering/compatibility.md)
 - [Diagram arsitektur dari metadata](../architecture/diagrams/README.md)

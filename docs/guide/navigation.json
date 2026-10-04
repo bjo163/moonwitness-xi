@@ -49,7 +49,22 @@
       "title": "Referensi",
       "items": [
         { "title": "API", "kind": "reference", "path": "docs/guide/reference/api.md" },
-        { "title": "Model runtime", "kind": "reference", "path": "docs/guide/reference/models.md" }
+        { "title": "Model runtime", "kind": "reference", "path": "docs/guide/reference/models.md" },
+        {
+          "title": "API routes yang diekstrak",
+          "kind": "reference",
+          "path": "docs/guide/reference/generated-api.md"
+        },
+        {
+          "title": "Model, addon, menu, dan akses",
+          "kind": "reference",
+          "path": "docs/guide/reference/generated-models.md"
+        },
+        {
+          "title": "Paket, perintah, dan konfigurasi",
+          "kind": "reference",
+          "path": "docs/guide/reference/generated-platform.md"
+        }
       ]
     }
   ]

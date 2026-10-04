@@ -1,0 +1,2945 @@
+{
+  "schemaVersion": 1,
+  "generatedFromSha256": "f739faf14f7f54678bbe463ea2bb88c5463244f8b5b903b1e4a2c18ff589e765",
+  "safety": {
+    "applicationStarted": false,
+    "databaseConnected": false,
+    "realEnvironmentLoaded": false,
+    "seedValuesIncluded": false,
+    "defaultsIncluded": false
+  },
+  "packages": [
+    {
+      "name": "@moonwitness/api",
+      "version": "1.0.0-rc.1",
+      "directory": "apps/api",
+      "scripts": [
+        "build",
+        "dev",
+        "jobs:outbox",
+        "jobs:scheduler",
+        "jobs:worker",
+        "reset:superadmin-password",
+        "start",
+        "test"
+      ]
+    },
+    {
+      "name": "@moonwitness/board",
+      "version": "1.0.0-rc.1",
+      "directory": "apps/board",
+      "scripts": ["build", "dev", "lint", "preview", "typecheck"]
+    },
+    {
+      "name": "@moonwitness/ui-catalog",
+      "version": "1.0.0-rc.1",
+      "directory": "apps/ui-catalog",
+      "scripts": ["build", "dev", "preview", "test"]
+    },
+    {
+      "name": "@moonwitness/assets",
+      "version": "1.0.0-rc.1",
+      "directory": "packages/assets",
+      "scripts": []
+    },
+    {
+      "name": "@moonwitness/auth",
+      "version": "1.0.0-rc.1",
+      "directory": "packages/auth",
+      "scripts": ["build", "test"]
+    },
+    {
+      "name": "@moonwitness/client",
+      "version": "1.0.0-rc.1",
+      "directory": "packages/client",
+      "scripts": ["build", "test"]
+    },
+    {
+      "name": "@moonwitness/eslint-config",
+      "version": "1.0.0-rc.1",
+      "directory": "packages/eslint-config",
+      "scripts": []
+    },
+    {
+      "name": "@moonwitness/jobs",
+      "version": "1.0.0-rc.1",
+      "directory": "packages/jobs",
+      "scripts": ["build", "test"]
+    },
+    {
+      "name": "@moonwitness/logger",
+      "version": "1.0.0-rc.1",
+      "directory": "packages/logger",
+      "scripts": ["build", "test"]
+    },
+    {
+      "name": "@moonwitness/orm",
+      "version": "1.0.0-rc.1",
+      "directory": "packages/orm",
+      "scripts": ["build", "test"]
+    },
+    {
+      "name": "@moonwitness/orm-base",
+      "version": "1.0.0-rc.1",
+      "directory": "packages/orm-base",
+      "scripts": ["build", "test"]
+    },
+    {
+      "name": "@moonwitness/types",
+      "version": "1.0.0-rc.1",
+      "directory": "packages/types",
+      "scripts": ["build"]
+    },
+    {
+      "name": "@moonwitness/ui",
+      "version": "1.0.0-rc.1",
+      "directory": "packages/ui",
+      "scripts": ["build", "test"]
+    }
+  ],
+  "scripts": {
+    "@moonwitness/api": {
+      "build": "tsc",
+      "dev": "tsx watch src/server.ts",
+      "jobs:outbox": "tsx src/commands/outbox-worker.ts",
+      "jobs:scheduler": "tsx src/commands/jobs-scheduler.ts",
+      "jobs:worker": "tsx src/commands/jobs-worker.ts",
+      "reset:superadmin-password": "tsx src/commands/reset-superadmin-password.ts",
+      "start": "node dist/server.js",
+      "test": "vitest run"
+    },
+    "@moonwitness/board": {
+      "build": "tsc -b && vite build",
+      "dev": "vite",
+      "lint": "oxlint",
+      "preview": "vite preview",
+      "typecheck": "tsc -b"
+    },
+    "@moonwitness/ui-catalog": {
+      "build": "pnpm --filter @moonwitness/ui build && tsc -p tsconfig.json && vite build",
+      "dev": "vite",
+      "preview": "vite preview",
+      "test": "playwright test"
+    },
+    "@moonwitness/auth": {
+      "build": "tsc",
+      "test": "tsc -p tsconfig.check.json && vitest run"
+    },
+    "@moonwitness/client": {
+      "build": "tsc",
+      "test": "tsc -p tsconfig.check.json && vitest run"
+    },
+    "@moonwitness/jobs": {
+      "build": "tsc",
+      "test": "tsc -p tsconfig.check.json && vitest run"
+    },
+    "@moonwitness/logger": {
+      "build": "tsc",
+      "test": "vitest run"
+    },
+    "@moonwitness/orm": {
+      "build": "tsc",
+      "test": "vitest run"
+    },
+    "@moonwitness/orm-base": {
+      "build": "tsc",
+      "test": "tsc -p tsconfig.check.json && vitest run"
+    },
+    "@moonwitness/types": {
+      "build": "tsc"
+    },
+    "@moonwitness/ui": {
+      "build": "node scripts/generate-icons.mjs && tsc",
+      "test": "pnpm build && node --test tests/*.test.mjs"
+    },
+    "root": {
+      "architecture:check": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && node scripts/architecture/generate-diagrams.mjs --check",
+      "architecture:generate": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && node scripts/architecture/generate-diagrams.mjs",
+      "assets:check:docs": "node scripts/export-doc-assets.mjs --check",
+      "assets:export:docs": "node scripts/export-doc-assets.mjs",
+      "assets:generate": "node packages/assets/scripts/generate.mjs && node packages/assets/scripts/generate-illustrations.mjs && node scripts/export-doc-assets.mjs",
+      "assets:generate:illustrations": "node packages/assets/scripts/generate-illustrations.mjs && node scripts/export-doc-assets.mjs",
+      "assets:render": "node packages/assets/scripts/render-social.mjs",
+      "assets:validate": "node packages/assets/scripts/validate.mjs",
+      "audit:workspace": "node scripts/audit-workspace.mjs",
+      "build": "pnpm -r build",
+      "ci:affected": "node scripts/select-affected.mjs",
+      "dev": "pnpm --filter @moonwitness/api dev",
+      "dev:board": "pnpm --filter @moonwitness/board dev",
+      "docs:check": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && node --test scripts/docs/generate-reference.test.mjs && node scripts/docs/generate-reference.mjs --check && node scripts/check-docs.mjs && node scripts/check-doc-navigation.mjs && node --test scripts/check-doc-navigation.test.mjs",
+      "docs:generate": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && node scripts/docs/generate-reference.mjs",
+      "format": "prettier --write .",
+      "format:check": "prettier --check .",
+      "jobs:outbox": "pnpm --filter @moonwitness/api jobs:outbox",
+      "jobs:scheduler": "pnpm --filter @moonwitness/api jobs:scheduler",
+      "jobs:worker": "pnpm --filter @moonwitness/api jobs:worker",
+      "lint": "eslint .",
+      "lint:fix": "eslint . --fix",
+      "promotion:approval-check": "node scripts/check-promotion-approval.mjs",
+      "promotion:risk": "node scripts/check-promotion-risk.mjs",
+      "release:check": "node scripts/check-release.mjs",
+      "release:classify": "node scripts/classify-release-commits.mjs",
+      "reset:superadmin-password": "pnpm --filter @moonwitness/api reset:superadmin-password",
+      "test": "pnpm test:unit",
+      "test:affected": "node --test scripts/select-affected.test.mjs",
+      "test:architecture": "node --test scripts/architecture/*.test.mjs",
+      "test:artifact-safety": "node --test scripts/scan-test-reports.test.mjs",
+      "test:assets": "pnpm assets:validate && node --test packages/assets/tests/*.test.mjs scripts/export-doc-assets.test.mjs && pnpm assets:check:docs",
+      "test:ci-gate": "node --test scripts/ci-gate.test.mjs",
+      "test:coverage-policy": "node --test scripts/check-coverage.test.mjs",
+      "test:docs-navigation": "node --test scripts/check-doc-navigation.test.mjs",
+      "test:e2e": "node scripts/run-e2e.mjs",
+      "test:flaky-policy": "node --test scripts/flaky-policy.test.mjs scripts/playwright-flake-reporter.test.mjs",
+      "test:integration": "node scripts/run-postgres-tests.mjs",
+      "test:promotion-policy": "node --test scripts/git-range.test.mjs scripts/promotion-risk.test.mjs scripts/promotion-approval.test.mjs",
+      "test:release-classification": "node --test scripts/release-classification.test.mjs",
+      "test:restore-drill": "node scripts/verify-application-restore.mjs",
+      "test:ui": "pnpm --filter @moonwitness/ui build && node --test packages/ui/tests/*.test.mjs && node packages/ui/scripts/verify-package.mjs",
+      "test:ui-budget": "node --test apps/ui-catalog/tests/bundle-budget.test.mjs && pnpm --filter @moonwitness/ui-catalog build && pnpm ui:budget",
+      "test:ui-catalog": "pnpm --filter @moonwitness/ui-catalog build && pnpm --filter @moonwitness/ui-catalog test",
+      "test:unit": "pnpm build && pnpm --filter @moonwitness/api exec vitest run --exclude tests/postgres.integration.test.ts --exclude tests/postgres.performance.integration.test.ts && pnpm --filter @moonwitness/auth test && pnpm --filter @moonwitness/client test && pnpm --filter @moonwitness/jobs test && pnpm --filter @moonwitness/logger test && pnpm --filter @moonwitness/orm test && pnpm --filter @moonwitness/orm-base test && pnpm test:assets && pnpm test:ui",
+      "test:unit:ci": "node scripts/run-unit-tests.mjs",
+      "typecheck": "pnpm build && pnpm --filter @moonwitness/board typecheck",
+      "ui:budget": "node scripts/check-ui-catalog-budget.mjs",
+      "ui:visual:update": "pnpm --filter @moonwitness/ui-catalog build && pnpm --filter @moonwitness/ui-catalog exec playwright test --update-snapshots",
+      "verify": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test:unit && pnpm test:architecture && pnpm architecture:check && pnpm docs:check"
+    }
+  },
+  "environment": [
+    {
+      "name": "ACCESS_TOKEN_TTL_SECONDS",
+      "configuredInExample": true,
+      "secret": true,
+      "valueType": "secret"
+    },
+    {
+      "name": "API_HOST",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "string"
+    },
+    {
+      "name": "API_PORT",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "integer"
+    },
+    {
+      "name": "ATTACHMENT_STORAGE_DIR",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "string"
+    },
+    {
+      "name": "AUTH_LOGIN_RATE_MAX",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "integer"
+    },
+    {
+      "name": "DATABASE_URL",
+      "configuredInExample": true,
+      "secret": true,
+      "valueType": "url"
+    },
+    {
+      "name": "DB_ACQUIRE_TIMEOUT_MS",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "integer"
+    },
+    {
+      "name": "DB_POOL_MAX",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "integer"
+    },
+    {
+      "name": "DB_POOL_MIN",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "integer"
+    },
+    {
+      "name": "DB_STATEMENT_TIMEOUT_MS",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "integer"
+    },
+    {
+      "name": "HOST",
+      "configuredInExample": false,
+      "secret": false,
+      "valueType": "string"
+    },
+    {
+      "name": "JOB_HANDLERS_MODULE",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "string"
+    },
+    {
+      "name": "JOBS_SCHEDULER_HEALTH_PORT",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "integer"
+    },
+    {
+      "name": "JOBS_WORKER_HEALTH_PORT",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "integer"
+    },
+    {
+      "name": "JWT_SECRET",
+      "configuredInExample": true,
+      "secret": true,
+      "valueType": "secret"
+    },
+    {
+      "name": "LOG_DIR",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "string"
+    },
+    {
+      "name": "LOG_FILE_NAME",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "string"
+    },
+    {
+      "name": "LOG_LEVEL",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "string"
+    },
+    {
+      "name": "LOG_PRETTY",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "boolean"
+    },
+    {
+      "name": "LOG_TO_FILE",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "boolean"
+    },
+    {
+      "name": "METRICS_TOKEN",
+      "configuredInExample": true,
+      "secret": true,
+      "valueType": "secret"
+    },
+    {
+      "name": "NODE_ENV",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "string"
+    },
+    {
+      "name": "OUTBOX_HANDLERS_MODULE",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "string"
+    },
+    {
+      "name": "OUTBOX_WORKER_HEALTH_PORT",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "integer"
+    },
+    {
+      "name": "PORT",
+      "configuredInExample": false,
+      "secret": false,
+      "valueType": "integer"
+    },
+    {
+      "name": "POSTGRES_TEST_URL",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "url"
+    },
+    {
+      "name": "PRINT_ROUTES",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "boolean"
+    },
+    {
+      "name": "REFRESH_TOKEN_TTL_SECONDS",
+      "configuredInExample": true,
+      "secret": true,
+      "valueType": "secret"
+    },
+    {
+      "name": "RESTORE_DRILL_SCHEMA",
+      "configuredInExample": false,
+      "secret": false,
+      "valueType": "string"
+    },
+    {
+      "name": "SUPERADMIN_PASSWORD",
+      "configuredInExample": true,
+      "secret": true,
+      "valueType": "secret"
+    },
+    {
+      "name": "WORKER_HEALTH_HOST",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "string"
+    }
+  ],
+  "addons": [
+    {
+      "name": "auth",
+      "version": "1.0.0",
+      "depends": ["base"],
+      "models": [
+        {
+          "name": "auth.refresh_token",
+          "table": "auth_refresh_tokens",
+          "fields": [
+            {
+              "name": "expires_at",
+              "kind": "string",
+              "column": "expires_at",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "family",
+              "kind": "string",
+              "column": "family",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "revoked",
+              "kind": "boolean",
+              "column": "revoked",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "rotated_at",
+              "kind": "string",
+              "column": "rotated_at",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "rotation_lease_until",
+              "kind": "string",
+              "column": "rotation_lease_until",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "token_hash",
+              "kind": "string",
+              "column": "token_hash",
+              "declaredRequired": true,
+              "required": true,
+              "unique": true,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "user",
+              "kind": "belongsTo",
+              "column": "user_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.user"
+            },
+            {
+              "name": "user_agent",
+              "kind": "string",
+              "column": "user_agent",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            }
+          ],
+          "uniqueConstraints": []
+        }
+      ],
+      "menus": [],
+      "views": [],
+      "seeds": {},
+      "accessRules": []
+    },
+    {
+      "name": "base",
+      "version": "1.0.0",
+      "depends": [],
+      "models": [
+        {
+          "name": "base.access_group",
+          "table": "access_groups",
+          "fields": [
+            {
+              "name": "code",
+              "kind": "string",
+              "column": "code",
+              "declaredRequired": true,
+              "required": true,
+              "unique": true,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "description",
+              "kind": "text",
+              "column": "description",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "name",
+              "kind": "string",
+              "column": "name",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            }
+          ],
+          "uniqueConstraints": []
+        },
+        {
+          "name": "base.activity",
+          "table": "activities",
+          "fields": [
+            {
+              "name": "activity_type",
+              "kind": "enum",
+              "column": "activity_type",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]",
+              "values": ["call", "email", "meeting", "todo"]
+            },
+            {
+              "name": "assigned_to",
+              "kind": "belongsTo",
+              "column": "assigned_to_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false,
+              "relation": "base.user"
+            },
+            {
+              "name": "deadline",
+              "kind": "string",
+              "column": "deadline",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "note",
+              "kind": "text",
+              "column": "note",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "resource_id",
+              "kind": "integer",
+              "column": "resource_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "resource_model",
+              "kind": "string",
+              "column": "resource_model",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "state",
+              "kind": "enum",
+              "column": "state",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]",
+              "values": ["cancelled", "done", "planned"]
+            },
+            {
+              "name": "summary",
+              "kind": "string",
+              "column": "summary",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            }
+          ],
+          "uniqueConstraints": []
+        },
+        {
+          "name": "base.attachment",
+          "table": "attachments",
+          "fields": [
+            {
+              "name": "checksum",
+              "kind": "string",
+              "column": "checksum",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "mimetype",
+              "kind": "string",
+              "column": "mimetype",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "name",
+              "kind": "string",
+              "column": "name",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "resource_id",
+              "kind": "integer",
+              "column": "resource_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "resource_model",
+              "kind": "string",
+              "column": "resource_model",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "size_bytes",
+              "kind": "integer",
+              "column": "size_bytes",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "storage_key",
+              "kind": "string",
+              "column": "storage_key",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            }
+          ],
+          "uniqueConstraints": []
+        },
+        {
+          "name": "base.audit_log",
+          "table": "audit_logs",
+          "fields": [
+            {
+              "name": "actor_id",
+              "kind": "integer",
+              "column": "actor_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "changes",
+              "kind": "text",
+              "column": "changes",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "model",
+              "kind": "string",
+              "column": "model",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "operation",
+              "kind": "string",
+              "column": "operation",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "record_id",
+              "kind": "integer",
+              "column": "record_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            }
+          ],
+          "uniqueConstraints": []
+        },
+        {
+          "name": "base.bank",
+          "table": "banks",
+          "fields": [
+            {
+              "name": "bic",
+              "kind": "string",
+              "column": "bic",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "code",
+              "kind": "string",
+              "column": "code",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "country",
+              "kind": "belongsTo",
+              "column": "country_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false,
+              "relation": "base.country"
+            },
+            {
+              "name": "name",
+              "kind": "string",
+              "column": "name",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "phone",
+              "kind": "string",
+              "column": "phone",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "website",
+              "kind": "string",
+              "column": "website",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            }
+          ],
+          "uniqueConstraints": [["bic"], ["code", "country"]]
+        },
+        {
+          "name": "base.company",
+          "table": "companies",
+          "fields": [
+            {
+              "name": "city",
+              "kind": "string",
+              "column": "city",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "country",
+              "kind": "belongsTo",
+              "column": "country_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false,
+              "relation": "base.country"
+            },
+            {
+              "name": "currency",
+              "kind": "belongsTo",
+              "column": "currency_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false,
+              "relation": "base.currency"
+            },
+            {
+              "name": "email",
+              "kind": "string",
+              "column": "email",
+              "declaredRequired": false,
+              "required": false,
+              "unique": true,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "language",
+              "kind": "belongsTo",
+              "column": "language_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false,
+              "relation": "base.language"
+            },
+            {
+              "name": "name",
+              "kind": "string",
+              "column": "name",
+              "declaredRequired": true,
+              "required": true,
+              "unique": true,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "phone",
+              "kind": "string",
+              "column": "phone",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "postal_code",
+              "kind": "string",
+              "column": "postal_code",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "street",
+              "kind": "string",
+              "column": "street",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "timezone",
+              "kind": "string",
+              "column": "timezone",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "website",
+              "kind": "string",
+              "column": "website",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            }
+          ],
+          "uniqueConstraints": []
+        },
+        {
+          "name": "base.company_membership",
+          "table": "company_memberships",
+          "fields": [
+            {
+              "name": "company",
+              "kind": "belongsTo",
+              "column": "company_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.company"
+            },
+            {
+              "name": "is_default",
+              "kind": "boolean",
+              "column": "is_default",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "user",
+              "kind": "belongsTo",
+              "column": "user_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.user"
+            }
+          ],
+          "uniqueConstraints": [["company", "user"]]
+        },
+        {
+          "name": "base.country",
+          "table": "countries",
+          "fields": [
+            {
+              "name": "code",
+              "kind": "string",
+              "column": "code",
+              "declaredRequired": true,
+              "required": true,
+              "unique": true,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "code_alpha3",
+              "kind": "string",
+              "column": "code_alpha3",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "name",
+              "kind": "string",
+              "column": "name",
+              "declaredRequired": true,
+              "required": true,
+              "unique": true,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "phone_code",
+              "kind": "string",
+              "column": "phone_code",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "vat_label",
+              "kind": "string",
+              "column": "vat_label",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            }
+          ],
+          "uniqueConstraints": []
+        },
+        {
+          "name": "base.country_state",
+          "table": "country_states",
+          "fields": [
+            {
+              "name": "code",
+              "kind": "string",
+              "column": "code",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "country",
+              "kind": "belongsTo",
+              "column": "country_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.country"
+            },
+            {
+              "name": "name",
+              "kind": "string",
+              "column": "name",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "type",
+              "kind": "string",
+              "column": "type",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            }
+          ],
+          "uniqueConstraints": [["code", "country"]]
+        },
+        {
+          "name": "base.currency",
+          "table": "currencies",
+          "fields": [
+            {
+              "name": "code",
+              "kind": "string",
+              "column": "code",
+              "declaredRequired": true,
+              "required": true,
+              "unique": true,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "name",
+              "kind": "string",
+              "column": "name",
+              "declaredRequired": true,
+              "required": true,
+              "unique": true,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "symbol",
+              "kind": "string",
+              "column": "symbol",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            }
+          ],
+          "uniqueConstraints": []
+        },
+        {
+          "name": "base.group_membership",
+          "table": "group_memberships",
+          "fields": [
+            {
+              "name": "group",
+              "kind": "belongsTo",
+              "column": "group_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.access_group"
+            },
+            {
+              "name": "user",
+              "kind": "belongsTo",
+              "column": "user_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.user"
+            }
+          ],
+          "uniqueConstraints": [["group", "user"]]
+        },
+        {
+          "name": "base.language",
+          "table": "languages",
+          "fields": [
+            {
+              "name": "code",
+              "kind": "string",
+              "column": "code",
+              "declaredRequired": true,
+              "required": true,
+              "unique": true,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "name",
+              "kind": "string",
+              "column": "name",
+              "declaredRequired": true,
+              "required": true,
+              "unique": true,
+              "optional": false,
+              "hasDefault": false
+            }
+          ],
+          "uniqueConstraints": []
+        },
+        {
+          "name": "base.model_access",
+          "table": "model_access",
+          "fields": [
+            {
+              "name": "create",
+              "kind": "boolean",
+              "column": "create",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "group",
+              "kind": "belongsTo",
+              "column": "group_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.access_group"
+            },
+            {
+              "name": "model_name",
+              "kind": "string",
+              "column": "model_name",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "read",
+              "kind": "boolean",
+              "column": "read",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "unlink",
+              "kind": "boolean",
+              "column": "unlink",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "write",
+              "kind": "boolean",
+              "column": "write",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            }
+          ],
+          "uniqueConstraints": [["group", "model_name"]]
+        },
+        {
+          "name": "base.partner",
+          "table": "partners",
+          "fields": [
+            {
+              "name": "city",
+              "kind": "string",
+              "column": "city",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "company",
+              "kind": "belongsTo",
+              "column": "company_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false,
+              "relation": "base.company"
+            },
+            {
+              "name": "country",
+              "kind": "belongsTo",
+              "column": "country_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false,
+              "relation": "base.country"
+            },
+            {
+              "name": "email",
+              "kind": "string",
+              "column": "email",
+              "declaredRequired": false,
+              "required": false,
+              "unique": true,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "is_company",
+              "kind": "boolean",
+              "column": "is_company",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "is_customer",
+              "kind": "boolean",
+              "column": "is_customer",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "is_supplier",
+              "kind": "boolean",
+              "column": "is_supplier",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "job_title",
+              "kind": "string",
+              "column": "job_title",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "mobile",
+              "kind": "string",
+              "column": "mobile",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "name",
+              "kind": "string",
+              "column": "name",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "notes",
+              "kind": "text",
+              "column": "notes",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "parent",
+              "kind": "belongsTo",
+              "column": "parent_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false,
+              "relation": "base.partner"
+            },
+            {
+              "name": "phone",
+              "kind": "string",
+              "column": "phone",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "postal_code",
+              "kind": "string",
+              "column": "postal_code",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "state",
+              "kind": "belongsTo",
+              "column": "state_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false,
+              "relation": "base.country_state"
+            },
+            {
+              "name": "street",
+              "kind": "string",
+              "column": "street",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "vat",
+              "kind": "string",
+              "column": "vat",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "website",
+              "kind": "string",
+              "column": "website",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            }
+          ],
+          "uniqueConstraints": []
+        },
+        {
+          "name": "base.partner_address",
+          "table": "partner_addresses",
+          "fields": [
+            {
+              "name": "address_type",
+              "kind": "enum",
+              "column": "address_type",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]",
+              "values": ["contact", "delivery", "invoice", "other"]
+            },
+            {
+              "name": "city",
+              "kind": "string",
+              "column": "city",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "country",
+              "kind": "belongsTo",
+              "column": "country_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false,
+              "relation": "base.country"
+            },
+            {
+              "name": "is_primary",
+              "kind": "boolean",
+              "column": "is_primary",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "label",
+              "kind": "string",
+              "column": "label",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "partner",
+              "kind": "belongsTo",
+              "column": "partner_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.partner"
+            },
+            {
+              "name": "postal_code",
+              "kind": "string",
+              "column": "postal_code",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "state",
+              "kind": "belongsTo",
+              "column": "state_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false,
+              "relation": "base.country_state"
+            },
+            {
+              "name": "street",
+              "kind": "string",
+              "column": "street",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "street2",
+              "kind": "string",
+              "column": "street2",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            }
+          ],
+          "uniqueConstraints": []
+        },
+        {
+          "name": "base.partner_bank",
+          "table": "partner_banks",
+          "fields": [
+            {
+              "name": "acc_holder_name",
+              "kind": "string",
+              "column": "acc_holder_name",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "acc_number",
+              "kind": "string",
+              "column": "acc_number",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "bank",
+              "kind": "belongsTo",
+              "column": "bank_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false,
+              "relation": "base.bank"
+            },
+            {
+              "name": "company",
+              "kind": "belongsTo",
+              "column": "company_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false,
+              "relation": "base.company"
+            },
+            {
+              "name": "currency",
+              "kind": "belongsTo",
+              "column": "currency_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false,
+              "relation": "base.currency"
+            },
+            {
+              "name": "is_primary",
+              "kind": "boolean",
+              "column": "is_primary",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "partner",
+              "kind": "belongsTo",
+              "column": "partner_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.partner"
+            },
+            {
+              "name": "sanitized_acc_number",
+              "kind": "string",
+              "column": "sanitized_acc_number",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            }
+          ],
+          "uniqueConstraints": []
+        },
+        {
+          "name": "base.partner_category",
+          "table": "partner_categories",
+          "fields": [
+            {
+              "name": "code",
+              "kind": "string",
+              "column": "code",
+              "declaredRequired": true,
+              "required": true,
+              "unique": true,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "color",
+              "kind": "string",
+              "column": "color",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "description",
+              "kind": "text",
+              "column": "description",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "name",
+              "kind": "string",
+              "column": "name",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            }
+          ],
+          "uniqueConstraints": []
+        },
+        {
+          "name": "base.partner_category_link",
+          "table": "partner_category_links",
+          "fields": [
+            {
+              "name": "category",
+              "kind": "belongsTo",
+              "column": "category_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.partner_category"
+            },
+            {
+              "name": "partner",
+              "kind": "belongsTo",
+              "column": "partner_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.partner"
+            }
+          ],
+          "uniqueConstraints": [["category", "partner"]]
+        },
+        {
+          "name": "base.sequence",
+          "table": "sequences",
+          "fields": [
+            {
+              "name": "code",
+              "kind": "string",
+              "column": "code",
+              "declaredRequired": true,
+              "required": true,
+              "unique": true,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "name",
+              "kind": "string",
+              "column": "name",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "next_number",
+              "kind": "integer",
+              "column": "next_number",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "padding",
+              "kind": "integer",
+              "column": "padding",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "prefix",
+              "kind": "string",
+              "column": "prefix",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            }
+          ],
+          "uniqueConstraints": []
+        },
+        {
+          "name": "base.tag",
+          "table": "tags",
+          "fields": [
+            {
+              "name": "color",
+              "kind": "string",
+              "column": "color",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "description",
+              "kind": "text",
+              "column": "description",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "name",
+              "kind": "string",
+              "column": "name",
+              "declaredRequired": true,
+              "required": true,
+              "unique": true,
+              "optional": false,
+              "hasDefault": false
+            }
+          ],
+          "uniqueConstraints": []
+        },
+        {
+          "name": "base.tag_link",
+          "table": "tag_links",
+          "fields": [
+            {
+              "name": "resource_id",
+              "kind": "integer",
+              "column": "resource_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "resource_model",
+              "kind": "string",
+              "column": "resource_model",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "tag",
+              "kind": "belongsTo",
+              "column": "tag_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.tag"
+            }
+          ],
+          "uniqueConstraints": [["resource_id", "resource_model", "tag"]]
+        },
+        {
+          "name": "base.user",
+          "table": "users",
+          "fields": [
+            {
+              "name": "language",
+              "kind": "belongsTo",
+              "column": "language_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false,
+              "relation": "base.language"
+            },
+            {
+              "name": "login",
+              "kind": "string",
+              "column": "login",
+              "declaredRequired": true,
+              "required": true,
+              "unique": true,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "partner",
+              "kind": "belongsTo",
+              "column": "partner_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": true,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.partner"
+            },
+            {
+              "name": "password",
+              "kind": "password",
+              "column": "password",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "role",
+              "kind": "enum",
+              "column": "role",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]",
+              "values": ["superadmin", "system", "user"]
+            },
+            {
+              "name": "timezone",
+              "kind": "string",
+              "column": "timezone",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            }
+          ],
+          "uniqueConstraints": []
+        }
+      ],
+      "menus": [
+        {
+          "model": "base.access_group",
+          "label": "base.access_group",
+          "group": "Technical",
+          "sequence": 420,
+          "developmentOnly": true
+        },
+        {
+          "model": "base.activity",
+          "label": "Activities",
+          "group": "Workspace",
+          "sequence": 40,
+          "developmentOnly": false
+        },
+        {
+          "model": "base.attachment",
+          "label": "Attachments",
+          "group": "Workspace",
+          "sequence": 50,
+          "developmentOnly": false
+        },
+        {
+          "model": "base.audit_log",
+          "label": "base.audit_log",
+          "group": "Technical",
+          "sequence": 460,
+          "developmentOnly": true
+        },
+        {
+          "model": "base.bank",
+          "label": "base.bank",
+          "group": "Finance",
+          "sequence": 310,
+          "developmentOnly": true
+        },
+        {
+          "model": "base.company",
+          "label": "Companies",
+          "group": "Organization",
+          "sequence": 20,
+          "developmentOnly": false
+        },
+        {
+          "model": "base.company_membership",
+          "label": "base.company_membership",
+          "group": "Technical",
+          "sequence": 450,
+          "developmentOnly": true
+        },
+        {
+          "model": "base.country",
+          "label": "base.country",
+          "group": "Localization",
+          "sequence": 210,
+          "developmentOnly": true
+        },
+        {
+          "model": "base.country_state",
+          "label": "base.country_state",
+          "group": "Localization",
+          "sequence": 220,
+          "developmentOnly": true
+        },
+        {
+          "model": "base.currency",
+          "label": "base.currency",
+          "group": "Localization",
+          "sequence": 230,
+          "developmentOnly": true
+        },
+        {
+          "model": "base.group_membership",
+          "label": "base.group_membership",
+          "group": "Technical",
+          "sequence": 430,
+          "developmentOnly": true
+        },
+        {
+          "model": "base.language",
+          "label": "base.language",
+          "group": "Localization",
+          "sequence": 240,
+          "developmentOnly": true
+        },
+        {
+          "model": "base.model_access",
+          "label": "base.model_access",
+          "group": "Technical",
+          "sequence": 440,
+          "developmentOnly": true
+        },
+        {
+          "model": "base.partner",
+          "label": "Partners",
+          "group": "Workspace",
+          "sequence": 10,
+          "developmentOnly": false
+        },
+        {
+          "model": "base.partner_address",
+          "label": "base.partner_address",
+          "group": "Contacts",
+          "sequence": 110,
+          "developmentOnly": true
+        },
+        {
+          "model": "base.partner_bank",
+          "label": "base.partner_bank",
+          "group": "Finance",
+          "sequence": 320,
+          "developmentOnly": true
+        },
+        {
+          "model": "base.partner_category",
+          "label": "base.partner_category",
+          "group": "Contacts",
+          "sequence": 120,
+          "developmentOnly": true
+        },
+        {
+          "model": "base.partner_category_link",
+          "label": "base.partner_category_link",
+          "group": "Contacts",
+          "sequence": 130,
+          "developmentOnly": true
+        },
+        {
+          "model": "base.sequence",
+          "label": "base.sequence",
+          "group": "Technical",
+          "sequence": 410,
+          "developmentOnly": true
+        },
+        {
+          "model": "base.tag",
+          "label": "Tags",
+          "group": "Workspace",
+          "sequence": 60,
+          "developmentOnly": false
+        },
+        {
+          "model": "base.tag_link",
+          "label": "base.tag_link",
+          "group": "Technical",
+          "sequence": 390,
+          "developmentOnly": true
+        },
+        {
+          "model": "base.user",
+          "label": "Users",
+          "group": "Organization",
+          "sequence": 30,
+          "developmentOnly": false
+        }
+      ],
+      "views": [
+        "base.access_group",
+        "base.activity",
+        "base.attachment",
+        "base.bank",
+        "base.company",
+        "base.company_membership",
+        "base.country",
+        "base.country_state",
+        "base.currency",
+        "base.group_membership",
+        "base.language",
+        "base.model_access",
+        "base.partner",
+        "base.partner_address",
+        "base.partner_bank",
+        "base.partner_category",
+        "base.partner_category_link",
+        "base.sequence",
+        "base.tag",
+        "base.tag_link",
+        "base.user"
+      ],
+      "seeds": {
+        "base.country": 249,
+        "base.country_state": 444,
+        "base.currency": 1,
+        "base.language": 1,
+        "base.company": 1,
+        "base.bank": 8,
+        "base.partner": 10,
+        "base.partner_bank": 2,
+        "base.partner_category": 2,
+        "base.partner_category_link": 2,
+        "base.partner_address": 1,
+        "base.user": 2,
+        "base.access_group": 3,
+        "base.tag": 1,
+        "base.tag_link": 1,
+        "base.attachment": 1,
+        "base.activity": 1,
+        "base.sequence": 2,
+        "base.group_membership": 1,
+        "base.company_membership": 2,
+        "base.model_access": 1
+      },
+      "accessRules": [
+        {
+          "group": "base.group_user",
+          "model": "base.partner",
+          "read": true,
+          "create": false,
+          "write": false,
+          "unlink": false
+        }
+      ]
+    },
+    {
+      "name": "jobs",
+      "version": "1.0.0",
+      "depends": ["base"],
+      "models": [
+        {
+          "name": "base.cron",
+          "table": "crons",
+          "fields": [
+            {
+              "name": "code",
+              "kind": "string",
+              "column": "code",
+              "declaredRequired": true,
+              "required": true,
+              "unique": true,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "company",
+              "kind": "belongsTo",
+              "column": "company_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false,
+              "relation": "base.company"
+            },
+            {
+              "name": "concurrency_policy",
+              "kind": "enum",
+              "column": "concurrency_policy",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]",
+              "values": ["allow", "forbid", "replace"]
+            },
+            {
+              "name": "cron_expression",
+              "kind": "string",
+              "column": "cron_expression",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "enabled",
+              "kind": "boolean",
+              "column": "enabled",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "handler",
+              "kind": "string",
+              "column": "handler",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "handler_version",
+              "kind": "integer",
+              "column": "handler_version",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "max_catch_up",
+              "kind": "integer",
+              "column": "max_catch_up",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "misfire_policy",
+              "kind": "enum",
+              "column": "misfire_policy",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]",
+              "values": ["catch_up", "coalesce", "skip"]
+            },
+            {
+              "name": "name",
+              "kind": "string",
+              "column": "name",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "next_run_at",
+              "kind": "string",
+              "column": "next_run_at",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "payload",
+              "kind": "text",
+              "column": "payload",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "requested_by",
+              "kind": "belongsTo",
+              "column": "requested_by_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false,
+              "relation": "base.user"
+            },
+            {
+              "name": "timezone",
+              "kind": "string",
+              "column": "timezone",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            }
+          ],
+          "uniqueConstraints": []
+        },
+        {
+          "name": "base.job",
+          "table": "jobs",
+          "fields": [
+            {
+              "name": "attempts",
+              "kind": "integer",
+              "column": "attempts",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "available_at",
+              "kind": "string",
+              "column": "available_at",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "cancel_requested",
+              "kind": "boolean",
+              "column": "cancel_requested",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "company",
+              "kind": "belongsTo",
+              "column": "company_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false,
+              "relation": "base.company"
+            },
+            {
+              "name": "cron_id",
+              "kind": "integer",
+              "column": "cron_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "fencing_token",
+              "kind": "integer",
+              "column": "fencing_token",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "handler",
+              "kind": "string",
+              "column": "handler",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "handler_version",
+              "kind": "integer",
+              "column": "handler_version",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "idempotency_key",
+              "kind": "string",
+              "column": "idempotency_key",
+              "declaredRequired": false,
+              "required": false,
+              "unique": true,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "lease_owner",
+              "kind": "string",
+              "column": "lease_owner",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "lease_until",
+              "kind": "string",
+              "column": "lease_until",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "max_attempts",
+              "kind": "integer",
+              "column": "max_attempts",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "payload",
+              "kind": "text",
+              "column": "payload",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "priority",
+              "kind": "integer",
+              "column": "priority",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "requested_by",
+              "kind": "belongsTo",
+              "column": "requested_by_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false,
+              "relation": "base.user"
+            },
+            {
+              "name": "schedule_key",
+              "kind": "string",
+              "column": "schedule_key",
+              "declaredRequired": false,
+              "required": false,
+              "unique": true,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "status",
+              "kind": "enum",
+              "column": "status",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]",
+              "values": ["cancelled", "dead", "queued", "running", "succeeded"]
+            }
+          ],
+          "uniqueConstraints": []
+        },
+        {
+          "name": "base.job_run",
+          "table": "job_runs",
+          "fields": [
+            {
+              "name": "attempt",
+              "kind": "integer",
+              "column": "attempt",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "error_code",
+              "kind": "string",
+              "column": "error_code",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "error_message",
+              "kind": "text",
+              "column": "error_message",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "finished_at",
+              "kind": "string",
+              "column": "finished_at",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "job",
+              "kind": "belongsTo",
+              "column": "job_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.job"
+            },
+            {
+              "name": "result",
+              "kind": "text",
+              "column": "result",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "started_at",
+              "kind": "string",
+              "column": "started_at",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "status",
+              "kind": "enum",
+              "column": "status",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "values": ["cancelled", "dead", "retrying", "running", "succeeded"]
+            },
+            {
+              "name": "worker_id",
+              "kind": "string",
+              "column": "worker_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            }
+          ],
+          "uniqueConstraints": [["attempt", "job"]]
+        },
+        {
+          "name": "base.outbox_event",
+          "table": "outbox_events",
+          "fields": [
+            {
+              "name": "actor",
+              "kind": "belongsTo",
+              "column": "actor_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false,
+              "relation": "base.user"
+            },
+            {
+              "name": "aggregate_id",
+              "kind": "integer",
+              "column": "aggregate_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "aggregate_model",
+              "kind": "string",
+              "column": "aggregate_model",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "attempts",
+              "kind": "integer",
+              "column": "attempts",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "available_at",
+              "kind": "string",
+              "column": "available_at",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "company",
+              "kind": "belongsTo",
+              "column": "company_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false,
+              "relation": "base.company"
+            },
+            {
+              "name": "created_at",
+              "kind": "string",
+              "column": "created_at",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "event_type",
+              "kind": "string",
+              "column": "event_type",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "fencing_token",
+              "kind": "integer",
+              "column": "fencing_token",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "last_error",
+              "kind": "text",
+              "column": "last_error",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "lease_owner",
+              "kind": "string",
+              "column": "lease_owner",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "lease_until",
+              "kind": "string",
+              "column": "lease_until",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "max_attempts",
+              "kind": "integer",
+              "column": "max_attempts",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "payload",
+              "kind": "text",
+              "column": "payload",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "published_at",
+              "kind": "string",
+              "column": "published_at",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "status",
+              "kind": "enum",
+              "column": "status",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]",
+              "values": ["dead", "pending", "processing", "published"]
+            }
+          ],
+          "uniqueConstraints": []
+        }
+      ],
+      "menus": [],
+      "views": [],
+      "seeds": {
+        "base.cron": 1
+      },
+      "accessRules": []
+    }
+  ],
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/crons"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/crons"
+    },
+    {
+      "method": "PATCH",
+      "path": "/admin/crons/:id"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/crons/:id/trigger"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/jobs"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/jobs/:id/cancel"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/jobs/:id/retry"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/jobs/:id/runs"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/jobs/health"
+    },
+    {
+      "method": "GET",
+      "path": "/admin/outbox"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/outbox/:id/retry"
+    },
+    {
+      "method": "GET",
+      "path": "/api/:model"
+    },
+    {
+      "method": "POST",
+      "path": "/api/:model"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/:model/:id"
+    },
+    {
+      "method": "GET",
+      "path": "/api/:model/:id"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/:model/:id"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/:model/:id"
+    },
+    {
+      "method": "POST",
+      "path": "/api/:model/:id/action/:method"
+    },
+    {
+      "method": "GET",
+      "path": "/api/:model/fields"
+    },
+    {
+      "method": "GET",
+      "path": "/api/:model/views"
+    },
+    {
+      "method": "GET",
+      "path": "/api/base.attachment/:id/download"
+    },
+    {
+      "method": "POST",
+      "path": "/api/base.attachment/upload"
+    },
+    {
+      "method": "GET",
+      "path": "/api/models"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/login"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/logout"
+    },
+    {
+      "method": "GET",
+      "path": "/auth/me"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/me/password"
+    },
+    {
+      "method": "PATCH",
+      "path": "/auth/me/preferences"
+    },
+    {
+      "method": "PATCH",
+      "path": "/auth/me/profile"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/refresh"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/register"
+    },
+    {
+      "method": "GET",
+      "path": "/health"
+    },
+    {
+      "method": "POST",
+      "path": "/jsonrpc"
+    },
+    {
+      "method": "GET",
+      "path": "/livez"
+    },
+    {
+      "method": "GET",
+      "path": "/metrics"
+    },
+    {
+      "method": "GET",
+      "path": "/readyz"
+    }
+  ]
+}

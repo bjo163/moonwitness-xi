@@ -1,0 +1,43 @@
+# Generated API route reference
+
+Extracted from literal Fastify route declarations. Source fingerprint: `f739faf14f7f54678bbe463ea2bb88c5463244f8b5b903b1e4a2c18ff589e765`. Generic handler request payloads are not inferred where the source does not declare a static schema.
+
+| Method | Path                                |
+| ------ | ----------------------------------- |
+| GET    | `/`                                 |
+| GET    | `/admin/crons`                      |
+| POST   | `/admin/crons`                      |
+| PATCH  | `/admin/crons/:id`                  |
+| POST   | `/admin/crons/:id/trigger`          |
+| GET    | `/admin/jobs`                       |
+| POST   | `/admin/jobs/:id/cancel`            |
+| POST   | `/admin/jobs/:id/retry`             |
+| GET    | `/admin/jobs/:id/runs`              |
+| GET    | `/admin/jobs/health`                |
+| GET    | `/admin/outbox`                     |
+| POST   | `/admin/outbox/:id/retry`           |
+| GET    | `/api/:model`                       |
+| POST   | `/api/:model`                       |
+| DELETE | `/api/:model/:id`                   |
+| GET    | `/api/:model/:id`                   |
+| PATCH  | `/api/:model/:id`                   |
+| PUT    | `/api/:model/:id`                   |
+| POST   | `/api/:model/:id/action/:method`    |
+| GET    | `/api/:model/fields`                |
+| GET    | `/api/:model/views`                 |
+| GET    | `/api/base.attachment/:id/download` |
+| POST   | `/api/base.attachment/upload`       |
+| GET    | `/api/models`                       |
+| POST   | `/auth/login`                       |
+| POST   | `/auth/logout`                      |
+| GET    | `/auth/me`                          |
+| POST   | `/auth/me/password`                 |
+| PATCH  | `/auth/me/preferences`              |
+| PATCH  | `/auth/me/profile`                  |
+| POST   | `/auth/refresh`                     |
+| POST   | `/auth/register`                    |
+| GET    | `/health`                           |
+| POST   | `/jsonrpc`                          |
+| GET    | `/livez`                            |
+| GET    | `/metrics`                          |
+| GET    | `/readyz`                           |
