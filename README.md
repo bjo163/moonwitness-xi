@@ -8,6 +8,9 @@ Diagram arsitektur, relasi model base, dan alur runtime tersedia di
 [Architecture diagrams](docs/architecture/diagrams/README.md) dan diperiksa
 otomatis agar tetap mengikuti metadata workspace.
 
+Panduan developer untuk quickstart, addon, API/metadata, Board, jobs, security, recovery, dan
+troubleshooting tersedia di [Developer guide](docs/guide/index.md).
+
 Panduan sumber brand, token bersama, serta asset statis untuk dokumentasi:
 [Brand assets](docs/design/brand-assets.md).
 
