@@ -200,7 +200,10 @@
   .mw-ui-visually-hidden {
     position: absolute;
     width: 1px;
+    min-width: 1px;
+    max-width: 1px;
     height: 1px;
+    table-layout: fixed;
     padding: 0;
     margin: -1px;
     overflow: hidden;
