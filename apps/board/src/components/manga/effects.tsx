@@ -53,7 +53,10 @@ export function SpeedLines({
       aria-hidden
       viewBox="0 0 1000 1000"
       preserveAspectRatio="none"
-      className={cn('pointer-events-none absolute inset-0 h-full w-full text-ink', className)}
+      className={cn(
+        'pointer-events-none absolute inset-0 h-full w-full overflow-hidden text-ink',
+        className
+      )}
     >
       <g fill="currentColor" className={animate ? 'speedlines-pulse' : undefined}>
         {paths.map((d, i) => (
