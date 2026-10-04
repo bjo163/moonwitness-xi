@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { env, execPath, stderr, exit } from 'node:process';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { URL } from 'node:url';
 
 const repositoryRoot = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const packageManagerCli = env.npm_execpath;
