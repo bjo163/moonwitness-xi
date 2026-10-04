@@ -45,8 +45,8 @@ export default defineConfig({
   outputDir: '../../test-results/playwright',
   use: {
     baseURL,
-    // Traces include request headers and cookies; CI uploads only sanitized JUnit and screenshots.
-    trace: 'off',
+    // Trace archives are scanned before upload because they can contain request credentials.
+    trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     viewport: { width: 1440, height: 1000 },

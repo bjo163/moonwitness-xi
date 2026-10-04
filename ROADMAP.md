@@ -234,8 +234,9 @@ Jadwal GitHub bersifat best-effort; selalu sediakan manual dispatch dan pemeriks
 
 ## Log bukti dan keputusan
 
-| Tanggal    | Item        | Status  | Commit / run / artefak                    | Catatan                                                                                                                           |
-| ---------- | ----------- | ------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-10-04 | Master plan | Disusun | ROADMAP.md                                | Belum mengaktifkan implementasi milestone baru                                                                                    |
-| 2026-10-04 | M3.08       | Selesai | `5b2ff93`; CI 37188917137                 | Import/export formula-safe, activity dan attachment metadata ownership teruji; binary storage gap tercatat untuk M4.12/M9.02      |
-| 2026-10-04 | M3.09       | Selesai | local verification; source commit pending | Query cache diskop per akun/company, retryable network errors, submit guard, dan 18 E2E lulus; hosted CI ditambahkan setelah push |
+| Tanggal    | Item        | Status   | Commit / run / artefak                    | Catatan                                                                                                                                              |
+| ---------- | ----------- | -------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-04 | Master plan | Disusun  | ROADMAP.md                                | Belum mengaktifkan implementasi milestone baru                                                                                                       |
+| 2026-10-04 | M3.08       | Selesai  | `5b2ff93`; CI 37188917137                 | Import/export formula-safe, activity dan attachment metadata ownership teruji; binary storage gap tercatat untuk M4.12/M9.02                         |
+| 2026-10-04 | M3.09       | Selesai  | local verification; source commit pending | Query cache diskop per akun/company, retryable network errors, submit guard, dan 18 E2E lulus; hosted CI ditambahkan setelah push                    |
+| 2026-10-04 | M3.10       | Berjalan | local verification; `dev`                 | Failure trace lokal dan manual visual-review workflow tersedia; screenshot baseline dan pixel comparison yang direview masih menjadi acceptance work |

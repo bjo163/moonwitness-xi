@@ -1,0 +1,63 @@
+name: Visual review
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch or commit to render for visual review
+        required: true
+        default: dev
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: visual-review-${{ inputs.ref }}
+  cancel-in-progress: true
+
+jobs:
+  screenshots:
+    name: render reviewed baseline candidates
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: moonwitness_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d moonwitness_e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      CI: 'true'
+      POSTGRES_TEST_URL: postgresql://postgres:postgres@127.0.0.1:5432/moonwitness_e2e
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          node-version: '22'
+          pnpm-version: '11'
+      - name: Install Chromium and operating-system dependencies
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Render approved comparison candidates
+        run: pnpm test:e2e --grep "responsive screen audit|responsive protected screens"
+      - name: Scan reports before publishing screenshots
+        if: always()
+        run: node scripts/scan-test-reports.mjs
+      - name: Publish screenshots for human review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-review-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/visual-audit/**/*.png
+          if-no-files-found: error
+          retention-days: 14
