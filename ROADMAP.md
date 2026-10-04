@@ -142,7 +142,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 
 ## M7 — Version, changelog, release otomatis (jalur A; setelah gate siap)
 
-- [ ] M7.01 Terapkan Conventional Commits dan definisi patch/minor/major/non-release secara konsisten.
+- [ ] M7.01 Terapkan Conventional Commits dan definisi patch/minor/major/non-release secara konsisten. Parser, classifier, tests, dan validasi CI sudah ditambahkan; tunggu full CI remote untuk menutup item. Bukti: [M7.01](docs/roadmap/evidence/M7.01.md).
 - [ ] M7.02 Tetapkan satu versi monorepo bersama; sinkronkan root/workspaces/lockfile/metadata yang relevan.
 - [ ] M7.03 Putuskan transisi `1.0.0-rc.1` ke stable secara eksplisit; jangan auto-publish stable hanya karena automation baru aktif.
 - [ ] M7.04 Hitung versi dari release terakhir dan perubahan fungsional; abaikan commit generator/sync untuk mencegah release loop.
