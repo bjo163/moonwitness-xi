@@ -523,7 +523,7 @@
     {
       "id": "M5.01",
       "title": "Inventarisasi UI Board; tentukan arah visual MoonWitness dan audit contoh halaman representatif sebelum migrasi massal.",
-      "status": "in_progress",
+      "status": "complete",
       "milestone": "M5",
       "dependsOn": ["M0.05"],
       "output": "docs/design/visual-direction.md",
