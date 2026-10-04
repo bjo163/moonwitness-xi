@@ -216,7 +216,6 @@ export const views = [
     form: {
       sections: [
         { title: 'File metadata', fields: ['name', 'mimetype', 'size_bytes', 'checksum'] },
-        { title: 'Storage', fields: ['storage_key'] },
         { title: 'Related record', fields: ['resource_model', 'resource_id'] },
       ],
     },

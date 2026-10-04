@@ -40,6 +40,6 @@ Add concrete test file and assertion names plus latest SHA/run. Split rows when 
 
 ## Planned gaps
 
-| Gap ID            | Status          | Expected contract                                                                                                                                                                                                        | Roadmap owner |
-| ----------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- |
-| FILE-BINARY-STORE | Not implemented | Upload bytes through an authenticated storage adapter; bind metadata to owner/resource; support authorized download and delete; validate size/MIME; prevent path traversal and orphan exposure; test retention/failures. | M4.12, M9.02  |
+| Gap ID            | Status                                | Expected contract                                                                                                                                                                                                                                                  | Roadmap owner |
+| ----------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- |
+| FILE-BINARY-STORE | Local filesystem provider implemented | Authenticated 10 MiB uploads, MIME allowlist, UUID storage keys, parent-record scope, forced downloads, hard-delete cleanup, and traversal/retention tests. Shared persistent volume is required; cloud adapter, malware scanning, and orphan sweeper remain open. | M4.12, M9.02  |

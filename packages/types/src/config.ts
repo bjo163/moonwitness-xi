@@ -1,6 +1,7 @@
 export interface EnvConfig {
   superadminPassword?: string;
   metricsToken?: string;
+  attachmentStorageDirectory: string;
   env: string;
   host: string;
   port: number;

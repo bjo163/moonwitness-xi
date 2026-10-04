@@ -59,6 +59,10 @@ const databaseUrl = readDatabaseUrl(
 export const config: EnvConfig = {
   superadminPassword: process.env.SUPERADMIN_PASSWORD || undefined,
   metricsToken,
+  attachmentStorageDirectory: path.resolve(
+    repositoryRoot,
+    process.env.ATTACHMENT_STORAGE_DIR || 'storage/attachments'
+  ),
   env: nodeEnvironment,
   host: process.env.API_HOST ?? process.env.HOST ?? '0.0.0.0',
   port: readPort(process.env.API_PORT ?? process.env.PORT),

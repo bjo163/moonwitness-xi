@@ -264,11 +264,21 @@ test('record chatter persists activity and attachment metadata with owner and pe
   });
   expect(attachmentSearch.status()).toBe(200);
   const attachmentPayload = (await attachmentSearch.json()) as {
-    data: Array<{ id: number; size_bytes: number; storage_key: string }>;
+    data: Array<{ id: number; size_bytes: number; name: string; storage_key?: string }>;
   };
   expect(attachmentPayload.data).toHaveLength(1);
   expect(attachmentPayload.data[0].size_bytes).toBe(Buffer.byteLength('sample'));
-  expect(attachmentPayload.data[0].storage_key).toContain(attachmentName);
+  expect(attachmentPayload.data[0].storage_key).toBeUndefined();
+  const downloadedAttachment = await page.request.get(
+    `/api/base.attachment/${attachmentPayload.data[0].id}/download`,
+    { headers: authorization }
+  );
+  expect(downloadedAttachment.status()).toBe(200);
+  expect(await downloadedAttachment.body()).toEqual(Buffer.from('sample'));
+  expect(downloadedAttachment.headers()['content-disposition']).toContain(attachmentName);
+  const browserDownloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download attachment' }).click();
+  expect((await browserDownloadPromise).suggestedFilename()).toBe(attachmentName);
 
   const privateAttachments = await page.request.get('/api/base.attachment', {
     headers: viewerAuthorization,
@@ -282,6 +292,11 @@ test('record chatter persists activity and attachment metadata with owner and pe
   });
   expect(privateAttachments.status()).toBe(200);
   expect(((await privateAttachments.json()) as { data: CreatedRecord[] }).data).toHaveLength(0);
+  const deniedAttachmentDownload = await page.request.get(
+    `/api/base.attachment/${attachmentPayload.data[0].id}/download`,
+    { headers: viewerAuthorization }
+  );
+  expect(deniedAttachmentDownload.status()).toBe(404);
   const deniedAttachmentDelete = await page.request.delete(
     `/api/base.attachment/${attachmentPayload.data[0].id}`,
     { headers: viewerAuthorization }

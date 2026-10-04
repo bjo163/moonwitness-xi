@@ -1,4 +1,7 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
+import { createHash, randomUUID } from 'node:crypto';
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 import { databaseErrorCode } from '../database/errors.js';
 import {
   BaseModel,
@@ -651,7 +654,66 @@ async function executeRpc(
   }
 }
 
-export const genericRoutes: FastifyPluginAsync = async (fastify) => {
+interface GenericRoutesOptions {
+  attachmentStorageDirectory: string;
+}
+
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+const ATTACHMENT_MIME_TYPES = new Set([
+  'application/octet-stream',
+  'application/pdf',
+  'application/json',
+  'application/zip',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/msword',
+  'application/vnd.ms-excel',
+  'application/vnd.ms-powerpoint',
+  'text/plain',
+  'text/csv',
+  'image/gif',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+]);
+
+function safeAttachmentName(value: string | undefined): string | null {
+  if (
+    !value ||
+    value.length > 255 ||
+    value.includes('/') ||
+    value.includes('\\') ||
+    [...value].some((character) => {
+      const code = character.charCodeAt(0);
+      return code < 32 || code === 127;
+    })
+  )
+    return null;
+  const name = value.normalize('NFC').trim();
+  if (!name || name === '.' || name === '..' || name.includes('..')) return null;
+  return name;
+}
+
+function attachmentPath(directory: string, key: string): string {
+  if (!/^[0-9a-f-]{36}$/i.test(key)) throw new Error('Invalid attachment storage key');
+  return path.join(directory, key);
+}
+
+function encodedAttachmentName(name: string): string {
+  return encodeURIComponent(name).replace(
+    /[!'()*]/gu,
+    (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`
+  );
+}
+
+export const genericRoutes: FastifyPluginAsync<GenericRoutesOptions> = async (fastify, options) => {
+  fastify.addContentTypeParser(
+    'application/octet-stream',
+    { parseAs: 'buffer' },
+    (_request, body, done) => done(null, body)
+  );
+
   // Single authorization point for every /api/:model route; handlers stay policy-free.
   fastify.addHook('preHandler', async (req, reply) => {
     const model = (req.params as { model?: string } | undefined)?.model;
@@ -659,6 +721,142 @@ export const genericRoutes: FastifyPluginAsync = async (fastify) => {
     const operation = operationFor(req.method, req.routeOptions.url ?? '');
     if (!canAccess(req.auth?.role, model, operation, req.auth?.groupPermissions)) {
       return reply.code(403).send({ success: false, error: 'Forbidden' });
+    }
+    if (model === 'base.attachment' && operation === 'create') {
+      return reply.code(400).send({ success: false, error: 'Use the attachment upload endpoint' });
+    }
+    if (
+      model === 'base.attachment' &&
+      operation === 'write' &&
+      req.routeOptions.url !== '/api/:model/:id/action/:method'
+    ) {
+      return reply.code(400).send({ success: false, error: 'Attachment metadata is immutable' });
+    }
+  });
+
+  fastify.post<{
+    Querystring: { resource_model?: string; resource_id?: string; name?: string };
+    Body: Buffer;
+  }>(
+    '/api/base.attachment/upload',
+    {
+      bodyLimit: MAX_ATTACHMENT_BYTES,
+      config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
+    },
+    async (req, reply) => {
+      if (!canAccess(req.auth?.role, 'base.attachment', 'create', req.auth?.groupPermissions))
+        return forbidden(reply);
+      const { resource_model: resourceModel, resource_id: rawResourceId } = req.query;
+      const resourceId = parseInteger(rawResourceId);
+      const name = safeAttachmentName(req.query.name);
+      const mimeHeader = req.headers['x-file-mime'];
+      const rawMime = (Array.isArray(mimeHeader) ? mimeHeader[0] : mimeHeader)
+        ?.trim()
+        .toLowerCase();
+      const mimetype = rawMime && ATTACHMENT_MIME_TYPES.has(rawMime) ? rawMime : null;
+      if (
+        !resourceModel ||
+        !Registry.has(resourceModel) ||
+        resourceId === undefined ||
+        resourceId < 1 ||
+        !name ||
+        !mimetype
+      ) {
+        return reply.code(400).send({ success: false, error: 'Invalid attachment metadata' });
+      }
+      const resource = await scopedRecord(
+        req,
+        resolveModel(req, resourceModel) ?? BaseModel,
+        resourceModel,
+        resourceId
+      );
+      if (!resource) return reply.code(404).send({ success: false, error: 'Record not found' });
+      if (!Buffer.isBuffer(req.body) || req.body.length === 0)
+        return reply.code(400).send({ success: false, error: 'Attachment must not be empty' });
+      if (req.body.length > MAX_ATTACHMENT_BYTES)
+        return reply.code(413).send({ success: false, error: 'Attachment exceeds 10 MiB limit' });
+
+      const key = randomUUID();
+      const target = attachmentPath(options.attachmentStorageDirectory, key);
+      const temporary = `${target}.tmp`;
+      const checksum = createHash('sha256').update(req.body).digest('hex');
+      let persisted = false;
+      try {
+        await mkdir(options.attachmentStorageDirectory, { recursive: true });
+        await writeFile(temporary, req.body, { flag: 'wx', mode: 0o600 });
+        await rename(temporary, target);
+        persisted = true;
+        const record = await inRequestTransaction(req, async (trx) => {
+          const AttachmentModel = req.env.get('base.attachment');
+          const created = await AttachmentModel.create(
+            {
+              name,
+              resource_model: resourceModel,
+              resource_id: resourceId,
+              mimetype,
+              size_bytes: req.body.length,
+              storage_key: key,
+              checksum,
+            } as JsonObject,
+            { transaction: trx }
+          );
+          const createdRecord = Array.isArray(created) ? created[0] : created;
+          if (!createdRecord) throw new Error('Attachment metadata was not created');
+          await recordAudit(
+            req,
+            'base.attachment',
+            'create',
+            createdRecord.id,
+            null,
+            createdRecord,
+            trx
+          );
+          await recordOutbox(
+            req,
+            'base.attachment',
+            'created',
+            createdRecord.id,
+            auditSnapshot(AttachmentModel, createdRecord),
+            trx
+          );
+          return createdRecord;
+        });
+        return reply.code(201).send({ success: true, data: record });
+      } catch (error) {
+        if (persisted) await rm(target, { force: true }).catch(() => undefined);
+        await rm(temporary, { force: true }).catch(() => undefined);
+        throw error;
+      }
+    }
+  );
+
+  fastify.get<{ Params: ModelIdParam }>('/api/base.attachment/:id/download', async (req, reply) => {
+    if (!canAccess(req.auth?.role, 'base.attachment', 'read', req.auth?.groupPermissions))
+      return forbidden(reply);
+    const id = requireId(req.params.id, reply);
+    if (id === null) return;
+    const Model = req.env.get('base.attachment');
+    const attachment = await scopedRecord(req, Model, 'base.attachment', id);
+    if (!attachment) return reply.code(404).send({ success: false, error: 'Attachment not found' });
+    const key = property(attachment, 'storage_key');
+    const name = property(attachment, 'name');
+    const mimetype = property(attachment, 'mimetype');
+    if (typeof key !== 'string' || typeof name !== 'string' || typeof mimetype !== 'string')
+      return reply.code(404).send({ success: false, error: 'Attachment content not found' });
+    try {
+      const content = await readFile(attachmentPath(options.attachmentStorageDirectory, key));
+      reply
+        .header('Content-Type', mimetype)
+        .header('Content-Length', content.length)
+        .header(
+          'Content-Disposition',
+          `attachment; filename*=UTF-8''${encodedAttachmentName(name)}`
+        )
+        .header('X-Content-Type-Options', 'nosniff')
+        .header('Cache-Control', 'private, no-store');
+      return reply.send(content);
+    } catch {
+      return reply.code(404).send({ success: false, error: 'Attachment content not found' });
     }
   });
 
@@ -684,9 +882,9 @@ export const genericRoutes: FastifyPluginAsync = async (fastify) => {
   /** Field metadata with readonly forced on when the caller cannot write. */
   const fieldsFor = (req: FastifyRequest, model: string) => {
     const writable = canAccess(req.auth?.role, model, 'write', req.auth?.groupPermissions);
-    return describeFields(Registry.get(model)).map((field) =>
-      writable ? field : { ...field, readonly: true }
-    );
+    return describeFields(Registry.get(model))
+      .filter((field) => model !== 'base.attachment' || field.name !== 'storage_key')
+      .map((field) => (writable ? field : { ...field, readonly: true }));
   };
 
   fastify.get<{ Params: ModelParam }>('/api/:model/fields', async (req, reply) => {
@@ -1047,13 +1245,22 @@ export const genericRoutes: FastifyPluginAsync = async (fastify) => {
           auditSnapshot(transactionalModel, hardDelete ? before : locked),
           trx
         );
-        return { deleted: true as const };
+        const storageKey =
+          hardDelete && req.params.model === 'base.attachment'
+            ? property(locked, 'storage_key')
+            : undefined;
+        return { deleted: true as const, storageKey };
       });
       if ('missing' in deletion)
         return reply.status(404).send(recordNotFound(req.params.model, id));
       if ('forbidden' in deletion) return forbidden(reply);
       if ('reference' in deletion && typeof deletion.reference === 'string')
         return relationConflict(reply, req.params.model, deletion.reference);
+      if (typeof deletion.storageKey === 'string') {
+        await rm(attachmentPath(options.attachmentStorageDirectory, deletion.storageKey), {
+          force: true,
+        });
+      }
       return {
         success: true,
         model: req.params.model,
@@ -1188,6 +1395,12 @@ export const genericRoutes: FastifyPluginAsync = async (fastify) => {
     const Model = resolveModel(req, modelName);
     if (!Model) return reply.send(rpcError(-32000, `Model '${modelName}' not found`));
     const required = rpcOperation(method);
+    if (
+      modelName === 'base.attachment' &&
+      (required === 'create' || required === 'write' || required === 'unlink')
+    ) {
+      return reply.send(rpcError(-32003, 'Use the attachment content endpoints'));
+    }
     if (required && !canAccess(req.auth?.role, modelName, required, req.auth?.groupPermissions)) {
       return reply.status(403).send(rpcError(-32003, 'Forbidden'));
     }

@@ -7,6 +7,8 @@ type Scalar = string | number | boolean;
 export interface FieldOptions<T extends Scalar = Scalar> {
   required?: boolean;
   unique?: boolean;
+  /** Excludes the field from serialized records and generic query inputs. */
+  hidden?: boolean;
   default?: T;
   /** Human-readable label for generated UIs; defaults to the humanized field name. */
   label?: string;
@@ -181,12 +183,15 @@ export function defineModel<const F extends FieldMap>(
 
   class DeclaredModel extends BaseModel {
     static override hiddenFields = Object.entries(definition.fields)
-      .filter(([, field]) => field.kind === 'password')
+      .filter(([, field]) => field.kind === 'password' || field.hidden === true)
       .map(([key]) => key);
 
     private async hashPasswords() {
       const values = this as unknown as Record<string, unknown>;
-      for (const key of DeclaredModel.hiddenFields) {
+      const passwordFields = Object.entries(definition.fields)
+        .filter(([, field]) => field.kind === 'password')
+        .map(([key]) => key);
+      for (const key of passwordFields) {
         if (typeof values[key] === 'string') values[key] = await hashPassword(values[key]);
       }
     }

@@ -1,9 +1,11 @@
 import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   Calendar,
   CheckCircle2,
   Clock,
+  Download,
   File,
   FileArchive,
   FileCode,
@@ -53,7 +55,6 @@ interface AttachmentRecord {
   resource_id: number;
   mimetype: string;
   size_bytes: number;
-  storage_key: string;
   checksum?: string;
   create_date?: string;
 }
@@ -220,21 +221,18 @@ export function Chatter({ model, recordId }: ChatterProps) {
     try {
       const fileList = Array.from(files);
       for (const file of fileList) {
-        const key = `vault_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-        await client.model('base.attachment').create({
-          name: file.name,
-          resource_model: model,
-          resource_id: recordId,
-          mimetype: file.type || 'application/octet-stream',
-          size_bytes: file.size,
-          storage_key: key,
-        });
+        if (file.size > 10 * 1024 * 1024) throw new Error(`${file.name} exceeds the 10 MiB limit`);
+        await client
+          .model<AttachmentRecord>('base.attachment')
+          .uploadAttachment(model, recordId, file);
       }
       queryClient.invalidateQueries({
         queryKey: ['records', 'base.attachment'],
       });
+      toast.success(`${fileList.length} file${fileList.length === 1 ? '' : 's'} uploaded`);
     } catch (err) {
       console.error('Failed to upload attachments:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to upload attachment');
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -249,6 +247,23 @@ export function Chatter({ model, recordId }: ChatterProps) {
       });
     } catch (err) {
       console.error('Failed to delete attachment:', err);
+    }
+  };
+
+  const handleDownloadAttachment = async (attachment: AttachmentRecord) => {
+    try {
+      const blob = await client
+        .model<AttachmentRecord>('base.attachment')
+        .downloadAttachment(attachment.id);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = attachment.name;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download attachment:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to download attachment');
     }
   };
 
@@ -603,7 +618,8 @@ export function Chatter({ model, recordId }: ChatterProps) {
             <UploadCloud className="mx-auto size-8 text-ink-faint mb-2" />
             <p className="font-bold text-sm text-ink">Drop files here or click to browse</p>
             <p className="font-mono text-xs text-ink-faint mt-1">
-              Supports documents, images, spreadsheets, and archives linked to {model} #{recordId}
+              Files up to 10 MiB · documents, images, spreadsheets, and archives linked to {model} #
+              {recordId}
             </p>
           </div>
 
@@ -642,6 +658,15 @@ export function Chatter({ model, recordId }: ChatterProps) {
                     </div>
 
                     <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDownloadAttachment(file)}
+                        className="size-7 text-ink-faint hover:text-lime hover:bg-lime/10"
+                        title="Download attachment"
+                      >
+                        <Download className="size-3.5" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"

@@ -35,6 +35,38 @@ function makeClient(handler: (url: URL, init?: RequestInit) => Response | Promis
 }
 
 describe('MoonWitnessClient', () => {
+  it('uploads file bytes and downloads attachments as blobs', async () => {
+    let uploadBody: BodyInit | null | undefined;
+    let uploadHeaders: Record<string, string> = {};
+    const { client } = makeClient((url, init) => {
+      if (url.pathname === '/auth/login') return json(tokens('attachment-token'));
+      if (url.pathname === '/api/base.attachment/upload') {
+        uploadBody = init?.body;
+        uploadHeaders = init?.headers as Record<string, string>;
+        return json({ data: { id: 17 } }, 201);
+      }
+      if (url.pathname === '/api/base.attachment/17/download') {
+        return new Response(new Blob(['real file bytes'], { type: 'text/plain' }), {
+          headers: { 'content-type': 'text/plain' },
+        });
+      }
+      return json({ error: 'unexpected request' }, 404);
+    });
+    await client.login({ login: 'alice', password: 'pw' });
+    const repository = client.model<{ id: number }>('base.attachment');
+    const attachment = await repository.uploadAttachment(
+      'base.partner',
+      42,
+      new File(['real file bytes'], 'note.txt', { type: 'text/plain' })
+    );
+    expect(attachment).toEqual({ id: 17 });
+    expect(uploadBody).toBeInstanceOf(Blob);
+    expect(uploadHeaders['Content-Type']).toBe('application/octet-stream');
+    expect(uploadHeaders['X-File-Mime']).toBe('text/plain');
+    const downloaded = await repository.downloadAttachment(17);
+    expect(await downloaded.text()).toBe('real file bytes');
+  });
+
   it('sends the bearer token and builds list queries', async () => {
     let seen: { auth?: string; query?: string } = {};
     const { client } = makeClient((url, init) => {

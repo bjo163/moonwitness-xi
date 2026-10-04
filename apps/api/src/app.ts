@@ -38,6 +38,8 @@ export interface BuildAppOptions {
   /** Overrides AUTH_LOGIN_RATE_MAX (used by tests). */
   loginRateMax?: number;
   metricsToken?: string;
+  /** Overrides ATTACHMENT_STORAGE_DIR for isolated tests. */
+  attachmentStorageDirectory?: string;
 }
 
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
@@ -187,7 +189,10 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     accessTtlSeconds: authConfig.accessTtlSeconds,
     loginRateMax: options.loginRateMax ?? authConfig.loginRateMax,
   });
-  await app.register(genericRoutes);
+  await app.register(genericRoutes, {
+    attachmentStorageDirectory:
+      options.attachmentStorageDirectory ?? config.attachmentStorageDirectory,
+  });
   await app.register(jobsRoutes);
 
   return app;

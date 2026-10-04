@@ -2,6 +2,9 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import knex, { type Knex } from 'knex';
 import { Model } from 'objection';
 import type { QueryContext } from 'objection';
+import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { BaseModel, Registry, Environment } from '@moonwitness/orm';
 import { buildApp } from '../src/app.js';
 import type { FastifyInstance, InjectOptions } from 'fastify';
@@ -55,6 +58,7 @@ Registry.register(TestItem);
 describe('Enterprise BaseModel & Fastify Integration', () => {
   let testDb: Knex;
   let app: FastifyInstance;
+  let attachmentStorageDirectory: string;
   let accessToken = '';
   /** Injects a request authenticated as the seeded superadmin. */
   const send = (options: InjectOptions) =>
@@ -90,10 +94,12 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
     });
 
     process.env.NODE_ENV = 'test';
+    attachmentStorageDirectory = await mkdtemp(path.join(tmpdir(), 'moonwitness-attachments-'));
     app = await buildApp({
       db: testDb,
       superadminPassword: 'api-test-password',
       jwtSecret: 'test-secret-test-secret-test-secret-123',
+      attachmentStorageDirectory,
     });
     await app.ready();
     const login = await app.inject({
@@ -107,6 +113,7 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
   afterAll(async () => {
     await app.close();
     await testDb.destroy();
+    await rm(attachmentStorageDirectory, { recursive: true, force: true });
   });
 
   it('should register models in Registry', () => {
@@ -324,7 +331,7 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
       },
     });
     expect(activity.statusCode).toBe(201);
-    const attachment = await send({
+    const forgedAttachment = await send({
       method: 'POST',
       url: '/api/base.attachment',
       payload: {
@@ -336,14 +343,113 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
         storage_key: 'partners/acme/proposal.pdf',
       },
     });
+    expect(forgedAttachment.statusCode).toBe(400);
+    const traversalFilename = await send({
+      method: 'POST',
+      url: `/api/base.attachment/upload?resource_model=base.partner&resource_id=${partner?.id}&name=..%2Fsecret.txt`,
+      headers: {
+        'content-type': 'application/octet-stream',
+        'x-file-mime': 'text/plain',
+      },
+      payload: Buffer.from('not stored'),
+    });
+    expect(traversalFilename.statusCode).toBe(400);
+    const unsupportedMime = await send({
+      method: 'POST',
+      url: `/api/base.attachment/upload?resource_model=base.partner&resource_id=${partner?.id}&name=payload.svg`,
+      headers: {
+        'content-type': 'application/octet-stream',
+        'x-file-mime': 'image/svg+xml',
+      },
+      payload: Buffer.from('<svg/>'),
+    });
+    expect(unsupportedMime.statusCode).toBe(400);
+    const oversized = await send({
+      method: 'POST',
+      url: `/api/base.attachment/upload?resource_model=base.partner&resource_id=${partner?.id}&name=large.txt`,
+      headers: {
+        'content-type': 'application/octet-stream',
+        'x-file-mime': 'text/plain',
+      },
+      payload: Buffer.alloc(10 * 1024 * 1024 + 1),
+    });
+    expect(oversized.statusCode).toBe(413);
+
+    const attachment = await send({
+      method: 'POST',
+      url:
+        '/api/base.attachment/upload?resource_model=base.partner&resource_id=' +
+        partner?.id +
+        '&name=proposal.pdf',
+      headers: {
+        'content-type': 'application/octet-stream',
+        'x-file-mime': 'application/pdf',
+      },
+      payload: Buffer.from('%PDF attachment content'),
+    });
     expect(attachment.statusCode).toBe(201);
+    expect(attachment.json<{ data: Record<string, unknown> }>().data).not.toHaveProperty(
+      'storage_key'
+    );
     const attachmentId = attachment.json<{ data: { id: number } }>().data.id;
+    const downloaded = await send({
+      method: 'GET',
+      url: `/api/base.attachment/${attachmentId}/download`,
+    });
+    expect(downloaded.statusCode).toBe(200);
+    expect(downloaded.headers['content-disposition']).toContain('proposal.pdf');
+    expect(downloaded.payload).toBe('%PDF attachment content');
+    expect(downloaded.headers['x-content-type-options']).toBe('nosniff');
+    expect(await readdir(attachmentStorageDirectory)).toHaveLength(1);
     const invalidAttachmentUpdate = await send({
       method: 'PATCH',
       url: `/api/base.attachment/${attachmentId}`,
       payload: { resource_id: null },
     });
     expect(invalidAttachmentUpdate.statusCode).toBe(400);
+    const archivedAttachment = await send({
+      method: 'DELETE',
+      url: `/api/base.attachment/${attachmentId}`,
+    });
+    expect(archivedAttachment.statusCode).toBe(200);
+    expect(await readdir(attachmentStorageDirectory)).toHaveLength(1);
+    const restoreAttachment = await send({
+      method: 'POST',
+      url: `/api/base.attachment/${attachmentId}/action/action_unarchive`,
+      payload: {},
+    });
+    expect(restoreAttachment.statusCode).toBe(200);
+    const restoredDownload = await send({
+      method: 'GET',
+      url: `/api/base.attachment/${attachmentId}/download`,
+    });
+    expect(restoredDownload.payload).toBe('%PDF attachment content');
+    const deletedAttachment = await send({
+      method: 'DELETE',
+      url: `/api/base.attachment/${attachmentId}?hard=true`,
+    });
+    expect(deletedAttachment.statusCode).toBe(200);
+    expect(await readdir(attachmentStorageDirectory)).toHaveLength(0);
+    await testDb.raw(`
+      CREATE TRIGGER reject_outbox_insert
+      BEFORE INSERT ON outbox_events
+      BEGIN SELECT RAISE(ABORT, 'outbox unavailable'); END;
+    `);
+    const rolledBackAttachment = await send({
+      method: 'POST',
+      url:
+        '/api/base.attachment/upload?resource_model=base.partner&resource_id=' +
+        partner?.id +
+        '&name=rollback.txt',
+      headers: {
+        'content-type': 'application/octet-stream',
+        'x-file-mime': 'text/plain',
+      },
+      payload: Buffer.from('rollback bytes'),
+    });
+    await testDb.raw('DROP TRIGGER reject_outbox_insert');
+    expect(rolledBackAttachment.statusCode).toBe(500);
+    expect(await readdir(attachmentStorageDirectory)).toHaveLength(0);
 
     const referencedPartnerDelete = await send({
       method: 'DELETE',

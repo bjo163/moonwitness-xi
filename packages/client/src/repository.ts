@@ -9,6 +9,8 @@ import type {
 export interface RequestOptions {
   method?: string;
   query?: Record<string, string | number | boolean | undefined>;
+  headers?: Record<string, string>;
+  responseType?: 'json' | 'blob';
   body?: unknown;
 }
 
@@ -96,6 +98,30 @@ export class ModelRepository<TRecord = Record<string, unknown>> {
       body: {},
     });
     return res.result;
+  }
+
+  /** Uploads actual file bytes to the authenticated attachment content endpoint. */
+  async uploadAttachment(resourceModel: string, resourceId: number, file: File): Promise<TRecord> {
+    const response = await this.http.request<{ data: TRecord }>('/api/base.attachment/upload', {
+      method: 'POST',
+      query: { resource_model: resourceModel, resource_id: resourceId, name: file.name },
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'X-File-Mime': file.type || 'application/octet-stream',
+      },
+      body: file,
+    });
+    return response.data;
+  }
+
+  /** Downloads one attachment as a Blob; the server checks its parent record scope. */
+  async downloadAttachment(id: number): Promise<Blob> {
+    return this.http.request<Blob>(
+      `/api/base.attachment/${encodeURIComponent(String(id))}/download`,
+      {
+        responseType: 'blob',
+      }
+    );
   }
 }
 
