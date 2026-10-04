@@ -51,7 +51,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 - [x] M1.05 Buat satu PR promosi otomatis; gunakan merge commit dan jangan auto-delete `dev`. PR #1 auto-merged setelah `ci-gate`; bukti: [M1.02–M1.06](docs/roadmap/evidence/M1.02-06.md).
 - [x] M1.06 Tetapkan required checks yang stabil dan tidak deadlock akibat filter path atau job skipped. Bukti: [M1.02–M1.06](docs/roadmap/evidence/M1.02-06.md).
 - [x] M1.07 Atur CODEOWNERS untuk workflow, auth, akses, schema, dan release. Satu maintainer terdeteksi; assignment meminta focused review tanpa mewajibkan approval yang akan menghentikan auto-promotion. Bukti: [M1.07](docs/roadmap/evidence/M1.07.md).
-- [ ] M1.08 Tentukan kebijakan promosi: patch/minor kompatibel bisa otomatis; breaking change, perubahan destruktif, dan perubahan kebijakan keamanan memerlukan persetujuan eksplisit.
+- [ ] M1.08 Tentukan kebijakan promosi: patch/minor kompatibel bisa otomatis; breaking change, perubahan destruktif, dan perubahan kebijakan keamanan memerlukan persetujuan eksplisit. Implementasi dan pengujian lokal: [M1.08](docs/roadmap/evidence/M1.08.md); tunggu CI jarak jauh, review CODEOWNER pada SHA PR terkini, dan bukti merge.
 - [x] M1.09 Sinkronkan `main → dev` tanpa force-push; perubahan bersamaan atau konflik menghasilkan laporan, bukan overwrite. Push + rekonsiliasi terjadwal + trigger manual terbukti pada run 37172778791.
 - [ ] M1.10 Lindungi tag release dari pemindahan/penghapusan rutin; periksa drift ruleset dan settings.
 - [ ] M1.11 Hapus alur staging/production deployment yang tidak digunakan; pertahankan smoke test lokal runner.

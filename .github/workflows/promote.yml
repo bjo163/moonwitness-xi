@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
   pull-requests: write
 
 concurrency:
@@ -19,6 +20,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Skip stale promotion events
         env:
           EXPECTED_SHA: ${{ github.sha }}
@@ -28,6 +31,7 @@ jobs:
             echo "Skipping stale event for $EXPECTED_SHA; dev is now $current_sha"
             exit 0
           fi
+          git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main refs/heads/dev:refs/remotes/origin/dev
       - name: Create or find the promotion pull request
         id: pr
         env:
@@ -44,9 +48,42 @@ jobs:
             number="${url##*/}"
           fi
           echo "number=$number" >> "$GITHUB_OUTPUT"
-      - name: Enable merge after required checks pass
+      - name: Classify risk from commits and changed paths
+        id: risk
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: node scripts/check-promotion-risk.mjs refs/remotes/origin/main "$EXPECTED_SHA" --summary >> "$GITHUB_OUTPUT"
+      - name: Ensure approval-required label exists
+        if: steps.risk.outputs.approval_required == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: gh label create approval-required --repo "$GH_REPO" --color B60205 --description "Risk classifier requires a fresh CODEOWNER approval" --force
+      - name: Disable auto-merge and mark sensitive promotion
+        if: steps.risk.outputs.approval_required == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           PR_NUMBER: ${{ steps.pr.outputs.number }}
-        run: gh pr merge "$PR_NUMBER" --auto --merge
+        run: |
+          set -euo pipefail
+          gh pr edit "$PR_NUMBER" --repo "$GH_REPO" --add-label approval-required
+          auto_merge="$(gh pr view "$PR_NUMBER" --repo "$GH_REPO" --json autoMergeRequest --jq '.autoMergeRequest != null')"
+          if [[ "$auto_merge" == "true" ]]; then
+            gh pr merge "$PR_NUMBER" --repo "$GH_REPO" --disable-auto
+          fi
+          echo "Promotion requires a fresh CODEOWNER approval and a manual merge. Reasons: ${{ steps.risk.outputs.reasons }}" >> "$GITHUB_STEP_SUMMARY"
+      - name: Enable merge for compatible, low-risk promotion
+        if: steps.risk.outputs.approval_required != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          labels="$(gh pr view "$PR_NUMBER" --repo "$GH_REPO" --json labels --jq '[.labels[].name]')"
+          if jq -e 'index("approval-required") != null' <<< "$labels" >/dev/null; then
+            gh pr edit "$PR_NUMBER" --repo "$GH_REPO" --remove-label approval-required
+          fi
+          gh pr merge "$PR_NUMBER" --repo "$GH_REPO" --auto --merge --match-head-commit "$EXPECTED_SHA"

@@ -25,10 +25,13 @@
     "verify": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test:unit && pnpm docs:check",
     "release:check": "node scripts/check-release.mjs",
     "release:classify": "node scripts/classify-release-commits.mjs",
+    "promotion:risk": "node scripts/check-promotion-risk.mjs",
+    "promotion:approval-check": "node scripts/check-promotion-approval.mjs",
     "test:ci-gate": "node --test scripts/ci-gate.test.mjs",
     "ci:affected": "node scripts/select-affected.mjs",
     "test:affected": "node --test scripts/select-affected.test.mjs",
-    "test:release-classification": "node --test scripts/release-classification.test.mjs"
+    "test:release-classification": "node --test scripts/release-classification.test.mjs",
+    "test:promotion-policy": "node --test scripts/git-range.test.mjs scripts/promotion-risk.test.mjs scripts/promotion-approval.test.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
