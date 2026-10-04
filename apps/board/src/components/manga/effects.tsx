@@ -37,14 +37,21 @@ export function SpeedLines({
   const paths = useMemo(() => {
     const rand = mulberry32(seed);
     const [ox, oy] = [origin[0] * 1000, origin[1] * 1000];
+    const distanceToCanvasEdge = (angle: number) => {
+      const dx = Math.cos(angle);
+      const dy = Math.sin(angle);
+      const xDistance = dx > 0 ? (1000 - ox) / dx : dx < 0 ? -ox / dx : Infinity;
+      const yDistance = dy > 0 ? (1000 - oy) / dy : dy < 0 ? -oy / dy : Infinity;
+      return Math.min(xDistance, yDistance);
+    };
     return Array.from({ length: count }, (_, i) => {
       const angle = (i / count) * Math.PI * 2 + rand() * 0.06;
       const start = 1000 * (inner + rand() * 0.18);
-      const end = 1800;
       const width = 0.004 + rand() * 0.012;
       const p = (r: number, a: number) =>
         `${(ox + Math.cos(a) * r).toFixed(1)},${(oy + Math.sin(a) * r).toFixed(1)}`;
-      return `M${p(start, angle)} L${p(end, angle - width)} L${p(end, angle + width)} Z`;
+      const innerRadius = Math.min(start, distanceToCanvasEdge(angle));
+      return `M${p(innerRadius, angle)} L${p(distanceToCanvasEdge(angle - width), angle - width)} L${p(distanceToCanvasEdge(angle + width), angle + width)} Z`;
     });
   }, [count, origin, inner, seed]);
 
