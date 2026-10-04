@@ -24,6 +24,17 @@ if (!packageManagerCli) {
   exit(2);
 }
 
+const flakyPolicyCheck = spawnSync(execPath, ['scripts/check-flaky-policy.mjs'], {
+  cwd: root,
+  env,
+  stdio: 'inherit',
+});
+if (flakyPolicyCheck.error) {
+  stderr.write(`${flakyPolicyCheck.error.message}\n`);
+  exit(1);
+}
+if (flakyPolicyCheck.status !== 0) exit(flakyPolicyCheck.status ?? 1);
+
 const result = spawnSync(
   execPath,
   [

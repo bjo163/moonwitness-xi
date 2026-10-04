@@ -70,7 +70,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 - [x] M2.09 Atur timeout, concurrency, pembatalan run usang, dan serialisasi penulisan branch/release. Bukti: [M2.09](docs/roadmap/evidence/M2.09.md), [stale CI cancellation 37171696638](https://github.com/bjo163/moonwitness-xi/actions/runs/37171696638), [release verify 37172005570](https://github.com/bjo163/moonwitness-xi/actions/runs/37172005570), [queued verify 37172007276](https://github.com/bjo163/moonwitness-xi/actions/runs/37172007276).
 - [x] M2.10 Hasilkan test report, coverage, job summary, serta log/trace yang disanitasi dengan retensi terbatas. Full CI dan upload artefak tervalidasi: [M2.10](docs/roadmap/evidence/M2.10.md), [CI 37177300402](https://github.com/bjo163/moonwitness-xi/actions/runs/37177300402).
 - [ ] M2.11 Workflow/shell lint, frozen install, dan fixture negatif lulus lokal + remote; generator reproducibility masih menunggu M6.02: [M2.11](docs/roadmap/evidence/M2.11.md), [CI 37178020854](https://github.com/bjo163/moonwitness-xi/actions/runs/37178020854).
-- [ ] M2.12 Terapkan kebijakan flaky tests: diagnosis, pemilik, tenggat; retry terbatas tidak boleh menyembunyikan regresi.
+- [ ] M2.12 Retry dibatasi satu kali dan first failure/quarantine policy dibuat; validasi upload report remote masih berjalan: [M2.12](docs/roadmap/evidence/M2.12.md).
 - [ ] M2.13 Ukur baseline coverage bagian kritis dan tetapkan threshold bertahap yang bermakna, bukan angka global arbitrer.
 
 ## M3 — Board: audit visual dan E2E (jalur B; paralel dengan A/C)

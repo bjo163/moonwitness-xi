@@ -98,7 +98,7 @@ jobs:
       - name: Validate workflows and shell scripts
         run: bash scripts/check-automation.sh
       - name: Test affected selection, release classification, and promotion policy
-        run: pnpm test:ci-gate && pnpm test:affected && pnpm test:release-classification && pnpm test:promotion-policy
+        run: pnpm test:ci-gate && pnpm test:affected && pnpm test:release-classification && pnpm test:promotion-policy && pnpm test:flaky-policy && node scripts/check-flaky-policy.mjs
 
   integration:
     name: integration
@@ -211,6 +211,7 @@ jobs:
           name: board-playwright-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             test-results/junit/board-e2e.xml
+            test-results/junit/board-e2e-retries.json
             test-results/playwright/**/*.png
           if-no-files-found: ignore
           retention-days: 7

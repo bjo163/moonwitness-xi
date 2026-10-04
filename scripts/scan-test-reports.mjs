@@ -17,6 +17,12 @@ export function assertReportsAreSanitized(contents) {
   for (const pattern of forbidden) assert.doesNotMatch(contents, pattern);
 }
 
+export function assertRequiredTestReports(files) {
+  if (files.includes('board-e2e.xml') && !files.includes('board-e2e-retries.json')) {
+    throw new Error('Playwright JUnit exists but its retry-diagnostics report is missing.');
+  }
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   async function listReports(directory) {
     const reports = [];
@@ -30,6 +36,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const files = await listReports(artifactDirectory);
   const junitFiles = files.filter((file) => file.endsWith('.xml'));
   if (junitFiles.length === 0) throw new Error('No JUnit reports were generated.');
+  assertRequiredTestReports(files.map((file) => path.basename(file)));
   for (const file of files) assertReportsAreSanitized(await readFile(file, 'utf8'));
   process.stdout.write(
     `Scanned ${files.length} JUnit/coverage reports; no credential patterns found.\n`

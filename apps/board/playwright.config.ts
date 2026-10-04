@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { env } from 'node:process';
 
@@ -12,14 +13,36 @@ const jwtSecret = 'e2e-only-jwt-secret-that-is-never-used-outside-tests';
 const superadminPassword = 'e2e-only-password';
 const ci = env.CI === 'true';
 const buildScript = resolve(repositoryRoot, 'scripts/build-api-workspace.mjs');
+const flakyPolicyPath = resolve(repositoryRoot, 'docs/testing/flaky-tests.json');
+const flakyPolicyValue: unknown = JSON.parse(readFileSync(flakyPolicyPath, 'utf8'));
+if (
+  typeof flakyPolicyValue !== 'object' ||
+  flakyPolicyValue === null ||
+  !('maxRetries' in flakyPolicyValue) ||
+  typeof flakyPolicyValue.maxRetries !== 'number'
+) {
+  throw new Error('docs/testing/flaky-tests.json must define a numeric maxRetries value.');
+}
+const maxRetries = flakyPolicyValue.maxRetries;
+if (!Number.isInteger(maxRetries) || maxRetries < 0 || maxRetries > 1) {
+  throw new Error('Playwright CI retries must be an integer between 0 and 1.');
+}
+const flakeReporter = resolve(repositoryRoot, 'scripts/playwright-flake-reporter.mjs');
 
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
   forbidOnly: ci,
-  retries: ci ? 1 : 0,
+  retries: ci ? maxRetries : 0,
   workers: ci ? 1 : undefined,
-  reporter: [['list'], ['junit', { outputFile: '../../test-results/junit/board-e2e.xml' }]],
+  reporter: [
+    ['list'],
+    ['junit', { outputFile: '../../test-results/junit/board-e2e.xml' }],
+    [
+      flakeReporter,
+      { outputFile: resolve(repositoryRoot, 'test-results/junit/board-e2e-retries.json') },
+    ],
+  ],
   outputDir: '../../test-results/playwright',
   use: {
     baseURL,

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { assertReportsAreSanitized } from './scan-test-reports.mjs';
+import { assertReportsAreSanitized, assertRequiredTestReports } from './scan-test-reports.mjs';
 
 test('accepts sanitized reports', () => {
   assert.doesNotThrow(() => assertReportsAreSanitized('<testsuite tests="2" failures="0"/>'));
@@ -20,4 +20,10 @@ test('rejects credentials, cookies, and connection-string passwords', () => {
   ]) {
     assert.throws(() => assertReportsAreSanitized(report));
   }
+});
+
+test('requires retry diagnostics whenever a Playwright JUnit report exists', () => {
+  assert.throws(() => assertRequiredTestReports(['board-e2e.xml']), /retry-diagnostics/u);
+  assert.doesNotThrow(() => assertRequiredTestReports(['board-e2e.xml', 'board-e2e-retries.json']));
+  assert.doesNotThrow(() => assertRequiredTestReports(['api.xml']));
 });
