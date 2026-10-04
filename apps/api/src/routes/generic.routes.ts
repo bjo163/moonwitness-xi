@@ -411,6 +411,25 @@ function relationExpression(graph: string | undefined): string | undefined {
   return `[${value}]`;
 }
 
+function queryGraphIsBounded(graph: string | undefined): boolean {
+  if (!graph) return true;
+  if (graph.length > 512) return false;
+  const paths =
+    graph.startsWith('[') && graph.endsWith(']') ? graph.slice(1, -1).split(',') : [graph];
+  return paths.every((path) => {
+    const segments = path.trim().split('.');
+    return segments.length > 0 && segments.length <= 3 && segments.every(Boolean);
+  });
+}
+
+function rpcSearchReadIsBounded(kwargs: Record<string, JsonValue>): boolean {
+  const fields = kwargs.fields;
+  if (Array.isArray(fields) && fields.length > 100) return false;
+  const graph = typeof kwargs.with === 'string' ? kwargs.with : undefined;
+  const order = typeof kwargs.order === 'string' ? kwargs.order : undefined;
+  return queryGraphIsBounded(graph) && (order?.length ?? 0) <= 512;
+}
+
 async function rpcUserMutationAllowed(
   actorRole: string | undefined,
   model: typeof BaseModel,
@@ -701,7 +720,8 @@ export const genericRoutes: FastifyPluginAsync = async (fastify) => {
       if (req.query.domain) {
         try {
           const parsed: unknown = JSON.parse(req.query.domain);
-          if (!Array.isArray(parsed)) throw new Error('Domain must be an array');
+          if (!Array.isArray(parsed) || parsed.length > 100)
+            throw new Error('Domain must be an array with at most 100 terms');
           domain = parsed as Domain;
         } catch {
           return reply
@@ -738,6 +758,19 @@ export const genericRoutes: FastifyPluginAsync = async (fastify) => {
         ?.split(',')
         .map((field) => field.trim())
         .filter(Boolean);
+      if (fields && fields.length > 100) {
+        return reply
+          .code(400)
+          .send({ success: false, error: 'At most 100 fields may be selected' });
+      }
+      if ((req.query.with?.length ?? 0) > 512 || (req.query.order?.length ?? 0) > 512) {
+        return reply.code(400).send({ success: false, error: 'Query expression is too long' });
+      }
+      if (!queryGraphIsBounded(req.query.with)) {
+        return reply
+          .code(400)
+          .send({ success: false, error: 'Relation graph exceeds maximum depth' });
+      }
       const options = {
         fields,
         limit: cursorMode && limit > 0 ? limit + 1 : limit,
@@ -1155,6 +1188,10 @@ export const genericRoutes: FastifyPluginAsync = async (fastify) => {
     const args = Array.isArray(rawArgs) && rawArgs.every(isJsonValue) ? rawArgs : [];
     const kwargs = asJsonObject(rawKwargs) ?? {};
     const requestedGraph = typeof kwargs.with === 'string' ? kwargs.with : undefined;
+    if (required === 'read' && !queryGraphIsBounded(requestedGraph))
+      return reply.send(rpcError(-32602, 'Relation graph exceeds maximum depth'));
+    if (required === 'read' && method === 'search_read' && !rpcSearchReadIsBounded(kwargs))
+      return reply.send(rpcError(-32602, 'Search query exceeds configured limits'));
     if (required === 'read' && !userGraphAllowed(req.auth?.role, modelName, requestedGraph))
       return reply.status(403).send(rpcError(-32003, 'Forbidden relation graph'));
     const scope =

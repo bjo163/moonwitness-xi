@@ -70,6 +70,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   });
 
   const app = Fastify({
+    bodyLimit: 1024 * 1024,
     loggerInstance: appLogger,
     ajv: {
       customOptions: {

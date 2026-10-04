@@ -187,6 +187,96 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
     expect(privateField.statusCode).toBe(400);
   });
 
+  it('bounds generic query cost and rejects unknown fields through mass assignment', async () => {
+    const tooManyTerms = await send({
+      method: 'GET',
+      url: `/api/base.partner?domain=${encodeURIComponent(JSON.stringify(Array.from({ length: 101 }, (_, index) => ['id', '=', index])))}`,
+    });
+    expect(tooManyTerms.statusCode).toBe(400);
+
+    const tooManyFields = await send({
+      method: 'GET',
+      url: `/api/base.partner?fields=${Array.from({ length: 101 }, (_, index) => `field_${index}`).join(',')}`,
+    });
+    expect(tooManyFields.statusCode).toBe(400);
+
+    const oversizedOrder = await send({
+      method: 'GET',
+      url: `/api/base.partner?order=${'id asc,'.repeat(80)}`,
+    });
+    expect(oversizedOrder.statusCode).toBe(400);
+
+    const oversizedRelation = await send({
+      method: 'GET',
+      url: `/api/base.partner?with=${'addresses,'.repeat(65)}`,
+    });
+    expect(oversizedRelation.statusCode).toBe(400);
+
+    const overNestedRelation = await send({
+      method: 'GET',
+      url: '/api/base.user?with=partner.company.country.currency',
+    });
+    expect(overNestedRelation.statusCode).toBe(400);
+
+    const oversizedRpcGraph = await send({
+      method: 'POST',
+      url: '/jsonrpc',
+      payload: {
+        jsonrpc: '2.0',
+        method: 'call',
+        params: {
+          service: 'object',
+          method: 'execute_kw',
+          args: ['base.user', 'search_read', [[]], { with: 'partner.company.country.currency' }],
+        },
+        id: 1,
+      },
+    });
+    expect(oversizedRpcGraph.statusCode).toBe(200);
+    expect(oversizedRpcGraph.json<{ error: { code: number } }>().error.code).toBe(-32602);
+
+    const oversizedRpcFields = await send({
+      method: 'POST',
+      url: '/jsonrpc',
+      payload: {
+        jsonrpc: '2.0',
+        method: 'call',
+        params: {
+          service: 'object',
+          method: 'execute_kw',
+          args: [
+            'base.partner',
+            'search_read',
+            [[]],
+            { fields: Array.from({ length: 101 }, (_, index) => `field_${index}`) },
+          ],
+        },
+        id: 2,
+      },
+    });
+    expect(oversizedRpcFields.json<{ error: { code: number } }>().error.code).toBe(-32602);
+
+    const unknownField = await send({
+      method: 'POST',
+      url: '/api/base.partner',
+      payload: { name: 'Mass assignment probe', is_admin: true },
+    });
+    expect(unknownField.statusCode).toBe(400);
+    expect(
+      await testDb('partners').where({ name: 'Mass assignment probe' }).first()
+    ).toBeUndefined();
+  });
+
+  it('rejects JSON request bodies above the configured one-megabyte limit', async () => {
+    const oversizedBody = await send({
+      method: 'POST',
+      url: '/jsonrpc',
+      headers: { 'content-type': 'application/json' },
+      payload: JSON.stringify({ payload: 'x'.repeat(1024 * 1024) }),
+    });
+    expect(oversizedBody.statusCode).toBe(413);
+  });
+
   it('validates polymorphic resource references for base extensions', async () => {
     const partner = await testDb('partners').where({ name: 'Acme Studio' }).first('id');
     expect(partner).toBeDefined();

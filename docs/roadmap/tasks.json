@@ -422,6 +422,8 @@
     },
     {
       "id": "M4.07",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M4.07.md",
       "title": "Batasi pagination, query cost, kedalaman eager relations, payload, sorting, dan filter; cegah mass assignment.",
       "milestone": "M4",
       "dependsOn": ["M0.01"],
