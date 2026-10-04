@@ -38,7 +38,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 - [x] M0.03 Rekam baseline typecheck, lint, format, build, test, coverage, bundle, performa, dan warning. Pisahkan kegagalan dari test yang skipped. Bukti: [M0.03](docs/roadmap/evidence/M0.03.md).
 - [x] M0.04 Audit GitHub settings, workflows, permissions, Pages, registry, rulesets, status checks, dan ketersediaan fitur akun tanpa menampilkan secret. Bukti: [M0.04](docs/roadmap/evidence/M0.04.md).
 - [x] M0.05 Audit ukuran/duplikasi, penggunaan dependency, dan siklus tersedia di [refactor map](docs/engineering/refactor-map.md), dapat diulang dengan `pnpm audit:workspace`. Bukti: [M0.05](docs/roadmap/evidence/M0.05.md).
-- [ ] M0.06 Runtime Node/pnpm/PostgreSQL tercatat di [support policy](docs/engineering/support-policy.md); browser matrix dan pengukuran budget/retensi pada runner masih perlu diselesaikan sebelum task dicentang.
+- [ ] M0.06 Versi Node/pnpm/PostgreSQL/browser, budget, dan retensi dicatat di [support policy](docs/engineering/support-policy.md); bukti kini mencakup Chromium dan 9 run full CI, tetapi butuh 10 sampel dan verifikasi retensi log sebelum item dicentang.
 - [x] M0.07 Dokumentasikan keputusan arsitektur: versi monorepo bersama, dua branch, model promosi, sumber metadata, dan batas package. Bukti: [ADR 0001](docs/decisions/0001-platform-contracts.md).
 - [x] M0.08 Fresh install seed tepat 2 user + 10 partner (12 record utama); pertahankan partner existing pada upgrade, dan buktikan reinstall tidak menggandakan/menimpa edit. Bukti: [M0.08](docs/roadmap/evidence/M0.08.md).
 
