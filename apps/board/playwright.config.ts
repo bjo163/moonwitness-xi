@@ -63,6 +63,7 @@ export default defineConfig({
         ...env,
         API_HOST: '127.0.0.1',
         API_PORT: apiPort,
+        AUTH_LOGIN_RATE_MAX: '100',
         DATABASE_URL: databaseUrl,
         JWT_SECRET: E2E_JWT_SECRET,
         LOG_TO_FILE: 'false',

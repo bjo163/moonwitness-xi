@@ -32,16 +32,18 @@ export function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const queryClient = useQueryClient();
   const { data, isLoading, error } = useQuery({
-    queryKey: ['profile', user?.partner_id],
+    queryKey: ['profile', user?.id],
     queryFn: async () => {
-      if (!user?.partner_id) return undefined;
+      if (!user) return null;
+      const currentUser = await client.getMe();
+      if (!currentUser.partner_id) return null;
       const result = await client.model<PartnerProfile>('base.partner').searchRead({
-        domain: [['id', '=', user.partner_id]],
+        domain: [['id', '=', currentUser.partner_id]],
         limit: 1,
       });
-      return result.records[0];
+      return result.records[0] ?? null;
     },
-    enabled: Boolean(user?.partner_id),
+    enabled: Boolean(user),
   });
 
   const saveProfile = async (event: FormEvent<HTMLFormElement>) => {
@@ -61,7 +63,7 @@ export function ProfilePage() {
           website: value('website') || null,
         },
       });
-      await queryClient.invalidateQueries({ queryKey: ['profile', user?.partner_id] });
+      await queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
       toast.success('Profile updated');
     } catch (saveError) {
       toast.error(saveError instanceof Error ? saveError.message : 'Could not update profile');
