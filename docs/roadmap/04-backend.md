@@ -230,19 +230,22 @@ Batas dukungan provider dan pekerjaan storage terdistribusi dicatat eksplisit pa
 
 - **Prasyarat:** M0.01
 - **Baca/periksa:** server.ts; health.routes.ts; observability; worker commands.
-- **Deliverable:** Runtime lifecycle tests.
+- **Deliverable:** Runtime lifecycle tests dan [runtime operations contract](../engineering/runtime-operations.md).
 
 ### Langkah pelaksanaan
 
-1. Pisahkan liveness dari readiness dependency.
-2. Implementasikan stop accepting lalu drain in-flight sesuai timeout dan tutup pools.
-3. Redact config/logs dan expose metrics low-cardinality tanpa data pribadi.
+1. Pisahkan liveness API/worker dari readiness dependency; readiness menjalankan koneksi DB dan no-store.
+2. Batasi pool, waktu tunggu koneksi, dan statement timeout PostgreSQL per proses; validasi nilai startup dan hitung kapasitas agregat semua replicas/workers.
+3. Validasi `X-Request-ID`, buat UUID fallback, dan kembalikan ID yang sama tanpa menggunakannya sebagai label metric.
+4. Pada SIGINT/SIGTERM, API berhenti menerima request, menguras request yang berjalan, menutup socket setelah deadline, lalu menutup pool. Workers menghentikan polling, menandai probe not-ready, menyelesaikan pekerjaan aktif, dan menutup pool.
+5. Sediakan probe internal worker opsional yang mati secara default; loopback/private bind harus eksplisit.
+6. Audit error/log context agar tidak membocorkan secret atau bindings SQL; metrics tetap pakai route template dengan cardinality rendah.
 
 ### Verifikasi dan syarat selesai
 
-SIGTERM runner selesai dalam batas; readiness false saat dependency wajib down; no secret log.
+Tes membuktikan deadline shutdown/socket close, drain job aktif, probe liveness/readiness API dan worker, invalid request ID fallback, batas pool/query, database-unavailable 503, dan tidak adanya secret pada log.
 
-Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M4.13.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
+Implementasi dan hasil lokal dicatat dalam [evidence M4.13](evidence/M4.13.md). Tandai selesai setelah push ke `dev` dan hosted CI pada SHA yang sama lulus. Probe worker opsional dan default-nya nonaktif; operator perlu mengaktifkannya pada jaringan privat bila orkestrator membutuhkannya.
 
 ## M4.14 — Restore drill dengan data aplikasi, relasi, akun test dan integrity checks; tetapkan target pemulihan berbasis hasil pengukuran.
 

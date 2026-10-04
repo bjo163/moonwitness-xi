@@ -11,6 +11,9 @@ import {
   cancelJob,
   registerOutboxConsumer,
   dispatchOneOutboxEvent,
+  runWorkerLoop,
+  runSchedulerLoop,
+  runOutboxLoop,
 } from '../src/runtime.js';
 
 describe('durable job runtime', () => {
@@ -469,6 +472,61 @@ describe('durable job runtime', () => {
       });
     } finally {
       await db.raw('DROP TRIGGER IF EXISTS fail_outbox_ack');
+      unregister();
+    }
+  });
+
+  it('stops idle worker, scheduler, and outbox loops when shutdown is signaled', async () => {
+    const stop = new AbortController();
+    const loops = Promise.all([
+      runWorkerLoop({ workerId: 'shutdown-worker' }, stop.signal, 60_000),
+      runSchedulerLoop(stop.signal, 60_000),
+      runOutboxLoop('shutdown-outbox', stop.signal, 60_000),
+    ]);
+    setTimeout(() => stop.abort(), 10);
+    await expect(loops).resolves.toEqual([undefined, undefined, undefined]);
+  });
+
+  it('drains the currently claimed job before a worker loop exits', async () => {
+    let announceStarted: () => void = () => undefined;
+    let finishHandler: () => void = () => undefined;
+    const started = new Promise<void>((resolve) => {
+      announceStarted = resolve;
+    });
+    const hold = new Promise<void>((resolve) => {
+      finishHandler = resolve;
+    });
+    const unregister = registerJobHandler({
+      name: 'test.shutdown-drain',
+      version: 1,
+      parse(payload: unknown): { run: true } {
+        if (typeof payload !== 'object' || payload === null || !('run' in payload))
+          throw new Error('invalid payload');
+        return { run: true };
+      },
+      async run() {
+        announceStarted();
+        await hold;
+        return { completed: true };
+      },
+    });
+    try {
+      const jobId = await enqueueJob('test.shutdown-drain', { run: true });
+      const stop = new AbortController();
+      const loop = runWorkerLoop({ workerId: 'draining-worker' }, stop.signal, 60_000);
+      await started;
+      stop.abort();
+      let loopFinished = false;
+      void loop.then(() => {
+        loopFinished = true;
+      });
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(loopFinished).toBe(false);
+      finishHandler();
+      await loop;
+      expect(await Job.query().findById(jobId)).toMatchObject({ status: 'succeeded' });
+    } finally {
+      finishHandler();
       unregister();
     }
   });

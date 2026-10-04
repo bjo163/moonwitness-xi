@@ -27,12 +27,39 @@ describe('health and metrics endpoints', () => {
   });
 
   it('separates liveness from database readiness', async () => {
-    expect((await app.inject('/livez')).statusCode).toBe(200);
+    const liveness = await app.inject({
+      url: '/livez',
+      headers: { 'x-request-id': 'trace:board-123' },
+    });
+    expect(liveness.statusCode).toBe(200);
+    expect(liveness.headers['x-request-id']).toBe('trace:board-123');
     expect((await app.inject('/readyz')).json()).toMatchObject({
       status: 'healthy',
       database: 'connected',
     });
     expect((await app.inject('/health')).statusCode).toBe(200);
+    const invalidRequestId = await app.inject({
+      url: '/livez',
+      headers: { 'x-request-id': 'x'.repeat(120) },
+    });
+    expect(invalidRequestId.headers['x-request-id']).not.toBe('x'.repeat(120));
+    expect(invalidRequestId.headers['x-request-id']).toMatch(/^[0-9a-f-]{36}$/iu);
+    expect(invalidRequestId.headers['cache-control']).toBe('no-store');
+  });
+
+  it('keeps liveness available while reporting a failed readiness dependency', async () => {
+    const testConnection = app.testConnection;
+    app.testConnection = async () => false;
+    try {
+      expect((await app.inject('/livez')).statusCode).toBe(200);
+      expect((await app.inject('/readyz')).statusCode).toBe(503);
+      expect((await app.inject('/readyz')).json()).toMatchObject({
+        status: 'unhealthy',
+        database: 'disconnected',
+      });
+    } finally {
+      app.testConnection = testConnection;
+    }
   });
 
   it('protects Prometheus metrics and records route status and duration', async () => {

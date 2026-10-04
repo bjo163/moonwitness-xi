@@ -8,6 +8,10 @@ export interface EnvConfig {
   db: {
     client: string;
     connection: string;
+    poolMin: number;
+    poolMax: number;
+    acquireTimeoutMs: number;
+    statementTimeoutMs: number;
   };
   log?: {
     level?: string;

@@ -483,9 +483,11 @@
     {
       "id": "M4.13",
       "title": "Operasional: graceful shutdown, DB pools/timeouts, request ID, redaksi log, readiness/liveness API dan worker.",
+      "status": "in_progress",
       "milestone": "M4",
       "dependsOn": ["M0.01"],
-      "output": "Runtime lifecycle tests",
+      "output": "Bounded PostgreSQL runtime, drained API/worker lifecycle, internal probes, and operational runbook",
+      "evidence": "docs/roadmap/evidence/M4.13.md",
       "detailFile": "docs/roadmap/04-backend.md"
     },
     {

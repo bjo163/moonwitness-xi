@@ -29,13 +29,14 @@ Seed areas visible in packages/orm-base/src/data.ts: 249 countries, a state refe
 
 ## API route families
 
-| Family              | Source                                | Behavior                                                                                 |
-| ------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Health/root/metrics | apps/api/src/routes/health.routes.ts  | /livez, /readyz, /health, /metrics, root info                                            |
-| Authentication      | apps/api/src/routes/auth.routes.ts    | register, login, refresh, logout, current user, own password, preferences, own profile   |
-| Generic models      | apps/api/src/routes/generic.routes.ts | models/fields/views, search/count, read, create/update/delete/archive, actions, JSON-RPC |
-| Jobs administration | apps/api/src/routes/jobs.routes.ts    | job/outbox health/list/runs/retry/cancel and cron management/trigger                     |
-| Startup             | apps/api/src/startup-checks.ts        | required models, seed, accounts and credentials readiness                                |
+| Family              | Source                                 | Behavior                                                                                 |
+| ------------------- | -------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Health/root/metrics | apps/api/src/routes/health.routes.ts   | /livez, /readyz, /health, /metrics, root info                                            |
+| Authentication      | apps/api/src/routes/auth.routes.ts     | register, login, refresh, logout, current user, own password, preferences, own profile   |
+| Generic models      | apps/api/src/routes/generic.routes.ts  | models/fields/views, search/count, read, create/update/delete/archive, actions, JSON-RPC |
+| Jobs administration | apps/api/src/routes/jobs.routes.ts     | job/outbox health/list/runs/retry/cancel and cron management/trigger                     |
+| Startup             | apps/api/src/startup-checks.ts         | required models, seed, accounts and credentials readiness                                |
+| Runtime operations  | docs/engineering/runtime-operations.md | request IDs, health/readiness, signal draining, worker probes, PostgreSQL pool budgets   |
 
 Dynamic generic operations are behavior families, not one route per model. Test role/company/model/action combinations; route existence does not prove authorization.
 

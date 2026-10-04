@@ -24,7 +24,7 @@ export const healthRoutes: FastifyPluginAsync<HealthRoutesOptions> = async (fast
       database: dbOk ? 'connected' : 'disconnected',
       registeredModels: Registry.getNames(),
     };
-    return reply.status(status).send(responseBody);
+    return reply.header('Cache-Control', 'no-store').status(status).send(responseBody);
   };
 
   fastify.get<{ Reply: HealthResponse }>('/readyz', async (_req, reply) => readiness(reply));

@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { EnvConfig } from '@moonwitness/types';
 import { requireProductionDatabaseUrl } from './production.js';
+import { readDatabaseRuntimeLimits } from './database-runtime.js';
 
 const apiDirectory = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(apiDirectory, '../../../../');
@@ -55,6 +56,7 @@ function readDatabaseUrl(value: string): string {
 const databaseUrl = readDatabaseUrl(
   process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@127.0.0.1:5432/moonwitness_db'
 );
+const databaseRuntime = readDatabaseRuntimeLimits(process.env);
 
 export const config: EnvConfig = {
   superadminPassword: process.env.SUPERADMIN_PASSWORD || undefined,
@@ -69,6 +71,7 @@ export const config: EnvConfig = {
   db: {
     client: 'pg',
     connection: databaseUrl,
+    ...databaseRuntime,
   },
   log: {
     level: process.env.LOG_LEVEL,

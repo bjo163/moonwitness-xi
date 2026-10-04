@@ -30,6 +30,7 @@ import {
 import { manifest as baseManifest } from '@moonwitness/orm-base';
 import { buildApp } from '../src/app.js';
 import { verifyDefaultBaseAccounts } from '../src/startup-checks.js';
+import { createPostgresKnexConfig } from '../src/config/knexfile.js';
 
 const connectionString = process.env.POSTGRES_TEST_URL;
 if (process.env.REQUIRE_POSTGRES_TESTS === 'true' && !connectionString) {
@@ -50,12 +51,13 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     await adminDb.raw('select 1');
     await adminDb.raw('create schema ??', [schema]);
     await adminDb.raw('create schema ??', [apiSchema]);
-    db = knex({
-      client: 'pg',
-      connection: connectionString,
-      searchPath: [schema],
-      pool: { min: 0, max: 4 },
-    });
+    db = knex(
+      createPostgresKnexConfig(
+        connectionString,
+        { poolMin: 0, poolMax: 4, acquireTimeoutMs: 5000, statementTimeoutMs: 9000 },
+        { searchPath: [schema] }
+      )
+    );
   }, 30000);
 
   afterAll(async () => {
@@ -67,6 +69,11 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       await adminDb.raw('drop schema if exists ?? cascade', [apiSchema]);
       await adminDb.destroy();
     }
+  });
+
+  it('applies the PostgreSQL statement timeout to pooled connections', async () => {
+    const result = await db.raw('SHOW statement_timeout');
+    expect(result.rows[0]?.statement_timeout).toBe('9s');
   });
 
   it('upgrades populated legacy tables, restores references and enforces PostgreSQL foreign keys', async () => {

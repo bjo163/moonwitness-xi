@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import type { FastifyBaseLogger, FastifyInstance } from 'fastify';
+import { randomUUID } from 'node:crypto';
 import cors from '@fastify/cors';
 import sensible from '@fastify/sensible';
 import swagger from '@fastify/swagger';
@@ -42,6 +43,11 @@ export interface BuildAppOptions {
   attachmentStorageDirectory?: string;
 }
 
+function requestIdFromHeader(value: string | string[] | undefined): string | null {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  return candidate && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/u.test(candidate) ? candidate : null;
+}
+
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
   const authConfig = config.auth ?? {
     accessTtlSeconds: 15 * 60,
@@ -73,12 +79,19 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
 
   const app = Fastify({
     bodyLimit: 1024 * 1024,
+    requestIdHeader: false,
+    genReqId: (request) => requestIdFromHeader(request.headers['x-request-id']) ?? randomUUID(),
     loggerInstance: appLogger,
     ajv: {
       customOptions: {
         coerceTypes: false,
       },
     },
+  });
+
+  app.addHook('onSend', async (request, reply, payload) => {
+    reply.header('x-request-id', request.id);
+    return payload;
   });
 
   await app.register(observabilityPlugin);
