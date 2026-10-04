@@ -62,7 +62,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 - [x] M2.01 Sediakan reusable setup/workflow agar CI, release, dan scheduled checks memakai konfigurasi yang sama. Bukti: [M2.01](docs/roadmap/evidence/M2.01.md), [CI 37164299898](https://github.com/bjo163/moonwitness-xi/actions/runs/37164299898).
 - [ ] M2.02 Standarkan root scripts: typecheck, lint, format:check, test:unit, test:integration, test:e2e, docs:check, verify.
 - [x] M2.03 Sertakan typecheck dan lint Board secara eksplisit; selaraskan ESLint/Oxlint agar aturan tidak saling bertentangan. Bukti: [M2.03](docs/roadmap/evidence/M2.03.md). _Cleanup seluruh overlap/warning masih terbuka._
-- [ ] M2.04 Pisahkan job quality, unit, PostgreSQL integration, browser, security, docs, container, dan release integrity.
+- [x] M2.04 Pisahkan job quality, unit, PostgreSQL integration, browser, security, docs, container, dan release integrity. Bukti: [M2.04](docs/roadmap/evidence/M2.04.md). _Browser/docs/security belum punya job karena command dan automation contract belum tersedia._
 - [ ] M2.05 Tambahkan `ci-gate` yang memahami success/failure/cancelled/skipped dan menjadi keputusan akhir.
 - [x] M2.06 Required PostgreSQL tests harus gagal jika konfigurasi test hilang; tidak boleh diam-diam skipped pada CI wajib. Bukti dan run: [M2.06](docs/roadmap/evidence/M2.06.md), [CI 37164074612](https://github.com/bjo163/moonwitness-xi/actions/runs/37164074612).
 - [ ] M2.07 Pakai database dan akun fixture terisolasi per run; seed deterministik, cleanup, dan jangan menyentuh database pengguna.
