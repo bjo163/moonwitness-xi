@@ -179,13 +179,13 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ### Langkah pelaksanaan
 
-1. Klasifikasikan docs-only tanpa memperlakukan perubahan executable generator sebagai konten saja.
-2. Uji docs updates dan publish dari verified main SHA tanpa app version bump.
-3. Catat source SHA pada site metadata walau version sama.
+1. Klasifikasikan hanya `docs/**/*.md`, `README.md`, dan `ROADMAP.md` sebagai konten docs-only; generator, script, app source, workflow, manifest, lockfile, JSON dan assets adalah executable/config/code changes.
+2. Jalur branch main menunggu check run terbaru `ci-gate` untuk SHA yang persis sama sebelum upload atau deploy. Perubahan generator tetap menjalani required CI dan tidak diberi label docs-only.
+3. Pastikan release classifier menghasilkan `none` untuk docs-only commit; jangan jalankan release/tag/version bump. Tulis application version dan source SHA/ref terpisah di `build-info.json`.
 
 ### Verifikasi dan syarat selesai
 
-Docs typo fix tidak membuat tag aplikasi; code change tetap full gate.
+Docs typo fix tidak membuat tag aplikasi dan hanya publish setelah full `ci-gate` success pada SHA tersebut; executable/code change tidak lolos docs-only classifier dan tetap memerlukan full validation.
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M6.10.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 

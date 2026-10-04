@@ -19,6 +19,8 @@ test('writes immutable source identity into an empty site directory', () => {
         SOURCE_SHA: 'a'.repeat(40),
         SOURCE_REF: 'refs/heads/main',
         RUN_ID: '1234',
+        DOCS_ONLY: 'true',
+        RELEASE_CHANGE_KIND: 'none',
       },
     });
     assert.equal(result.status, 0, result.stderr);
@@ -27,6 +29,12 @@ test('writes immutable source identity into an empty site directory', () => {
       { sourceSha: metadata.sourceSha, sourceRef: metadata.sourceRef, runId: metadata.runId },
       { sourceSha: 'a'.repeat(40), sourceRef: 'refs/heads/main', runId: '1234' }
     );
+    assert.equal(
+      metadata.applicationVersion,
+      JSON.parse(fs.readFileSync('package.json', 'utf8')).version
+    );
+    assert.equal(metadata.docsOnly, true);
+    assert.equal(metadata.releaseChangeKind, 'none');
     assert.ok(Number.isFinite(Date.parse(metadata.generatedAt)));
     assert.equal(
       spawnSync(process.execPath, [scriptPath, directory], {
@@ -36,6 +44,8 @@ test('writes immutable source identity into an empty site directory', () => {
           SOURCE_SHA: 'a'.repeat(40),
           SOURCE_REF: 'refs/heads/main',
           RUN_ID: '1234',
+          DOCS_ONLY: 'true',
+          RELEASE_CHANGE_KIND: 'none',
         },
       }).status,
       1

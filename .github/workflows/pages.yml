@@ -5,10 +5,17 @@ on:
     branches: [dev, main]
     paths:
       - 'apps/docs/**'
+      - 'apps/api/**'
+      - 'packages/**'
       - 'docs/**'
       - 'README.md'
       - 'ROADMAP.md'
       - 'scripts/docs/**'
+      - 'scripts/check-docs-publication.mjs'
+      - 'scripts/classify-docs-change.mjs'
+      - 'scripts/docs-change-policy.mjs'
+      - 'scripts/main-ci-policy.mjs'
+      - 'scripts/write-docs-metadata.mjs'
       - 'packages/assets/**'
       - 'packages/ui/**'
       - '.github/workflows/pages.yml'
@@ -41,6 +48,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       docs: ${{ steps.filter.outputs.docs }}
+      docs_only: ${{ steps.classification.outputs.docs_only }}
+      release_change_kind: ${{ steps.classification.outputs.release_change_kind }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -52,6 +61,8 @@ jobs:
           filters: |
             docs:
               - 'apps/docs/**'
+              - 'apps/api/**'
+              - 'packages/**'
               - 'docs/**'
               - 'README.md'
               - 'ROADMAP.md'
@@ -62,12 +73,42 @@ jobs:
               - 'package.json'
               - 'pnpm-workspace.yaml'
               - 'pnpm-lock.yaml'
+      - name: Classify docs-only content separately from executable changes
+        id: classification
+        if: steps.filter.outputs.docs == 'true'
+        env:
+          BASE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$BASE_SHA" || "$BASE_SHA" =~ ^0+$ ]]; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            echo "release_change_kind=unknown" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          docs_result="$(node scripts/classify-docs-change.mjs "$BASE_SHA" "$HEAD_SHA")"
+          echo "docs_only=$(jq -r '.docsOnly' <<< "$docs_result")" >> "$GITHUB_OUTPUT"
+          release_result="$(node scripts/classify-release-commits.mjs "$BASE_SHA" "$HEAD_SHA" --summary)"
+          echo "release_change_kind=$(jq -r '.changeKind' <<< "$release_result")" >> "$GITHUB_OUTPUT"
+          if [[ "$(jq -r '.docsOnly' <<< "$docs_result")" == "true" && "$(jq -r '.changeKind' <<< "$release_result")" != "none" ]]; then
+            echo "Pure documentation content unexpectedly classifies as an application release change." >&2
+            exit 1
+          fi
+          {
+            echo '### Documentation change classification'
+            echo "- Docs-only content: $(jq -r '.docsOnly' <<< "$docs_result")"
+            echo "- Application release change: $(jq -r '.changeKind' <<< "$release_result")"
+            echo "- Source SHA: \`$HEAD_SHA\`"
+          } >> "$GITHUB_STEP_SUMMARY"
   build:
     name: Build and verify documentation
     needs: change-detection
     if: always() && (needs.change-detection.result == 'skipped' || needs.change-detection.outputs.docs == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
     steps:
       - name: Validate dispatch trust policy
         id: policy
@@ -108,6 +149,7 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           EVENT_REF: ${{ github.ref }}
+          EVENT_SHA: ${{ github.sha }}
           INPUT_REF: ${{ inputs.source_ref }}
           PUBLISH: ${{ inputs.publish }}
           SOURCE_REF: ${{ inputs.source_ref }}
@@ -123,12 +165,12 @@ jobs:
               exit 0
             fi
             if [[ "$PUBLISH" == "true" && "$SOURCE_REF" == "main" ]]; then
-              echo "ref=refs/heads/main" >> "$GITHUB_OUTPUT"
+              echo "ref=$EVENT_SHA" >> "$GITHUB_OUTPUT"
               exit 0
             fi
             echo "ref=$INPUT_REF" >> "$GITHUB_OUTPUT"
           else
-            echo "ref=$EVENT_REF" >> "$GITHUB_OUTPUT"
+            echo "ref=$EVENT_SHA" >> "$GITHUB_OUTPUT"
           fi
       - uses: actions/checkout@v4
         with:
@@ -157,6 +199,52 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
       - name: Build and test documentation portal
         run: pnpm test:docs-portal
+      - name: Require successful CI gate for trusted main source
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.publish == true)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SOURCE_SHA: ${{ steps.source_sha.outputs.sha }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            runs="$(gh api "repos/$GH_REPO/actions/workflows/ci.yml/runs?branch=main&head_sha=$SOURCE_SHA&event=push&per_page=100")"
+            run="$(jq --arg sha "$SOURCE_SHA" '[.workflow_runs[] | select(.head_sha == $sha and .head_branch == "main" and .event == "push")] | sort_by(.created_at, .run_attempt) | last // empty' <<< "$runs")"
+            if [[ -n "$run" ]]; then
+              run_id="$(jq -r '.id' <<< "$run")"
+              run_attempt="$(jq -r '.run_attempt' <<< "$run")"
+              run_status="$(jq -r '.status' <<< "$run")"
+              run_conclusion="$(jq -r '.conclusion // ""' <<< "$run")"
+              if [[ "$run_status" == "completed" ]]; then
+                if [[ "$run_conclusion" != "success" ]]; then
+                  echo "The newest main push CI run for $SOURCE_SHA concluded $run_conclusion." >&2
+                  exit 1
+                fi
+                jobs="$(gh api "repos/$GH_REPO/actions/runs/$run_id/attempts/$run_attempt/jobs?per_page=100")"
+                gate="$(jq '[.jobs[] | select(.name == "ci-gate")] | last // empty' <<< "$jobs")"
+                if [[ "$(jq -r 'if type == "object" then (.conclusion // "") else "" end' <<< "$gate")" != "success" ]]; then
+                  echo "The main push CI run has no successful ci-gate for $SOURCE_SHA." >&2
+                  exit 1
+                fi
+                echo "Verified main push ci-gate success for source SHA $SOURCE_SHA (run $run_id)."
+                exit 0
+              fi
+            fi
+            echo "Waiting for main push CI and ci-gate on source SHA $SOURCE_SHA (attempt $attempt/60)."
+            sleep 15
+          done
+          echo "Timed out waiting for successful ci-gate on $SOURCE_SHA." >&2
+          exit 1
+      - name: Confirm docs-only source does not request an app version bump
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.change-detection.outputs.docs_only == 'true'
+        env:
+          RELEASE_CHANGE_KIND: ${{ needs.change-detection.outputs.release_change_kind }}
+        run: |
+          set -euo pipefail
+          if [[ "$RELEASE_CHANGE_KIND" != "none" ]]; then
+            echo "Docs-only change must have release change kind none; got $RELEASE_CHANGE_KIND." >&2
+            exit 1
+          fi
       - name: Test publication safety contracts
         run: pnpm test:docs-publication
       - name: Scan public output for secrets and unsafe files
@@ -166,6 +254,8 @@ jobs:
           SOURCE_SHA: ${{ steps.source_sha.outputs.sha }}
           SOURCE_REF: ${{ steps.source.outputs.ref }}
           RUN_ID: ${{ github.run_id }}
+          DOCS_ONLY: ${{ needs.change-detection.outputs.docs_only }}
+          RELEASE_CHANGE_KIND: ${{ needs.change-detection.outputs.release_change_kind }}
         run: node scripts/write-docs-metadata.mjs apps/docs/dist
       - name: Upload development preview artifact
         if: github.ref == 'refs/heads/dev' || (github.event_name == 'workflow_dispatch' && inputs.publish != true)
@@ -204,8 +294,8 @@ jobs:
 
   report-failure:
     name: Report documentation publication failure
-    if: always() && needs.build.result == 'failure' && (github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && inputs.publish == true))
-    needs: [change-detection, build]
+    if: always() && (needs.build.result == 'failure' || needs.deploy.result == 'failure') && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.publish == true))
+    needs: [change-detection, build, deploy]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

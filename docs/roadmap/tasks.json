@@ -758,7 +758,7 @@
       "title": "Docs-only changes dapat dipublikasikan setelah verifikasi tanpa memaksa release aplikasi; source SHA harus terlacak.",
       "milestone": "M6",
       "dependsOn": ["M6.07", "M7.01"],
-      "output": "Docs-only publishing path",
+      "output": "Verified main SHA gate, strict docs-only content classifier, app-version versus source-SHA provenance metadata, and no-release-bump checks",
       "detailFile": "docs/roadmap/06-documentation.md"
     },
     {

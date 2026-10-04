@@ -137,7 +137,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 - [ ] M6.07 Gunakan Actions artifact untuk Pages tanpa branch tambahan; dev hanya menghasilkan preview artifact. [Evidence](docs/roadmap/evidence/M6.07.md); Pages source dikonfigurasi ke Actions dan hosted `dev` run 37242781253 sukses mengunggah preview berbasis SHA `0ce59ed`. Publish trusted `main` masih menunggu promotion/review; belum ada publikasi.
 - [ ] M6.08 Publikasikan dokumentasi stable yang sesuai release; tentukan retensi versi dokumentasi dan URL latest.
 - [x] M6.09 Scan konten publik agar tidak berisi secret, data pribadi, real environment values, atau internal artifacts. [Evidence](docs/roadmap/evidence/M6.09.md); built output scan, source provenance metadata, lima positive/adversarial tests, dan hosted Pages preview scan lulus sebelum artifact upload; full release review tetap wajib.
-- [ ] M6.10 Docs-only changes dapat dipublikasikan setelah verifikasi tanpa memaksa release aplikasi; source SHA harus terlacak.
+- [ ] M6.10 Docs-only changes dapat dipublikasikan setelah verifikasi tanpa memaksa release aplikasi; source SHA harus terlacak. [Evidence](docs/roadmap/evidence/M6.10.md); classifier hanya menerima docs Markdown, memisahkan generator/manifests/workflows/app code, mencatat versi app + source SHA, dan Pages menunggu `ci-gate` untuk SHA main yang persis. Hosted docs-only merge/publish belum terjadi.
 - [ ] M6.11 Pisahkan retry Pages dari release aplikasi; kegagalan docs tercatat dan tidak menghasilkan tag/version baru.
 
 ## M7 — Version, changelog, release otomatis (jalur A; setelah gate siap)
