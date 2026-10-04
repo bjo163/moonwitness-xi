@@ -15,7 +15,7 @@ Observed values on 2026-10-04:
 ## Initial CI service objectives (measurement targets, not guarantees)
 
 - PR quick verification target: under 10 minutes wall-clock, measured over at least 10 representative affected runs. Not yet measured as a separate stable cohort.
-- Full promotion suite target: under 20 minutes wall-clock, measured over at least 10 full runs. Nine successful full push runs are currently observed at 2.57–3.73 minutes (3.24-minute mean); see [M0.06 evidence](../roadmap/evidence/M0.06.md). The sample count is still short of the target.
+- Full promotion suite target: under 20 minutes wall-clock, measured over at least 10 full runs. Ten successful full push runs are observed at 2.57–3.73 minutes (3.23-minute mean); see [M0.06 evidence](../roadmap/evidence/M0.06.md). This supports the current CI workflow budget only; it is not an application latency SLO.
 - If targets are missed, report slow jobs and separate required gates; never omit PostgreSQL/browser/security merely to hit the target.
 - Browser failure reports/traces/screenshots/video use explicit 7-day artifact retention in CI. Repository-level artifact/log retention is inherited (`artifact_and_log_retention_days` is unset in the repository API); actual log retention remains unverified.
 - Scheduled reliability: GitHub schedules are best-effort; workflows must be manually runnable and M8.10 must find stale/missed runs.
