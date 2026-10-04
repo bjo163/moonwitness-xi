@@ -21,3 +21,7 @@ The Board keeps its existing import paths as thin re-exports while migrating to 
 ## Composition primitives
 
 Composition components are imported individually from `@moonwitness/ui/components/*`. `Field` connects label, description, validation message, and a native control with `aria-describedby`/`aria-invalid`. `EmptyState`, `PageHeader`, `Panel`, and `Toolbar` accept consumer-owned React content. `Skeleton` is decorative by default and honors reduced motion. `Pagination` is controlled and contains no request logic. `Table` and its caption/head/body/row/header/cell exports provide semantic HTML plus a horizontally scrollable wrapper. No composition primitive knows about Board routes, models, filters, loading requests, or permissions.
+
+## Public API and compatibility
+
+Component and icon subpaths are the supported JavaScript contract; internal files and `dist` paths are private. CSS is explicitly exported, scoped under `.mw-ui-*`, and placed in the `components` cascade layer so consumer utility classes can override defaults. Stable releases follow SemVer; changes to exports, required props, accessibility behavior, token meanings, or peer minimums are major changes. Optional Radix/Sonner peers are needed only by the subpaths that use them. Package changes must update direct-export contracts and pass a packed-tarball consumer smoke check.

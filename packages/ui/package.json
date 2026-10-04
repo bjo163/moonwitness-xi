@@ -1,7 +1,13 @@
 {
   "name": "@moonwitness/ui",
   "version": "1.0.0-rc.1",
-  "description": "MoonWitness design tokens, typed icons, and accessible React primitives",
+  "description": "MoonWitness design tokens, typed icons, accessible controls and composition primitives",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "type": "module",
   "license": "ISC",
   "sideEffects": [

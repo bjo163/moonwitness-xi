@@ -26,4 +26,10 @@ Import the public token entry once, before component styles:
 
 The stylesheet defines semantic custom properties on `:root` and switches their light/dark surface mappings under `.dark`. It does not set global element styles, load fonts over the network, or require Tailwind. Applications may map these variables to their styling framework without copying the token values.
 
+Component rules are scoped to `.mw-ui-*` classes inside the `components` cascade layer. Import tokens before `components.css`; consumer utility styles outside that layer can override package defaults. Both CSS entry points are explicitly exported and declared as package side effects so bundlers retain them. The JavaScript surface has no aggregate component barrel: direct component and icon subpaths are the stable import contract. Internal `dist` paths are not public APIs.
+
+### Compatibility and releases
+
+The package follows SemVer after stable `1.0.0`; while the version includes an `-rc` prerelease, consumers should pin the exact prerelease and expect API review before stable release. Adding an optional prop or a new subpath is additive. Removing/renaming exports, changing required props or accessibility semantics, changing CSS token meaning, or raising peer/runtime minimums is breaking and requires a major release after stable. Peer ranges are React `>=18`, optional `radix-ui >=1.6.7`, and optional `sonner >=2`; only importing the associated subpath requires its peer. Node `>=20` is the supported tooling/runtime baseline. Import maps/exports and types are verified by the package test suite and tarball smoke check.
+
 See [the token guide](./TOKENS.md) for semantic rules, measured contrast, motion, and chart color use.

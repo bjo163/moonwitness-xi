@@ -625,7 +625,9 @@
       "title": "Tetapkan theming dan compatibility policy komponen; hindari boolean props berlebihan dan barrel export yang membesarkan bundle.",
       "milestone": "M5",
       "dependsOn": ["M5.08"],
-      "output": "UI API contract dan export tests",
+      "output": "UI API compatibility policy, package export contract tests, CSS isolation checks, and packed-consumer smoke",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/M5.11.md",
       "detailFile": "docs/roadmap/05-design-system.md"
     },
     {

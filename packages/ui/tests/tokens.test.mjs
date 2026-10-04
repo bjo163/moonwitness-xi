@@ -59,6 +59,10 @@ test('package exposes explicit stylesheet and tree-shakeable typed icon entries'
   assert.equal(packageJson.peerDependenciesMeta['radix-ui'].optional, true);
   assert.equal(packageJson.peerDependencies.sonner, '>=2');
   assert.equal(packageJson.peerDependenciesMeta.sonner.optional, true);
+  assert.deepEqual(packageJson.sideEffects, ['**/*.css']);
+  assert.equal(packageJson.publishConfig.access, 'public');
+  assert.equal(packageJson.engines.node, '>=20');
+  assert.equal(packageJson.version, '1.0.0-rc.1');
   for (const component of ['dialog', 'dropdown-menu', 'select', 'tabs', 'tooltip', 'toast']) {
     assert.equal(
       packageJson.exports[`./components/${component}`].import,
@@ -101,6 +105,28 @@ test('composition styles stay scoped and skeleton respects reduced motion', asyn
   }
   assert.match(componentCss, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
   assert.match(componentCss, /\.mw-ui-skeleton[\s\S]*?animation:\s*mw-ui-pulse/);
+});
+
+test('component CSS contains no global element or ID selectors', async () => {
+  const componentCss = await readFile(
+    new URL('../src/styles/components.css', import.meta.url),
+    'utf8'
+  );
+  const selectors = [...componentCss.matchAll(/(^|\})\s*([^@}{][^{]*)\{/gu)]
+    .map((match) => match[2].replaceAll('}', '').trim())
+    .filter((selector) => !selector.startsWith('@'));
+  const invalidSelector = selectors.find((selectorGroup) =>
+    selectorGroup
+      .split(',')
+      .map((selector) => selector.trim())
+      .some((selector) => !selector.startsWith('.mw-ui-'))
+  );
+  assert.equal(
+    invalidSelector,
+    undefined,
+    `Unexpected global component selector: ${invalidSelector}`
+  );
+  assert.match(componentCss, /^@layer components\s*\{/u);
 });
 
 test('semantic text pairs meet WCAG AA in both theme mappings', () => {

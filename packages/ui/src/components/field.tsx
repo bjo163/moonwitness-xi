@@ -1,10 +1,11 @@
-import {
-  cloneElement,
-  isValidElement,
-  type ComponentProps,
-  type ReactElement,
-  type ReactNode,
-} from 'react';
+import { cloneElement, type ComponentProps, type ReactElement, type ReactNode } from 'react';
+
+type DescribedControlProps = {
+  id?: string;
+  'aria-describedby'?: string;
+  'aria-invalid'?: boolean | 'true' | 'false';
+  'aria-required'?: boolean | 'true' | 'false';
+};
 
 export type FieldProps = Omit<ComponentProps<'div'>, 'children'> & {
   label: ReactNode;
@@ -12,9 +13,7 @@ export type FieldProps = Omit<ComponentProps<'div'>, 'children'> & {
   description?: ReactNode;
   error?: ReactNode;
   required?: boolean;
-  children: ReactElement<
-    ComponentProps<'input'> | ComponentProps<'select'> | ComponentProps<'textarea'>
-  >;
+  children: ReactElement<DescribedControlProps>;
 };
 
 export function Field({
@@ -30,14 +29,12 @@ export function Field({
   const descriptionId = description ? `${htmlFor}-description` : undefined;
   const errorId = error ? `${htmlFor}-error` : undefined;
   const describedBy = [descriptionId, errorId].filter(Boolean).join(' ') || undefined;
-  const control = isValidElement(children)
-    ? cloneElement(children, {
-        id: htmlFor,
-        'aria-describedby': describedBy,
-        'aria-invalid': error ? true : undefined,
-        'aria-required': required ? true : undefined,
-      })
-    : children;
+  const control = cloneElement(children, {
+    id: htmlFor,
+    'aria-describedby': describedBy,
+    'aria-invalid': error ? true : undefined,
+    'aria-required': required ? true : undefined,
+  });
 
   return (
     <div className={['mw-ui-field', className].filter(Boolean).join(' ')} {...props}>

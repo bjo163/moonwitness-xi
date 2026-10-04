@@ -21,7 +21,7 @@
     "assets:render": "node packages/assets/scripts/render-social.mjs",
     "assets:validate": "node packages/assets/scripts/validate.mjs",
     "test:assets": "pnpm assets:validate && node --test packages/assets/tests/*.test.mjs",
-    "test:ui": "pnpm --filter @moonwitness/ui build && node --test packages/ui/tests/*.test.mjs",
+    "test:ui": "pnpm --filter @moonwitness/ui build && node --test packages/ui/tests/*.test.mjs && node packages/ui/scripts/verify-package.mjs",
     "test:e2e": "node scripts/run-e2e.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
