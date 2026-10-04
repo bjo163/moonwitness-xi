@@ -48,7 +48,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 - [x] M1.02 Batasi pembuatan branch selain `main`/`dev` melalui ruleset yang didukung repository. Bukti: [M1.02–M1.06](docs/roadmap/evidence/M1.02-06.md).
 - [x] M1.03 Lindungi kedua branch dari deletion dan force-push; dokumentasikan akses darurat yang sempit dan dapat diaudit. Bukti: [M1.02–M1.06](docs/roadmap/evidence/M1.02-06.md).
 - [x] M1.04 Batasi promosi `main` melalui PR `dev → main`; validasi sumber PR dengan check wajib. Bukti: [M1.02–M1.06](docs/roadmap/evidence/M1.02-06.md).
-- [ ] M1.05 Buat satu PR promosi otomatis; gunakan merge commit dan jangan auto-delete `dev`. Workflow disiapkan; menunggu run remote pertamanya.
+- [x] M1.05 Buat satu PR promosi otomatis; gunakan merge commit dan jangan auto-delete `dev`. PR #1 auto-merged setelah `ci-gate`; bukti: [M1.02–M1.06](docs/roadmap/evidence/M1.02-06.md).
 - [x] M1.06 Tetapkan required checks yang stabil dan tidak deadlock akibat filter path atau job skipped. Bukti: [M1.02–M1.06](docs/roadmap/evidence/M1.02-06.md).
 - [ ] M1.07 Atur CODEOWNERS untuk workflow, auth, akses, schema, dan release; tetapkan reviewer realistis sesuai jumlah maintainer.
 - [ ] M1.08 Tentukan kebijakan promosi: patch/minor kompatibel bisa otomatis; breaking change, perubahan destruktif, dan perubahan kebijakan keamanan memerlukan persetujuan eksplisit.
