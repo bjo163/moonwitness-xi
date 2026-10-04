@@ -5,14 +5,15 @@ import test from 'node:test';
 import {
   collectReferenceMetadata,
   extractRoutes,
-  findStaleGeneratedPaths,
+  assertGeneratedOutputsCurrent,
+  generateReference,
   normalizeModel,
   validateModelCatalog,
 } from './generate-reference.mjs';
 
 const root = path.resolve(import.meta.dirname, '../..');
 
-test('stale generated output reports every changed or missing path deterministically', () => {
+test('stale generated output fails and reports every changed or missing path deterministically', () => {
   const actual = new Map([
     ['docs/z.md', 'old'],
     ['docs/a.md', 'old'],
@@ -23,11 +24,27 @@ test('stale generated output reports every changed or missing path deterministic
     ['docs/a.md', 'old'],
     ['docs/added.md', 'new'],
   ]);
-  assert.deepEqual(findStaleGeneratedPaths(actual, expected), [
-    'docs/added.md',
-    'docs/removed.md',
-    'docs/z.md',
-  ]);
+  assert.throws(
+    () => assertGeneratedOutputsCurrent(actual, expected),
+    /docs\/added\.md\n- docs\/removed\.md\n- docs\/z\.md/u
+  );
+});
+
+test('reference check mode compares rendered output without changing tracked files', async () => {
+  const paths = [
+    'docs/guide/reference/generated-platform.json',
+    'docs/guide/reference/generated-platform.md',
+    'docs/guide/reference/generated-models.md',
+    'docs/guide/reference/generated-api.md',
+  ];
+  const before = await Promise.all(
+    paths.map((relativePath) => readFile(path.join(root, relativePath), 'utf8'))
+  );
+  await generateReference({ check: true });
+  const after = await Promise.all(
+    paths.map((relativePath) => readFile(path.join(root, relativePath), 'utf8'))
+  );
+  assert.deepEqual(after, before);
 });
 
 test('model metadata preserves optionality and redacts defaults', () => {

@@ -101,6 +101,15 @@ export function findStaleGeneratedPaths(actual, expected) {
   return [...paths].filter((file) => actual.get(file) !== expected.get(file)).sort(compare);
 }
 
+export function assertGeneratedOutputsCurrent(actual, expected) {
+  const stalePaths = findStaleGeneratedPaths(actual, expected);
+  if (stalePaths.length > 0) {
+    throw new Error(
+      `Generated references are stale; run pnpm docs:generate:\n${stalePaths.map((file) => `- ${file}`).join('\n')}`
+    );
+  }
+}
+
 function routeLiteral(node) {
   if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
   return undefined;
@@ -518,7 +527,6 @@ export async function generateReference({ check = false } = {}) {
   const temporaryRoot = check
     ? await mkdtemp(path.join(tmpdir(), 'moonwitness-docs-check-'))
     : undefined;
-  const stalePaths = [];
   const expectedOutputs = new Map();
   const actualOutputs = new Map();
   try {
@@ -550,12 +558,7 @@ export async function generateReference({ check = false } = {}) {
   } finally {
     if (temporaryRoot) await rm(temporaryRoot, { recursive: true, force: true });
   }
-  stalePaths.push(...findStaleGeneratedPaths(actualOutputs, expectedOutputs));
-  if (stalePaths.length > 0) {
-    throw new Error(
-      `Generated references are stale; run pnpm docs:generate:\n${stalePaths.map((file) => `- ${file}`).join('\n')}`
-    );
-  }
+  if (check) assertGeneratedOutputsCurrent(actualOutputs, expectedOutputs);
 }
 
 if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url) {
