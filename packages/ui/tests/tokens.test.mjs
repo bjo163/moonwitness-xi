@@ -57,6 +57,14 @@ test('package exposes explicit stylesheet and tree-shakeable typed icon entries'
   assert.equal(packageJson.peerDependenciesMeta.react.optional, true);
   assert.equal(packageJson.peerDependencies['radix-ui'], '>=1.6.7');
   assert.equal(packageJson.peerDependenciesMeta['radix-ui'].optional, true);
+  assert.equal(packageJson.peerDependencies.sonner, '>=2');
+  assert.equal(packageJson.peerDependenciesMeta.sonner.optional, true);
+  for (const component of ['dialog', 'dropdown-menu', 'select', 'tabs', 'tooltip', 'toast']) {
+    assert.equal(
+      packageJson.exports[`./components/${component}`].import,
+      `./dist/components/${component}.js`
+    );
+  }
 });
 
 test('semantic text pairs meet WCAG AA in both theme mappings', () => {

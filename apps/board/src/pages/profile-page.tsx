@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Building2, Contact, Mail, ShieldCheck, UserRound } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@moonwitness/ui/components/toast';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

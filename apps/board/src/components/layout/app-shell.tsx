@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import type { ModelInfo } from '@moonwitness/client';
+import { ToastHost } from '@moonwitness/ui/components/toast';
 import { SettingsIcon as MoonWitnessSettingsIcon } from '@moonwitness/ui/icons/settings';
 import { UserIcon as MoonWitnessUserIcon } from '@moonwitness/ui/icons/user';
 import {
@@ -288,6 +289,7 @@ export function AppShell() {
 
   return (
     <div className="grid min-h-dvh grid-cols-1 lg:grid-cols-[16rem_minmax(0,1fr)]">
+      <ToastHost theme={theme} />
       {/* Sidebar: scoped .dark tokens keep it ink-black with light ink in BOTH themes. */}
       <aside className="dark sticky top-0 hidden h-dvh flex-col border-r-4 border-[#0d0d0d] bg-[#0d0d0d] text-ink lg:flex">
         <div className="relative border-b-2 border-dashed border-ink/20 px-5 py-5">

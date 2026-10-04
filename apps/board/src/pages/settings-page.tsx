@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, MonitorCog, Moon, Sun } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@moonwitness/ui/components/toast';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';

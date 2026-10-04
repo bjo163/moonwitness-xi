@@ -40,3 +40,25 @@ test('login layout fits a narrow mobile viewport', async ({ page }) => {
   );
   expect(hasHorizontalOverflow).toBe(false);
 });
+
+test('shared select works with keyboard and profile feedback is announced', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByLabel('Login').fill('superadmin');
+  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await expect(page).toHaveURL(/\/$/u);
+  await expect(page.getByText('Welcome, superadmin!', { exact: false })).toBeVisible();
+
+  await page.goto('/settings');
+  const language = page.getByRole('combobox').first();
+  await language.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('listbox')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('listbox')).toBeHidden();
+  await expect(language).toBeFocused();
+
+  await page.goto('/profile');
+  await page.getByRole('button', { name: 'Save profile' }).click();
+  await expect(page.getByText('Profile updated')).toBeVisible();
+});

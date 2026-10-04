@@ -12,6 +12,11 @@ import { Button } from '../dist/components/button.js';
 import { Checkbox } from '../dist/components/checkbox.js';
 import { Input } from '../dist/components/input.js';
 import { SelectField } from '../dist/components/select-field.js';
+import { Dialog, DialogTrigger } from '../dist/components/dialog.js';
+import { DropdownMenu, DropdownMenuTrigger } from '../dist/components/dropdown-menu.js';
+import { Select, SelectTrigger, SelectValue } from '../dist/components/select.js';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../dist/components/tabs.js';
+import { Tooltip, TooltipProvider, TooltipTrigger } from '../dist/components/tooltip.js';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const assetsRoot = resolve(root, '../assets/icons');
@@ -121,8 +126,59 @@ test('core controls preserve native form semantics and use package-owned styles'
     '.mw-ui-checkbox',
     '.mw-ui-badge',
     '.mw-ui-avatar',
+    '.mw-ui-dialog-content',
+    '.mw-ui-menu-content',
+    '.mw-ui-select-trigger',
+    '.mw-ui-tabs-list',
+    '.mw-ui-tooltip-content',
   ]) {
     assert.ok(componentCss.includes(selector), `${selector} has package-owned styles`);
   }
+  assert.match(componentCss, /^@layer components\s*\{/u);
   assert.match(componentCss, /prefers-reduced-motion/u);
+});
+
+test('interactive primitives retain native Radix roles', () => {
+  const dialog = renderToStaticMarkup(
+    createElement(Dialog, null, createElement(DialogTrigger, null, 'Open dialog'))
+  );
+  assert.match(dialog, /data-slot="dialog-trigger"/u);
+  assert.match(dialog, /Open dialog/u);
+
+  const menu = renderToStaticMarkup(
+    createElement(DropdownMenu, null, createElement(DropdownMenuTrigger, null, 'Open menu'))
+  );
+  assert.match(menu, /data-slot="dropdown-menu-trigger"/u);
+
+  const select = renderToStaticMarkup(
+    createElement(
+      Select,
+      { defaultValue: 'one' },
+      createElement(SelectTrigger, null, createElement(SelectValue))
+    )
+  );
+  assert.match(select, /data-slot="select-trigger"/u);
+  assert.match(select, /role="combobox"/u);
+
+  const tabs = renderToStaticMarkup(
+    createElement(
+      Tabs,
+      { defaultValue: 'overview' },
+      createElement(TabsList, null, createElement(TabsTrigger, { value: 'overview' }, 'Overview')),
+      createElement(TabsContent, { value: 'overview' }, 'Panel content')
+    )
+  );
+  assert.match(tabs, /role="tablist"/u);
+  assert.match(tabs, /role="tab"/u);
+  assert.match(tabs, /aria-selected="true"/u);
+  assert.match(tabs, /role="tabpanel"/u);
+
+  const tooltip = renderToStaticMarkup(
+    createElement(
+      TooltipProvider,
+      null,
+      createElement(Tooltip, null, createElement(TooltipTrigger, null, 'Help'))
+    )
+  );
+  assert.match(tooltip, /data-slot="tooltip-trigger"/u);
 });
