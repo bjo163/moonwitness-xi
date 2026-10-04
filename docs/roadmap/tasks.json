@@ -635,7 +635,9 @@
       "title": "Grafik data: tema, tooltip/legend, locale/timezone, loading/empty/error, tabel alternatif, dan responsivitas. Bentuk `@moonwitness/charts` hanya ketika reuse membenarkannya.",
       "milestone": "M5",
       "dependsOn": ["M5.03", "M5.08"],
-      "output": "Chart components; ADR ekstraksi packages/charts",
+      "status": "in_progress",
+      "output": "Typed SVG chart primitives with accessible data table, locale formatter, loading/empty/error states, and reuse decision",
+      "evidence": "docs/roadmap/evidence/M5.12.md",
       "detailFile": "docs/roadmap/05-design-system.md"
     },
     {

@@ -100,6 +100,11 @@ test('responsive protected screens fit and remain accessible in both themes', as
         if (view.name === 'profile' && size.name === 'mobile-375') {
           await expect(page.getByRole('heading', { name: 'Super Administrator' })).toBeVisible();
         }
+        if (view.name === 'dashboard') {
+          await expect(
+            page.getByRole('img', { name: 'Background job status distribution' })
+          ).toBeVisible();
+        }
         await page.screenshot({
           path: path.join(auditDirectory, `${view.name}-${size.name}-${theme}.png`),
           fullPage: true,

@@ -25,3 +25,7 @@ Composition components are imported individually from `@moonwitness/ui/component
 ## Public API and compatibility
 
 Component and icon subpaths are the supported JavaScript contract; internal files and `dist` paths are private. CSS is explicitly exported, scoped under `.mw-ui-*`, and placed in the `components` cascade layer so consumer utility classes can override defaults. Stable releases follow SemVer; changes to exports, required props, accessibility behavior, token meanings, or peer minimums are major changes. Optional Radix/Sonner peers are needed only by the subpaths that use them. Package changes must update direct-export contracts and pass a packed-tarball consumer smoke check.
+
+## Charts
+
+`@moonwitness/ui/components/chart` provides dependency-free SVG bar and line charts. Callers own data fetching, locale/timezone decisions, and value labels. Loading/error/empty states are distinct, including valid all-zero data. SVG point/bar titles, series labels, and a semantic data table keep values available without relying on color or hover; horizontal scrolling preserves labels on narrow screens.

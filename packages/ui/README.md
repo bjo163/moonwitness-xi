@@ -6,6 +6,8 @@ The base control subpaths also require React 18 or newer. Radix-backed controls 
 
 Composable, presentation-only building blocks are available as direct subpaths: `components/field`, `skeleton`, `empty-state`, `page-header`, `panel`, `toolbar`, `pagination`, and `table`. They do not fetch data or encode model/business rules. `Field` takes a labeled form control and connects its generated help/error IDs; `Pagination` is controlled with `page`, `pageCount`, and `onPageChange`.
 
+`components/chart` exports dependency-free responsive SVG `BarChart` and `LineChart` primitives. Data is passed in by the application; loading, error, and empty states are explicit props. Each chart provides SVG titles, a legend where applicable, and a visually hidden semantic table alternative. Pass `locale` or `renderValue` for application-specific number formatting. Date/time labels should be formatted by the caller with its explicit locale and timezone so the chart never guesses a user profile preference.
+
 Import an icon from its own subpath to keep unrelated icons out of the application bundle:
 
 ```tsx

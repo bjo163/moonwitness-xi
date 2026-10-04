@@ -362,6 +362,74 @@
   .mw-ui-table-row:hover {
     background: var(--mw-muted);
   }
+  .mw-ui-chart {
+    min-width: 0;
+    color: var(--mw-foreground);
+  }
+  .mw-ui-chart-title {
+    margin-bottom: 0.75rem;
+    font-weight: 700;
+  }
+  .mw-ui-chart-scroll {
+    width: 100%;
+    overflow-x: auto;
+  }
+  .mw-ui-bar-chart,
+  .mw-ui-line-chart {
+    display: block;
+    width: 100%;
+    min-width: 20rem;
+    height: auto;
+    overflow: visible;
+  }
+  .mw-ui-bar-chart {
+    max-height: 14rem;
+  }
+  .mw-ui-chart-label {
+    fill: var(--mw-muted-foreground);
+    font-family: var(--mw-font-mono, monospace);
+    font-size: 11px;
+  }
+  .mw-ui-chart-value {
+    fill: var(--mw-foreground);
+    font-family: var(--mw-font-mono, monospace);
+    font-size: 10px;
+  }
+  .mw-ui-chart-track {
+    fill: var(--mw-muted);
+  }
+  .mw-ui-chart-state {
+    display: grid;
+    min-height: 10rem;
+    place-items: center;
+    border: 1px dashed var(--mw-border);
+    padding: 1rem;
+    color: var(--mw-muted-foreground);
+    text-align: center;
+  }
+  .mw-ui-chart-error {
+    border-color: var(--mw-destructive);
+    color: var(--mw-destructive);
+  }
+  .mw-ui-chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1rem;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .mw-ui-chart-legend li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+  }
+  .mw-ui-chart-legend li span {
+    width: 0.75rem;
+    height: 0.75rem;
+    border: 1px solid var(--mw-border);
+  }
 
   @keyframes mw-ui-pulse {
     50% {

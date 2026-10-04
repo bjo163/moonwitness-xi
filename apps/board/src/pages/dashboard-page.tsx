@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/dialog';
 import { CronSchedulerPanel } from '@/components/layout/cron-scheduler-panel';
 import { cn } from '@/lib/utils';
+import { BarChart } from '@moonwitness/ui/components/chart';
 
 export function DashboardPage() {
   const { user } = useAuth();
@@ -689,6 +690,21 @@ export function DashboardPage() {
                   </div>
                 </div>
               </div>
+
+              <BarChart
+                title="Background job status distribution"
+                locale={navigator.language}
+                valueLabel="Jobs"
+                loading={jobsHealthLoading}
+                data={[
+                  { label: 'Queued', value: jobsHealth?.data?.queued ?? 0 },
+                  { label: 'Running', value: jobsHealth?.data?.running ?? 0 },
+                  { label: 'Dead', value: jobsHealth?.data?.dead ?? 0 },
+                  { label: 'Outbox pending', value: jobsHealth?.data?.outboxPending ?? 0 },
+                  { label: 'Outbox dead', value: jobsHealth?.data?.outboxDead ?? 0 },
+                ]}
+                className="border-2 border-ink bg-card p-4 font-mono"
+              />
 
               {/* Scheduled Cron Tasks Section */}
               <div className="space-y-3 pt-2">

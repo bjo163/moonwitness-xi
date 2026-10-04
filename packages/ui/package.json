@@ -101,6 +101,10 @@
       "types": "./dist/components/table.d.ts",
       "import": "./dist/components/table.js"
     },
+    "./components/chart": {
+      "types": "./dist/components/chart.d.ts",
+      "import": "./dist/components/chart.js"
+    },
     "./icons": {
       "types": "./dist/icons/index.d.ts",
       "import": "./dist/icons/index.js"

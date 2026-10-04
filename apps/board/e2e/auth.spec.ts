@@ -23,6 +23,18 @@ test('superadmin can log in, open dashboard, and log out', async ({ page }) => {
 
   await expect(page).toHaveURL(/\/$/u);
   await expect(page.getByText('Welcome, superadmin!', { exact: false })).toBeVisible();
+  await expect(page.getByRole('img', { name: 'Background job status distribution' })).toBeVisible();
+  await expect(
+    page.getByRole('table', { name: 'Background job status distribution' })
+  ).toBeAttached();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole('img', { name: 'Background job status distribution' })).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+    )
+  ).toBe(false);
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByRole('button', { name: 'superadmin' }).click();
   await expect(page.getByRole('menuitem', { name: 'Sign out' })).toBeVisible();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();

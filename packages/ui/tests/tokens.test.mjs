@@ -78,6 +78,7 @@ test('package exposes explicit stylesheet and tree-shakeable typed icon entries'
     'toolbar',
     'pagination',
     'table',
+    'chart',
   ]) {
     assert.equal(
       packageJson.exports[`./components/${component}`].import,
@@ -100,6 +101,7 @@ test('composition styles stay scoped and skeleton respects reduced motion', asyn
     'toolbar',
     'pagination',
     'table',
+    'chart',
   ]) {
     assert.match(componentCss, new RegExp(`\\.mw-ui-${name}`));
   }
