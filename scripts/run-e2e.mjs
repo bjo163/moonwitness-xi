@@ -48,6 +48,17 @@ if (flakyPolicyCheck.error) {
 }
 if (flakyPolicyCheck.status !== 0) exit(flakyPolicyCheck.status ?? 1);
 
+const buildApiWorkspace = spawnSync(
+  execPath,
+  [packageManagerCli, '--filter', '@moonwitness/api...', 'build'],
+  { cwd: root, env, stdio: 'inherit' }
+);
+if (buildApiWorkspace.error) {
+  stderr.write(`${buildApiWorkspace.error.message}\n`);
+  exit(1);
+}
+if (buildApiWorkspace.status !== 0) exit(buildApiWorkspace.status ?? 1);
+
 const e2ePassword = env.MW_E2E_SUPERADMIN_PASSWORD ?? 'e2e-only-password';
 const resetE2ECredentials = spawnSync(
   execPath,
