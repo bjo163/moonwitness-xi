@@ -145,6 +145,7 @@ jobs:
           path: |
             test-results/junit/
             test-results/coverage/
+            test-results/performance/
           if-no-files-found: ignore
           retention-days: 14
       - name: Run isolated application backup and restore drill

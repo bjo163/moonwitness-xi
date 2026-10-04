@@ -25,6 +25,7 @@ await mkdir(reportDirectory, { recursive: true });
 
 for (const args of [
   ['build'],
+  ['--filter', '@moonwitness/api', 'exec', 'tsc', '--noEmit', '-p', 'tsconfig.integration.json'],
   [
     '--filter',
     '@moonwitness/api',
@@ -32,6 +33,7 @@ for (const args of [
     'vitest',
     'run',
     'tests/postgres.integration.test.ts',
+    'tests/postgres.performance.integration.test.ts',
     '--reporter=default',
     '--reporter=junit',
     `--outputFile.junit=${resolve(reportDirectory, 'postgres.xml')}`,

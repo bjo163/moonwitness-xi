@@ -103,7 +103,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 - [x] M4.12 Attachment: izin upload/download, size/MIME, filename/path traversal, storage ownership, dan retensi. Bukti: [M4.12](docs/roadmap/evidence/M4.12.md); byte upload/download, scope parent, cleanup transaksi, archive/restore, dan hard-delete diuji.
 - [x] M4.13 Operasional: graceful shutdown, DB pools/timeouts, request ID, redaksi log, readiness/liveness API dan worker. [Evidence](docs/roadmap/evidence/M4.13.md)
 - [x] M4.14 Restore drill dengan data aplikasi, relasi, akun test dan integrity checks; tetapkan target pemulihan berbasis hasil pengukuran. [Evidence](docs/roadmap/evidence/M4.14.md)
-- [ ] M4.15 Tambahkan baseline load/query tests dan budget regresi realistis; ukur N+1 serta operasi yang memperbesar penggunaan memori.
+- [x] M4.15 Tambahkan baseline load/query tests dan budget regresi realistis; ukur N+1 serta operasi yang memperbesar penggunaan memori. [Evidence](docs/roadmap/evidence/M4.15.md)
 - [ ] M4.16 Dokumentasikan compatibility policy API/addon, deprecation, dan upgrade guidance.
 
 ## M5 — Design system dan asset milik project (jalur E)

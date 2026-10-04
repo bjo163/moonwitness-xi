@@ -51,7 +51,7 @@ Dynamic generic operations are behavior families, not one route per model. Test 
 
 ## Tests and GitHub automation
 
-- Existing test families: ORM/client domains, logger, auth, jobs, base addon/password/extensions, API auth/client/database errors/jobs/observability/ORM/record rules/startup/ratelimit/views, optional PostgreSQL upgrade/auth integration.
+- Existing test families: ORM/client domains, logger, auth, jobs, base addon/password/extensions, API auth/client/database errors/jobs/observability/ORM/record rules/startup/ratelimit/views, PostgreSQL upgrade/auth integration, and the M4.15 query/job performance baseline.
 - Root pnpm test runs recursive workspace tests. API PostgreSQL tests currently skip without POSTGRES_TEST_URL; M2.06 must fail closed in required CI mode.
 - CI is .github/workflows/ci.yml; PostgreSQL service, lint, format, build, tests, container builds, Compose validation and an isolated application backup/restore drill. See M4.14 evidence for exactly which integrity checks run and the measured RPO/RTO limits.
 - Existing release is .github/workflows/release.yml, tag/workflow_dispatch with explicit publish boolean.

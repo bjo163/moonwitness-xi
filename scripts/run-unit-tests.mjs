@@ -63,7 +63,14 @@ for (const suite of suites) {
     );
   }
   const args = ['--filter', suite.packageName, 'exec', 'vitest', 'run'];
-  if (suite.excludePostgres) args.push('--exclude', 'tests/postgres.integration.test.ts');
+  if (suite.excludePostgres) {
+    args.push(
+      '--exclude',
+      'tests/postgres.integration.test.ts',
+      '--exclude',
+      'tests/postgres.performance.integration.test.ts'
+    );
+  }
   args.push(
     '--reporter=default',
     '--reporter=junit',

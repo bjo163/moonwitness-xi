@@ -273,17 +273,19 @@ Detail command, hasil, SHA, hosted CI, batasan RPO/RTO, serta cleanup dicatat pa
 
 - **Prasyarat:** M0.03, M0.06
 - **Baca/periksa:** base.model.ts; generic routes; baseline datasets.
-- **Deliverable:** Performance fixtures dan report.
+- **Deliverable:** Isolated PostgreSQL workload fixture, deterministic query-count budgets, EXPLAIN plans, and a sanitized CI performance report artifact.
 
 ### Langkah pelaksanaan
 
-1. Buat dataset kecil/menengah deterministik untuk list/count/eager/job claim.
-2. Ukur query count/latency/memory pada runner fixed semampunya.
-3. Tetapkan relative budgets dan analisis EXPLAIN untuk hot paths, bukan optimasi spekulatif.
+1. Buat schema PostgreSQL sementara; seed 120 partner dan 240 alamat terprogram, plus delapan job yang dikerjakan melalui worker runtime.
+2. Ukur `search_read` list, `search_count`, eager addresses pada 12 vs 120 partner, serta 8 claim jobs. Tangkap query event dari koneksi uji, latency sesudah satu warm-up, dan delta heap.
+3. Tetapkan structural budgets: list 1 query, count 1, eager-loading 2 queries tetap untuk ukuran kecil/menengah, dan claim <=12 queries/job. Assert hasil/relasi lengkap agar query reduction tidak membuang data.
+4. Simpan median/p95/rata-rata/deviasi, heap delta, fixture scale, Node/PostgreSQL versi, dan `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` untuk partner list dan eager related-address query sebagai JSON artifact yang ikut secret scanner.
+5. Jangan gate absolute latency atau heap pada shared runner; gunakan sebagai baseline tren dan optimalkan hanya bila rencana/hasil menunjukkan hot path nyata.
 
 ### Verifikasi dan syarat selesai
 
-N+1 terdeteksi oleh query-count assertion; benchmark laporan menyebut environment dan variance.
+Eager loading tidak menambah query saat hasil meningkat 10x; structural job/list/count budgets lulus; report menyebut environment, jumlah sample, variance, EXPLAIN, dan batas interpretasi timing/memory.
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M4.15.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 

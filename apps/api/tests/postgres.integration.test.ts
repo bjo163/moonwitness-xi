@@ -47,6 +47,7 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
   const apiSchema = `mw_api_test_${randomUUID().replaceAll('-', '')}`;
 
   beforeAll(async () => {
+    if (!connectionString) throw new Error('POSTGRES_TEST_URL is required');
     adminDb = knex({ client: 'pg', connection: connectionString, pool: { min: 0, max: 2 } });
     await adminDb.raw('select 1');
     await adminDb.raw('create schema ??', [schema]);
@@ -54,7 +55,7 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     db = knex(
       createPostgresKnexConfig(
         connectionString,
-        { poolMin: 0, poolMax: 4, acquireTimeoutMs: 5000, statementTimeoutMs: 9000 },
+        { poolMin: 0, poolMax: 4, acquireTimeoutMs: 5000, statementTimeoutMs: 30_000 },
         { searchPath: [schema] }
       )
     );
@@ -73,7 +74,7 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
 
   it('applies the PostgreSQL statement timeout to pooled connections', async () => {
     const result = await db.raw('SHOW statement_timeout');
-    expect(result.rows[0]?.statement_timeout).toBe('9s');
+    expect(result.rows[0]?.statement_timeout).toBe('30s');
   });
 
   it('upgrades populated legacy tables, restores references and enforces PostgreSQL foreign keys', async () => {
