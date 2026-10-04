@@ -204,15 +204,13 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - name: Build production API container
-        run: docker build --tag moonwitness-api:ci .
-      - name: Build production Board container
-        run: docker build --target board-runtime --tag moonwitness-board:ci .
       - name: Validate production Compose configuration
         env:
           DATABASE_URL: postgresql://moonwitness:ci-password@postgres.example:5432/moonwitness
           JWT_SECRET: ci-only-secret-that-is-at-least-32-characters-long
         run: docker compose -f docker-compose.production.yml config --quiet
+      - name: Smoke test API and Board containers against isolated PostgreSQL
+        run: bash scripts/smoke-containers.sh
   ci-gate:
     name: ci-gate
     if: always()
