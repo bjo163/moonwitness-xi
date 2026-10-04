@@ -293,16 +293,17 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 - **Prasyarat:** M0.07
 - **Baca/periksa:** Public exports; client/types; addon contracts.
-- **Deliverable:** Compatibility policy dan contract tests.
+- **Deliverable:** `docs/engineering/compatibility.md`, compatibility policy, and executable client→API and addon→ORM contract tests.
 
 ### Langkah pelaksanaan
 
-1. Daftar public APIs dan supported semantics.
-2. Tetapkan deprecation window serta upgrade instructions untuk change incompatible.
-3. Tambah contract tests untuk client→API dan addon example→ORM.
+1. Daftar root exports, auth/model HTTP routes, response/error semantics, search options, addon manifest and installer behavior; label internal imports unsupported.
+2. Tetapkan SemVer behavior untuk pre-stable dan stable release, deprecation notice/window, security exception, and mandatory breaking-change guide.
+3. Dokumentasikan upgrade langkah demi langkah termasuk backup/restore rehearsal, addon version/hooks, data/seed identity, token/session impact, paired client/server deployment, and post-upgrade integrity checks. Jangan menjanjikan down migration otomatis.
+4. Jalankan contract test melalui public client package terhadap Fastify routes, termasuk comma-separated relation loading, serta install seeded base manifest melalui public ORM/addon exports. Pertahankan test upgrade hook, transaction rollback, seed identity, and downgrade rejection.
 
 ### Verifikasi dan syarat selesai
 
-Breaking contract terdeteksi sebelum release; upgrade guide menjelaskan data/session impact.
+Public contract tercatat, client→API dan addon→ORM contract tests lulus, dan upgrade guide menjelaskan data/session impact serta batas rollback. Release-gate enforcement untuk breaking notes dilacak di M7.06.
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M4.16.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
