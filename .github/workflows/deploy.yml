@@ -1,17 +1,6 @@
 name: Staging deploy
 
-on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [main]
-  workflow_dispatch:
-    inputs:
-      deploy_production:
-        description: Deploy to production after staging smoke tests pass
-        required: true
-        type: boolean
-        default: false
+on: []
 
 permissions:
   contents: read
