@@ -604,7 +604,7 @@
       "id": "M5.09",
       "title": "Komponen dasar: button/input/select/checkbox/badge/avatar; interaksi: dialog/dropdown/tabs/tooltip/toast.",
       "milestone": "M5",
-      "status": "in_progress",
+      "status": "complete",
       "dependsOn": ["M5.08", "M5.03"],
       "output": "UI primitives dan interaction stories",
       "evidence": "docs/roadmap/evidence/M5.09.md",
@@ -615,7 +615,9 @@
       "title": "Komponen komposisi: field/help/error, card/skeleton/empty/error state, page header/toolbar/panel, pagination/table primitives.",
       "milestone": "M5",
       "dependsOn": ["M5.09"],
-      "output": "UI composition components",
+      "status": "in_progress",
+      "output": "Typed, directly exported UI composition primitives with accessible contracts and Board adoption",
+      "evidence": "docs/roadmap/evidence/M5.10.md",
       "detailFile": "docs/roadmap/05-design-system.md"
     },
     {

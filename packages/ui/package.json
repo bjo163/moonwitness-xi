@@ -63,6 +63,38 @@
       "types": "./dist/components/toast.d.ts",
       "import": "./dist/components/toast.js"
     },
+    "./components/field": {
+      "types": "./dist/components/field.d.ts",
+      "import": "./dist/components/field.js"
+    },
+    "./components/skeleton": {
+      "types": "./dist/components/skeleton.d.ts",
+      "import": "./dist/components/skeleton.js"
+    },
+    "./components/empty-state": {
+      "types": "./dist/components/empty-state.d.ts",
+      "import": "./dist/components/empty-state.js"
+    },
+    "./components/page-header": {
+      "types": "./dist/components/page-header.d.ts",
+      "import": "./dist/components/page-header.js"
+    },
+    "./components/panel": {
+      "types": "./dist/components/panel.d.ts",
+      "import": "./dist/components/panel.js"
+    },
+    "./components/toolbar": {
+      "types": "./dist/components/toolbar.d.ts",
+      "import": "./dist/components/toolbar.js"
+    },
+    "./components/pagination": {
+      "types": "./dist/components/pagination.d.ts",
+      "import": "./dist/components/pagination.js"
+    },
+    "./components/table": {
+      "types": "./dist/components/table.d.ts",
+      "import": "./dist/components/table.js"
+    },
     "./icons": {
       "types": "./dist/icons/index.d.ts",
       "import": "./dist/icons/index.js"

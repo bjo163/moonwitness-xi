@@ -65,6 +65,42 @@ test('package exposes explicit stylesheet and tree-shakeable typed icon entries'
       `./dist/components/${component}.js`
     );
   }
+  for (const component of [
+    'field',
+    'skeleton',
+    'empty-state',
+    'page-header',
+    'panel',
+    'toolbar',
+    'pagination',
+    'table',
+  ]) {
+    assert.equal(
+      packageJson.exports[`./components/${component}`].import,
+      `./dist/components/${component}.js`
+    );
+  }
+});
+
+test('composition styles stay scoped and skeleton respects reduced motion', async () => {
+  const componentCss = await readFile(
+    new URL('../src/styles/components.css', import.meta.url),
+    'utf8'
+  );
+  for (const name of [
+    'field',
+    'skeleton',
+    'empty-state',
+    'page-header',
+    'panel',
+    'toolbar',
+    'pagination',
+    'table',
+  ]) {
+    assert.match(componentCss, new RegExp(`\\.mw-ui-${name}`));
+  }
+  assert.match(componentCss, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
+  assert.match(componentCss, /\.mw-ui-skeleton[\s\S]*?animation:\s*mw-ui-pulse/);
 });
 
 test('semantic text pairs meet WCAG AA in both theme mappings', () => {

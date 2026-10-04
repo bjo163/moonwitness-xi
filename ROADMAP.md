@@ -116,8 +116,8 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 - [x] M5.06 Buat ilustrasi original empty/search/error/access denied/offline/onboarding serta pola latar ringan. [Evidence](docs/roadmap/evidence/M5.06.md); hosted technical CI passed, promotion awaits fresh CODEOWNER approval.
 - [x] M5.07 Catat sumber/lisensi font dan asset; optimasi SVG, validasi script/external refs, dan cegah ID collision. [Evidence](docs/roadmap/evidence/M5.07.md); technical CI passed on `dev`, promotion awaits fresh CODEOWNER approval.
 - [x] M5.08 Buat `@moonwitness/ui` dengan exports jelas, tanpa dependency API/router/auth aplikasi dan tanpa side effect yang tidak terdokumentasi. [Evidence](docs/roadmap/evidence/M5.08.md); technical CI passed on `dev`, promotion awaits fresh CODEOWNER approval.
-- [ ] M5.09 Komponen dasar: button/input/select/checkbox/badge/avatar; interaksi: dialog/dropdown/tabs/tooltip/toast.
-- [ ] M5.10 Komponen komposisi: field/help/error, card/skeleton/empty/error state, page header/toolbar/panel, pagination/table primitives.
+- [x] M5.09 Komponen dasar: button/input/select/checkbox/badge/avatar; interaksi: dialog/dropdown/tabs/tooltip/toast. [Evidence](docs/roadmap/evidence/M5.09.md); hosted technical CI passed on `dev`, promotion awaits fresh CODEOWNER approval.
+- [ ] M5.10 Komponen komposisi: field/help/error, card/skeleton/empty/error state, page header/toolbar/panel, pagination/table primitives. [Implementation evidence](docs/roadmap/evidence/M5.10.md); local checks pass, hosted CI pending.
 - [ ] M5.11 Tetapkan theming dan compatibility policy komponen; hindari boolean props berlebihan dan barrel export yang membesarkan bundle.
 - [ ] M5.12 Grafik data: tema, tooltip/legend, locale/timezone, loading/empty/error, tabel alternatif, dan responsivitas. Bentuk `@moonwitness/charts` hanya ketika reuse membenarkannya.
 - [ ] M5.13 Diagram arsitektur/relasi/alur: generate dari metadata bila tepat; kurasi diagram penjelasan agar terbaca.
