@@ -432,16 +432,25 @@ describe('authentication and authorization', () => {
           })
         ).statusCode
       ).toBe(403);
+      const deniedCreate = await as(alice.access_token, {
+        method: 'POST',
+        url: '/api/base.partner',
+        payload: { name: 'Cross-company write', company_id: foreignCompany.id },
+      });
+      expect(deniedCreate.statusCode).toBe(403);
+      expect(deniedCreate.payload).not.toContain('Foreign Tenant');
+      const count = await as(alice.access_token, {
+        method: 'GET',
+        url: '/api/base.partner?count=true&limit=500',
+      });
+      expect(count.statusCode).toBe(200);
+      expect(count.json<{ total: number }>().total).toBe(1);
+      const exportRows = await as(alice.access_token, {
+        method: 'GET',
+        url: '/api/base.partner?limit=500',
+      });
+      expect(JSON.stringify(exportRows.json())).not.toContain('Foreign Partner');
       await ModelAccess.query().findById(partnerGrant.id).patch({ write: false, create: false });
-      expect(
-        (
-          await as(alice.access_token, {
-            method: 'POST',
-            url: '/api/base.partner',
-            payload: { name: 'Cross-company write', company_id: foreignCompany.id },
-          })
-        ).statusCode
-      ).toBe(403);
       expect(
         (
           await as(alice.access_token, {

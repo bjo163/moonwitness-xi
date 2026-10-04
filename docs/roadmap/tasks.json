@@ -412,6 +412,8 @@
     },
     {
       "id": "M4.06",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M4.06.md",
       "title": "Test izin negatif CRUD/count/export/direct API dan isolasi company, termasuk relasi lintas-company.",
       "milestone": "M4",
       "dependsOn": ["M2.07", "M0.02"],
