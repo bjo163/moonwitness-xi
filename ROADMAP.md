@@ -60,12 +60,12 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 ## M2 — CI terpusat dan paralel (jalur A; kontrak M0)
 
 - [x] M2.01 Sediakan reusable setup/workflow agar CI, release, dan scheduled checks memakai konfigurasi yang sama. Bukti: [M2.01](docs/roadmap/evidence/M2.01.md), [CI 37164299898](https://github.com/bjo163/moonwitness-xi/actions/runs/37164299898).
-- [ ] M2.02 Standarkan root scripts: typecheck, lint, format:check, test:unit, test:integration, test:e2e, docs:check, verify. _Implementasi lengkap; menunggu CI browser job revisi terbaru._ Bukti: [M2.02](docs/roadmap/evidence/M2.02.md).
+- [x] M2.02 Standarkan root scripts: typecheck, lint, format:check, test:unit, test:integration, test:e2e, docs:check, verify. Bukti: [M2.02](docs/roadmap/evidence/M2.02.md), [CI 37167792644](https://github.com/bjo163/moonwitness-xi/actions/runs/37167792644).
 - [x] M2.03 Sertakan typecheck dan lint Board secara eksplisit; selaraskan ESLint/Oxlint agar aturan tidak saling bertentangan. Bukti: [M2.03](docs/roadmap/evidence/M2.03.md). _Cleanup seluruh overlap/warning masih terbuka._
-- [x] M2.04 Pisahkan job quality, unit, PostgreSQL integration, browser, security, docs, container, dan release integrity. Bukti: [M2.04](docs/roadmap/evidence/M2.04.md). _Docs/security belum punya job hingga command/automation contract tersedia; browser job menunggu remote proof._
+- [x] M2.04 Pisahkan job quality, unit, PostgreSQL integration, browser, security, docs, container, dan release integrity. Bukti: [M2.04](docs/roadmap/evidence/M2.04.md), [CI 37167792644](https://github.com/bjo163/moonwitness-xi/actions/runs/37167792644). _Docs/security belum punya job hingga command/automation contract tersedia._
 - [x] M2.05 Tambahkan `ci-gate` yang memahami success/failure/cancelled/skipped dan menjadi keputusan akhir. Bukti: [M2.05](docs/roadmap/evidence/M2.05.md). _Aktivasi sebagai required status check masih M1.06._
 - [x] M2.06 Required PostgreSQL tests harus gagal jika konfigurasi test hilang; tidak boleh diam-diam skipped pada CI wajib. Bukti dan run: [M2.06](docs/roadmap/evidence/M2.06.md), [CI 37164074612](https://github.com/bjo163/moonwitness-xi/actions/runs/37164074612).
-- [ ] M2.07 Pakai database dan akun fixture terisolasi per run; seed deterministik, cleanup, dan jangan menyentuh database pengguna. _Isolation harness implemented; final CI proof pending._ Bukti: [M2.07](docs/roadmap/evidence/M2.07.md).
+- [x] M2.07 Pakai database dan akun fixture terisolasi per run; seed deterministik, cleanup, dan jangan menyentuh database pengguna. Bukti: [M2.07](docs/roadmap/evidence/M2.07.md), [CI 37167792644](https://github.com/bjo163/moonwitness-xi/actions/runs/37167792644).
 - [ ] M2.08 Cache dependency/build; affected testing memperhitungkan transitive dependents dan shared config. Promosi menjalankan suite penuh.
 - [ ] M2.09 Atur timeout, concurrency, pembatalan run usang, dan serialisasi penulisan branch/release.
 - [ ] M2.10 Hasilkan test report, coverage, job summary, serta log/trace yang disanitasi dengan retensi terbatas.
@@ -75,7 +75,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 
 ## M3 — Board: audit visual dan E2E (jalur B; paralel dengan A/C)
 
-- [ ] M3.01 Siapkan browser automation yang dapat dijalankan lokal dan GitHub runner; gunakan API dan PostgreSQL sungguhan untuk alur kritis. _Local suite and visual check pass; browser CI proof pending._ Bukti: [M3.01](docs/roadmap/evidence/M3.01.md).
+- [x] M3.01 Siapkan browser automation yang dapat dijalankan lokal dan GitHub runner; gunakan API dan PostgreSQL sungguhan untuk alur kritis. Bukti: [M3.01](docs/roadmap/evidence/M3.01.md), [CI 37167792644](https://github.com/bjo163/moonwitness-xi/actions/runs/37167792644).
 - [ ] M3.02 Audit desktop/mobile, light/dark, overflow, fokus keyboard, kontras, label, dan navigasi screen reader dasar.
 - [ ] M3.03 Test login sukses/gagal, logout, reload, expiry, refresh bersamaan, sesi dicabut, dan user nonaktif.
 - [ ] M3.04 Test sidebar, command palette, dashboard, direct URL, Development Mode dan persistensinya; semua mengikuti metadata/akses yang sama.
