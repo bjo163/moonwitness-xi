@@ -279,12 +279,46 @@ jobs:
           format: sarif
           output: trivy-results.sarif
           exit-code: '1'
-      - name: Upload container dependency scan SARIF
+      - name: Scan production API image for CRITICAL vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
+        with:
+          scan-type: image
+          image-ref: moonwitness-api:production
+          vuln-type: os,library
+          severity: CRITICAL
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-api-image.sarif
+          exit-code: '1'
+      - name: Scan production Board image for CRITICAL vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
+        with:
+          scan-type: image
+          image-ref: moonwitness-board:production
+          vuln-type: os,library
+          severity: CRITICAL
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-board-image.sarif
+          exit-code: '1'
+      - name: Upload locked workspace scan SARIF
         if: always() && hashFiles('trivy-results.sarif') != ''
         uses: github/codeql-action/upload-sarif@1190a975f95ce23525efb6a3fc21ea29567c1b52 # v3
         with:
           sarif_file: trivy-results.sarif
           category: trivy-workspace-dependencies
+      - name: Upload production API image scan SARIF
+        if: always() && hashFiles('trivy-api-image.sarif') != ''
+        uses: github/codeql-action/upload-sarif@1190a975f95ce23525efb6a3fc21ea29567c1b52 # v3
+        with:
+          sarif_file: trivy-api-image.sarif
+          category: trivy-api-image
+      - name: Upload production Board image scan SARIF
+        if: always() && hashFiles('trivy-board-image.sarif') != ''
+        uses: github/codeql-action/upload-sarif@1190a975f95ce23525efb6a3fc21ea29567c1b52 # v3
+        with:
+          sarif_file: trivy-board-image.sarif
+          category: trivy-board-image
   ci-gate:
     name: ci-gate
     if: always()

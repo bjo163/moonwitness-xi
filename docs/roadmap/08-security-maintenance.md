@@ -47,7 +47,7 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 ### Langkah pelaksanaan
 
 1. Aktifkan CodeQL untuk JavaScript/TypeScript dan GitHub Actions pada PR/push, jadwal mingguan, dan dispatch; scope `security-events:write` hanya pada job analisis.
-2. Scan dependency graph dari lockfile pada lane container, block temuan CRITICAL yang actionable, dan unggah SARIF jika dihasilkan. Ini bukan image-layer scan.
+2. Scan dependency graph dari lockfile serta image API dan Board hasil build pada lane container; block temuan CRITICAL yang actionable dan unggah tiap hasil SARIF.
 3. Definisikan exception minimum (ID, owner, alasan, expiry ISO); exception kedaluwarsa atau format invalid menggagalkan CI. Scanner error harus fail-closed dan tidak boleh dinyatakan sebagai scan bersih.
 4. Rekam status secret scanning/push protection dan keterbatasan alert/dependency settings dari GitHub; aktifkan dependency alerts yang tersedia setelah hak akses terkonfirmasi.
 
