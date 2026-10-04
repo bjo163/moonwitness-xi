@@ -26,7 +26,13 @@ const fullScopeFiles = new Set([
 
 function git(args) {
   const result = spawnSync('git', args, { encoding: 'utf8' });
-  if (result.status !== 0) return null;
+  if (result.status !== 0) {
+    stderr.write(
+      `git ${args[0]} could not compare the requested revisions; selecting full scope.\n`
+    );
+    if (result.stderr) stderr.write(result.stderr);
+    return null;
+  }
   return result.stdout;
 }
 
@@ -126,7 +132,7 @@ async function main() {
     return;
   }
 
-  const changedPaths = base ? git(['diff', '--name-only', `${base}...${head}`]) : null;
+  const changedPaths = base ? git(['diff', '--name-only', base, head]) : null;
   if (changedPaths === null) {
     const reason = base ? 'base-sha-unavailable' : 'base-sha-missing';
     await writePlan({ mode: 'full', reason, projects: requiredProjects }, jsonOutput);
