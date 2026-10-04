@@ -626,7 +626,7 @@
       "milestone": "M5",
       "dependsOn": ["M5.08"],
       "output": "UI API compatibility policy, package export contract tests, CSS isolation checks, and packed-consumer smoke",
-      "status": "in_progress",
+      "status": "complete",
       "evidence": "docs/roadmap/evidence/M5.11.md",
       "detailFile": "docs/roadmap/05-design-system.md"
     },
