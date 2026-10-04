@@ -67,7 +67,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 - [x] M2.06 Required PostgreSQL tests harus gagal jika konfigurasi test hilang; tidak boleh diam-diam skipped pada CI wajib. Bukti dan run: [M2.06](docs/roadmap/evidence/M2.06.md), [CI 37164074612](https://github.com/bjo163/moonwitness-xi/actions/runs/37164074612).
 - [x] M2.07 Pakai database dan akun fixture terisolasi per run; seed deterministik, cleanup, dan jangan menyentuh database pengguna. Bukti: [M2.07](docs/roadmap/evidence/M2.07.md), [CI 37167792644](https://github.com/bjo163/moonwitness-xi/actions/runs/37167792644).
 - [x] M2.08 Cache dependency/build; affected testing memperhitungkan transitive dependents dan shared config. Promosi menjalankan suite penuh. Bukti: [M2.08](docs/roadmap/evidence/M2.08.md), [full CI 37169257765](https://github.com/bjo163/moonwitness-xi/actions/runs/37169257765), [affected docs CI 37169412621](https://github.com/bjo163/moonwitness-xi/actions/runs/37169412621).
-- [ ] M2.09 Atur timeout, concurrency, pembatalan run usang, dan serialisasi penulisan branch/release.
+- [ ] M2.09 Atur timeout, concurrency, pembatalan run usang, dan serialisasi penulisan branch/release. _Kebijakan dan timeout siap; menunggu bukti remote saat dua push berdekatan._ Bukti: [M2.09](docs/roadmap/evidence/M2.09.md).
 - [ ] M2.10 Hasilkan test report, coverage, job summary, serta log/trace yang disanitasi dengan retensi terbatas.
 - [ ] M2.11 Validasi YAML/workflow dan shell scripts; periksa lockfile frozen dan reproducibility generator.
 - [ ] M2.12 Terapkan kebijakan flaky tests: diagnosis, pemilik, tenggat; retry terbatas tidak boleh menyembunyikan regresi.
