@@ -59,7 +59,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 
 ## M2 — CI terpusat dan paralel (jalur A; kontrak M0)
 
-- [ ] M2.01 Sediakan reusable setup/workflow agar CI, release, dan scheduled checks memakai konfigurasi yang sama.
+- [x] M2.01 Sediakan reusable setup/workflow agar CI, release, dan scheduled checks memakai konfigurasi yang sama. Bukti: [M2.01](docs/roadmap/evidence/M2.01.md), [CI 37164299898](https://github.com/bjo163/moonwitness-xi/actions/runs/37164299898).
 - [ ] M2.02 Standarkan root scripts: typecheck, lint, format:check, test:unit, test:integration, test:e2e, docs:check, verify.
 - [ ] M2.03 Sertakan typecheck dan lint Board secara eksplisit; selaraskan ESLint/Oxlint agar aturan tidak saling bertentangan.
 - [ ] M2.04 Pisahkan job quality, unit, PostgreSQL integration, browser, security, docs, container, dan release integrity.
