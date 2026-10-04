@@ -726,6 +726,8 @@ describe('authentication and authorization', () => {
         },
       });
       expect(created.statusCode).toBe(201);
+      expect(created.payload).not.toContain('secret-audit-password');
+      expect(created.payload).not.toContain('scrypt$');
       const userId = created.json<{ data: { id: number } }>().data.id;
       const event = await AuditLog.query()
         .findOne({ model: 'base.user', record_id: userId, operation: 'create' })
@@ -743,6 +745,39 @@ describe('authentication and authorization', () => {
         .throwIfNotFound();
       expect(outboxEvent.status).toBe('pending');
       expect(outboxEvent.payload).not.toContain('secret-audit-password');
+      expect(outboxEvent.payload).not.toContain('scrypt$');
+
+      const restUser = await as(admin.access_token, {
+        method: 'GET',
+        url: `/api/base.user/${userId}?with=partner`,
+      });
+      expect(restUser.statusCode).toBe(200);
+      expect(restUser.payload).not.toContain('secret-audit-password');
+      expect(restUser.payload).not.toContain('scrypt$');
+
+      const rpcUser = await rpc(admin.access_token, ['base.user', 'search_read', [[]], {}]);
+      expect(rpcUser.statusCode).toBe(200);
+      expect(rpcUser.payload).not.toContain('secret-audit-password');
+      expect(rpcUser.payload).not.toContain('scrypt$');
+      const ormUser = await User.query().findById(userId).throwIfNotFound();
+      expect(JSON.stringify(ormUser.toJSON())).not.toContain('scrypt$');
+      expect(
+        JSON.stringify(await User.search_read([['id', '=', userId]], { limit: 1 }))
+      ).not.toContain('scrypt$');
+
+      const sensitiveError = await as(admin.access_token, {
+        method: 'POST',
+        url: '/api/base.user',
+        payload: {
+          login: 'invalid-secret-probe',
+          partner_id: partnerId,
+          password: 'secret-validation-probe',
+          unexpected_secret: 'secret-error-probe',
+        },
+      });
+      expect(sensitiveError.statusCode).toBe(400);
+      expect(sensitiveError.payload).not.toContain('secret-validation-probe');
+      expect(sensitiveError.payload).not.toContain('secret-error-probe');
 
       expect(
         (await as(alice.access_token, { method: 'GET', url: '/api/base.audit_log' })).statusCode

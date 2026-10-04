@@ -432,6 +432,8 @@
     },
     {
       "id": "M4.08",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M4.08.md",
       "title": "Pastikan field sensitif tidak muncul dalam JSON, export, audit, error, atau log.",
       "milestone": "M4",
       "dependsOn": ["M0.01"],

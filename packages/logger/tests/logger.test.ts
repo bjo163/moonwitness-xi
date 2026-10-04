@@ -45,4 +45,41 @@ describe('Centralized Logger (@moonwitness/logger)', () => {
     expect(content).toContain('Hello world log test');
     expect(content).toContain('"test":123');
   });
+
+  it('redacts credentials in structured and nested log fields', async () => {
+    const log = createLogger({
+      name: 'secret-redaction',
+      level: 'info',
+      logDir: testLogDir,
+      logFileName: 'redaction.log',
+      enableFile: true,
+      enableConsole: false,
+    });
+
+    log.error(
+      {
+        password: 'sentinel-password',
+        user: { password: 'sentinel-nested-password' },
+        refresh_token: 'sentinel-refresh-token',
+        session: { refresh_token: 'sentinel-nested-refresh-token' },
+        access_token: 'sentinel-access-token',
+        req: { headers: { authorization: 'Bearer sentinel-authorization' } },
+      },
+      'credential redaction probe'
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const content = fs.readFileSync(path.join(testLogDir, 'redaction.log'), 'utf8');
+    for (const sentinel of [
+      'sentinel-password',
+      'sentinel-nested-password',
+      'sentinel-refresh-token',
+      'sentinel-nested-refresh-token',
+      'sentinel-access-token',
+      'sentinel-authorization',
+    ]) {
+      expect(content).not.toContain(sentinel);
+    }
+    expect(content).toContain('[redacted]');
+  });
 });

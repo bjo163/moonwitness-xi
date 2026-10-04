@@ -245,9 +245,11 @@ function auditSnapshot(model: AuditableModel, record: unknown): JsonObject {
       .filter(([, field]) => field.kind === 'belongsTo')
       .map(([key]) => `${key}_id`),
   ]);
+  const modelHidden = new Set(model.hiddenFields ?? []);
   const snapshot: JsonObject = {};
   for (const [key, value] of Object.entries(source)) {
-    if (keys.has(key) && !AUDIT_SECRET_KEY.test(key) && isJsonValue(value)) snapshot[key] = value;
+    if (keys.has(key) && !modelHidden.has(key) && !AUDIT_SECRET_KEY.test(key) && isJsonValue(value))
+      snapshot[key] = value;
   }
   return snapshot;
 }
@@ -808,6 +810,10 @@ export const genericRoutes: FastifyPluginAsync = async (fastify) => {
       if (!Model) return reply.status(404).send(modelNotFound(req.params.model));
       const id = requireId(req.params.id, reply);
       if (id === null) return;
+      if (!queryGraphIsBounded(req.query.with))
+        return reply
+          .code(400)
+          .send({ success: false, error: 'Relation graph exceeds maximum depth' });
       if (!userGraphAllowed(req.auth?.role, req.params.model, req.query.with))
         return reply.code(403).send({ success: false, error: 'Forbidden relation graph' });
       if (req.auth?.role === 'user') {
@@ -1190,14 +1196,14 @@ export const genericRoutes: FastifyPluginAsync = async (fastify) => {
     const requestedGraph = typeof kwargs.with === 'string' ? kwargs.with : undefined;
     if (required === 'read' && !queryGraphIsBounded(requestedGraph))
       return reply.send(rpcError(-32602, 'Relation graph exceeds maximum depth'));
-    if (required === 'read' && method === 'search_read' && !rpcSearchReadIsBounded(kwargs))
-      return reply.send(rpcError(-32602, 'Search query exceeds configured limits'));
-    if (required === 'read' && !userGraphAllowed(req.auth?.role, modelName, requestedGraph))
-      return reply.status(403).send(rpcError(-32003, 'Forbidden relation graph'));
     const scope =
       required === 'read' || required === 'write' || required === 'unlink'
         ? await userReadScope(req, modelName)
         : [];
+    if (required === 'read' && method === 'search_read' && !rpcSearchReadIsBounded(kwargs))
+      return reply.send(rpcError(-32602, 'Search query exceeds configured limits'));
+    if (required === 'read' && !userGraphAllowed(req.auth?.role, modelName, requestedGraph))
+      return reply.status(403).send(rpcError(-32003, 'Forbidden relation graph'));
     if (
       modelName === 'base.user' &&
       (required === 'create' || required === 'write' || required === 'unlink') &&

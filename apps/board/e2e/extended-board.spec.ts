@@ -124,6 +124,36 @@ test('CSV import rejects invalid rows, reports partial failures, and exports onl
   expect(formulaCsv).toContain(`'${formulaName.replace(/"/g, '""')}`);
 });
 
+test('user password write-only field is absent from list and CSV export', async ({ page }) => {
+  const token = await loginSuperadmin(page);
+  const response = await page.request.get('/api/base.user/views', {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  expect(response.status()).toBe(200);
+  const metadata = (await response.json()) as {
+    fields: { name: string; writeOnly?: boolean }[];
+    list: { columns: string[] };
+  };
+  expect(metadata.fields.find((field) => field.name === 'password')?.writeOnly).toBe(true);
+  expect(metadata.list.columns).not.toContain('password');
+
+  await page.goto('/m/base.user');
+  await expect(page.getByRole('table')).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'Password' })).toHaveCount(0);
+  await page
+    .getByRole('checkbox', { name: /Select record #/u })
+    .first()
+    .check();
+  const downloadReady = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export CSV' }).click();
+  const download = await downloadReady;
+  const filePath = await download.path();
+  expect(filePath).not.toBeNull();
+  const csv = await readFile(filePath!, 'utf8');
+  expect(csv).not.toContain('Password');
+  expect(csv).not.toContain('scrypt$');
+});
+
 test('record chatter persists activity and attachment metadata with owner and permission boundaries', async ({
   page,
 }) => {

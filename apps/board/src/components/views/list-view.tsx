@@ -238,7 +238,8 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
   const columns = useMemo(() => {
     return views.list.columns
       .map((colName) => views.fields.find((f) => f.name === colName))
-      .filter((f): f is NonNullable<typeof f> => Boolean(f));
+      .filter((f): f is NonNullable<typeof f> => Boolean(f))
+      .filter((field) => !field.writeOnly);
   }, [views]);
 
   const mutations = useRecordMutations(model);
@@ -398,11 +399,12 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
       selectedIds.length > 0
         ? data.records.filter((r) => selectedIds.includes(r.id as number))
         : data.records;
+    const exportColumns = columns.filter((column) => !column.writeOnly);
 
-    const headers = ['ID', ...columns.map((c) => c.label)];
+    const headers = ['ID', ...exportColumns.map((c) => c.label)];
     const rows = recordsToExport.map((row) => [
       String(row.id),
-      ...columns.map((c) => {
+      ...exportColumns.map((c) => {
         const val = row[c.name];
         if (val === null || val === undefined) return '';
         if (typeof val === 'object') {
