@@ -12,6 +12,19 @@ if (!env.POSTGRES_TEST_URL) {
   stderr.write('POSTGRES_TEST_URL is required for test:e2e.\n');
   exit(2);
 }
+let testDatabaseName;
+try {
+  testDatabaseName = decodeURIComponent(new URL(env.POSTGRES_TEST_URL).pathname.slice(1));
+} catch {
+  stderr.write('POSTGRES_TEST_URL must be a valid PostgreSQL connection URL.\n');
+  exit(2);
+}
+if (!/(?:^|[_-])(?:test|e2e)(?:$|[_-])/iu.test(testDatabaseName)) {
+  stderr.write(
+    'Refusing to reset E2E credentials: POSTGRES_TEST_URL database name must include test or e2e.\n'
+  );
+  exit(2);
+}
 if (!existsSync(config)) {
   stderr.write('E2E is not configured yet; complete roadmap task M3.01 before running test:e2e.\n');
   exit(2);
@@ -34,6 +47,26 @@ if (flakyPolicyCheck.error) {
   exit(1);
 }
 if (flakyPolicyCheck.status !== 0) exit(flakyPolicyCheck.status ?? 1);
+
+const e2ePassword = env.MW_E2E_SUPERADMIN_PASSWORD ?? 'e2e-only-password';
+const resetE2ECredentials = spawnSync(
+  execPath,
+  [packageManagerCli, '--filter', '@moonwitness/api', 'run', 'reset:superadmin-password'],
+  {
+    cwd: root,
+    env: {
+      ...env,
+      DATABASE_URL: env.POSTGRES_TEST_URL,
+      SUPERADMIN_PASSWORD: e2ePassword,
+    },
+    stdio: 'inherit',
+  }
+);
+if (resetE2ECredentials.error) {
+  stderr.write(`${resetE2ECredentials.error.message}\n`);
+  exit(1);
+}
+if (resetE2ECredentials.status !== 0) exit(resetE2ECredentials.status ?? 1);
 
 const result = spawnSync(
   execPath,

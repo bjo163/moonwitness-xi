@@ -146,7 +146,7 @@ export function FieldWidget({
     case 'selection':
       return (
         <Select
-          value={value ? String(value) : undefined}
+          value={value === null || value === undefined ? '' : String(value)}
           onValueChange={onChange}
           disabled={field.readonly}
         >

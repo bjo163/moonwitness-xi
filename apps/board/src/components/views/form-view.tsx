@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Archive, ArrowLeft, Check, Loader2, Save, Zap } from 'lucide-react';
+import { Archive, ArrowLeft, Check, Loader2, Save, Trash2, Zap } from 'lucide-react';
 import { evalDomain, type FieldMeta, type ResolvedViews } from '@moonwitness/client';
 import { useRecord, useRecordMutations } from '@/hooks/use-model';
 import { Button } from '@/components/ui/button';
@@ -131,6 +131,16 @@ export function FormView({ model, views, recordId, onBack, onSaved }: FormViewPr
         if (typeof val === 'object' && val !== null && !Array.isArray(val) && !field) continue;
         cleanValues[key] = val;
       }
+      for (const field of views.fields) {
+        if (
+          field.default !== undefined &&
+          !Object.hasOwn(cleanValues, field.name) &&
+          !field.readonly &&
+          field.type !== 'one2many'
+        ) {
+          cleanValues[field.name] = field.default;
+        }
+      }
 
       const saved = await mutations.save.mutateAsync({
         id: recordId,
@@ -260,6 +270,19 @@ export function FormView({ model, views, recordId, onBack, onSaved }: FormViewPr
             </Button>
           )}
 
+          {!isCreate && views.permissions.unlink && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => handleArchive(true)}
+              className="gap-1.5"
+              disabled={mutations.archive.isPending}
+              title="Permanently delete this record"
+            >
+              <Trash2 className="size-4" /> Delete permanently
+            </Button>
+          )}
+
           {canWrite && (
             <Button
               onClick={() => handleSave()}
@@ -386,7 +409,7 @@ export function FormView({ model, views, recordId, onBack, onSaved }: FormViewPr
                         <FieldWidget
                           id={`field-${field.name}`}
                           field={effectiveField}
-                          value={formData[field.name]}
+                          value={formData[field.name] ?? field.default}
                           onChange={(val) => handleChange(field.name, val)}
                           related={relatedObj}
                           contextDomain={contextDomain}

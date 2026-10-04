@@ -504,7 +504,7 @@ export function DashboardPage() {
                                 ? 'border-lime bg-lime text-on-accent'
                                 : audit.operation === 'write'
                                   ? 'border-ink bg-ink text-paper'
-                                  : 'border-pink bg-pink text-white'
+                                  : 'border-pink bg-pink text-on-pink'
                             )}
                           >
                             {audit.operation}

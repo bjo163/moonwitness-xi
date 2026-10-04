@@ -15,6 +15,7 @@
   --ink-faint: #6b695f;
   --lime: #e6ff00;
   --pink: #ff2e88;
+  --on-pink: #0d0d0d;
   --on-accent: #0d0d0d;
   --halftone-dot: rgb(13 13 13 / 0.13);
 
@@ -62,6 +63,7 @@
   --color-ink-faint: var(--ink-faint);
   --color-lime: var(--lime);
   --color-pink: var(--pink);
+  --color-on-pink: var(--on-pink);
   --color-on-accent: var(--on-accent);
 
   --color-background: var(--background);
