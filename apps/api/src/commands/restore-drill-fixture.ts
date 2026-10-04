@@ -63,6 +63,12 @@ async function countTables(db: Knex): Promise<RestoreExpectations['counts']> {
   return Object.fromEntries(entries) as RestoreExpectations['counts'];
 }
 
+function bindFixtureModels(db: Knex): void {
+  for (const addon of [baseManifest, authManifest, jobsManifest]) {
+    for (const model of addon.models) model.knex(db);
+  }
+}
+
 async function recordId(db: Knex, externalId: string, model: string): Promise<number> {
   const identity = await db('_orm_data').where({ id: externalId, model }).first('record_id');
   assert(identity, `Missing external identity ${externalId}`);
@@ -207,7 +213,10 @@ async function main(): Promise<void> {
   try {
     await db.raw('select 1');
     if (mode === 'seed') await seed(db, expectationsPath);
-    else await verify(db, expectationsPath);
+    else {
+      bindFixtureModels(db);
+      await verify(db, expectationsPath);
+    }
   } finally {
     await db.destroy();
   }
