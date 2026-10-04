@@ -110,12 +110,12 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 
 - [x] M5.01 Inventarisasi UI Board; tentukan arah visual MoonWitness dan audit contoh halaman representatif sebelum migrasi massal. [Evidence](docs/roadmap/evidence/M5.01.md)
 - [x] M5.02 Buat `@moonwitness/assets`: logo simbol/wordmark/lockup, versi terang/gelap/monokrom, favicon dan social image. [Evidence](docs/roadmap/evidence/M5.02.md); technical CI passed on `dev`, while promotion awaits fresh CODEOWNER approval.
-- [ ] M5.03 Buat tokens warna/semantik, tipografi, spacing, radius, shadow, motion, dan reduced-motion; dokumentasikan aturan penggunaan.
-- [ ] M5.04 Buat ikon SVG konsisten untuk domain inti dan aksi umum; audit keterbacaan ukuran kecil serta identitas yang berbeda dari brand lain.
+- [x] M5.03 Buat tokens warna/semantik, tipografi, spacing, radius, shadow, motion, dan reduced-motion; dokumentasikan aturan penggunaan. [Evidence](docs/roadmap/evidence/M5.03.md); technical CI passed on `dev`, promotion awaits fresh CODEOWNER approval.
+- [x] M5.04 Buat ikon SVG konsisten untuk domain inti dan aksi umum; audit keterbacaan ukuran kecil serta identitas yang berbeda dari brand lain. [Evidence](docs/roadmap/evidence/M5.04.md); technical CI passed on `dev`, promotion awaits fresh CODEOWNER approval.
 - [ ] M5.05 Sediakan ikon React typed dengan currentColor, ukuran, title, dan aksesibilitas; gunakan static SVG untuk README.
 - [ ] M5.06 Buat ilustrasi original empty/search/error/access denied/offline/onboarding serta pola latar ringan.
-- [ ] M5.07 Catat sumber/lisensi font dan asset; optimasi SVG, validasi script/external refs, dan cegah ID collision.
-- [ ] M5.08 Buat `@moonwitness/ui` dengan exports jelas, tanpa dependency API/router/auth aplikasi dan tanpa side effect yang tidak terdokumentasi.
+- [x] M5.07 Catat sumber/lisensi font dan asset; optimasi SVG, validasi script/external refs, dan cegah ID collision. [Evidence](docs/roadmap/evidence/M5.07.md); technical CI passed on `dev`, promotion awaits fresh CODEOWNER approval.
+- [x] M5.08 Buat `@moonwitness/ui` dengan exports jelas, tanpa dependency API/router/auth aplikasi dan tanpa side effect yang tidak terdokumentasi. [Evidence](docs/roadmap/evidence/M5.08.md); technical CI passed on `dev`, promotion awaits fresh CODEOWNER approval.
 - [ ] M5.09 Komponen dasar: button/input/select/checkbox/badge/avatar; interaksi: dialog/dropdown/tabs/tooltip/toast.
 - [ ] M5.10 Komponen komposisi: field/help/error, card/skeleton/empty/error state, page header/toolbar/panel, pagination/table primitives.
 - [ ] M5.11 Tetapkan theming dan compatibility policy komponen; hindari boolean props berlebihan dan barrel export yang membesarkan bundle.

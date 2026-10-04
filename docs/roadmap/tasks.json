@@ -543,16 +543,17 @@
     {
       "id": "M5.03",
       "title": "Buat tokens warna/semantik, tipografi, spacing, radius, shadow, motion, dan reduced-motion; dokumentasikan aturan penggunaan.",
-      "status": "in_progress",
+      "status": "complete",
       "milestone": "M5",
       "dependsOn": ["M5.01"],
       "output": "packages/ui/src/styles/tokens.css dan token guide",
+      "evidence": "docs/roadmap/evidence/M5.03.md",
       "detailFile": "docs/roadmap/05-design-system.md"
     },
     {
       "id": "M5.04",
       "title": "Buat ikon SVG konsisten untuk domain inti dan aksi umum; audit keterbacaan ukuran kecil serta identitas yang berbeda dari brand lain.",
-      "status": "in_progress",
+      "status": "complete",
       "milestone": "M5",
       "dependsOn": ["M5.01"],
       "output": "packages/assets/icons/*.svg dan icon inventory",
@@ -578,7 +579,7 @@
     {
       "id": "M5.07",
       "title": "Catat sumber/lisensi font dan asset; optimasi SVG, validasi script/external refs, dan cegah ID collision.",
-      "status": "in_progress",
+      "status": "complete",
       "milestone": "M5",
       "dependsOn": ["M5.02"],
       "output": "Asset validation script dan licenses manifest",
@@ -588,10 +589,11 @@
     {
       "id": "M5.08",
       "title": "Buat `@moonwitness/ui` dengan exports jelas, tanpa dependency API/router/auth aplikasi dan tanpa side effect yang tidak terdokumentasi.",
-      "status": "in_progress",
+      "status": "complete",
       "milestone": "M5",
       "dependsOn": ["M0.07"],
       "output": "packages/ui scaffold dan consumer smoke test",
+      "evidence": "docs/roadmap/evidence/M5.08.md",
       "detailFile": "docs/roadmap/05-design-system.md"
     },
     {
