@@ -213,6 +213,7 @@ jobs:
             test-results/junit/board-e2e.xml
             test-results/junit/board-e2e-retries.json
             test-results/playwright/**/*.png
+            test-results/visual-audit/**/*.png
           if-no-files-found: ignore
           retention-days: 7
 
