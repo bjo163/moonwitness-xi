@@ -109,7 +109,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 ## M5 — Design system dan asset milik project (jalur E)
 
 - [x] M5.01 Inventarisasi UI Board; tentukan arah visual MoonWitness dan audit contoh halaman representatif sebelum migrasi massal. [Evidence](docs/roadmap/evidence/M5.01.md)
-- [ ] M5.02 Buat `@moonwitness/assets`: logo simbol/wordmark/lockup, versi terang/gelap/monokrom, favicon dan social image.
+- [x] M5.02 Buat `@moonwitness/assets`: logo simbol/wordmark/lockup, versi terang/gelap/monokrom, favicon dan social image. [Evidence](docs/roadmap/evidence/M5.02.md); technical CI passed on `dev`, while promotion awaits fresh CODEOWNER approval.
 - [ ] M5.03 Buat tokens warna/semantik, tipografi, spacing, radius, shadow, motion, dan reduced-motion; dokumentasikan aturan penggunaan.
 - [ ] M5.04 Buat ikon SVG konsisten untuk domain inti dan aksi umum; audit keterbacaan ukuran kecil serta identitas yang berbeda dari brand lain.
 - [ ] M5.05 Sediakan ikon React typed dengan currentColor, ukuran, title, dan aksesibilitas; gunakan static SVG untuk README.

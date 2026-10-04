@@ -533,7 +533,7 @@
     {
       "id": "M5.02",
       "title": "Buat `@moonwitness/assets`: logo simbol/wordmark/lockup, versi terang/gelap/monokrom, favicon dan social image.",
-      "status": "in_progress",
+      "status": "complete",
       "milestone": "M5",
       "dependsOn": ["M5.01"],
       "output": "packages/assets, deterministic SVG source, export manifest, README banner, and social image",
