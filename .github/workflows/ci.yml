@@ -41,6 +41,11 @@ jobs:
           else
             pnpm ci:affected "$BASE_SHA" "$HEAD_SHA" --json
           fi
+      - name: Validate Conventional Commit history
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: pnpm release:classify "$BASE_SHA" "$HEAD_SHA" --summary
 
   quality:
     name: quality
@@ -76,7 +81,7 @@ jobs:
       - name: Validate GitHub workflows
         run: docker run --rm -v "$PWD:/work" -w /work rhysd/actionlint:1.7.7 -color .github/workflows/ci.yml .github/workflows/release.yml .github/workflows/promote.yml .github/workflows/sync-main-to-dev.yml
       - name: Test affected workspace selection and gate behavior
-        run: pnpm test:ci-gate && pnpm test:affected
+        run: pnpm test:ci-gate && pnpm test:affected && pnpm test:release-classification
 
   integration:
     name: integration

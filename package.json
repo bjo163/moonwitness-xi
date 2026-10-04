@@ -24,9 +24,11 @@
     "audit:workspace": "node scripts/audit-workspace.mjs",
     "verify": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test:unit && pnpm docs:check",
     "release:check": "node scripts/check-release.mjs",
+    "release:classify": "node scripts/classify-release-commits.mjs",
     "test:ci-gate": "node --test scripts/ci-gate.test.mjs",
     "ci:affected": "node scripts/select-affected.mjs",
-    "test:affected": "node --test scripts/select-affected.test.mjs"
+    "test:affected": "node --test scripts/select-affected.test.mjs",
+    "test:release-classification": "node --test scripts/release-classification.test.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
