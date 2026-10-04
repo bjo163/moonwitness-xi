@@ -119,7 +119,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 - [x] M5.09 Komponen dasar: button/input/select/checkbox/badge/avatar; interaksi: dialog/dropdown/tabs/tooltip/toast. [Evidence](docs/roadmap/evidence/M5.09.md); hosted technical CI passed on `dev`, promotion awaits fresh CODEOWNER approval.
 - [x] M5.10 Komponen komposisi: field/help/error, card/skeleton/empty/error state, page header/toolbar/panel, pagination/table primitives. [Evidence](docs/roadmap/evidence/M5.10.md); hosted technical CI passed on `dev`, promotion awaits fresh CODEOWNER approval.
 - [x] M5.11 Tetapkan theming dan compatibility policy komponen; hindari boolean props berlebihan dan barrel export yang membesarkan bundle. [Evidence](docs/roadmap/evidence/M5.11.md); hosted technical CI passed on `dev`, promotion awaits fresh CODEOWNER approval.
-- [ ] M5.12 Grafik data: tema, tooltip/legend, locale/timezone, loading/empty/error, tabel alternatif, dan responsivitas. [Implementation evidence](docs/roadmap/evidence/M5.12.md); local checks/browser pass, hosted CI pending; reuse audit retains charts in `@moonwitness/ui`.
+- [x] M5.12 Grafik data: tema, tooltip/legend, locale/timezone, loading/empty/error, tabel alternatif, dan responsivitas. [Evidence](docs/roadmap/evidence/M5.12.md); hosted technical CI passed on `dev`; reuse audit retains charts in `@moonwitness/ui`.
 - [ ] M5.13 Diagram arsitektur/relasi/alur: generate dari metadata bila tepat; kurasi diagram penjelasan agar terbaca.
 - [ ] M5.14 Migrasikan shell/login/profile/settings/list/form Board bertahap; hapus duplikasi dan dependency yang benar-benar tidak terpakai.
 - [ ] M5.15 Gunakan sumber asset/tokens yang sama pada README dan Pages; ekspor statis sesuai kemampuan platform.
