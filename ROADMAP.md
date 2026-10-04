@@ -77,7 +77,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 
 - [x] M3.01 Siapkan browser automation yang dapat dijalankan lokal dan GitHub runner; gunakan API dan PostgreSQL sungguhan untuk alur kritis. Bukti: [M3.01](docs/roadmap/evidence/M3.01.md), [CI 37167792644](https://github.com/bjo163/moonwitness-xi/actions/runs/37167792644).
 - [x] M3.02 Audit desktop/mobile, light/dark, overflow, fokus keyboard, kontras, label, dan navigasi screen reader dasar. Bukti: [M3.02](docs/roadmap/evidence/M3.02.md), [CI 37180982813](https://github.com/bjo163/moonwitness-xi/actions/runs/37180982813).
-- [ ] M3.03 Test login sukses/gagal, logout, reload, expiry, refresh bersamaan, sesi dicabut, dan user nonaktif.
+- [x] M3.03 Test login sukses/gagal, logout, reload, expiry, refresh bersamaan, sesi dicabut, dan user nonaktif. Bukti: [M3.03](docs/roadmap/evidence/M3.03.md), [CI 37182163058](https://github.com/bjo163/moonwitness-xi/actions/runs/37182163058).
 - [ ] M3.04 Test sidebar, command palette, dashboard, direct URL, Development Mode dan persistensinya; semua mengikuti metadata/akses yang sama.
 - [ ] M3.05 Test profil sendiri, language/timezone, ganti password, login ulang, dan error validasi.
 - [ ] M3.06 Test list/search/filter/sort/pagination/count, termasuk regresi `partner,language` dan count PostgreSQL.
