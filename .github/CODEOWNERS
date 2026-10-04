@@ -1,0 +1,13 @@
+# One repository maintainer currently has write access: @bjo163.
+# These assignments request focused review on security, data, workflow and release boundaries.
+/.github/ @bjo163
+/apps/api/src/auth/ @bjo163
+/apps/api/src/config/env.ts @bjo163
+/apps/api/src/routes/auth.routes.ts @bjo163
+/packages/auth/ @bjo163
+/packages/orm/ @bjo163
+/packages/orm-base/ @bjo163
+/Dockerfile @bjo163
+/docker-compose.production.yml @bjo163
+/package.json @bjo163
+/pnpm-lock.yaml @bjo163
