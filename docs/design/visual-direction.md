@@ -25,14 +25,14 @@ The initial contrast target is WCAG 2.1 AA: 4.5:1 for ordinary text, 3:1 for lar
 
 Board currently has 29 reusable component files in four groups:
 
-| Group       | Current source                     | Count | Role                                                                                                          |
-| ----------- | ---------------------------------- | ----: | ------------------------------------------------------------------------------------------------------------- |
-| Layout      | `apps/board/src/components/layout` |     5 | App shell, route protection, breadcrumbs, activity bell, scheduler panel.                                     |
-| Brand/manga | `apps/board/src/components/manga`  |     3 | Crescent/wordmark logo, speed lines/doodles/underline, shortcut dialog.                                       |
-| Primitives  | `apps/board/src/components/ui`     |    13 | Button, command, dialog, dropdown, input, label, popover, select, sheet, skeleton, switch, textarea, tooltip. |
-| Data views  | `apps/board/src/components/views`  |     8 | List/form/field renderers, import, query builder, chatter, one-to-many and tags.                              |
+| Group       | Current source                     | Count | Role                                                                                                           |
+| ----------- | ---------------------------------- | ----: | -------------------------------------------------------------------------------------------------------------- |
+| Layout      | `apps/board/src/components/layout` |     5 | App shell, route protection, breadcrumbs, activity bell, scheduler panel.                                      |
+| Brand/manga | `apps/board/src/components/manga`  |     3 | Crescent/wordmark logo, speed lines/doodles/underline, shortcut dialog.                                        |
+| Primitives  | `apps/board/src/components/ui`     |     6 | Board-local command, label, popover, sheet, switch, and textarea; shared controls come from `@moonwitness/ui`. |
+| Data views  | `apps/board/src/components/views`  |     8 | List/form/field renderers, import, query builder, chatter, one-to-many and tags.                               |
 
-`apps/board/src/index.css` is the only current visual token source. It defines paper/ink/lime/pink light and dark values, semantic aliases, Anton/Space Grotesk/JetBrains Mono stacks, hard-shadow utilities, halftone backgrounds, and reduced-motion behavior. Fonts are loaded from Google Fonts by `apps/board/index.html` with local generic fallbacks. Icons currently come from `lucide-react`; there is no `packages/assets` or `packages/ui` workspace package yet. The existing 29 files should be evaluated as migration inputs; do not duplicate a component just to satisfy a new package boundary.
+The baseline above recorded 29 Board component files before shared package adoption. M5.14 removed seven pass-through primitive adapters; the six remaining local UI files contain Board-local compositions with no equivalent public `@moonwitness/ui` primitive yet. `packages/ui/src/styles/tokens.css` owns shared brand and semantic values; `apps/board/src/index.css` imports those values and adds Tailwind aliases and Board-specific styling. Typography includes Anton, Space Grotesk, and JetBrains Mono with system fallbacks. `packages/assets` is the canonical source for MoonWitness brand SVGs, icons, and illustrations, while Board still uses `lucide-react` for general application controls. Keep these boundaries explicit and avoid copying package components merely to make the directory counts match.
 
 ## Visual audit
 
