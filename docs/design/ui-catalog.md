@@ -21,6 +21,13 @@ the built output at that nested path and check responsive layout, theme
 switching, filtering, fragment navigation, tabs, and dialog keyboard/focus
 behavior.
 
+`pnpm test:ui-catalog` also runs WCAG 2.1 A/AA scans in light and dark themes
+and checks a representative layout/token baseline. Review a changed visual
+contract JSON before updating it with `pnpm ui:visual:update`; desktop/mobile
+screenshots are retained as CI artifacts. `pnpm test:ui-budget` checks that
+bundled JavaScript stays below 512 KiB raw / 160 KiB gzip and CSS below 64 KiB
+raw / 16 KiB gzip.
+
 The build output is `apps/ui-catalog/dist`. The catalog has not been published:
 the docs portal integration is M6.06 and the GitHub Pages artifact/settings are
 M6.07. See [ADR 0002](../decisions/0002-ui-catalog.md) for the framework choice.

@@ -8,9 +8,12 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 2 : 1,
-  reporter: 'list',
+  reporter: [['list'], ['junit', { outputFile: '../../test-results/junit/ui-catalog.xml' }]],
+  outputDir: '../../test-results/ui-catalog',
+  snapshotPathTemplate: '{testDir}/{testFilePath}-snapshots/{arg}{ext}',
   use: {
     baseURL,
+    reducedMotion: 'reduce',
     trace: 'retain-on-failure',
     ...devices['Desktop Chrome'],
   },

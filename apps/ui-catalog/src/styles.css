@@ -105,6 +105,7 @@ a:focus-visible {
   height: 2.7rem;
   place-items: center;
   border: 2px solid var(--mw-ink);
+  color: var(--mw-on-accent);
   background: var(--mw-lime);
   font-family: var(--mw-font-display);
 }
@@ -112,6 +113,9 @@ a:focus-visible {
 .catalog-brand small {
   display: block;
   letter-spacing: 0.08em;
+}
+.catalog-brand strong {
+  color: var(--mw-ink);
 }
 .catalog-brand small {
   margin-top: 0.2rem;
@@ -201,6 +205,7 @@ a:focus-visible {
 }
 .catalog-highlight {
   display: inline;
+  color: var(--mw-on-accent);
   background: var(--mw-lime);
   box-decoration-break: clone;
   padding-inline: 0.08em;

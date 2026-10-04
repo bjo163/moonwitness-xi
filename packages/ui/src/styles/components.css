@@ -63,12 +63,14 @@
 
   .mw-ui-button[data-variant='ghost'] {
     border-color: transparent;
+    color: var(--mw-surface-foreground);
     background: transparent;
     box-shadow: none;
   }
 
   .mw-ui-button[data-variant='link'] {
     border-color: transparent;
+    color: var(--mw-surface-foreground);
     background: transparent;
     box-shadow: none;
     text-decoration: underline;
@@ -229,7 +231,7 @@
     font-size: 0.875rem;
   }
   .mw-ui-field-error {
-    color: var(--mw-destructive);
+    color: var(--mw-ink);
     font-size: 0.875rem;
   }
   .mw-ui-skeleton {
@@ -412,7 +414,7 @@
   }
   .mw-ui-chart-error {
     border-color: var(--mw-destructive);
-    color: var(--mw-destructive);
+    color: var(--mw-ink);
   }
   .mw-ui-chart-legend {
     display: flex;
@@ -628,6 +630,9 @@
     font: inherit;
     font-size: 0.875rem;
     white-space: nowrap;
+  }
+  .mw-ui-select-trigger[data-placeholder] {
+    color: var(--mw-ink-soft);
   }
   .mw-ui-select-trigger[data-size='sm'] {
     min-height: 2rem;

@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { EmptyState } from '../dist/components/empty-state.js';
+import { BarChart } from '../dist/components/chart.js';
 import { Field } from '../dist/components/field.js';
 import { PageHeader } from '../dist/components/page-header.js';
 import { Pagination } from '../dist/components/pagination.js';
@@ -46,6 +47,20 @@ test('pagination is controlled, bounded, and exposes disabled edge actions', () 
   assert.match(html, /aria-label="Pagination"/);
   assert.match(html, /disabled=""/);
   assert.match(html, /Page 1 of 4/);
+});
+
+test('labeled skeleton is a status and chart scroll regions are keyboard accessible', () => {
+  const html = renderToStaticMarkup(
+    React.createElement(
+      React.Fragment,
+      null,
+      React.createElement(Skeleton, { label: 'Loading model records' }),
+      React.createElement(BarChart, { title: 'Model totals', data: [{ label: 'Users', value: 4 }] })
+    )
+  );
+
+  assert.match(html, /<div[^>]*aria-label="Loading model records"[^>]*role="status"/);
+  assert.match(html, /role="region"[^>]*aria-label="Model totals chart data"[^>]*tabindex="0"/);
 });
 
 test('composition parts retain landmarks and semantic table markup', () => {

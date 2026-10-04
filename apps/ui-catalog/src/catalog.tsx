@@ -385,9 +385,12 @@ export function Catalog() {
                       <option value="viewer">Viewer</option>
                     </SelectField>
                   </Field>
-                  <Field htmlFor="catalog-role" label="Accessible select">
+                  <div className="catalog-field">
+                    <label id="catalog-role-label" htmlFor="catalog-role-trigger">
+                      Accessible select
+                    </label>
                     <Select defaultValue="member">
-                      <SelectTrigger id="catalog-role">
+                      <SelectTrigger id="catalog-role-trigger" aria-labelledby="catalog-role-label">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -396,7 +399,7 @@ export function Catalog() {
                         <SelectItem value="viewer">Viewer</SelectItem>
                       </SelectContent>
                     </Select>
-                  </Field>
+                  </div>
                   <label className="catalog-check-row" htmlFor="catalog-consent">
                     <Checkbox
                       id="catalog-consent"

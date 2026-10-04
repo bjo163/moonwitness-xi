@@ -4,7 +4,7 @@ import { exit } from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
-const requiredJobs = ['quality', 'integration', 'browser', 'containers', 'automation'];
+const requiredJobs = ['quality', 'integration', 'browser', 'containers', 'automation', 'ui'];
 
 export const isCiGatePassing = (results, selectedJobs = requiredJobs, planResult = 'success') =>
   planResult === 'success' &&

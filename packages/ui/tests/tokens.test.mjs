@@ -107,6 +107,8 @@ test('composition styles stay scoped and skeleton respects reduced motion', asyn
   }
   assert.match(componentCss, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
   assert.match(componentCss, /\.mw-ui-skeleton[\s\S]*?animation:\s*mw-ui-pulse/);
+  assert.match(componentCss, /\.mw-ui-field-error\s*\{\s*color:\s*var\(--mw-ink\)/);
+  assert.match(componentCss, /\.mw-ui-chart-error\s*\{[^}]*color:\s*var\(--mw-ink\)/);
 });
 
 test('component CSS contains no global element or ID selectors', async () => {

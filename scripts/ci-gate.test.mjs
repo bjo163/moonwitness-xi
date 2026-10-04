@@ -8,6 +8,7 @@ const successfulResults = {
   browser: 'success',
   containers: 'success',
   automation: 'success',
+  ui: 'success',
 };
 
 test('accepts a success from every required job', () => {

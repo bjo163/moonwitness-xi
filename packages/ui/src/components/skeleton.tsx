@@ -12,6 +12,7 @@ export function Skeleton({ className, label, ...props }: SkeletonProps) {
       aria-hidden={label ? undefined : true}
       className={['mw-ui-skeleton', className].filter(Boolean).join(' ')}
       data-slot="skeleton"
+      role={label ? 'status' : undefined}
       {...props}
     />
   );

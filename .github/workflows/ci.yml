@@ -42,8 +42,8 @@ jobs:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
           if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" || "$BASE_REF" == "main" || "$GITHUB_REF" == "refs/heads/main" ]]; then
-            echo 'projects=["quality","integration","browser","containers","automation"]' >> "$GITHUB_OUTPUT"
-            echo 'plan={"mode":"full","reason":"full-validation","projects":["quality","integration","browser","containers","automation"]}' >> "$GITHUB_OUTPUT"
+            echo 'projects=["quality","integration","browser","containers","automation","ui"]' >> "$GITHUB_OUTPUT"
+            echo 'plan={"mode":"full","reason":"full-validation","projects":["quality","integration","browser","containers","automation","ui"]}' >> "$GITHUB_OUTPUT"
           else
             base_sha="${BASE_SHA:-$(git rev-parse origin/main)}"
             pnpm ci:affected "$base_sha" "$HEAD_SHA" --json
@@ -206,6 +206,43 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  ui:
+    name: ui
+    needs: [plan]
+    if: contains(fromJSON(needs.plan.outputs.projects), 'ui')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          node-version: '22'
+          pnpm-version: '11'
+      - name: Install Chromium and operating-system dependencies
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Test shared UI package public exports and component contracts
+        run: pnpm test:ui
+      - name: Validate source SVG assets and static documentation exports
+        run: pnpm test:assets
+      - name: Enforce tested JavaScript and CSS bundle budgets
+        run: pnpm test:ui-budget
+      - name: Test UI catalog interactions, WCAG, and visual contract
+        run: pnpm --filter @moonwitness/ui-catalog test
+      - name: Scan UI browser reports before artifact upload
+        id: scan_ui_reports
+        if: always()
+        run: node scripts/scan-test-reports.mjs
+      - name: Upload UI browser report and visual screenshots only
+        if: always() && steps.scan_ui_reports.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-catalog-playwright-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            test-results/junit/ui-catalog.xml
+            test-results/ui-catalog/**/*.png
+          if-no-files-found: ignore
+          retention-days: 7
+
   containers:
     name: containers
     needs: [plan]
@@ -224,7 +261,7 @@ jobs:
   ci-gate:
     name: ci-gate
     if: always()
-    needs: [plan, quality, integration, browser, containers, automation]
+    needs: [plan, quality, integration, browser, containers, automation, ui]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -245,6 +282,7 @@ jobs:
           BROWSER_RESULT: ${{ needs.browser.result }}
           CONTAINERS_RESULT: ${{ needs.containers.result }}
           AUTOMATION_RESULT: ${{ needs.automation.result }}
+          UI_RESULT: ${{ needs.ui.result }}
         run: |
           PLAN_RESULT="$PLAN_RESULT" \
           SELECTED_JOBS="$SELECTED_JOBS" \
@@ -253,6 +291,7 @@ jobs:
           BROWSER_RESULT="$BROWSER_RESULT" \
           CONTAINERS_RESULT="$CONTAINERS_RESULT" \
           AUTOMATION_RESULT="$AUTOMATION_RESULT" \
+          UI_RESULT="$UI_RESULT" \
           node scripts/ci-gate.mjs || true
       - name: Require every mandatory job to succeed
         env:
@@ -263,6 +302,7 @@ jobs:
           BROWSER_RESULT: ${{ needs.browser.result }}
           CONTAINERS_RESULT: ${{ needs.containers.result }}
           AUTOMATION_RESULT: ${{ needs.automation.result }}
+          UI_RESULT: ${{ needs.ui.result }}
         run: |
           PLAN_RESULT="$PLAN_RESULT" \
           SELECTED_JOBS="$SELECTED_JOBS" \
@@ -271,6 +311,7 @@ jobs:
           BROWSER_RESULT="$BROWSER_RESULT" \
           CONTAINERS_RESULT="$CONTAINERS_RESULT" \
           AUTOMATION_RESULT="$AUTOMATION_RESULT" \
+          UI_RESULT="$UI_RESULT" \
           node scripts/ci-gate.mjs
       - name: Require fresh CODEOWNER approval for sensitive promotions
         if: needs.plan.outputs.approval-required == 'true'

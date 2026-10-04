@@ -113,7 +113,12 @@ export function BarChart({
       className={className}
       {...props}
     >
-      <div className="mw-ui-chart-scroll">
+      <div
+        className="mw-ui-chart-scroll"
+        role="region"
+        aria-label={`${title} chart data`}
+        tabIndex={0}
+      >
         <svg
           className="mw-ui-bar-chart"
           viewBox={`0 0 560 ${Math.max(72, validData.length * 34 + 16)}`}
@@ -219,7 +224,12 @@ export function LineChart({
       className={className}
       {...props}
     >
-      <div className="mw-ui-chart-scroll">
+      <div
+        className="mw-ui-chart-scroll"
+        role="region"
+        aria-label={`${title} chart data`}
+        tabIndex={0}
+      >
         <svg
           className="mw-ui-line-chart"
           viewBox={`0 0 ${width} 220`}
