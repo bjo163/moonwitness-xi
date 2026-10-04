@@ -95,8 +95,8 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11'
-      - name: Validate GitHub workflows
-        run: docker run --rm -v "$PWD:/work" -w /work rhysd/actionlint:1.7.7 -color .github/workflows/ci.yml .github/workflows/release.yml .github/workflows/promote.yml .github/workflows/sync-main-to-dev.yml
+      - name: Validate workflows and shell scripts
+        run: bash scripts/check-automation.sh
       - name: Test affected selection, release classification, and promotion policy
         run: pnpm test:ci-gate && pnpm test:affected && pnpm test:release-classification && pnpm test:promotion-policy
 
