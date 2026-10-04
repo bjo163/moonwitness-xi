@@ -225,7 +225,6 @@ describe('declarative addons', () => {
         }
       }
 
-      const fieldNames = new Set(Object.keys(model.fields));
       const usedColumns = [
         ...(view?.spec.list?.columns ?? []),
         ...(view?.spec.search?.fields ?? []),

@@ -19,6 +19,7 @@ import {
 } from '@moonwitness/orm-base';
 import { createAuthService, manifest as authManifest } from '@moonwitness/auth';
 import { jobsManifest } from '@moonwitness/jobs';
+import { manifest as baseManifest } from '@moonwitness/orm-base';
 import { buildApp } from '../src/app.js';
 import { verifyDefaultBaseAccounts } from '../src/startup-checks.js';
 
@@ -211,6 +212,24 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
         3
       );
       expect(Number((await concurrentDb('users').count({ count: '*' }).first())?.count)).toBe(2);
+      const seedCount = baseManifest.data?.length ?? 0;
+      expect(Number((await concurrentDb('_orm_data').count({ count: '*' }).first())?.count)).toBe(
+        seedCount + (authManifest.data?.length ?? 0) + (jobsManifest.data?.length ?? 0)
+      );
+      const seededSuperadmin = await concurrentDb('_orm_data')
+        .where({ id: 'base.user_superadmin', model: 'base.user' })
+        .first('record_id');
+      expect(seededSuperadmin).toBeDefined();
+
+      await installAddons(concurrentDb, [manifest, authManifest, jobsManifest]);
+      expect(Number((await concurrentDb('_orm_data').count({ count: '*' }).first())?.count)).toBe(
+        seedCount + (authManifest.data?.length ?? 0) + (jobsManifest.data?.length ?? 0)
+      );
+      await expect(
+        concurrentDb('_orm_data')
+          .where({ id: 'base.user_superadmin', model: 'base.user' })
+          .first('record_id')
+      ).resolves.toEqual(seededSuperadmin);
     } finally {
       await concurrentDb.destroy();
       await adminDb.raw('drop schema if exists ?? cascade', [concurrentSchema]);
