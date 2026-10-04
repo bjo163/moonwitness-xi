@@ -33,10 +33,10 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 
 ## M0 — Inventarisasi dan baseline (prasyarat semua jalur)
 
-- [ ] M0.01 Inventarisasi package, model, endpoint, view, menu, akses, seed, scheduler, worker, outbox, import/export, dan attachment yang benar-benar tersedia.
-- [ ] M0.02 Buat matriks fitur → role/company → skenario sukses/gagal → unit/integration/E2E → bukti → gap.
-- [ ] M0.03 Rekam baseline typecheck, lint, format, build, test, coverage, bundle, performa, dan warning. Pisahkan kegagalan dari test yang skipped.
-- [ ] M0.04 Audit GitHub settings, workflows, permissions, Pages, registry, rulesets, status checks, dan ketersediaan fitur akun tanpa menampilkan secret.
+- [x] M0.01 Inventarisasi package, model, endpoint, view, menu, akses, seed, scheduler, worker, outbox, import/export, dan attachment yang benar-benar tersedia. Bukti: [M0.01](docs/roadmap/evidence/M0.01.md).
+- [x] M0.02 Buat matriks fitur → role/company → skenario sukses/gagal → unit/integration/E2E → bukti → gap. Bukti: [M0.02](docs/roadmap/evidence/M0.02.md).
+- [x] M0.03 Rekam baseline typecheck, lint, format, build, test, coverage, bundle, performa, dan warning. Pisahkan kegagalan dari test yang skipped. Bukti: [M0.03](docs/roadmap/evidence/M0.03.md).
+- [x] M0.04 Audit GitHub settings, workflows, permissions, Pages, registry, rulesets, status checks, dan ketersediaan fitur akun tanpa menampilkan secret. Bukti: [M0.04](docs/roadmap/evidence/M0.04.md).
 - [ ] M0.05 Inventarisasi duplikasi, komponen besar, dependency tidak terpakai, siklus import, dan tanggung jawab yang masih membebani apps/api atau Board.
 - [ ] M0.06 Tetapkan versi runtime/database/browser yang didukung, anggaran durasi CI, retensi artefak, serta baseline performa yang terukur.
 - [ ] M0.07 Dokumentasikan keputusan arsitektur: versi monorepo bersama, dua branch, model promosi, sumber metadata, dan batas package.
