@@ -247,7 +247,7 @@ Tes membuktikan deadline shutdown/socket close, drain job aktif, probe liveness/
 
 Implementasi dan hasil CI dicatat dalam [evidence M4.13](evidence/M4.13.md). Probe worker opsional dan default-nya nonaktif; operator perlu mengaktifkannya pada jaringan privat bila orkestrator membutuhkannya. Promosi ke `main` tetap mengikuti CODEOWNER gate.
 
-## M4.14 — Restore drill dengan data aplikasi, relasi, akun test dan integrity checks; tetapkan target pemulihan berbasis hasil pengukuran.
+## M4.14 — Restore drill dengan data aplikasi, relasi, akun test dan integrity checks; tetapkan target pemulihan berbasis hasil pengukuran. **Selesai**
 
 - **Prasyarat:** M4.02, M4.03
 - **Baca/periksa:** backup-postgres.sh; restore-postgres.sh; PostgreSQL fixture.
@@ -256,7 +256,7 @@ Implementasi dan hasil CI dicatat dalam [evidence M4.13](evidence/M4.13.md). Pro
 ### Langkah pelaksanaan
 
 1. Buat dua database dengan nama acak pada PostgreSQL CI service; fixture hanya menerima URL database source/target yang diturunkan dari maintenance URL.
-2. Instal Base/Auth/Jobs secara programatik pada source, set password admin sintetis acak, lalu buat akun fixture melalui alur auth normal, partner parent/child, alamat primary, company membership, dan group membership.
+2. Instal Base/Auth/Jobs secara programatik pada source, set password admin sintetis, lalu buat akun fixture ber-password acak melalui alur auth normal, partner parent/child, alamat primary, company membership, dan group membership.
 3. Catat jumlah row pada tabel aplikasi, external ID default company/user, dan ID fixture; buat custom-format dump di direktori sementara dengan permission terbatas.
 4. Jalankan restore ke target kosong melalui skrip operasional yang sama. Kirim konfirmasi nama target yang salah lebih dahulu dan wajibkan skrip menolaknya sebelum mengirim nama target yang tepat.
 5. Pada target, bandingkan count dan seluruh ID, periksa foreign-key references company/partner/address/membership, lalu login akun sintetis untuk membuktikan password hash dan data auth benar-benar pulih.
@@ -265,9 +265,9 @@ Implementasi dan hasil CI dicatat dalam [evidence M4.13](evidence/M4.13.md). Pro
 
 ### Verifikasi dan syarat selesai
 
-Restore mismatch confirmation ditolak; database source/target bernama acak dan hanya source fixture yang di-dump; integrity counts/IDs/relations serta login fixture pass; waktu dump/restore dilaporkan; cleanup tidak meninggalkan database atau dump. Bukti menyatakan RPO/RTO produksi belum ditetapkan bila frekuensi backup off-host dan waktu cutover belum terukur.
+Semua acceptance diverifikasi dalam [evidence M4.14](evidence/M4.14.md). Hasil durasi berlaku untuk fixture CI itu; RPO/RTO produksi belum ditetapkan karena frekuensi backup off-host dan waktu cutover belum terukur.
 
-Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M4.14.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
+Detail command, hasil, SHA, hosted CI, batasan RPO/RTO, serta cleanup dicatat pada [evidence M4.14](evidence/M4.14.md).
 
 ## M4.15 — Tambahkan baseline load/query tests dan budget regresi realistis; ukur N+1 serta operasi yang memperbesar penggunaan memori.
 

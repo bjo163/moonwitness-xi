@@ -372,11 +372,13 @@ sebelum mengubahnya. CI menjalankan `pnpm test:restore-drill` dengan dua databas
 acak: addon dan data aplikasi sintetis di-dump, lalu dipulihkan menggunakan skrip yang sama
 ke target terpisah. Drill membuktikan mismatch confirmation ditolak tanpa mengubah sentinel
 target, membandingkan jumlah row dan ID, memeriksa relasi/membership, dan mencoba login
-sesudah pemulihan; durasi dump
-dan restore dicatat sebagai pengukuran fixture CI. Untuk menjalankannya sendiri, siapkan
+sesudah pemulihan; durasi dump dan restore dicatat sebagai pengukuran fixture CI. Untuk
+menjalankannya sendiri, siapkan
 `POSTGRES_TEST_URL` dan PostgreSQL client utilities (`pg_dump`, `pg_restore`, `createdb`,
-`dropdb`, `psql`). Drill satu kali ini tidak menetapkan RPO atau RTO produksi: frekuensi
-backup off-host dan waktu provisioning/cutover harus ditetapkan serta diukur oleh operator.
+`dropdb`, `psql`). Untuk mencegah koneksi salah sasaran, drill hanya berjalan pada host
+loopback dan nama database yang mengandung `test`, `e2e`, atau `ci`. Drill satu kali ini
+tidak menetapkan RPO atau RTO produksi: frekuensi backup off-host dan waktu
+provisioning/cutover harus ditetapkan serta diukur oleh operator.
 Simpan backup produksi di luar server/database utama dan gunakan enkripsi storage yang
 dikelola infrastruktur.
 
