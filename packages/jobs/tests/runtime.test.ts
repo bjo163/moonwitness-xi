@@ -81,6 +81,53 @@ describe('durable job runtime', () => {
     }
   });
 
+  it('allows only one concurrent worker to claim the same queued job', async () => {
+    let invocations = 0;
+    let signalStarted: (() => void) | undefined;
+    let releaseHandler: (() => void) | undefined;
+    const started = new Promise<void>((resolve) => {
+      signalStarted = resolve;
+    });
+    const hold = new Promise<void>((resolve) => {
+      releaseHandler = resolve;
+    });
+    const unregister = registerJobHandler({
+      name: 'test.single-claim',
+      version: 1,
+      parse(payload: unknown): { run: true } {
+        if (typeof payload !== 'object' || payload === null || !('run' in payload))
+          throw new Error('invalid payload');
+        return { run: true };
+      },
+      async run() {
+        invocations += 1;
+        signalStarted?.();
+        await hold;
+      },
+    });
+    try {
+      const jobId = await enqueueJob('test.single-claim', { run: true });
+      const firstWorker = runOneJob({
+        workerId: 'worker-one',
+        leaseSeconds: 6,
+        heartbeatSeconds: 2,
+      });
+      await started;
+      expect(await runOneJob({ workerId: 'worker-two' })).toBe(false);
+      releaseHandler?.();
+      expect(await firstWorker).toBe(true);
+      expect(invocations).toBe(1);
+      expect(await Job.query().findById(jobId)).toMatchObject({
+        status: 'succeeded',
+        lease_owner: null,
+        fencing_token: 1,
+      });
+    } finally {
+      releaseHandler?.();
+      unregister();
+    }
+  });
+
   it('retries a transient failure and dead-letters a permanent failure', async () => {
     let calls = 0;
     const unregister = registerJobHandler({
@@ -99,7 +146,11 @@ describe('durable job runtime', () => {
     });
     try {
       const id = await enqueueJob('test.retry', { ok: true }, { maxAttempts: 2 });
-      expect(await runOneJob({ workerId: 'worker-b', retryBaseSeconds: 0 })).toBe(true);
+      const firstAttemptAt = Date.now();
+      expect(await runOneJob({ workerId: 'worker-b', retryBaseSeconds: 2 })).toBe(true);
+      const waiting = await Job.query().findById(id).throwIfNotFound();
+      expect(Date.parse(waiting.available_at)).toBeGreaterThan(firstAttemptAt + 1000);
+      expect(await runOneJob({ workerId: 'worker-b' })).toBe(false);
       await Job.query()
         .findById(id)
         .patch({ available_at: new Date(0).toISOString() });
@@ -110,6 +161,56 @@ describe('durable job runtime', () => {
         fencing_token: 2,
       });
       expect(await JobRun.query().where({ job_id: id }).orderBy('attempt')).toHaveLength(2);
+    } finally {
+      unregister();
+    }
+  });
+
+  it('reclaims an expired lease with a new fencing token and preserves attempt history', async () => {
+    const unregister = registerJobHandler({
+      name: 'test.reclaim',
+      version: 1,
+      parse(payload: unknown): { run: true } {
+        if (typeof payload !== 'object' || payload === null || !('run' in payload))
+          throw new Error('invalid payload');
+        return { run: true };
+      },
+      async run() {
+        return { recovered: true };
+      },
+    });
+    try {
+      const expired = await Job.query().insertAndFetch({
+        handler: 'test.reclaim',
+        handler_version: 1,
+        payload: '{"run":true}',
+        status: 'running',
+        attempts: 1,
+        max_attempts: 3,
+        fencing_token: 1,
+        lease_owner: 'crashed-worker',
+        lease_until: new Date(0).toISOString(),
+        available_at: new Date(0).toISOString(),
+      });
+      const previousRun = await JobRun.query().insertAndFetch({
+        job_id: expired.id,
+        attempt: 1,
+        worker_id: 'crashed-worker',
+        status: 'running',
+        started_at: new Date(0).toISOString(),
+      });
+
+      expect(await runOneJob({ workerId: 'recovery-worker' })).toBe(true);
+      expect(await Job.query().findById(expired.id)).toMatchObject({
+        status: 'succeeded',
+        attempts: 2,
+        fencing_token: 2,
+      });
+      expect(await JobRun.query().findById(previousRun.id)).toMatchObject({
+        status: 'retrying',
+        error_code: 'LEASE_EXPIRED',
+      });
+      expect(await JobRun.query().where({ job_id: expired.id })).toHaveLength(2);
     } finally {
       unregister();
     }
@@ -249,6 +350,46 @@ describe('durable job runtime', () => {
       expect(await Job.query().where({ cron_id: cron.id })).toHaveLength(1);
       const advanced = await Cron.query().findById(cron.id);
       expect(Date.parse(advanced?.next_run_at ?? '')).toBeGreaterThan(now.getTime());
+    } finally {
+      unregister();
+    }
+  });
+
+  it('coalesces repeated wall-clock cron occurrences across a daylight-saving transition', async () => {
+    const unregister = registerJobHandler({
+      name: 'test.dst',
+      version: 1,
+      parse(payload: unknown): { run: true } {
+        if (typeof payload !== 'object' || payload === null || !('run' in payload))
+          throw new Error('invalid payload');
+        return { run: true };
+      },
+      async run() {
+        return null;
+      },
+    });
+    try {
+      const company = await Company.query().findOne({ name: 'MoonWitness' }).throwIfNotFound();
+      const now = new Date('2026-11-01T07:00:00.000Z');
+      const cron = await Cron.query().insertAndFetch({
+        code: 'test.dst-fallback',
+        name: 'DST fallback schedule',
+        handler: 'test.dst',
+        payload: '{"run":true}',
+        company_id: company.id,
+        cron_expression: '30 1 * * *',
+        timezone: 'America/New_York',
+        enabled: true,
+        next_run_at: '2026-11-01T05:30:00.000Z',
+        misfire_policy: 'coalesce',
+        concurrency_policy: 'allow',
+        max_catch_up: 3,
+      });
+
+      expect(await enqueueDueCrons({ now })).toBe(1);
+      expect(await Job.query().where({ cron_id: cron.id })).toHaveLength(1);
+      const advanced = await Cron.query().findById(cron.id).throwIfNotFound();
+      expect(Date.parse(advanced.next_run_at)).toBeGreaterThan(now.getTime());
     } finally {
       unregister();
     }

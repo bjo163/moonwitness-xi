@@ -19,7 +19,14 @@ import {
   manifest,
 } from '@moonwitness/orm-base';
 import { createAuthService, manifest as authManifest } from '@moonwitness/auth';
-import { jobsManifest } from '@moonwitness/jobs';
+import {
+  Job,
+  JobRun,
+  enqueueJob,
+  jobsManifest,
+  registerJobHandler,
+  runOneJob,
+} from '@moonwitness/jobs';
 import { manifest as baseManifest } from '@moonwitness/orm-base';
 import { buildApp } from '../src/app.js';
 import { verifyDefaultBaseAccounts } from '../src/startup-checks.js';
@@ -362,5 +369,52 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     await resetSuperadminPassword('postgres-flow-reset-password');
     expect((await login('postgres-flow-initial-password')).statusCode).toBe(401);
     expect((await login('postgres-flow-reset-password')).statusCode).toBe(200);
+  }, 30000);
+
+  it('claims one PostgreSQL job once when two workers race for the same queue item', async () => {
+    let signalStarted: (() => void) | undefined;
+    let releaseHandler: (() => void) | undefined;
+    let invocations = 0;
+    const started = new Promise<void>((resolve) => {
+      signalStarted = resolve;
+    });
+    const hold = new Promise<void>((resolve) => {
+      releaseHandler = resolve;
+    });
+    const unregister = registerJobHandler({
+      name: 'test.postgres-claim',
+      version: 1,
+      parse(payload: unknown): { run: true } {
+        if (typeof payload !== 'object' || payload === null || !('run' in payload))
+          throw new Error('invalid payload');
+        return { run: true };
+      },
+      async run() {
+        invocations += 1;
+        signalStarted?.();
+        await hold;
+      },
+    });
+    try {
+      const jobId = await enqueueJob('test.postgres-claim', { run: true });
+      const firstWorker = runOneJob({
+        workerId: 'postgres-worker-one',
+        leaseSeconds: 6,
+        heartbeatSeconds: 2,
+      });
+      await started;
+      expect(await runOneJob({ workerId: 'postgres-worker-two' })).toBe(false);
+      releaseHandler?.();
+      expect(await firstWorker).toBe(true);
+      expect(invocations).toBe(1);
+      expect(await Job.query().findById(jobId)).toMatchObject({
+        status: 'succeeded',
+        fencing_token: 1,
+      });
+      expect(await JobRun.query().where({ job_id: jobId })).toHaveLength(1);
+    } finally {
+      releaseHandler?.();
+      unregister();
+    }
   }, 30000);
 });

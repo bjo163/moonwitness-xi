@@ -452,6 +452,8 @@
     },
     {
       "id": "M4.10",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M4.10.md",
       "title": "Scheduler/worker: claim atomik, lease, heartbeat, retry/backoff, recovery setelah crash, cancellation, dead-letter, dan job history.",
       "milestone": "M4",
       "dependsOn": ["M0.01", "M2.07"],

@@ -98,7 +98,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 - [x] M4.07 Batasi pagination, query cost, kedalaman eager relations, payload, sorting, dan filter; cegah mass assignment. Bukti: [M4.07](docs/roadmap/evidence/M4.07.md); limit input REST/JSON-RPC dan payload 1 MiB diverifikasi.
 - [x] M4.08 Pastikan field sensitif tidak muncul dalam JSON, export, audit, error, atau log. Bukti: [M4.08](docs/roadmap/evidence/M4.08.md); REST/RPC/ORM, audit/outbox, logger sentinel, dan Board CSV Chromium diverifikasi.
 - [x] M4.09 Audit transaksi, constraint, indexes, concurrency edits, timezone, error mapping, dan rollback kegagalan upgrade programatis. Bukti: [M4.09](docs/roadmap/evidence/M4.09.md); PostgreSQL integration memeriksa upgrade, FK/unique mapping, update konkuren, dan kontrak UTC/last-commit-wins.
-- [ ] M4.10 Scheduler/worker: claim atomik, lease, heartbeat, retry/backoff, recovery setelah crash, cancellation, dead-letter, dan job history.
+- [x] M4.10 Scheduler/worker: claim atomik, lease, heartbeat, retry/backoff, recovery setelah crash, cancellation, dead-letter, dan job history. Bukti: [M4.10](docs/roadmap/evidence/M4.10.md); 9 jobs tests + 4 PostgreSQL integration tests memeriksa claim/reclaim/fencing, retry, cancellation, DST, dan concurrent workers.
 - [ ] M4.11 Outbox: transactional enqueue, delivery retries, deduplication/idempotency, dan pengujian efek eksternal ganda; jangan mengklaim exactly-once tanpa bukti.
 - [ ] M4.12 Attachment: izin upload/download, size/MIME, filename/path traversal, storage ownership, dan retensi.
 - [ ] M4.13 Operasional: graceful shutdown, DB pools/timeouts, request ID, redaksi log, readiness/liveness API dan worker.
