@@ -14,8 +14,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  plan:
+    name: plan
+    runs-on: ubuntu-latest
+    outputs:
+      projects: ${{ steps.affected.outputs.projects }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          node-version: '22'
+          pnpm-version: '11'
+      - name: Select affected CI projects (promotion is always full)
+        id: affected
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          if [[ "$BASE_REF" == "main" || "$GITHUB_REF" == "refs/heads/main" ]]; then
+            echo 'projects=["quality","integration","browser","containers","automation"]' >> "$GITHUB_OUTPUT"
+            echo 'plan={"mode":"full","reason":"main-promotion","projects":["quality","integration","browser","containers","automation"]}' >> "$GITHUB_OUTPUT"
+          else
+            pnpm ci:affected -- "$BASE_SHA" "$HEAD_SHA" --json
+          fi
+
   quality:
     name: quality
+    needs: [plan]
+    if: contains(fromJSON(needs.plan.outputs.projects), 'quality')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -32,14 +61,24 @@ jobs:
 
   automation:
     name: automation
+    needs: [plan]
+    if: contains(fromJSON(needs.plan.outputs.projects), 'automation')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          node-version: '22'
+          pnpm-version: '11'
       - name: Validate GitHub workflows
         run: docker run --rm -v "$PWD:/work" -w /work rhysd/actionlint:1.7.7 -color .github/workflows/ci.yml .github/workflows/release.yml .github/workflows/promote.yml
+      - name: Test affected workspace selection and gate behavior
+        run: pnpm test:ci-gate && pnpm test:affected
 
   integration:
     name: integration
+    needs: [plan]
+    if: contains(fromJSON(needs.plan.outputs.projects), 'integration')
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -90,6 +129,8 @@ jobs:
 
   browser:
     name: browser
+    needs: [plan]
+    if: contains(fromJSON(needs.plan.outputs.projects), 'browser')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -131,6 +172,8 @@ jobs:
 
   containers:
     name: containers
+    needs: [plan]
+    if: contains(fromJSON(needs.plan.outputs.projects), 'containers')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -146,7 +189,7 @@ jobs:
   ci-gate:
     name: ci-gate
     if: always()
-    needs: [quality, integration, browser, containers, automation]
+    needs: [plan, quality, integration, browser, containers, automation]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -158,12 +201,16 @@ jobs:
         run: pnpm test:ci-gate
       - name: Require every mandatory job to succeed
         env:
+          PLAN_RESULT: ${{ needs.plan.result }}
+          SELECTED_JOBS: ${{ needs.plan.outputs.projects }}
           QUALITY_RESULT: ${{ needs.quality.result }}
           INTEGRATION_RESULT: ${{ needs.integration.result }}
           BROWSER_RESULT: ${{ needs.browser.result }}
           CONTAINERS_RESULT: ${{ needs.containers.result }}
           AUTOMATION_RESULT: ${{ needs.automation.result }}
         run: |
+          PLAN_RESULT="$PLAN_RESULT" \
+          SELECTED_JOBS="$SELECTED_JOBS" \
           QUALITY_RESULT="$QUALITY_RESULT" \
           INTEGRATION_RESULT="$INTEGRATION_RESULT" \
           BROWSER_RESULT="$BROWSER_RESULT" \

@@ -66,7 +66,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 - [x] M2.05 Tambahkan `ci-gate` yang memahami success/failure/cancelled/skipped dan menjadi keputusan akhir. Bukti: [M2.05](docs/roadmap/evidence/M2.05.md). _Aktivasi sebagai required status check masih M1.06._
 - [x] M2.06 Required PostgreSQL tests harus gagal jika konfigurasi test hilang; tidak boleh diam-diam skipped pada CI wajib. Bukti dan run: [M2.06](docs/roadmap/evidence/M2.06.md), [CI 37164074612](https://github.com/bjo163/moonwitness-xi/actions/runs/37164074612).
 - [x] M2.07 Pakai database dan akun fixture terisolasi per run; seed deterministik, cleanup, dan jangan menyentuh database pengguna. Bukti: [M2.07](docs/roadmap/evidence/M2.07.md), [CI 37167792644](https://github.com/bjo163/moonwitness-xi/actions/runs/37167792644).
-- [ ] M2.08 Cache dependency/build; affected testing memperhitungkan transitive dependents dan shared config. Promosi menjalankan suite penuh.
+- [ ] M2.08 Cache dependency/build; affected testing memperhitungkan transitive dependents dan shared config. Promosi menjalankan suite penuh. _Planner, gate, dan cache lockfile siap; menunggu bukti CI terintegrasi._ Bukti: [M2.08](docs/roadmap/evidence/M2.08.md).
 - [ ] M2.09 Atur timeout, concurrency, pembatalan run usang, dan serialisasi penulisan branch/release.
 - [ ] M2.10 Hasilkan test report, coverage, job summary, serta log/trace yang disanitasi dengan retensi terbatas.
 - [ ] M2.11 Validasi YAML/workflow dan shell scripts; periksa lockfile frozen dan reproducibility generator.

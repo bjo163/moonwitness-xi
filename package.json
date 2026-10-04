@@ -23,7 +23,9 @@
     "docs:check": "node scripts/check-docs.mjs",
     "verify": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test:unit && pnpm docs:check",
     "release:check": "node scripts/check-release.mjs",
-    "test:ci-gate": "node --test scripts/ci-gate.test.mjs"
+    "test:ci-gate": "node --test scripts/ci-gate.test.mjs",
+    "ci:affected": "node scripts/select-affected.mjs",
+    "test:affected": "node --test scripts/select-affected.test.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
