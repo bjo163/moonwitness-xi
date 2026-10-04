@@ -5,6 +5,10 @@ on:
     tags: ['v*.*.*']
   workflow_dispatch:
     inputs:
+      version:
+        description: Version to verify for a non-publishing branch dry run (with or without the v prefix)
+        required: false
+        type: string
       publish:
         description: Publish the verified image and GitHub Release
         required: true
@@ -46,7 +50,13 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11'
-      - run: pnpm release:check "$GITHUB_REF_NAME"
+      - name: Verify workspace release version
+        env:
+          RELEASE_VERSION: ${{ inputs.version || github.ref_name }}
+        run: |
+          version="$RELEASE_VERSION"
+          if [[ "$version" != v* ]]; then version="v$version"; fi
+          pnpm release:check "$version"
       - run: pnpm lint
       - run: pnpm format:check
       - run: pnpm typecheck
@@ -63,7 +73,7 @@ jobs:
         run: docker compose -f docker-compose.production.yml config --quiet
 
   publish:
-    if: github.event_name == 'workflow_dispatch' && inputs.publish
+    if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref_type == 'tag'
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 30
