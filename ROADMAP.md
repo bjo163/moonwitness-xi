@@ -37,14 +37,14 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 - [x] M0.02 Buat matriks fitur → role/company → skenario sukses/gagal → unit/integration/E2E → bukti → gap. Bukti: [M0.02](docs/roadmap/evidence/M0.02.md).
 - [x] M0.03 Rekam baseline typecheck, lint, format, build, test, coverage, bundle, performa, dan warning. Pisahkan kegagalan dari test yang skipped. Bukti: [M0.03](docs/roadmap/evidence/M0.03.md).
 - [x] M0.04 Audit GitHub settings, workflows, permissions, Pages, registry, rulesets, status checks, dan ketersediaan fitur akun tanpa menampilkan secret. Bukti: [M0.04](docs/roadmap/evidence/M0.04.md).
-- [ ] M0.05 Inventarisasi duplikasi, komponen besar, dependency tidak terpakai, siklus import, dan tanggung jawab yang masih membebani apps/api atau Board.
-- [ ] M0.06 Tetapkan versi runtime/database/browser yang didukung, anggaran durasi CI, retensi artefak, serta baseline performa yang terukur.
-- [ ] M0.07 Dokumentasikan keputusan arsitektur: versi monorepo bersama, dua branch, model promosi, sumber metadata, dan batas package.
+- [ ] M0.05 Audit source size/duplikasi awal tersedia di [refactor map](docs/engineering/refactor-map.md); dependency-use/dependency-cycle audit masih perlu diselesaikan sebelum task dicentang.
+- [ ] M0.06 Runtime Node/pnpm/PostgreSQL tercatat di [support policy](docs/engineering/support-policy.md); browser matrix dan pengukuran budget/retensi pada runner masih perlu diselesaikan sebelum task dicentang.
+- [x] M0.07 Dokumentasikan keputusan arsitektur: versi monorepo bersama, dua branch, model promosi, sumber metadata, dan batas package. Bukti: [ADR 0001](docs/decisions/0001-platform-contracts.md).
 - [x] M0.08 Fresh install seed tepat 2 user + 10 partner (12 record utama); pertahankan partner existing pada upgrade, dan buktikan reinstall tidak menggandakan/menimpa edit. Bukti: [M0.08](docs/roadmap/evidence/M0.08.md).
 
 ## M1 — Governance dua branch (jalur A; setelah M0)
 
-- [ ] M1.01 Buat `dev` dari commit `main` yang tervalidasi, setelah memeriksa branch remote aktual.
+- [x] M1.01 Buat `dev` dari commit `main` yang tervalidasi, setelah memeriksa branch remote aktual. Bukti: [M1.01](docs/roadmap/evidence/M1.01.md).
 - [ ] M1.02 Batasi pembuatan branch selain `main`/`dev` melalui ruleset yang didukung repository.
 - [ ] M1.03 Lindungi kedua branch dari deletion dan force-push; dokumentasikan akses darurat yang sempit dan dapat diaudit.
 - [ ] M1.04 Batasi promosi `main` melalui PR `dev → main`; validasi sumber PR dengan check wajib.
