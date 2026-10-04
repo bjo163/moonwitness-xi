@@ -392,6 +392,8 @@
     },
     {
       "id": "M4.04",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M4.04.md",
       "title": "Verifikasi company default, reference countries, states, banks, partner bank, serta provenance/update policy data referensi; jangan mengklaim states lengkap bila hanya subset.",
       "milestone": "M4",
       "dependsOn": ["M0.08"],

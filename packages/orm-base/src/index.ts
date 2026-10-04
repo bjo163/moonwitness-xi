@@ -4,6 +4,8 @@ export { Company } from './models/company.js';
 export { Country } from './models/country.js';
 export { CountryState } from './models/country-state.js';
 export { countryStates } from './states.js';
+export { countryStateDataSource } from './states.js';
+export { countries, countryDataSource } from './countries.js';
 export { Bank, PartnerBank } from './models/bank.js';
 export { Currency } from './models/currency.js';
 export { Language } from './models/language.js';

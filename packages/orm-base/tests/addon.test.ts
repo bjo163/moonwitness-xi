@@ -13,6 +13,9 @@ import {
 } from '@moonwitness/orm';
 import {
   manifest,
+  countries,
+  countryDataSource,
+  countryStateDataSource,
   countryStates,
   Partner,
   User,
@@ -186,6 +189,44 @@ describe('declarative addons', () => {
       unlink: false,
     });
     expect(await GroupMembership.query().resultSize()).toBe(1);
+  });
+
+  it('validates reference-data codes, provenance, coverage, relations, and non-destructive updates', async () => {
+    expect(countryDataSource.standard).toBe('ISO 3166-1 alpha-2');
+    expect(countryDataSource.url).toMatch(/^https:\/\//);
+    expect(countryDataSource.verifiedDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(countries).toHaveLength(249);
+    expect(new Set(countries.map((country) => country.code)).size).toBe(countries.length);
+    expect(countries.every((country) => /^[A-Z]{2}$/.test(country.code))).toBe(true);
+    expect(countryStateDataSource.coverage).toContain('not complete worldwide');
+    expect(new Set(countryStates.map((state) => state.code)).size).toBe(countryStates.length);
+    expect(countryStates.every((state) => /^[A-Z]{2}-[A-Z0-9]{1,3}$/.test(state.code))).toBe(true);
+    expect(
+      countryStates.every((state) =>
+        countries.some((country) => country.code === state.countryCode)
+      )
+    ).toBe(true);
+
+    await installAddons(db, [manifest]);
+    const indonesia = await Country.query().findOne({ code: 'ID' }).throwIfNotFound();
+    const indonesianCountryState = await CountryState.query()
+      .findOne({ code: 'ID-JK' })
+      .throwIfNotFound();
+    await Country.query().findById(indonesia.id).patch({ name: 'User-customized Indonesia' });
+    await CountryState.query()
+      .findById(indonesianCountryState.id)
+      .patch({ name: 'User-customized Jakarta' });
+    await installAddons(db, [manifest]);
+    await expect(Country.query().findById(indonesia.id)).resolves.toMatchObject({
+      name: 'User-customized Indonesia',
+    });
+    await expect(CountryState.query().findById(indonesianCountryState.id)).resolves.toMatchObject({
+      name: 'User-customized Jakarta',
+    });
+    expect(await db('countries').count({ count: '*' }).first()).toMatchObject({ count: 249 });
+    expect(await db('country_states').count({ count: '*' }).first()).toMatchObject({
+      count: countryStates.length,
+    });
   });
 
   it('keeps addon metadata internally consistent across models, relations, views, menus, and seeds', async () => {
