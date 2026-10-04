@@ -5,11 +5,30 @@ import test from 'node:test';
 import {
   collectReferenceMetadata,
   extractRoutes,
+  findStaleGeneratedPaths,
   normalizeModel,
   validateModelCatalog,
 } from './generate-reference.mjs';
 
 const root = path.resolve(import.meta.dirname, '../..');
+
+test('stale generated output reports every changed or missing path deterministically', () => {
+  const actual = new Map([
+    ['docs/z.md', 'old'],
+    ['docs/a.md', 'old'],
+    ['docs/removed.md', 'old'],
+  ]);
+  const expected = new Map([
+    ['docs/z.md', 'new'],
+    ['docs/a.md', 'old'],
+    ['docs/added.md', 'new'],
+  ]);
+  assert.deepEqual(findStaleGeneratedPaths(actual, expected), [
+    'docs/added.md',
+    'docs/removed.md',
+    'docs/z.md',
+  ]);
+});
 
 test('model metadata preserves optionality and redacts defaults', () => {
   const model = normalizeModel({

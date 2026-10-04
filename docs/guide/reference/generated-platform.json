@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "10396f5e85da5878376ebf9c44c682fb7a3fd5431d86707f3f6803e730182816",
+  "generatedFromSha256": "9be4b338bcddeaaba267fd5f4da5b7760e05b4738bc98e5b2b94fba3c90d1cab",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -167,8 +167,10 @@
       "ci:affected": "node scripts/select-affected.mjs",
       "dev": "pnpm --filter @moonwitness/api dev",
       "dev:board": "pnpm --filter @moonwitness/board dev",
-      "docs:check": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && node --test scripts/docs/generate-reference.test.mjs scripts/docs/update-readme.test.mjs && node scripts/docs/generate-reference.mjs --check && node scripts/docs/update-readme.mjs --check && node scripts/check-docs.mjs && node scripts/check-doc-navigation.mjs && node --test scripts/check-doc-navigation.test.mjs",
-      "docs:generate": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && node scripts/docs/generate-reference.mjs",
+      "docs:build": "pnpm docs:check && node scripts/docs/build-guide.mjs",
+      "docs:check": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && node --test scripts/docs/generate-reference.test.mjs scripts/docs/update-readme.test.mjs scripts/docs/build-guide.test.mjs && node scripts/docs/generate-reference.mjs --check && node scripts/docs/update-readme.mjs --check && pnpm docs:links",
+      "docs:generate": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && node scripts/docs/generate-reference.mjs && node scripts/docs/update-readme.mjs",
+      "docs:links": "node scripts/check-docs.mjs && node scripts/check-doc-navigation.mjs && node --test scripts/check-doc-navigation.test.mjs",
       "format": "prettier --write .",
       "format:check": "prettier --check .",
       "jobs:outbox": "pnpm --filter @moonwitness/api jobs:outbox",
@@ -179,7 +181,7 @@
       "promotion:approval-check": "node scripts/check-promotion-approval.mjs",
       "promotion:risk": "node scripts/check-promotion-risk.mjs",
       "readme:check": "node scripts/docs/update-readme.mjs --check",
-      "readme:generate": "pnpm docs:generate && node scripts/docs/update-readme.mjs",
+      "readme:generate": "pnpm docs:generate",
       "release:check": "node scripts/check-release.mjs",
       "release:classify": "node scripts/classify-release-commits.mjs",
       "reset:superadmin-password": "pnpm --filter @moonwitness/api reset:superadmin-password",
@@ -205,7 +207,7 @@
       "typecheck": "pnpm build && pnpm --filter @moonwitness/board typecheck",
       "ui:budget": "node scripts/check-ui-catalog-budget.mjs",
       "ui:visual:update": "pnpm --filter @moonwitness/ui-catalog build && pnpm --filter @moonwitness/ui-catalog exec playwright test --update-snapshots",
-      "verify": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test:unit && pnpm test:architecture && pnpm architecture:check && pnpm docs:check"
+      "verify": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test:unit && pnpm test:architecture && pnpm architecture:check && pnpm docs:build"
     }
   },
   "environment": [

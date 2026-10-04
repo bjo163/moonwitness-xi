@@ -82,7 +82,7 @@ jobs:
       - run: pnpm test:architecture
       - run: pnpm architecture:check
       - run: pnpm assets:check:docs
-      - run: pnpm docs:check
+      - run: pnpm docs:build
       - name: Lint Board
         run: pnpm --filter @moonwitness/board lint
 

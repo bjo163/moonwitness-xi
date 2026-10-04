@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
-import { readdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import ts from 'typescript';
@@ -93,6 +94,11 @@ export function validateModelCatalog(models) {
       }
     }
   }
+}
+
+export function findStaleGeneratedPaths(actual, expected) {
+  const paths = new Set([...actual.keys(), ...expected.keys()]);
+  return [...paths].filter((file) => actual.get(file) !== expected.get(file)).sort(compare);
 }
 
 function routeLiteral(node) {
@@ -509,27 +515,46 @@ function renderApiMarkdown(metadata) {
 
 export async function generateReference({ check = false } = {}) {
   const metadata = await collectReferenceMetadata();
-  for (const [relativePath, render] of outputs) {
-    const destination = path.join(root, relativePath);
-    const options = await prettier.resolveConfig(destination);
-    const expected = await prettier.format(render(metadata), {
-      ...options,
-      filepath: destination,
-    });
-    if (check) {
-      let actual;
-      try {
-        actual = await readFile(destination, 'utf8');
-      } catch {
-        actual = '';
+  const temporaryRoot = check
+    ? await mkdtemp(path.join(tmpdir(), 'moonwitness-docs-check-'))
+    : undefined;
+  const stalePaths = [];
+  const expectedOutputs = new Map();
+  const actualOutputs = new Map();
+  try {
+    for (const [relativePath, render] of outputs) {
+      const destination = path.join(root, relativePath);
+      const options = await prettier.resolveConfig(destination);
+      const expected = await prettier.format(render(metadata), {
+        ...options,
+        filepath: destination,
+      });
+      if (check && temporaryRoot) {
+        const temporaryPath = path.join(temporaryRoot, relativePath);
+        await mkdir(path.dirname(temporaryPath), { recursive: true });
+        await writeFile(temporaryPath, expected);
+        let actual = '';
+        try {
+          actual = await readFile(destination, 'utf8');
+        } catch {
+          // A missing generated file is reported as stale below.
+        }
+        const rendered = await readFile(temporaryPath, 'utf8');
+        actualOutputs.set(relativePath, actual);
+        expectedOutputs.set(relativePath, rendered);
+      } else {
+        await mkdir(path.dirname(destination), { recursive: true });
+        await writeFile(destination, expected);
       }
-      if (actual !== expected)
-        throw new Error(`Generated reference is stale: ${relativePath}; run pnpm docs:generate`);
-    } else {
-      const { mkdir } = await import('node:fs/promises');
-      await mkdir(path.dirname(destination), { recursive: true });
-      await writeFile(destination, expected);
     }
+  } finally {
+    if (temporaryRoot) await rm(temporaryRoot, { recursive: true, force: true });
+  }
+  stalePaths.push(...findStaleGeneratedPaths(actualOutputs, expectedOutputs));
+  if (stalePaths.length > 0) {
+    throw new Error(
+      `Generated references are stale; run pnpm docs:generate:\n${stalePaths.map((file) => `- ${file}`).join('\n')}`
+    );
   }
 }
 
