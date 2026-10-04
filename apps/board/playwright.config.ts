@@ -23,6 +23,7 @@ export default defineConfig({
     ['html', { outputFolder: '../../test-results/playwright-report', open: 'never' }],
   ],
   outputDir: '../../test-results/playwright',
+  globalSetup: './e2e/global-setup.ts',
   use: {
     baseURL,
     trace: 'retain-on-failure',
