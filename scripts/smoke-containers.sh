@@ -21,4 +21,4 @@ curl --fail --silent --show-error http://127.0.0.1:3000/readyz | grep -q '"statu
 curl --fail --silent --show-error http://127.0.0.1:4174/ | grep -q 'MoonWitness'
 
 "${compose[@]}" stop --timeout 45 api
-"${compose[@]}" logs api | grep -q 'API server shutdown complete'
+"${compose[@]}" logs api | grep -Eq 'Graceful shutdown complete|API server shutdown complete'
