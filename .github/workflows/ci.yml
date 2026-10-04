@@ -43,7 +43,7 @@ jobs:
         run: |
           if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" || "$BASE_REF" == "main" || "$GITHUB_REF" == "refs/heads/main" ]]; then
             echo 'projects=["quality","integration","browser","containers","automation"]' >> "$GITHUB_OUTPUT"
-            echo 'plan={"mode":"full","reason":"full-validation","projects":["quality","integration","browser","containers","automation"]}' >> "$GITHUB_OUTPUT'
+            echo 'plan={"mode":"full","reason":"full-validation","projects":["quality","integration","browser","containers","automation"]}' >> "$GITHUB_OUTPUT"
           else
             base_sha="${BASE_SHA:-$(git rev-parse origin/main)}"
             pnpm ci:affected "$base_sha" "$HEAD_SHA" --json
