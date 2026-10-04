@@ -189,6 +189,8 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
       - name: Run Board browser tests
         run: pnpm test:e2e
+      - name: Test documentation portal routing, search, and responsive navigation
+        run: pnpm test:docs-portal
       - name: Scan browser reports for secrets before artifact upload
         id: scan_browser_reports
         if: always()
@@ -201,8 +203,11 @@ jobs:
           path: |
             test-results/junit/board-e2e.xml
             test-results/junit/board-e2e-retries.json
+            test-results/junit/docs-portal.xml
             test-results/playwright/**/*.png
             test-results/visual-audit/**/*.png
+            test-results/docs-portal/**/*.png
+            test-results/docs-portal/**/*.zip
           if-no-files-found: ignore
           retention-days: 7
 

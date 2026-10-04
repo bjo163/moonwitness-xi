@@ -1,6 +1,6 @@
 # Generated platform reference
 
-Source fingerprint: `515c9c495c87f45ce120a4183fde8248d22bcbb2c6ae13468757ba1692b22404`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
+Source fingerprint: `a9d099254220ebad3237fe5e9596f687513595ca5d0792673a569681d8109282`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
 
 ## Workspace packages and apps
 
@@ -8,6 +8,7 @@ Source fingerprint: `515c9c495c87f45ce120a4183fde8248d22bcbb2c6ae13468757ba1692b
 | ---------------------------- | ------- | ---------- | ------------------------------------------------------------------------------------------------------------ |
 | `@moonwitness/api`           | App     | 1.0.0-rc.1 | `build`, `dev`, `jobs:outbox`, `jobs:scheduler`, `jobs:worker`, `reset:superadmin-password`, `start`, `test` |
 | `@moonwitness/board`         | App     | 1.0.0-rc.1 | `build`, `dev`, `lint`, `preview`, `typecheck`                                                               |
+| `@moonwitness/docs`          | App     | 1.0.0-rc.1 | `dev`, `portal:build`, `preview`, `test`, `typecheck`                                                        |
 | `@moonwitness/ui-catalog`    | App     | 1.0.0-rc.1 | `build`, `dev`, `preview`, `test`                                                                            |
 | `@moonwitness/assets`        | Package | 1.0.0-rc.1 | —                                                                                                            |
 | `@moonwitness/auth`          | Package | 1.0.0-rc.1 | `build`, `test`                                                                                              |
@@ -103,6 +104,7 @@ Value categories are inferred from variable names and example syntax; requiredne
 - `pnpm test:ci-gate`
 - `pnpm test:coverage-policy`
 - `pnpm test:docs-navigation`
+- `pnpm test:docs-portal`
 - `pnpm test:e2e`
 - `pnpm test:flaky-policy`
 - `pnpm test:integration`

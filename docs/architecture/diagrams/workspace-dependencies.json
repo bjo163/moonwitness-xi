@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "apps/*/package.json and packages/*/package.json",
-  "sourceSha256": "4ece737febfe06926c1c3d3461d2a2b125afb703230b3bf593cc674580fc59fc",
+  "sourceSha256": "d7a7d10964243b35570c43f5413af860022add82d59808b43d788087ba6c173e",
   "packages": [
     {
       "name": "@moonwitness/api",
@@ -32,6 +32,12 @@
       "kind": "package",
       "version": "1.0.0-rc.1",
       "manifest": "packages/client"
+    },
+    {
+      "name": "@moonwitness/docs",
+      "kind": "app",
+      "version": "1.0.0-rc.1",
+      "manifest": "apps/docs"
     },
     {
       "name": "@moonwitness/eslint-config",
@@ -148,6 +154,18 @@
       "to": "@moonwitness/ui",
       "kind": "runtime",
       "manifest": "apps/board"
+    },
+    {
+      "from": "@moonwitness/docs",
+      "to": "@moonwitness/assets",
+      "kind": "runtime",
+      "manifest": "apps/docs"
+    },
+    {
+      "from": "@moonwitness/docs",
+      "to": "@moonwitness/ui",
+      "kind": "runtime",
+      "manifest": "apps/docs"
     },
     {
       "from": "@moonwitness/jobs",

@@ -110,6 +110,13 @@ Nested URL reload, search keyboard dan 404 bekerja pada static preview.
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M6.06.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
+### Catatan implementasi
+
+Portal saat ini berada di `apps/docs`, memakai guide bundle deterministik, React Router basename
+`/moonwitness-xi/`, Markdown renderer tanpa raw HTML, pencarian keyboard, dan fallback `404.html`.
+CI wajib menjalankan `pnpm test:docs-portal`. Publikasi Pages dan build source ref stable tetap
+menjadi acceptance terpisah M6.07/M6.08.
+
 ## M6.07 — Gunakan Actions artifact untuk Pages tanpa branch tambahan; dev hanya menghasilkan preview artifact.
 
 - **Prasyarat:** M6.06, M0.04

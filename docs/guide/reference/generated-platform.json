@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "515c9c495c87f45ce120a4183fde8248d22bcbb2c6ae13468757ba1692b22404",
+  "generatedFromSha256": "a9d099254220ebad3237fe5e9596f687513595ca5d0792673a569681d8109282",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -30,6 +30,12 @@
       "version": "1.0.0-rc.1",
       "directory": "apps/board",
       "scripts": ["build", "dev", "lint", "preview", "typecheck"]
+    },
+    {
+      "name": "@moonwitness/docs",
+      "version": "1.0.0-rc.1",
+      "directory": "apps/docs",
+      "scripts": ["dev", "portal:build", "preview", "test", "typecheck"]
     },
     {
       "name": "@moonwitness/ui-catalog",
@@ -116,6 +122,13 @@
       "preview": "vite preview",
       "typecheck": "tsc -b"
     },
+    "@moonwitness/docs": {
+      "dev": "vite",
+      "portal:build": "pnpm --filter @moonwitness/ui build && tsc -p tsconfig.json && vite build && node scripts/copy-404.mjs && node scripts/verify-build.mjs",
+      "preview": "vite preview",
+      "test": "playwright test",
+      "typecheck": "tsc -p tsconfig.json"
+    },
     "@moonwitness/ui-catalog": {
       "build": "pnpm --filter @moonwitness/ui build && tsc -p tsconfig.json && vite build",
       "dev": "vite",
@@ -167,7 +180,7 @@
       "ci:affected": "node scripts/select-affected.mjs",
       "dev": "pnpm --filter @moonwitness/api dev",
       "dev:board": "pnpm --filter @moonwitness/board dev",
-      "docs:build": "pnpm docs:check && node scripts/docs/build-guide.mjs",
+      "docs:build": "pnpm docs:check && node scripts/docs/build-guide.mjs && pnpm --filter @moonwitness/docs portal:build",
       "docs:check": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && node --test scripts/docs/generate-reference.test.mjs scripts/docs/update-readme.test.mjs scripts/docs/build-guide.test.mjs && node scripts/docs/generate-reference.mjs --check && node scripts/docs/update-readme.mjs --check && pnpm docs:links && pnpm docs:examples:check",
       "docs:examples:check": "pnpm --filter @moonwitness/orm build && pnpm exec tsc --noEmit -p packages/orm/examples/tsconfig.json && pnpm --filter @moonwitness/orm exec vitest run tests/addon.test.ts",
       "docs:generate": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && node scripts/docs/generate-reference.mjs && node scripts/docs/update-readme.mjs",
@@ -195,6 +208,7 @@
       "test:ci-gate": "node --test scripts/ci-gate.test.mjs",
       "test:coverage-policy": "node --test scripts/check-coverage.test.mjs",
       "test:docs-navigation": "node --test scripts/check-doc-navigation.test.mjs",
+      "test:docs-portal": "pnpm docs:build && pnpm --filter @moonwitness/docs test",
       "test:e2e": "node scripts/run-e2e.mjs",
       "test:flaky-policy": "node --test scripts/flaky-policy.test.mjs scripts/playwright-flake-reporter.test.mjs",
       "test:integration": "node scripts/run-postgres-tests.mjs",

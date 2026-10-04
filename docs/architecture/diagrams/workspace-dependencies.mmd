@@ -4,27 +4,30 @@ flowchart LR
   pkg2["@moonwitness/auth"]
   pkg3["@moonwitness/board"]
   pkg4["@moonwitness/client"]
-  pkg5["@moonwitness/eslint-config"]
-  pkg6["@moonwitness/jobs"]
-  pkg7["@moonwitness/logger"]
-  pkg8["@moonwitness/orm"]
-  pkg9["@moonwitness/orm-base"]
-  pkg10["@moonwitness/types"]
-  pkg11["@moonwitness/ui"]
-  pkg12["@moonwitness/ui-catalog"]
+  pkg5["@moonwitness/docs"]
+  pkg6["@moonwitness/eslint-config"]
+  pkg7["@moonwitness/jobs"]
+  pkg8["@moonwitness/logger"]
+  pkg9["@moonwitness/orm"]
+  pkg10["@moonwitness/orm-base"]
+  pkg11["@moonwitness/types"]
+  pkg12["@moonwitness/ui"]
+  pkg13["@moonwitness/ui-catalog"]
   pkg0 -->|development| pkg4
   pkg0 -->|runtime| pkg2
-  pkg0 -->|runtime| pkg6
   pkg0 -->|runtime| pkg7
   pkg0 -->|runtime| pkg8
   pkg0 -->|runtime| pkg9
   pkg0 -->|runtime| pkg10
-  pkg2 -->|runtime| pkg8
+  pkg0 -->|runtime| pkg11
   pkg2 -->|runtime| pkg9
+  pkg2 -->|runtime| pkg10
   pkg3 -->|runtime| pkg4
-  pkg3 -->|runtime| pkg11
-  pkg6 -->|runtime| pkg8
-  pkg6 -->|runtime| pkg9
-  pkg8 -->|runtime| pkg10
-  pkg9 -->|runtime| pkg8
-  pkg12 -->|runtime| pkg11
+  pkg3 -->|runtime| pkg12
+  pkg5 -->|runtime| pkg1
+  pkg5 -->|runtime| pkg12
+  pkg7 -->|runtime| pkg9
+  pkg7 -->|runtime| pkg10
+  pkg9 -->|runtime| pkg11
+  pkg10 -->|runtime| pkg9
+  pkg13 -->|runtime| pkg12

@@ -42,6 +42,11 @@
           "title": "Release dan upgrade",
           "kind": "how-to",
           "path": "docs/guide/how-to/release-upgrade.md"
+        },
+        {
+          "title": "Portal dokumentasi",
+          "kind": "how-to",
+          "path": "docs/guide/how-to/developer-portal.md"
         }
       ]
     },
