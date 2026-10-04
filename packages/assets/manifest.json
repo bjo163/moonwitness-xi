@@ -1,0 +1,136 @@
+{
+  "name": "@moonwitness/assets",
+  "schemaVersion": 1,
+  "source": "scripts/generate.mjs",
+  "assets": [
+    {
+      "path": "brand/moonwitness-symbol-light.svg",
+      "kind": "symbol",
+      "variant": "light",
+      "format": "svg",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "path": "brand/moonwitness-wordmark-light.svg",
+      "kind": "wordmark",
+      "variant": "light",
+      "format": "svg",
+      "width": 440,
+      "height": 80
+    },
+    {
+      "path": "brand/moonwitness-lockup-light.svg",
+      "kind": "lockup",
+      "variant": "light",
+      "format": "svg",
+      "width": 500,
+      "height": 80
+    },
+    {
+      "path": "brand/moonwitness-symbol-dark.svg",
+      "kind": "symbol",
+      "variant": "dark",
+      "format": "svg",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "path": "brand/moonwitness-wordmark-dark.svg",
+      "kind": "wordmark",
+      "variant": "dark",
+      "format": "svg",
+      "width": 440,
+      "height": 80
+    },
+    {
+      "path": "brand/moonwitness-lockup-dark.svg",
+      "kind": "lockup",
+      "variant": "dark",
+      "format": "svg",
+      "width": 500,
+      "height": 80
+    },
+    {
+      "path": "brand/moonwitness-symbol-mono-light.svg",
+      "kind": "symbol",
+      "variant": "mono-light",
+      "format": "svg",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "path": "brand/moonwitness-wordmark-mono-light.svg",
+      "kind": "wordmark",
+      "variant": "mono-light",
+      "format": "svg",
+      "width": 440,
+      "height": 80
+    },
+    {
+      "path": "brand/moonwitness-lockup-mono-light.svg",
+      "kind": "lockup",
+      "variant": "mono-light",
+      "format": "svg",
+      "width": 500,
+      "height": 80
+    },
+    {
+      "path": "brand/moonwitness-symbol-mono-dark.svg",
+      "kind": "symbol",
+      "variant": "mono-dark",
+      "format": "svg",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "path": "brand/moonwitness-wordmark-mono-dark.svg",
+      "kind": "wordmark",
+      "variant": "mono-dark",
+      "format": "svg",
+      "width": 440,
+      "height": 80
+    },
+    {
+      "path": "brand/moonwitness-lockup-mono-dark.svg",
+      "kind": "lockup",
+      "variant": "mono-dark",
+      "format": "svg",
+      "width": 500,
+      "height": 80
+    },
+    {
+      "path": "brand/favicon.svg",
+      "kind": "favicon",
+      "variant": "dark-surface",
+      "format": "svg",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "path": "brand/social-card.svg",
+      "kind": "social-card",
+      "variant": "light",
+      "format": "svg",
+      "width": 1200,
+      "height": 630
+    },
+    {
+      "path": "brand/readme-banner.svg",
+      "kind": "readme-banner",
+      "variant": "light",
+      "format": "svg",
+      "width": 1280,
+      "height": 320
+    },
+    {
+      "path": "brand/social-card.png",
+      "source": "brand/social-card.svg",
+      "kind": "social-card",
+      "variant": "light",
+      "format": "png",
+      "width": 1200,
+      "height": 630
+    }
+  ]
+}

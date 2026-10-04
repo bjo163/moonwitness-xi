@@ -89,5 +89,6 @@ for (const suite of suites) {
   run(args, `${suite.name} tests`);
 }
 
+run(['run', 'test:assets'], 'brand asset contracts');
 run(['exec', 'node', 'scripts/check-coverage.mjs'], 'Critical branch coverage');
 process.stdout.write(`JUnit reports written to ${path.relative(root, reportDirectory)}\n`);

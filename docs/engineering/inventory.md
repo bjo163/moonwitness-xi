@@ -19,6 +19,10 @@ Baseline inspeksi: source pada dev setelah M0.08. Ini inventaris bukti kode, buk
 | packages/addons                      | Directory exists but no package source found in first scan; decide whether empty scaffold is intentional |
 | Planned packages/ui, packages/assets | Not present at baseline                                                                                  |
 
+## Current workspace delta (2026-10-04)
+
+Since the initial M0.05 snapshot, `packages/assets` is now a workspace package (`@moonwitness/assets`) with generated MoonWitness symbol, wordmark and lockup variants, favicon, README banner, and social-card exports. Its SVG generation is deterministic and the package has no runtime dependencies. The asset package is not yet consumed by Board; adoption belongs to M5.05/M5.14/M5.15. `packages/ui` remains planned at this point. Run `pnpm audit:workspace` for the current package/dependency graph; the tables above remain the historical initial inventory.
+
 ## Base addon models
 
 Declared in packages/orm-base/src/manifest.ts: base.country, base.country_state, base.currency, base.language, base.company, base.bank, base.partner, base.partner_bank, base.partner_category, base.partner_category_link, base.partner_address, base.user, base.tag, base.tag_link, base.attachment, base.activity, base.sequence, base.access_group, base.group_membership, base.model_access, base.company_membership, base.audit_log.

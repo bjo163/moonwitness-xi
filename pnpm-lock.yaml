@@ -197,6 +197,8 @@ importers:
         specifier: ^8.3.0
         version: 8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
 
+  packages/assets: {}
+
   packages/auth:
     dependencies:
       '@moonwitness/orm':
