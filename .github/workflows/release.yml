@@ -44,8 +44,11 @@ jobs:
       - run: pnpm release:check "$GITHUB_REF_NAME"
       - run: pnpm lint
       - run: pnpm format:check
-      - run: pnpm build
-      - run: pnpm test
+      - run: pnpm typecheck
+      - run: pnpm docs:check
+      - run: pnpm --filter @moonwitness/board lint
+      - run: pnpm test:unit
+      - run: pnpm test:integration
       - run: docker build --tag moonwitness-api:"$GITHUB_REF_NAME" .
       - run: docker build --target board-runtime --tag moonwitness-board:"$GITHUB_REF_NAME" .
       - name: Validate production Compose configuration

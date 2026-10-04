@@ -25,9 +25,8 @@ jobs:
           pnpm-version: '11'
       - run: pnpm lint
       - run: pnpm format:check
-      - run: pnpm build
-      - name: Typecheck Board
-        run: pnpm --filter @moonwitness/board typecheck
+      - run: pnpm typecheck
+      - run: pnpm docs:check
       - name: Lint Board
         run: pnpm --filter @moonwitness/board lint
 
@@ -66,8 +65,8 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11'
-      - run: pnpm build
-      - run: pnpm test
+      - run: pnpm test:unit
+      - run: pnpm test:integration
       - name: Verify PostgreSQL backup and restore
         env:
           PGPASSWORD: postgres
