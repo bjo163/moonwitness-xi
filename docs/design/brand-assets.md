@@ -22,6 +22,9 @@ static export after regenerating brand sources.
 The shared CSS token export is
 [`tokens.css`](../assets/moonwitness/styles/tokens.css). The generated mapping
 also contains the static brand/icon/illustration assets for the documentation
-catalog. GitHub Pages has not been configured or published yet; the publishing
-workflow and repository Pages settings remain M6.07 work. This milestone only
-prepares reviewable static inputs and does not deploy the application or site.
+catalog. The interactive UI catalog is maintained at
+[`apps/ui-catalog`](../../apps/ui-catalog) and consumes the same package API,
+CSS and tokens. GitHub Pages has not been configured or published yet; the
+portal and publishing workflow/repository settings remain M6.06/M6.07 work.
+These milestones prepare reviewable static inputs and do not deploy the
+application or site.

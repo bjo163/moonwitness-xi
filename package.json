@@ -24,6 +24,7 @@
     "assets:validate": "node packages/assets/scripts/validate.mjs",
     "test:assets": "pnpm assets:validate && node --test packages/assets/tests/*.test.mjs scripts/export-doc-assets.test.mjs && pnpm assets:check:docs",
     "test:ui": "pnpm --filter @moonwitness/ui build && node --test packages/ui/tests/*.test.mjs && node packages/ui/scripts/verify-package.mjs",
+    "test:ui-catalog": "pnpm --filter @moonwitness/ui-catalog build && pnpm --filter @moonwitness/ui-catalog test",
     "test:e2e": "node scripts/run-e2e.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

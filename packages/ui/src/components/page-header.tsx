@@ -1,6 +1,6 @@
 import type { ComponentProps, ReactNode } from 'react';
 
-export type PageHeaderProps = Omit<ComponentProps<'header'>, 'children'> & {
+export type PageHeaderProps = Omit<ComponentProps<'header'>, 'children' | 'title'> & {
   title: ReactNode;
   description?: ReactNode;
   breadcrumbs?: ReactNode;

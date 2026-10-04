@@ -11,6 +11,9 @@ otomatis agar tetap mengikuti metadata workspace.
 Panduan sumber brand, token bersama, serta asset statis untuk dokumentasi:
 [Brand assets](docs/design/brand-assets.md).
 
+Katalog interaktif untuk seluruh primitive UI:
+[UI component catalog](docs/design/ui-catalog.md).
+
 Arsitektur monorepo berkinerja tinggi menggunakan **pnpm workspaces** yang memisahkan core ORM, shared types, konfigurasi linter, dan service API.
 
 ---
