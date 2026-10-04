@@ -14,9 +14,14 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     services:
       postgres:
         image: postgres:16-alpine
@@ -61,6 +66,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && inputs.publish
     needs: verify
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
       packages: write

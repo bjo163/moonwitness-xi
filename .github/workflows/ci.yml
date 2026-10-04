@@ -10,13 +10,14 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
+  group: ci-${{ github.event.pull_request.base.ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
   plan:
     name: plan
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       projects: ${{ steps.affected.outputs.projects }}
     steps:
@@ -46,6 +47,7 @@ jobs:
     needs: [plan]
     if: contains(fromJSON(needs.plan.outputs.projects), 'quality')
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-pnpm
@@ -64,6 +66,7 @@ jobs:
     needs: [plan]
     if: contains(fromJSON(needs.plan.outputs.projects), 'automation')
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-pnpm
@@ -80,6 +83,7 @@ jobs:
     needs: [plan]
     if: contains(fromJSON(needs.plan.outputs.projects), 'integration')
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     services:
       postgres:
         image: postgres:16-alpine
@@ -132,7 +136,7 @@ jobs:
     needs: [plan]
     if: contains(fromJSON(needs.plan.outputs.projects), 'browser')
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:16-alpine
@@ -175,6 +179,7 @@ jobs:
     needs: [plan]
     if: contains(fromJSON(needs.plan.outputs.projects), 'containers')
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - name: Build production API container
@@ -191,6 +196,7 @@ jobs:
     if: always()
     needs: [plan, quality, integration, browser, containers, automation]
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-pnpm

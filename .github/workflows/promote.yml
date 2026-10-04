@@ -16,8 +16,18 @@ jobs:
   promote:
     name: create-promotion-pr
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - name: Skip stale promotion events
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          current_sha="$(git ls-remote origin refs/heads/dev | cut -f1)"
+          if [[ "$current_sha" != "$EXPECTED_SHA" ]]; then
+            echo "Skipping stale event for $EXPECTED_SHA; dev is now $current_sha"
+            exit 0
+          fi
       - name: Create or find the promotion pull request
         id: pr
         env:
