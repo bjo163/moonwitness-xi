@@ -180,10 +180,18 @@ async function hasCompanyAccess(
   const targetCompany = Object.hasOwn(values, 'company_id')
     ? values.company_id
     : property(current, 'company_id');
+  const canAssignCompanyMembership =
+    modelName === 'base.company_membership' &&
+    (req.auth?.role === 'system' || req.auth?.role === 'superadmin');
   if ('company' in modelFields || 'company_id' in modelFields) {
     const currentCompany = property(current, 'company_id');
     if (typeof currentCompany === 'number' && targetCompany === null) return false;
-    if (targetCompany !== undefined && targetCompany !== null && targetCompany !== companyId)
+    if (
+      targetCompany !== undefined &&
+      targetCompany !== null &&
+      targetCompany !== companyId &&
+      !canAssignCompanyMembership
+    )
       return false;
     if (targetCompany === undefined && companyId !== undefined && modelFields.company?.required)
       return false;

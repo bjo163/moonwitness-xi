@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { LoginParams, RegisterParams, UserProfile } from '@moonwitness/client';
 import { client } from '@/lib/client';
@@ -15,13 +15,15 @@ const AuthContext = createContext<AuthValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState(client.currentUser);
   const queryClient = useQueryClient();
+  const userId = useRef(client.currentUser?.id ?? null);
 
   useEffect(
     () =>
       client.onSessionChange((next) => {
+        const nextUserId = next?.id ?? null;
+        if (userId.current !== nextUserId) queryClient.clear();
+        userId.current = nextUserId;
         setUser(next);
-        // Never show one user's cached records to the next user.
-        if (!next) queryClient.clear();
       }),
     [queryClient]
   );

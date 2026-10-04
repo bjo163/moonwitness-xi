@@ -19,6 +19,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { client } from '@/lib/client';
+import { scopedQueryKey } from '@/lib/query-scope';
 import { useAuth } from '@/hooks/use-auth';
 import { useModels } from '@/hooks/use-model';
 import { modelIcon, modelLabel } from '@/lib/models';
@@ -55,12 +56,12 @@ export function DashboardPage() {
 
   // Live KPI Queries
   const { data: partnerStats, isLoading: partnerLoading } = useQuery({
-    queryKey: ['kpi', 'base.partner'],
+    queryKey: scopedQueryKey(['kpi', 'base.partner']),
     queryFn: () => client.model('base.partner').searchRead({ count: true, limit: 1 }),
   });
 
   const { data: userStats, isLoading: userLoading } = useQuery({
-    queryKey: ['kpi', 'base.user'],
+    queryKey: scopedQueryKey(['kpi', 'base.user']),
     queryFn: () =>
       client.model('base.user').searchRead({
         domain: [['active', '=', true]],
@@ -70,12 +71,12 @@ export function DashboardPage() {
   });
 
   const { data: companyStats, isLoading: companyLoading } = useQuery({
-    queryKey: ['kpi', 'base.company'],
+    queryKey: scopedQueryKey(['kpi', 'base.company']),
     queryFn: () => client.model('base.company').searchRead({ count: true, limit: 1 }),
   });
 
   const { data: activityStats, isLoading: activityLoading } = useQuery({
-    queryKey: ['kpi', 'base.activity'],
+    queryKey: scopedQueryKey(['kpi', 'base.activity']),
     queryFn: () =>
       client.model('base.activity').searchRead({
         domain: [['state', '=', 'planned']],
@@ -86,7 +87,7 @@ export function DashboardPage() {
 
   // Live Recent Audit Events (Admins)
   const { data: recentAudits, isLoading: auditsLoading } = useQuery({
-    queryKey: ['kpi', 'recent_audits'],
+    queryKey: scopedQueryKey(['kpi', 'recent_audits']),
     queryFn: () =>
       client
         .model<{
@@ -111,7 +112,7 @@ export function DashboardPage() {
     isLoading: jobsHealthLoading,
     refetch: refetchJobsHealth,
   } = useQuery({
-    queryKey: ['admin', 'jobs', 'health'],
+    queryKey: scopedQueryKey(['admin', 'jobs', 'health']),
     queryFn: () =>
       client.request<{
         success: boolean;
@@ -129,7 +130,7 @@ export function DashboardPage() {
   });
 
   const { data: adminCrons, isLoading: cronsLoading } = useQuery({
-    queryKey: ['admin', 'crons'],
+    queryKey: scopedQueryKey(['admin', 'crons']),
     queryFn: () =>
       client.request<{
         success: boolean;
@@ -167,7 +168,7 @@ export function DashboardPage() {
 
   // Dead Letter Jobs & Outbox Event Queries (Admins)
   const { data: deadJobs, isLoading: deadJobsLoading } = useQuery({
-    queryKey: ['admin', 'jobs', 'dead'],
+    queryKey: scopedQueryKey(['admin', 'jobs', 'dead']),
     queryFn: () =>
       client.request<{
         success: boolean;
@@ -185,7 +186,7 @@ export function DashboardPage() {
   });
 
   const { data: deadOutbox, isLoading: deadOutboxLoading } = useQuery({
-    queryKey: ['admin', 'outbox', 'dead'],
+    queryKey: scopedQueryKey(['admin', 'outbox', 'dead']),
     queryFn: () =>
       client.request<{
         success: boolean;
@@ -254,7 +255,7 @@ export function DashboardPage() {
 
   // Recent Planned Activities (Fallback for non-admins)
   const { data: recentActivities, isLoading: activitiesLoading } = useQuery({
-    queryKey: ['kpi', 'recent_activities'],
+    queryKey: scopedQueryKey(['kpi', 'recent_activities']),
     queryFn: () =>
       client
         .model<{

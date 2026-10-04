@@ -18,8 +18,9 @@ import {
   User,
   Users,
 } from 'lucide-react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { client } from '@/lib/client';
+import { scopedQueryKey } from '@/lib/query-scope';
 import { useAuth } from '@/hooks/use-auth';
 import { useModels } from '@/hooks/use-model';
 import { useTheme } from '@/hooks/use-theme';
@@ -149,12 +150,11 @@ export function AppShell() {
     updateDevelopmentMode(developmentMode);
   }, [developmentMode]);
 
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
 
   // Query accessible companies for the tenant switcher
   const { data: companiesData } = useQuery({
-    queryKey: ['companies_selector'],
+    queryKey: scopedQueryKey(['companies_selector']),
     queryFn: () =>
       client.model<{ id: number; name: string }>('base.company').searchRead({
         limit: 50,
@@ -168,13 +168,12 @@ export function AppShell() {
   const handleSelectCompany = (companyId: number | undefined) => {
     client.setCompanyId(companyId);
     setActiveCompanyId(companyId);
-    // Invalidate all records queries to apply new tenant scope immediately
-    queryClient.invalidateQueries();
+    // Tenant-scoped query keys switch atomically; don't refetch old keys with the new header.
   };
 
   // Omnisearch cross-model query
   const { data: searchResults } = useQuery({
-    queryKey: ['omnisearch', paletteQuery],
+    queryKey: scopedQueryKey(['omnisearch', paletteQuery]),
     queryFn: async () => {
       const q = paletteQuery.trim();
       if (!q) return [];
@@ -495,7 +494,7 @@ export function AppShell() {
         </header>
 
         <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-10">
-          <Outlet />
+          <Outlet key={activeCompanyId ?? 'default-company'} />
         </main>
       </div>
 

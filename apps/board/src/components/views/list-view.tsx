@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import type { Domain, ResolvedViews } from '@moonwitness/client';
 import { client } from '@/lib/client';
+import { scopedQueryKey } from '@/lib/query-scope';
 import { useRecordMutations, useRecords } from '@/hooks/use-model';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -224,7 +225,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
   const currentOrder = sortState ? `${sortState.col} ${sortState.dir}` : views.list.order;
 
   const offset = (page - 1) * pageSize;
-  const { data, isLoading, isPlaceholderData } = useRecords(model, {
+  const { data, isLoading, isFetching, isPlaceholderData, isError, refetch } = useRecords(model, {
     domain,
     offset,
     limit: pageSize,
@@ -349,7 +350,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
   const [tagPopoverOpen, setTagPopoverOpen] = useState(false);
   const [isMassTagging, setIsMassTagging] = useState(false);
   const { data: availableTagsData } = useQuery({
-    queryKey: ['available_tags'],
+    queryKey: scopedQueryKey(['available_tags']),
     queryFn: () =>
       client
         .model<{ id: number; name: string; color: string }>('base.tag')
@@ -730,6 +731,24 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
           </div>
         </div>
       </div>
+
+      {isError && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 border-2 border-ink bg-pink p-3 font-bold text-white shadow-ink"
+        >
+          <span>Could not load records. Check your connection and try again.</span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isFetching}
+            onClick={() => void refetch()}
+            className="border-paper text-white hover:bg-white hover:text-ink"
+          >
+            {isFetching ? 'Retrying…' : 'Retry'}
+          </Button>
+        </div>
+      )}
 
       {/* Main Content: Table, Grid, or Pipeline */}
       {viewMode === 'table' && (

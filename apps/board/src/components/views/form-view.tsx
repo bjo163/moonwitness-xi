@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Archive, ArrowLeft, Check, Loader2, Save, Trash2, Zap } from 'lucide-react';
 import { evalDomain, type FieldMeta, type ResolvedViews } from '@moonwitness/client';
 import { useRecord, useRecordMutations } from '@/hooks/use-model';
@@ -27,6 +27,7 @@ export function FormView({ model, views, recordId, onBack, onSaved }: FormViewPr
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const saveInFlight = useRef(false);
 
   // Field lookup map
   const fieldMap = useMemo(() => {
@@ -103,6 +104,7 @@ export function FormView({ model, views, recordId, onBack, onSaved }: FormViewPr
 
   async function handleSave(e?: React.FormEvent) {
     if (e) e.preventDefault();
+    if (saveInFlight.current) return;
     setError(null);
     setSuccessMsg(null);
 
@@ -142,6 +144,7 @@ export function FormView({ model, views, recordId, onBack, onSaved }: FormViewPr
         }
       }
 
+      saveInFlight.current = true;
       const saved = await mutations.save.mutateAsync({
         id: recordId,
         values: cleanValues,
@@ -155,6 +158,8 @@ export function FormView({ model, views, recordId, onBack, onSaved }: FormViewPr
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to save record.');
+    } finally {
+      saveInFlight.current = false;
     }
   }
 

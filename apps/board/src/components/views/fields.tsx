@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Check, ChevronsUpDown, X } from 'lucide-react';
 import type { Domain, FieldMeta } from '@moonwitness/client';
 import { client } from '@/lib/client';
+import { scopedQueryKey } from '@/lib/query-scope';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -230,7 +231,7 @@ function Many2oneWidget({
   const target = field.relation!;
 
   const { data, isFetching, error } = useQuery({
-    queryKey: ['m2o', target, term, contextDomain],
+    queryKey: scopedQueryKey(['m2o', target, term, contextDomain]),
     queryFn: () => {
       const baseDomain: Domain = contextDomain ? [...contextDomain] : [];
       if (term) {

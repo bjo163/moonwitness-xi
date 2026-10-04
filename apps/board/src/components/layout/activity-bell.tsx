@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell, Calendar, Check, CheckSquare, ExternalLink, Mail, Phone } from 'lucide-react';
 import { client } from '@/lib/client';
+import { scopedQueryKey } from '@/lib/query-scope';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -29,7 +30,7 @@ export function ActivityBell() {
 
   // Fetch pending activities
   const { data: activities = [], isLoading } = useQuery<ActivityRecord[]>({
-    queryKey: ['activities_bell', user?.id],
+    queryKey: scopedQueryKey(['activities_bell', user?.id]),
     queryFn: async () => {
       const res = await client.model<ActivityRecord>('base.activity').searchRead({
         domain: [['state', '=', 'planned']],

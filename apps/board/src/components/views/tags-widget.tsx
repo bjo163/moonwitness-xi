@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Tag as TagIcon, X } from 'lucide-react';
 import { client } from '@/lib/client';
+import { scopedQueryKey } from '@/lib/query-scope';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -33,7 +34,7 @@ export function TagsWidget({ model, recordId }: TagsWidgetProps) {
 
   // 1. Query attached tag links with eager-loaded tag relation
   const { data: linksData } = useQuery({
-    queryKey: ['records', 'base.tag_link', 'for_record', model, recordId],
+    queryKey: scopedQueryKey(['records', 'base.tag_link', 'for_record', model, recordId]),
     queryFn: () =>
       client.model<TagLinkItem>('base.tag_link').searchRead({
         domain: [
@@ -47,7 +48,7 @@ export function TagsWidget({ model, recordId }: TagsWidgetProps) {
 
   // 2. Query all existing tags in system
   const { data: allTagsData } = useQuery({
-    queryKey: ['records', 'base.tag', 'all'],
+    queryKey: scopedQueryKey(['records', 'base.tag', 'all']),
     queryFn: () =>
       client.model<TagItem>('base.tag').searchRead({
         limit: 100,

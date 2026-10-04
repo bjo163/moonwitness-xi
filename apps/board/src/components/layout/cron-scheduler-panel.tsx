@@ -12,6 +12,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { client } from '@/lib/client';
+import { scopedQueryKey } from '@/lib/query-scope';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -75,7 +76,7 @@ export function CronSchedulerPanel({ onOpenFailureTriage }: CronSchedulerPanelPr
     isLoading: cronsLoading,
     refetch: refetchCrons,
   } = useQuery({
-    queryKey: ['admin', 'crons'],
+    queryKey: scopedQueryKey(['admin', 'crons']),
     queryFn: () => client.request<{ success: boolean; data: CronItem[] }>('/admin/crons'),
     refetchInterval: 15_000,
   });
@@ -86,7 +87,7 @@ export function CronSchedulerPanel({ onOpenFailureTriage }: CronSchedulerPanelPr
     isLoading: jobsLoading,
     refetch: refetchJobs,
   } = useQuery({
-    queryKey: ['admin', 'jobs', 'recent'],
+    queryKey: scopedQueryKey(['admin', 'jobs', 'recent']),
     queryFn: () => client.request<{ success: boolean; data: JobItem[] }>('/admin/jobs?limit=15'),
     refetchInterval: 10_000,
   });

@@ -21,6 +21,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { client } from '@/lib/client';
+import { scopedQueryKey } from '@/lib/query-scope';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -120,7 +121,7 @@ export function Chatter({ model, recordId }: ChatterProps) {
 
   // 1. Query activities for this specific record
   const { data: activitiesData, isLoading: activitiesLoading } = useQuery({
-    queryKey: ['records', 'base.activity', 'for_record', model, recordId],
+    queryKey: scopedQueryKey(['records', 'base.activity', 'for_record', model, recordId]),
     queryFn: () =>
       client.model<ActivityRecord>('base.activity').searchRead({
         domain: [
@@ -134,7 +135,7 @@ export function Chatter({ model, recordId }: ChatterProps) {
 
   // 2. Query attachments for this record
   const { data: attachmentsData, isLoading: attachmentsLoading } = useQuery({
-    queryKey: ['records', 'base.attachment', 'for_record', model, recordId],
+    queryKey: scopedQueryKey(['records', 'base.attachment', 'for_record', model, recordId]),
     queryFn: () =>
       client.model<AttachmentRecord>('base.attachment').searchRead({
         domain: [
@@ -148,7 +149,7 @@ export function Chatter({ model, recordId }: ChatterProps) {
 
   // 3. Query audit logs for this specific record (admins only)
   const { data: auditData, isLoading: auditLoading } = useQuery({
-    queryKey: ['records', 'base.audit_log', 'for_record', model, recordId],
+    queryKey: scopedQueryKey(['records', 'base.audit_log', 'for_record', model, recordId]),
     queryFn: () =>
       client.model<AuditLogRecord>('base.audit_log').searchRead({
         domain: [
