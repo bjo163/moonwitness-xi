@@ -450,7 +450,7 @@ export function DashboardPage() {
           </div>
 
           {/* Live System Activity / Audit Pulse Feed */}
-          <div className="border-4 border-ink bg-paper p-6 shadow-ink space-y-4">
+          <div className="min-w-0 border-4 border-ink bg-paper p-4 shadow-ink space-y-4 sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-ink pb-3">
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1.5 border-2 border-ink bg-lime px-2.5 py-0.5 font-mono text-xs font-bold uppercase tracking-wider text-on-accent">
@@ -476,7 +476,7 @@ export function DashboardPage() {
                   No recent audit records available.
                 </p>
               ) : (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {recentAudits.records.map((audit) => {
                     let parsedChanges: Record<string, unknown> | null = null;
                     if (audit.changes) {
@@ -494,7 +494,7 @@ export function DashboardPage() {
                       <Link
                         key={audit.id}
                         to={`/m/${audit.model}/${audit.record_id}`}
-                        className="group border-2 border-ink bg-card p-3 font-mono text-xs transition-transform hover:-translate-y-0.5 hover:shadow-ink flex flex-col justify-between"
+                        className="group min-w-0 overflow-hidden border-2 border-ink bg-card p-3 font-mono text-xs transition-transform hover:-translate-y-0.5 hover:shadow-ink flex flex-col justify-between"
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span
@@ -509,7 +509,7 @@ export function DashboardPage() {
                           >
                             {audit.operation}
                           </span>
-                          <span className="text-[10px] text-ink-faint">
+                          <span className="min-w-0 truncate text-right text-[10px] text-ink-faint">
                             {audit.create_date
                               ? new Date(audit.create_date).toLocaleTimeString([], {
                                   hour: '2-digit',
@@ -519,11 +519,11 @@ export function DashboardPage() {
                           </span>
                         </div>
 
-                        <div className="my-2">
+                        <div className="my-2 min-w-0">
                           <p className="font-bold text-ink truncate group-hover:text-lime-600 transition-colors">
                             {audit.model} #{audit.record_id}
                           </p>
-                          <p className="text-[11px] text-ink-faint truncate">
+                          <p className="break-words text-[11px] text-ink-faint">
                             {changedFields ? `Modified: ${changedFields}` : 'System operation'}
                           </p>
                         </div>

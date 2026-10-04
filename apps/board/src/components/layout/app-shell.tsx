@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import type { ModelInfo } from '@moonwitness/client';
@@ -141,12 +141,13 @@ export function AppShell() {
   );
   const [developmentMode, setDevelopmentMode] = useState(readDevelopmentMode);
 
-  const toggleDevelopmentMode = () => {
-    setDevelopmentMode((enabled) => {
-      updateDevelopmentMode(!enabled);
-      return !enabled;
-    });
-  };
+  const toggleDevelopmentMode = useCallback(() => {
+    setDevelopmentMode((enabled) => !enabled);
+  }, []);
+
+  useEffect(() => {
+    updateDevelopmentMode(developmentMode);
+  }, [developmentMode]);
 
   const queryClient = useQueryClient();
   const navigate = useNavigate();
