@@ -803,5 +803,24 @@ describe('authentication and authorization', () => {
         await User.query().findById(admin.user.id).patch({ role: 'superadmin' });
       }
     });
+
+    it('applies role and active-state changes immediately to existing access tokens', async () => {
+      await User.query().findById(admin.user.id).patch({ role: 'user' });
+      try {
+        const demoted = await as(admin.access_token, {
+          method: 'GET',
+          url: '/api/base.user',
+        });
+        expect(demoted.statusCode).toBe(403);
+        await User.query().findById(admin.user.id).patch({ active: false });
+        const disabled = await as(admin.access_token, {
+          method: 'GET',
+          url: '/api/base.user',
+        });
+        expect(disabled.statusCode).toBe(401);
+      } finally {
+        await User.query().findById(admin.user.id).patch({ role: 'superadmin', active: true });
+      }
+    });
   });
 });

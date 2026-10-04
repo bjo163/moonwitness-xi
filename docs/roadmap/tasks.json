@@ -402,6 +402,8 @@
     },
     {
       "id": "M4.05",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M4.05.md",
       "title": "Audit autentikasi: hashing, enumeration, throttling, refresh replay/concurrency, perubahan role/password, dan batas waktu revocation access token.",
       "milestone": "M4",
       "dependsOn": ["M0.02"],
