@@ -39,7 +39,7 @@ async function expectNoA11yViolations(page: Page, label: string) {
       id,
       impact,
       help,
-      nodes: nodes.map((node) => node.target),
+      nodes: nodes.map(({ target, failureSummary }) => ({ target, failureSummary })),
     })),
     `${label} has WCAG accessibility violations`
   ).toEqual([]);

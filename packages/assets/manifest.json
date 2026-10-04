@@ -2,6 +2,7 @@
   "name": "@moonwitness/assets",
   "schemaVersion": 1,
   "source": "scripts/generate.mjs",
+  "licenseManifest": "licenses.json",
   "assets": [
     {
       "path": "brand/moonwitness-symbol-light.svg",
@@ -122,6 +123,198 @@
       "format": "svg",
       "width": 1280,
       "height": 320
+    },
+    {
+      "path": "icons/user.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/partner.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/company.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/team.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/addon.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/model.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/field.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/relation.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/activity.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/attachment.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/notification.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/jobs.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/workflow.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/security.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/search.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/add.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/edit.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/delete.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/settings.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/calendar.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/filter.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/refresh.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/external-link.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/menu.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
     },
     {
       "path": "brand/social-card.png",

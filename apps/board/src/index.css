@@ -4,8 +4,13 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Tailwind and existing Board classes adapt the shared tokens without owning values. */
-:root {
+/*
+ * Tailwind and existing Board classes adapt shared values. Redeclare aliases on .dark too:
+ * the Board scopes dark mode to its side navigation as well as the document root, and CSS
+ * custom properties declared only on :root are computed there before inheriting.
+ */
+:root,
+.dark {
   --paper: var(--mw-paper);
   --paper-raised: var(--mw-paper-raised);
   --ink: var(--mw-ink);

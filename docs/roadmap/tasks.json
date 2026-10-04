@@ -552,9 +552,11 @@
     {
       "id": "M5.04",
       "title": "Buat ikon SVG konsisten untuk domain inti dan aksi umum; audit keterbacaan ukuran kecil serta identitas yang berbeda dari brand lain.",
+      "status": "in_progress",
       "milestone": "M5",
       "dependsOn": ["M5.01"],
       "output": "packages/assets/icons/*.svg dan icon inventory",
+      "evidence": "docs/roadmap/evidence/M5.04.md",
       "detailFile": "docs/roadmap/05-design-system.md"
     },
     {
@@ -576,9 +578,11 @@
     {
       "id": "M5.07",
       "title": "Catat sumber/lisensi font dan asset; optimasi SVG, validasi script/external refs, dan cegah ID collision.",
+      "status": "in_progress",
       "milestone": "M5",
       "dependsOn": ["M5.02"],
       "output": "Asset validation script dan licenses manifest",
+      "evidence": "docs/roadmap/evidence/M5.07.md",
       "detailFile": "docs/roadmap/05-design-system.md"
     },
     {

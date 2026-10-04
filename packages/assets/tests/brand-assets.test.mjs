@@ -8,11 +8,12 @@ const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const manifest = JSON.parse(await readFile(resolve(packageRoot, 'manifest.json'), 'utf8'));
 const assetByPath = new Map(manifest.assets.map((asset) => [asset.path, asset]));
 
-test('manifest describes the full original brand export set with stable unique paths', () => {
+test('manifest describes all stable brand and icon exports with unique paths', () => {
   assert.equal(manifest.name, '@moonwitness/assets');
   assert.equal(manifest.schemaVersion, 1);
+  assert.equal(manifest.licenseManifest, 'licenses.json');
   assert.equal(assetByPath.size, manifest.assets.length);
-  assert.equal(manifest.assets.length, 16);
+  assert.equal(manifest.assets.length, 40);
 
   for (const kind of ['symbol', 'wordmark', 'lockup']) {
     for (const variant of ['light', 'dark', 'mono-light', 'mono-dark']) {
@@ -26,6 +27,40 @@ test('manifest describes the full original brand export set with stable unique p
     'brand/readme-banner.svg',
   ]) {
     assert.ok(assetByPath.has(requiredPath), `${requiredPath} is exported`);
+  }
+  const iconNames = [
+    'user',
+    'partner',
+    'company',
+    'team',
+    'addon',
+    'model',
+    'field',
+    'relation',
+    'activity',
+    'attachment',
+    'notification',
+    'jobs',
+    'workflow',
+    'security',
+    'search',
+    'add',
+    'edit',
+    'delete',
+    'settings',
+    'calendar',
+    'filter',
+    'refresh',
+    'external-link',
+    'menu',
+  ];
+  assert.equal(manifest.assets.filter(({ kind }) => kind === 'icon').length, iconNames.length);
+  for (const name of iconNames) {
+    const icon = assetByPath.get(`icons/${name}.svg`);
+    assert.ok(icon, `${name} icon is exported`);
+    assert.equal(icon.variant, 'currentColor');
+    assert.equal(icon.width, 24);
+    assert.equal(icon.height, 24);
   }
 });
 
@@ -63,7 +98,28 @@ test('package exports only framework-independent static assets', async () => {
   const packageJson = JSON.parse(await readFile(resolve(packageRoot, 'package.json'), 'utf8'));
   assert.deepEqual(packageJson.dependencies ?? {}, {});
   assert.equal(packageJson.exports['./brand/*'], './brand/*');
+  assert.equal(packageJson.exports['./icons/*'], './icons/*');
   assert.equal(packageJson.exports['./manifest.json'], './manifest.json');
+  assert.equal(packageJson.exports['./licenses.json'], './licenses.json');
   assert.ok(packageJson.files.includes('brand'));
+  assert.ok(packageJson.files.includes('icons'));
   assert.ok(packageJson.files.includes('manifest.json'));
+});
+
+test('provenance covers original design assets and every externally sourced font family', async () => {
+  const provenance = JSON.parse(await readFile(resolve(packageRoot, 'licenses.json'), 'utf8'));
+  assert.equal(provenance.schemaVersion, 1);
+  assert.equal(provenance.packageLicense, 'ISC');
+  assert.equal(provenance.originalAssets.source, 'packages/assets/scripts/generate.mjs');
+  assert.equal(provenance.originalAssets.license, 'ISC');
+  assert.equal(provenance.fonts.length, 3);
+  assert.deepEqual(
+    provenance.fonts.map(({ family }) => family).sort(),
+    ['Anton', 'JetBrains Mono', 'Space Grotesk'].sort()
+  );
+  for (const font of provenance.fonts) {
+    assert.equal(font.license, 'SIL Open Font License 1.1');
+    assert.match(font.source, /^https:\/\//u);
+    assert.match(font.usage, /not included/u);
+  }
 });

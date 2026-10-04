@@ -96,3 +96,4 @@ try {
 }
 
 stdout.write(`Rendered ${socialPath} and ${proofPath}.\n`);
+await import('./render-icons.mjs');

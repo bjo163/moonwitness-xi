@@ -6,11 +6,15 @@
   "license": "ISC",
   "files": [
     "brand",
+    "icons",
     "manifest.json",
+    "licenses.json",
     "README.md"
   ],
   "exports": {
     "./brand/*": "./brand/*",
-    "./manifest.json": "./manifest.json"
+    "./icons/*": "./icons/*",
+    "./manifest.json": "./manifest.json",
+    "./licenses.json": "./licenses.json"
   }
 }

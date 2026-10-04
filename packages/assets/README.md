@@ -4,16 +4,20 @@ Framework-independent SVG assets for MoonWitness. The package has no runtime dep
 
 ## Generate and export
 
-The published package contains the generated assets only. In the MoonWitness repository, maintainers can run `pnpm assets:generate` to regenerate the SVG files and manifest from the deterministic generator, then `pnpm assets:render` to rasterize the social card with the repository's Playwright Chromium setup and refresh the repository-only proof sheet at `docs/design/assets/brand-identity-contact-sheet.png`.
+The published package contains the generated assets, manifest, license provenance, and usage documentation. In the MoonWitness repository, maintainers can run `pnpm assets:generate` to regenerate the SVG files and manifest from the deterministic generator, `pnpm assets:render` to render social and icon proofs with repository Playwright Chromium, and `pnpm assets:validate` to check the whole SVG export set before packaging.
 
 Consumers can import a static asset through a package export, for example:
 
 ```text
 @moonwitness/assets/brand/moonwitness-lockup-dark.svg
 @moonwitness/assets/brand/favicon.svg
+@moonwitness/assets/icons/partner.svg
 @moonwitness/assets/manifest.json
+@moonwitness/assets/licenses.json
 ```
+
+The icon inventory uses 24×24 SVG viewBoxes, a 1.8-unit rounded stroke, and `currentColor` for inline/themeable consumers. For standalone `<img>` usage the SVG uses the browser's default current color; use the React wrappers in `@moonwitness/ui` when it is necessary to inherit an element color. The visual scale/theme contact sheet is at `docs/design/assets/icon-contact-sheet.png` in the repository.
 
 Variant suffixes describe the intended foreground palette and assume a transparent background unless the SVG is a banner/card/icon with its own surface. `mono-light` is dark ink for light surfaces; `mono-dark` is paper ink for dark surfaces. Use a lockup when there is enough room, and the symbol/favicon for compact spaces. Do not recolor by string replacement; generate from the shared palette definitions.
 
-SVG sources use built-in geometric paths and system font fallbacks only. They have no external image/font references. Third-party and source provenance is tracked separately under M5.07.
+SVG sources use built-in geometric paths and system font fallbacks only. They have no external image/font references. Creator, source, modifications, and licenses are recorded in [`licenses.json`](./licenses.json); font binaries are not included in this package.

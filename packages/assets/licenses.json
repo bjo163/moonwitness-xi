@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "packageLicense": "ISC",
+  "originalAssets": {
+    "creator": "MoonWitness contributors",
+    "source": "packages/assets/scripts/generate.mjs",
+    "license": "ISC",
+    "modifications": "Original MoonWitness brand marks and UI icons authored for this project; no third-party icon or logo artwork is embedded."
+  },
+  "fonts": [
+    {
+      "family": "Anton",
+      "designer": "Vernon Adams",
+      "source": "https://github.com/google/fonts/tree/main/ofl/anton",
+      "license": "SIL Open Font License 1.1",
+      "usage": "Referenced by the Board Google Fonts stylesheet; font binaries are not included in @moonwitness/assets."
+    },
+    {
+      "family": "Space Grotesk",
+      "designer": "Florian Karsten",
+      "source": "https://github.com/google/fonts/tree/main/ofl/spacegrotesk",
+      "license": "SIL Open Font License 1.1",
+      "usage": "Referenced by the Board Google Fonts stylesheet; font binaries are not included in @moonwitness/assets."
+    },
+    {
+      "family": "JetBrains Mono",
+      "designer": "Philipp Nurullin",
+      "source": "https://github.com/JetBrains/JetBrainsMono",
+      "license": "SIL Open Font License 1.1",
+      "usage": "Referenced by the Board Google Fonts stylesheet; font binaries are not included in @moonwitness/assets."
+    }
+  ],
+  "verifiedOn": "2026-10-04",
+  "notes": "Font names and licenses were checked against the upstream project metadata and license pages on the verification date. Verify the upstream license again before bundling font files or distributing modified font binaries."
+}

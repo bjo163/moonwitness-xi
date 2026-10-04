@@ -19,12 +19,152 @@ const mark = (palette) => `
   <path d="M49.5 7v12m-6-6h12m-10.2-4.2 8.4 8.4m0-8.4-8.4 8.4" fill="none" stroke="${palette.ink}" stroke-width="1.8" stroke-linecap="round"/>
 `;
 
-function svgDocument(viewBox, title, content, width, height) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="${width}" height="${height}" role="img" aria-label="${title}">
+function svgDocument(viewBox, title, content, width, height, attributes = '') {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="${width}" height="${height}"${attributes} role="img" aria-label="${title}">
   <title>${title}</title>
 ${content}
 </svg>\n`;
 }
+
+const icons = [
+  {
+    name: 'user',
+    title: 'User',
+    paths:
+      '<circle cx="12" cy="8" r="3.5"/><path d="M4.5 20c.7-3.4 3.4-5.5 7.5-5.5s6.8 2.1 7.5 5.5"/>',
+  },
+  {
+    name: 'partner',
+    title: 'Partner contact',
+    paths:
+      '<circle cx="9" cy="8" r="3"/><path d="M3.5 19c.5-2.9 2.5-4.5 5.5-4.5 2.2 0 3.8.9 4.7 2.6"/><rect x="14" y="5" width="6.5" height="11" rx="1"/><path d="M15.7 8h3.1m-3.1 2.7h3.1m-3.1 2.7h1.7"/><path d="M15.5 20h4"/>',
+  },
+  {
+    name: 'company',
+    title: 'Company',
+    paths:
+      '<path d="M3.5 20V8.5l6.5-3V20m0-9 10.5-4V20H3.5Zm0 0h17"/><path d="M6.5 10.5v1m0 3v1m6-2v1m0 3v1m4.5-8v1m0 3v1m0 3v1"/>',
+  },
+  {
+    name: 'team',
+    title: 'Team',
+    paths:
+      '<circle cx="12" cy="7" r="2.8"/><circle cx="5" cy="9" r="2.1"/><circle cx="19" cy="9" r="2.1"/><path d="M7 19c.4-3.2 2-4.8 5-4.8s4.6 1.6 5 4.8m-14.5-.5c.3-2.3 1.3-3.5 3.2-3.8m13.8 3.8c-.3-2.3-1.3-3.5-3.2-3.8"/>',
+  },
+  {
+    name: 'addon',
+    title: 'Addon module',
+    paths:
+      '<path d="M4 4h6v3a2 2 0 1 0 4 0V4h6v6h-3a2 2 0 1 0 0 4h3v6h-6v-3a2 2 0 1 0-4 0v3H4v-6h3a2 2 0 1 0 0-4H4V4Z"/>',
+  },
+  {
+    name: 'model',
+    title: 'Data model',
+    paths:
+      '<rect x="3.5" y="4" width="17" height="16" rx="1"/><path d="M3.5 9h17M9 9v11m6-11v11M3.5 14.5h17"/>',
+  },
+  {
+    name: 'field',
+    title: 'Model field',
+    paths: '<path d="M4 5h16M4 9h9m-9 4h16m-16 4h10"/><circle cx="18" cy="9" r="1"/>',
+  },
+  {
+    name: 'relation',
+    title: 'Model relation',
+    paths:
+      '<circle cx="5" cy="12" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="m7.4 11 9.2-4m-9.2 6 9.2 4"/>',
+  },
+  {
+    name: 'activity',
+    title: 'Activity',
+    paths: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2m-11-9 2-1.5m13 1.5-2-1.5"/>',
+  },
+  {
+    name: 'attachment',
+    title: 'Attachment',
+    paths:
+      '<path d="m8.5 12.5 6.8-6.8a3.2 3.2 0 0 1 4.5 4.5l-8.6 8.6a5 5 0 0 1-7.1-7.1l8.6-8.6"/><path d="m7.1 13.9 7.8-7.8"/>',
+  },
+  {
+    name: 'notification',
+    title: 'Notification',
+    paths:
+      '<path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Zm-8 12h4"/><path d="M12 3V1.8"/>',
+  },
+  {
+    name: 'jobs',
+    title: 'Background jobs',
+    paths:
+      '<rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M9 4V2.5h6V4m-7 5h8m-8 4h8m-8 4h4"/>',
+  },
+  {
+    name: 'workflow',
+    title: 'Workflow',
+    paths:
+      '<rect x="3.5" y="3.5" width="6" height="5" rx="1"/><rect x="14.5" y="15.5" width="6" height="5" rx="1"/><circle cx="17.5" cy="6" r="2.5"/><path d="M9.5 6h3.5a4.5 4.5 0 0 1 4.5 4.5v5m-14-7v4.5a3.5 3.5 0 0 0 3.5 3.5h7.5"/>',
+  },
+  {
+    name: 'security',
+    title: 'Security policy',
+    paths:
+      '<path d="M12 3 20 6v5.5c0 4.6-3 7.6-8 9.5-5-1.9-8-4.9-8-9.5V6l8-3Z"/><path d="m8.5 12 2.3 2.3 4.8-5"/>',
+  },
+  {
+    name: 'search',
+    title: 'Search',
+    paths: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/>',
+  },
+  {
+    name: 'add',
+    title: 'Add',
+    paths: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v10m-5-5h10"/>',
+  },
+  {
+    name: 'edit',
+    title: 'Edit',
+    paths:
+      '<path d="m14.5 5.5 4 4M4 20l4.5-1 10.8-10.8a2.8 2.8 0 0 0-4-4L4.5 15 4 20Z"/><path d="M13 20h7"/>',
+  },
+  {
+    name: 'delete',
+    title: 'Delete',
+    paths: '<path d="M4 7h16m-10-3h4m-8 3 1 13h10l1-13m-8 3v7m4-7v7"/>',
+  },
+  {
+    name: 'settings',
+    title: 'Settings',
+    paths:
+      '<path d="M12 3.5v2m0 13v2m8.5-8.5h-2m-13 0h-2m14.5-6-1.4 1.4m-9.2 9.2L6 18m12 0-1.4-1.4m-9.2-9.2L6 6"/><circle cx="12" cy="12" r="6.3"/><circle cx="12" cy="12" r="2"/>',
+  },
+  {
+    name: 'calendar',
+    title: 'Calendar',
+    paths:
+      '<rect x="3.5" y="5" width="17" height="16" rx="1.5"/><path d="M7.5 3v4m9-4v4m-13 2h17m-12 4h.1m4.9 0h.1m-5.1 4h.1m4.9 0h.1"/>',
+  },
+  {
+    name: 'filter',
+    title: 'Filter',
+    paths: '<path d="M3.5 5h17l-6.5 7v5l-4 2v-7L3.5 5Z"/>',
+  },
+  {
+    name: 'refresh',
+    title: 'Refresh',
+    paths:
+      '<path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.5 9a7 7 0 0 1 12-2L20 12M4 12l2.5 5a7 7 0 0 0 12-2"/>',
+  },
+  {
+    name: 'external-link',
+    title: 'Open external link',
+    paths:
+      '<path d="M13 4h7v7m0-7-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/>',
+  },
+  {
+    name: 'menu',
+    title: 'Menu',
+    paths: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+  },
+];
 
 const textStyle = (color, size) =>
   `fill="${color}" font-family="Arial, Helvetica, sans-serif" font-size="${size}" font-weight="700" letter-spacing="1.4"`;
@@ -146,15 +286,36 @@ generated.push({
   svg: readmeBanner,
 });
 
+for (const icon of icons) {
+  generated.push({
+    path: `icons/${icon.name}.svg`,
+    kind: 'icon',
+    variant: 'currentColor',
+    width: 24,
+    height: 24,
+    svg: svgDocument(
+      '0 0 24 24',
+      icon.title,
+      icon.paths,
+      24,
+      24,
+      ' fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"'
+    ),
+  });
+}
+
 await mkdir(brandDirectory, { recursive: true });
 for (const asset of generated) {
-  await writeFile(resolve(packageRoot, asset.path), asset.svg, 'utf8');
+  const optimizedSvg = `${asset.svg.replace(/>\s+</gu, '><').trim()}\n`;
+  await mkdir(dirname(resolve(packageRoot, asset.path)), { recursive: true });
+  await writeFile(resolve(packageRoot, asset.path), optimizedSvg, 'utf8');
 }
 
 const manifest = {
   name: '@moonwitness/assets',
   schemaVersion: 1,
   source: 'scripts/generate.mjs',
+  licenseManifest: 'licenses.json',
   assets: [
     ...generated.map(({ path, kind, variant, width, height }) => ({
       path,
