@@ -101,7 +101,9 @@ jobs:
       - name: Validate workflows and shell scripts
         run: bash scripts/check-automation.sh
       - name: Test affected selection, release classification, and promotion policy
-        run: pnpm test:ci-gate && pnpm test:affected && pnpm test:release-classification && pnpm test:promotion-policy && pnpm test:flaky-policy && node scripts/check-flaky-policy.mjs
+        run: pnpm test:ci-gate && pnpm test:affected && pnpm test:release-classification && pnpm test:promotion-policy && pnpm test:flaky-policy && pnpm test:security-policy && node scripts/check-flaky-policy.mjs
+      - name: Validate vulnerability exception baseline
+        run: node scripts/check-vulnerability-policy.mjs
 
   integration:
     name: integration
@@ -254,6 +256,9 @@ jobs:
     if: contains(fromJSON(needs.plan.outputs.projects), 'containers')
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@v4
       - name: Validate production Compose configuration
@@ -263,6 +268,23 @@ jobs:
         run: docker compose -f docker-compose.production.yml config --quiet
       - name: Smoke test API and Board containers against isolated PostgreSQL
         run: bash scripts/smoke-containers.sh
+      - name: Scan locked workspace runtime dependencies for CRITICAL vulnerabilities
+        uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 # 0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          severity: CRITICAL
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-results.sarif
+          exit-code: '1'
+      - name: Upload container dependency scan SARIF
+        if: always() && hashFiles('trivy-results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@1190a975f95ce23525efb6a3fc21ea29567c1b52 # v3
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy-workspace-dependencies
   ci-gate:
     name: ci-gate
     if: always()

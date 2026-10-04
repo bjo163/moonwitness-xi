@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "7c9eae303b07bb15be2b06e388ccd1616b8dc33f2d50e1473cf2068e68b8a6be",
+  "generatedFromSha256": "278f93a49bfeac3e1de7184ac0c22e3e2ead7b889318597f3d3b896f14693869",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -218,6 +218,7 @@
       "test:promotion-policy": "node --test scripts/git-range.test.mjs scripts/promotion-risk.test.mjs scripts/promotion-approval.test.mjs",
       "test:release-classification": "node --test scripts/release-classification.test.mjs",
       "test:restore-drill": "node scripts/verify-application-restore.mjs",
+      "test:security-policy": "node --test scripts/security-scan-policy.test.mjs",
       "test:ui": "pnpm --filter @moonwitness/ui build && node --test packages/ui/tests/*.test.mjs && node packages/ui/scripts/verify-package.mjs",
       "test:ui-budget": "node --test apps/ui-catalog/tests/bundle-budget.test.mjs && pnpm --filter @moonwitness/ui-catalog build && pnpm ui:budget",
       "test:ui-catalog": "pnpm --filter @moonwitness/ui-catalog build && pnpm --filter @moonwitness/ui-catalog test",
