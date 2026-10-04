@@ -99,7 +99,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 - [x] M4.08 Pastikan field sensitif tidak muncul dalam JSON, export, audit, error, atau log. Bukti: [M4.08](docs/roadmap/evidence/M4.08.md); REST/RPC/ORM, audit/outbox, logger sentinel, dan Board CSV Chromium diverifikasi.
 - [x] M4.09 Audit transaksi, constraint, indexes, concurrency edits, timezone, error mapping, dan rollback kegagalan upgrade programatis. Bukti: [M4.09](docs/roadmap/evidence/M4.09.md); PostgreSQL integration memeriksa upgrade, FK/unique mapping, update konkuren, dan kontrak UTC/last-commit-wins.
 - [x] M4.10 Scheduler/worker: claim atomik, lease, heartbeat, retry/backoff, recovery setelah crash, cancellation, dead-letter, dan job history. Bukti: [M4.10](docs/roadmap/evidence/M4.10.md); 9 jobs tests + 4 PostgreSQL integration tests memeriksa claim/reclaim/fencing, retry, cancellation, DST, dan concurrent workers.
-- [ ] M4.11 Outbox: transactional enqueue, delivery retries, deduplication/idempotency, dan pengujian efek eksternal ganda; jangan mengklaim exactly-once tanpa bukti.
+- [x] M4.11 Outbox: transactional enqueue, delivery retries, deduplication/idempotency, dan pengujian efek eksternal ganda; jangan mengklaim exactly-once tanpa bukti. Bukti: [M4.11](docs/roadmap/evidence/M4.11.md); business/outbox rollback dan pengiriman ulang stable ID dengan receiver dedup dibuktikan.
 - [ ] M4.12 Attachment: izin upload/download, size/MIME, filename/path traversal, storage ownership, dan retensi.
 - [ ] M4.13 Operasional: graceful shutdown, DB pools/timeouts, request ID, redaksi log, readiness/liveness API dan worker.
 - [ ] M4.14 Restore drill dengan data aplikasi, relasi, akun test dan integrity checks; tetapkan target pemulihan berbasis hasil pengukuran.

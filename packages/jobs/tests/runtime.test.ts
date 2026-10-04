@@ -420,4 +420,56 @@ describe('durable job runtime', () => {
       unregister();
     }
   });
+
+  it('retries after a successful receiver effect and lets an idempotent receiver deduplicate it', async () => {
+    const deliveries: number[] = [];
+    const appliedEffects = new Set<number>();
+    let effectCount = 0;
+    const unregister = registerOutboxConsumer('receiver.deduplicate', async (_payload, eventId) => {
+      deliveries.push(eventId);
+      if (!appliedEffects.has(eventId)) {
+        appliedEffects.add(eventId);
+        effectCount += 1;
+      }
+    });
+    try {
+      const event = await OutboxEvent.query().insertAndFetch({
+        event_type: 'receiver.deduplicate',
+        aggregate_model: 'base.partner',
+        aggregate_id: 456,
+        payload: '{"record":{"id":456}}',
+        available_at: new Date(0).toISOString(),
+        max_attempts: 3,
+      });
+      await db.raw(`
+        CREATE TRIGGER fail_outbox_ack
+        BEFORE UPDATE ON outbox_events
+        WHEN NEW.status = 'published'
+        BEGIN SELECT RAISE(ABORT, 'simulated acknowledgement failure'); END;
+      `);
+
+      expect(await dispatchOneOutboxEvent('outbox-retry')).toBe(true);
+      expect(await OutboxEvent.query().findById(event.id)).toMatchObject({
+        status: 'pending',
+        attempts: 1,
+      });
+      expect(await dispatchOneOutboxEvent('outbox-retry')).toBe(false);
+      await db.raw('DROP TRIGGER fail_outbox_ack');
+      await OutboxEvent.query()
+        .findById(event.id)
+        .patch({ available_at: new Date(0).toISOString() });
+
+      expect(await dispatchOneOutboxEvent('outbox-retry')).toBe(true);
+      expect(deliveries).toEqual([event.id, event.id]);
+      expect(effectCount).toBe(1);
+      expect(await OutboxEvent.query().findById(event.id)).toMatchObject({
+        status: 'published',
+        attempts: 2,
+        fencing_token: 2,
+      });
+    } finally {
+      await db.raw('DROP TRIGGER IF EXISTS fail_outbox_ack');
+      unregister();
+    }
+  });
 });

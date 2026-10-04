@@ -33,4 +33,6 @@ Cron expressions are evaluated by `cron-parser` with the configured IANA timezon
 
 Queue execution is at-least-once across crashes: a process can perform an external side effect and die before recording success, after which the expired lease may be retried. Fencing protects database completion, not external systems. Handlers that call external services must use a stable idempotency key or receiver-side deduplication. The runtime does not claim exactly-once effects.
 
+Outbox events are claimed as `pending -> processing -> published`; failed delivery returns to `pending` with bounded attempts/backoff or becomes `dead`. Each delivery keeps the same database event ID, which the consumer receives as its idempotency key. If the receiver commits an effect but local acknowledgement fails, delivery can happen again. A receiver that stores/deduplicates that stable ID can prevent a duplicate effect; the sender alone cannot guarantee that property.
+
 The addon includes a disabled example cron seed for discovery. Scheduled jobs are not enabled just by installing the addon.

@@ -462,6 +462,8 @@
     },
     {
       "id": "M4.11",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M4.11.md",
       "title": "Outbox: transactional enqueue, delivery retries, deduplication/idempotency, dan pengujian efek eksternal ganda; jangan mengklaim exactly-once tanpa bukti.",
       "milestone": "M4",
       "dependsOn": ["M4.10"],
