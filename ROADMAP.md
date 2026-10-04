@@ -51,11 +51,11 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 - [x] M1.05 Buat satu PR promosi otomatis; gunakan merge commit dan jangan auto-delete `dev`. PR #1 auto-merged setelah `ci-gate`; bukti: [M1.02–M1.06](docs/roadmap/evidence/M1.02-06.md).
 - [x] M1.06 Tetapkan required checks yang stabil dan tidak deadlock akibat filter path atau job skipped. Bukti: [M1.02–M1.06](docs/roadmap/evidence/M1.02-06.md).
 - [x] M1.07 Atur CODEOWNERS untuk workflow, auth, akses, schema, dan release. Satu maintainer terdeteksi; assignment meminta focused review tanpa mewajibkan approval yang akan menghentikan auto-promotion. Bukti: [M1.07](docs/roadmap/evidence/M1.07.md).
-- [ ] M1.08 Tentukan kebijakan promosi: patch/minor kompatibel bisa otomatis; breaking change, perubahan destruktif, dan perubahan kebijakan keamanan memerlukan persetujuan eksplisit. Implementasi dan pengujian lokal: [M1.08](docs/roadmap/evidence/M1.08.md); tunggu CI jarak jauh, review CODEOWNER pada SHA PR terkini, dan bukti merge.
+- [ ] M1.08 Tentukan kebijakan promosi: patch/minor kompatibel bisa otomatis; breaking change, perubahan destruktif, dan perubahan kebijakan keamanan memerlukan persetujuan eksplisit. Semua lane CI lulus; `ci-gate` menunggu review CODEOWNER pada SHA PR terkini dan bukti merge. Bukti: [M1.08](docs/roadmap/evidence/M1.08.md).
 - [x] M1.09 Sinkronkan `main → dev` tanpa force-push; perubahan bersamaan atau konflik menghasilkan laporan, bukan overwrite. Push + rekonsiliasi terjadwal + trigger manual terbukti pada run 37172778791.
 - [x] M1.10 Lindungi tag release dari pemindahan/penghapusan rutin; ruleset aktif `Protect version tags` membatasi update/delete `refs/tags/v*`, tanpa bypass. Bukti: [M1.10](docs/roadmap/evidence/M1.10.md).
-- [ ] M1.11 Hapus workflow deploy staging/production; pertahankan smoke test container API/Board runner-local dengan PostgreSQL sementara. Local verification lulus; tunggu CI/merge. Bukti: [M1.11](docs/roadmap/evidence/M1.11.md).
-- [ ] M1.12 Pastikan updater dependency, generator docs, dan release bot tidak membuat branch ketiga; dokumentasikan keterbatasan strict two-branch untuk kolaborasi.
+- [ ] M1.11 Hapus workflow deploy staging/production; pertahankan smoke test container API/Board runner-local dengan PostgreSQL sementara. Local dan semua lane CI lulus; tunggu promosi bersama PR M1.08. Bukti: [M1.11](docs/roadmap/evidence/M1.11.md).
+- [x] M1.12 Audit updater dependency, generator docs, dan release workflow: tidak ada updater/generator aktif; workflows yang ada tidak membuat branch ketiga. Batas dua branch dan tindak lanjut tercatat: [M1.12](docs/roadmap/evidence/M1.12.md).
 
 ## M2 — CI terpusat dan paralel (jalur A; kontrak M0)
 
