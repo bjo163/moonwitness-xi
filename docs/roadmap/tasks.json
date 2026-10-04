@@ -372,6 +372,8 @@
     },
     {
       "id": "M4.02",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M4.02.md",
       "title": "Test instalasi bersih, restart idempotent, upgrade legacy, seed reference, pelestarian edit pengguna, dan startup multi-replica.",
       "milestone": "M4",
       "dependsOn": ["M2.07"],
@@ -380,6 +382,8 @@
     },
     {
       "id": "M4.03",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M4.03.md",
       "title": "Verifikasi default system/superadmin, password awal dari konfigurasi, reset CLI/root script, dan tidak menimpa password yang sudah diubah.",
       "milestone": "M4",
       "dependsOn": ["M2.07"],
