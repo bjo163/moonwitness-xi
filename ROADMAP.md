@@ -80,8 +80,8 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 - [x] M3.03 Test login sukses/gagal, logout, reload, expiry, refresh bersamaan, sesi dicabut, dan user nonaktif. Bukti: [M3.03](docs/roadmap/evidence/M3.03.md), [CI 37182163058](https://github.com/bjo163/moonwitness-xi/actions/runs/37182163058).
   - [x] M3.04 Test sidebar, command palette, dashboard, direct URL, Development Mode dan persistensinya; semua mengikuti metadata/akses yang sama. Bukti: [M3.04](docs/roadmap/evidence/M3.04.md), [CI 37183405761](https://github.com/bjo163/moonwitness-xi/actions/runs/37183405761).
   - [x] M3.05 Test profil sendiri, language/timezone, ganti password, login ulang, dan error validasi. Bukti: [M3.05](docs/roadmap/evidence/M3.05.md), [CI 37184757957](https://github.com/bjo163/moonwitness-xi/actions/runs/37184757957).
-- [x] M3.06 Test list/search/filter/sort/pagination/count, termasuk regresi `partner,language` dan count PostgreSQL. Bukti: [M3.06](docs/roadmap/evidence/M3.06.md), CI menunggu push.
-- [ ] M3.07 Test create/edit/archive/delete sesuai kebijakan model, field relasi, serta filter country/state.
+- [x] M3.06 Test list/search/filter/sort/pagination/count, termasuk regresi `partner,language` dan count PostgreSQL. Bukti: [M3.06](docs/roadmap/evidence/M3.06.md), [CI 37185662813](https://github.com/bjo163/moonwitness-xi/actions/runs/37185662813).
+- [x] M3.07 Test create/edit/archive/delete sesuai kebijakan model, field relasi, serta filter country/state. Bukti: [M3.07](docs/roadmap/evidence/M3.07.md), [CI 37187634769](https://github.com/bjo163/moonwitness-xi/actions/runs/37187634769); seluruh lane implementasi lolos, promosi main menunggu CODEOWNER.
 - [ ] M3.08 Test import/export, attachment, activities, dan fitur Board lain jika ditemukan dalam inventarisasi.
 - [ ] M3.09 Uji error/empty/loading states, jaringan terputus, stale data, double submit, dan pencegahan kebocoran cache antar-user/company.
 - [ ] M3.10 Simpan screenshot/trace saat gagal; buat visual baseline setelah audit manusia dan jangan auto-accept perubahan baseline.
