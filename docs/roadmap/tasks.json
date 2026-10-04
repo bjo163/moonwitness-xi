@@ -750,7 +750,8 @@
       "milestone": "M6",
       "dependsOn": ["M6.04", "M6.06"],
       "output": "Public documentation output scanner and adversarial tests",
-      "detailFile": "docs/roadmap/06-documentation.md"
+      "detailFile": "docs/roadmap/06-documentation.md",
+      "status": "complete"
     },
     {
       "id": "M6.10",

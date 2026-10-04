@@ -131,7 +131,7 @@ menjadi acceptance terpisah M6.07/M6.08.
 
 ### Verifikasi dan syarat selesai
 
-Workflow artifact memiliki index dan base paths benar; `build-info.json` merekam SHA checkout. Pemeriksaan lokal lolos; published source SHA akan dibuktikan dari deployment pertama di main/tag.
+Workflow artifact memiliki index dan base paths benar; `build-info.json` merekam SHA checkout. Hosted preview M6.07 pada `0ce59ed` lulus dan mengunggah artifact. Published source SHA tetap harus dibuktikan dari deployment pertama pada trusted main/release.
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M6.07.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
