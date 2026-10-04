@@ -503,7 +503,7 @@
     {
       "id": "M4.15",
       "title": "Tambahkan baseline load/query tests dan budget regresi realistis; ukur N+1 serta operasi yang memperbesar penggunaan memori.",
-      "status": "in_progress",
+      "status": "complete",
       "milestone": "M4",
       "dependsOn": ["M0.03", "M0.06"],
       "output": "PostgreSQL query/job baseline fixtures, structural budgets, EXPLAIN output, and CI report artifact",
