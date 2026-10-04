@@ -10,25 +10,9 @@ exit code 0.
 Tambahkan package di workspace, impor `defineModel`, `fields`, `defineAddon`, dan `seed` hanya dari
 public export package. Gunakan nama model stabil seperti `sales.order`, stable external seed IDs,
 relasi metadata, views dan menus sesuai kebutuhan. Manifest version harus `major.minor.patch` dan
-dependencies harus menyebut addon yang dipakai.
-
-```ts
-import { defineAddon, defineModel, fields } from '@moonwitness/orm';
-
-export const Order = defineModel('sales.order', {
-  fields: {
-    name: fields.string({ required: true, unique: true }),
-    state: fields.enum(['draft', 'confirmed'], { default: 'draft' }),
-  },
-});
-
-export const manifest = defineAddon({
-  name: 'sales',
-  version: '1.0.0',
-  depends: ['base'],
-  models: [Order],
-});
-```
+dependencies harus menyebut addon yang dipakai. Contoh executable yang sama dengan yang di-install
+oleh tes tersedia di [manifest addon contoh](../../../packages/orm/examples/sales/manifest.ts); verifikasi dengan
+`pnpm docs:examples:check`.
 
 Contoh ini hanya deklarasi; addon baru belum terpasang di aplikasi. Untuk addon yang membutuhkan
 contoh record, tambahkan seed lengkap untuk model non-runtime dan pakai helper `seed(Order, id, ...)`.

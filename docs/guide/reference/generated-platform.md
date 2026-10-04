@@ -1,6 +1,6 @@
 # Generated platform reference
 
-Source fingerprint: `9be4b338bcddeaaba267fd5f4da5b7760e05b4738bc98e5b2b94fba3c90d1cab`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
+Source fingerprint: `515c9c495c87f45ce120a4183fde8248d22bcbb2c6ae13468757ba1692b22404`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
 
 ## Workspace packages and apps
 
@@ -77,8 +77,10 @@ Value categories are inferred from variable names and example syntax; requiredne
 - `pnpm dev:board`
 - `pnpm docs:build`
 - `pnpm docs:check`
+- `pnpm docs:examples:check`
 - `pnpm docs:generate`
 - `pnpm docs:links`
+- `pnpm docs:links:external`
 - `pnpm format`
 - `pnpm format:check`
 - `pnpm jobs:outbox`

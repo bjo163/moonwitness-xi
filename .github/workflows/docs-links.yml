@@ -1,0 +1,26 @@
+name: External documentation links
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: external-doc-links-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: check external documentation links
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check selected external Markdown links with bounded retries
+        run: node scripts/check-external-doc-links.mjs

@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { defineAddon, installAddons, seed } from '../src/addon.js';
 import { defineModel, fields } from '../src/model-definition.js';
 import { Registry } from '../src/registry.js';
+import { manifest as documentedManifest } from '../examples/sales/manifest.js';
 
 const Parent = defineModel('test.parent', {
   table: 'test_parents',
@@ -65,6 +66,25 @@ describe('programmatic addon installer', () => {
     expect(await connection('test_parents').first('name')).toMatchObject({ name: 'P' });
     expect(await connection('test_children').first('parent_id')).toMatchObject({ parent_id: 1 });
     expect(Registry.get('test.parent')).toBe(Parent);
+  });
+
+  it('installs the documented addon example and its stable seed into a test database', async () => {
+    const connection = database();
+    await installAddons(connection, [
+      defineAddon({ name: 'base', version: '1.0.0', models: [] }),
+      documentedManifest,
+    ]);
+    await installAddons(connection, [
+      defineAddon({ name: 'base', version: '1.0.0', models: [] }),
+      documentedManifest,
+    ]);
+    expect(await connection('sales_order').count({ count: '*' }).first()).toMatchObject({
+      count: 1,
+    });
+    expect(await connection('sales_order').first('name', 'state')).toMatchObject({
+      name: 'Example order',
+      state: 'draft',
+    });
   });
 
   it('rejects downgrade and rolls back new schema changes', async () => {
