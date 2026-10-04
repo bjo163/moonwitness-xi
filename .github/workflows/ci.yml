@@ -43,6 +43,10 @@ jobs:
       - run: pnpm lint
       - run: pnpm format:check
       - run: pnpm build
+      - name: Typecheck Board
+        run: pnpm --filter @moonwitness/board typecheck
+      - name: Lint Board
+        run: pnpm --filter @moonwitness/board lint
       - run: pnpm test
       - name: Build production container
         run: docker build --tag moonwitness-api:ci .
