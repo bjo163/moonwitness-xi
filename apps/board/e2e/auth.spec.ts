@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { E2E_SUPERADMIN_PASSWORD } from './constants.js';
 
 test('login form renders and rejects invalid credentials', async ({ page }) => {
   await page.goto('/login');
@@ -17,7 +18,7 @@ test('login form renders and rejects invalid credentials', async ({ page }) => {
 test('superadmin can log in, open dashboard, and log out', async ({ page }) => {
   await page.goto('/login');
   await page.getByLabel('Login').fill('superadmin');
-  await page.getByLabel('Password').fill('e2e-only-password');
+  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the board' }).click();
 
   await expect(page).toHaveURL(/\/$/u);

@@ -12,13 +12,24 @@ import { Logo } from '@/components/manga/logo';
 
 type Mode = 'login' | 'register';
 
+function safeReturnPath(value: unknown): string {
+  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//')) return '/';
+  try {
+    const target = new URL(value, window.location.origin);
+    if (target.origin !== window.location.origin) return '/';
+    return `${target.pathname}${target.search}${target.hash}`;
+  } catch {
+    return '/';
+  }
+}
+
 export function AuthPage({ mode }: { mode: Mode }) {
   const { user, login, register } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const from = (location.state as { from?: string } | null)?.from ?? '/';
+  const from = safeReturnPath((location.state as { from?: unknown } | null)?.from);
 
   if (user) return <Navigate to={from} replace />;
 

@@ -2,6 +2,7 @@ import { AxeBuilder } from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
+import { E2E_SUPERADMIN_PASSWORD } from './constants.js';
 
 const root = path.resolve(import.meta.dirname, '../../..');
 const auditDirectory = path.join(root, 'test-results/visual-audit');
@@ -71,7 +72,7 @@ test('responsive protected screens fit and remain accessible in both themes', as
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/login');
   await page.getByLabel('Login').fill('superadmin');
-  await page.getByLabel('Password').fill('e2e-only-password');
+  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the board' }).click();
   await expect(page).toHaveURL(/\/$/u);
 
