@@ -109,6 +109,13 @@ jobs:
     needs: [quality, integration, containers, automation]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          node-version: '22'
+          pnpm-version: '11'
+      - name: Test CI gate decisions
+        run: pnpm test:ci-gate
       - name: Require every mandatory job to succeed
         env:
           QUALITY_RESULT: ${{ needs.quality.result }}
@@ -116,9 +123,8 @@ jobs:
           CONTAINERS_RESULT: ${{ needs.containers.result }}
           AUTOMATION_RESULT: ${{ needs.automation.result }}
         run: |
-          for result in "$QUALITY_RESULT" "$INTEGRATION_RESULT" "$CONTAINERS_RESULT" "$AUTOMATION_RESULT"; do
-            if [ "$result" != success ]; then
-              echo "Required CI job result was '$result'" >&2
-              exit 1
-            fi
-          done
+          QUALITY_RESULT="$QUALITY_RESULT" \
+          INTEGRATION_RESULT="$INTEGRATION_RESULT" \
+          CONTAINERS_RESULT="$CONTAINERS_RESULT" \
+          AUTOMATION_RESULT="$AUTOMATION_RESULT" \
+          node scripts/ci-gate.mjs

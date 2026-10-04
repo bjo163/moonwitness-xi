@@ -16,7 +16,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "release:check": "node scripts/check-release.mjs"
+    "release:check": "node scripts/check-release.mjs",
+    "test:ci-gate": "node --test scripts/ci-gate.test.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
