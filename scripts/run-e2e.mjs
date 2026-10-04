@@ -59,6 +59,17 @@ if (buildApiWorkspace.error) {
 }
 if (buildApiWorkspace.status !== 0) exit(buildApiWorkspace.status ?? 1);
 
+const buildBoardPackages = spawnSync(
+  execPath,
+  [packageManagerCli, '--filter', '@moonwitness/ui', 'build'],
+  { cwd: root, env, stdio: 'inherit' }
+);
+if (buildBoardPackages.error) {
+  stderr.write(`${buildBoardPackages.error.message}\n`);
+  exit(1);
+}
+if (buildBoardPackages.status !== 0) exit(buildBoardPackages.status ?? 1);
+
 const e2ePassword = env.MW_E2E_SUPERADMIN_PASSWORD ?? 'e2e-only-password';
 const resetE2ECredentials = spawnSync(
   execPath,
