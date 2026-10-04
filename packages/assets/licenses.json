@@ -4,8 +4,9 @@
   "originalAssets": {
     "creator": "MoonWitness contributors",
     "source": "packages/assets/scripts/generate.mjs",
+    "additionalSource": "packages/assets/scripts/generate-illustrations.mjs",
     "license": "ISC",
-    "modifications": "Original MoonWitness brand marks and UI icons authored for this project; no third-party icon or logo artwork is embedded."
+    "modifications": "Original MoonWitness brand marks, UI icons, interface illustrations, and orbit pattern authored for this project; no third-party icon or logo artwork is embedded."
   },
   "fonts": [
     {

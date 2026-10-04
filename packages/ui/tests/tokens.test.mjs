@@ -43,10 +43,13 @@ function contrast(foreground, background) {
   return (values[0] + 0.05) / (values[1] + 0.05);
 }
 
-test('package exposes one explicit, framework-independent stylesheet entry', () => {
-  assert.deepEqual(packageJson.exports, {
-    './styles/tokens.css': './src/styles/tokens.css',
+test('package exposes explicit stylesheet and tree-shakeable typed icon entries', () => {
+  assert.equal(packageJson.exports['./styles/tokens.css'], './src/styles/tokens.css');
+  assert.deepEqual(packageJson.exports['./icons/*'], {
+    types: './dist/icons/*.d.ts',
+    import: './dist/icons/*.js',
   });
+  assert.equal(packageJson.exports['./icons'].import, './dist/icons/index.js');
   assert.equal(packageJson.dependencies, undefined);
   assert.equal(packageJson.peerDependencies.react, '>=18');
   assert.equal(packageJson.peerDependenciesMeta.react.optional, true);

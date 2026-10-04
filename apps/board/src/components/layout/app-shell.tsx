@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import type { ModelInfo } from '@moonwitness/client';
+import { SettingsIcon as MoonWitnessSettingsIcon } from '@moonwitness/ui/icons/settings';
+import { UserIcon as MoonWitnessUserIcon } from '@moonwitness/ui/icons/user';
 import {
   Building2,
   Calendar,
@@ -13,7 +15,6 @@ import {
   Menu,
   Moon,
   Search,
-  Settings,
   Sun,
   User,
   Users,
@@ -476,12 +477,12 @@ export function AppShell() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <NavLink to="/profile" className="flex cursor-pointer items-center gap-2">
-                    <User /> Profile
+                    <MoonWitnessUserIcon className="size-4" /> Profile
                   </NavLink>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <NavLink to="/settings" className="flex cursor-pointer items-center gap-2">
-                    <Settings /> Settings
+                    <MoonWitnessSettingsIcon className="size-4" /> Settings
                   </NavLink>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />

@@ -10,6 +10,9 @@ const repositoryRoot = resolve(packageRoot, '../..');
 const outputPath = resolve(repositoryRoot, 'docs/design/assets/icon-contact-sheet.png');
 const manifest = JSON.parse(await readFile(resolve(packageRoot, 'manifest.json'), 'utf8'));
 const icons = manifest.assets.filter((asset) => asset.kind === 'icon');
+const illustrations = manifest.assets.filter(
+  (asset) => asset.kind === 'illustration' || asset.kind === 'pattern'
+);
 
 function dataUrl(svg) {
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
@@ -82,6 +85,41 @@ try {
     `Rendered ${icons.length} icons across ${imageStates.length} size/theme samples to ${outputPath}.\n`
   );
   await page.close();
+
+  const illustrationOutput = resolve(
+    repositoryRoot,
+    'docs/design/assets/illustration-contact-sheet.png'
+  );
+  const illustrationCells = await Promise.all(
+    illustrations.map(async (asset) => {
+      const svg = await readFile(resolve(packageRoot, asset.path), 'utf8');
+      const data = dataUrl(svg);
+      return `<article class="${asset.variant}"><h2>${asset.path.slice('illustrations/'.length)}</h2><img src="${data}" alt="" width="${asset.width}" height="${asset.height}"></article>`;
+    })
+  );
+  const illustrationPage = await browser.newPage({
+    viewport: { width: 1320, height: 1000 },
+    deviceScaleFactor: 1,
+  });
+  await illustrationPage.setContent(`<!doctype html><html lang="en"><head><meta charset="utf-8"><style>
+    *{box-sizing:border-box}body{margin:0;padding:24px;background:#e8e4d9;color:#0d0d0d;font:14px Arial,sans-serif}h1{margin:0 0 8px;font-size:24px}p{margin:0 0 20px;color:#3a3a36}main{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}article{min-height:210px;padding:12px;border:2px solid #0d0d0d;background:#fffdf6;box-shadow:3px 3px #0d0d0d}article.dark{background:#0d0d0d;color:#f3efe4}h2{margin:0 0 8px;font:700 12px ui-monospace,monospace}img{display:block;width:100%;height:160px;object-fit:contain}
+    </style></head><body><h1>MoonWitness interface illustrations</h1><p>Original empty, search, activity, access, not-found, offline, onboarding and orbit pattern assets in light and dark variants.</p><main>${illustrationCells.join('')}</main></body></html>`);
+  const illustrationImages = await illustrationPage
+    .locator('main img')
+    .evaluateAll((images) => images.map((image) => image.complete && image.naturalWidth > 0));
+  if (illustrationImages.length !== illustrations.length || illustrationImages.includes(false)) {
+    throw new Error('Illustration contact sheet contains invalid SVG previews.');
+  }
+  await mkdir(dirname(illustrationOutput), { recursive: true });
+  await illustrationPage.screenshot({
+    path: illustrationOutput,
+    fullPage: true,
+    animations: 'disabled',
+  });
+  stdout.write(
+    `Rendered ${illustrations.length} themed illustration previews to ${illustrationOutput}.\n`
+  );
+  await illustrationPage.close();
 } finally {
   await browser.close();
 }

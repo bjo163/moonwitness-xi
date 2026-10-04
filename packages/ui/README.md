@@ -1,6 +1,16 @@
 # `@moonwitness/ui`
 
-Shared, framework-independent MoonWitness design tokens. This package has no runtime or application dependencies. React is an optional peer reserved for the typed component exports added by later design-system milestones.
+MoonWitness design tokens and typed, tree-shakeable React icons. The stylesheet has no runtime dependency. Consumers that import icon components must provide React 18 or newer; CSS-only consumers do not need React.
+
+Import an icon from its own subpath to keep unrelated icons out of the application bundle:
+
+```tsx
+import { UserIcon } from '@moonwitness/ui/icons/user';
+
+<UserIcon size={20} title="User" />;
+```
+
+Icons are decorative and hidden from assistive technology by default. Pass `title` when the icon conveys information without adjacent text.
 
 ## Stylesheet
 

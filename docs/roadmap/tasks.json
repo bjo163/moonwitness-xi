@@ -564,16 +564,20 @@
       "id": "M5.05",
       "title": "Sediakan ikon React typed dengan currentColor, ukuran, title, dan aksesibilitas; gunakan static SVG untuk README.",
       "milestone": "M5",
+      "status": "in_progress",
       "dependsOn": ["M5.04", "M5.08"],
       "output": "packages/ui/src/icons",
+      "evidence": "docs/roadmap/evidence/M5.05.md",
       "detailFile": "docs/roadmap/05-design-system.md"
     },
     {
       "id": "M5.06",
       "title": "Buat ilustrasi original empty/search/error/access denied/offline/onboarding serta pola latar ringan.",
       "milestone": "M5",
+      "status": "in_progress",
       "dependsOn": ["M5.02", "M5.03"],
       "output": "packages/assets/illustrations dan usage guide",
+      "evidence": "docs/roadmap/evidence/M5.06.md",
       "detailFile": "docs/roadmap/05-design-system.md"
     },
     {

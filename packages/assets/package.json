@@ -7,6 +7,7 @@
   "files": [
     "brand",
     "icons",
+    "illustrations",
     "manifest.json",
     "licenses.json",
     "README.md"
@@ -14,6 +15,7 @@
   "exports": {
     "./brand/*": "./brand/*",
     "./icons/*": "./icons/*",
+    "./illustrations/*": "./illustrations/*",
     "./manifest.json": "./manifest.json",
     "./licenses.json": "./licenses.json"
   }

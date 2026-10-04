@@ -19,6 +19,7 @@ const allowedTags = new Set([
   'g',
   'text',
   'defs',
+  'pattern',
   'linearGradient',
   'radialGradient',
   'stop',

@@ -1,19 +1,32 @@
 {
   "name": "@moonwitness/ui",
   "version": "1.0.0-rc.1",
-  "description": "Framework-independent MoonWitness interface tokens and styles",
+  "description": "Typed React icons and shared MoonWitness design tokens",
   "type": "module",
   "license": "ISC",
   "sideEffects": [
     "**/*.css"
   ],
   "files": [
+    "dist",
     "src/styles",
     "README.md",
     "TOKENS.md"
   ],
   "exports": {
+    "./icons": {
+      "types": "./dist/icons/index.d.ts",
+      "import": "./dist/icons/index.js"
+    },
+    "./icons/*": {
+      "types": "./dist/icons/*.d.ts",
+      "import": "./dist/icons/*.js"
+    },
     "./styles/tokens.css": "./src/styles/tokens.css"
+  },
+  "scripts": {
+    "build": "node scripts/generate-icons.mjs && tsc",
+    "test": "pnpm build && node --test tests/*.test.mjs"
   },
   "peerDependencies": {
     "react": ">=18"
@@ -22,5 +35,10 @@
     "react": {
       "optional": true
     }
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "react-dom": "^19.3.0"
   }
 }
