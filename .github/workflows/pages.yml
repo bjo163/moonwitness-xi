@@ -153,6 +153,8 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11'
+      - name: Install Chromium for portal browser tests
+        run: pnpm exec playwright install --with-deps chromium
       - name: Build and test documentation portal
         run: pnpm test:docs-portal
       - name: Test publication safety contracts
