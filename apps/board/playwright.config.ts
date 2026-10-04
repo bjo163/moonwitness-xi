@@ -11,6 +11,7 @@ const databaseUrl =
 const jwtSecret = 'e2e-only-jwt-secret-that-is-never-used-outside-tests';
 const superadminPassword = 'e2e-only-password';
 const ci = env.CI === 'true';
+const buildScript = resolve(repositoryRoot, 'scripts/build-api-workspace.mjs');
 
 export default defineConfig({
   testDir: './e2e',
@@ -23,7 +24,6 @@ export default defineConfig({
     ['html', { outputFolder: '../../test-results/playwright-report', open: 'never' }],
   ],
   outputDir: '../../test-results/playwright',
-  globalSetup: './e2e/global-setup.ts',
   use: {
     baseURL,
     trace: 'retain-on-failure',
@@ -34,7 +34,7 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: [
     {
-      command: 'pnpm --filter @moonwitness/api dev',
+      command: `pnpm exec node "${buildScript}" && pnpm --filter @moonwitness/api dev`,
       cwd: repositoryRoot,
       url: `http://127.0.0.1:${apiPort}/readyz`,
       timeout: 120_000,
