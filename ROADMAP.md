@@ -64,7 +64,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 - [ ] M2.03 Sertakan typecheck dan lint Board secara eksplisit; selaraskan ESLint/Oxlint agar aturan tidak saling bertentangan.
 - [ ] M2.04 Pisahkan job quality, unit, PostgreSQL integration, browser, security, docs, container, dan release integrity.
 - [ ] M2.05 Tambahkan `ci-gate` yang memahami success/failure/cancelled/skipped dan menjadi keputusan akhir.
-- [ ] M2.06 Required PostgreSQL tests harus gagal jika konfigurasi test hilang; tidak boleh diam-diam skipped pada CI wajib.
+- [x] M2.06 Required PostgreSQL tests harus gagal jika konfigurasi test hilang; tidak boleh diam-diam skipped pada CI wajib. Bukti dan run: [M2.06](docs/roadmap/evidence/M2.06.md), [CI 37164074612](https://github.com/bjo163/moonwitness-xi/actions/runs/37164074612).
 - [ ] M2.07 Pakai database dan akun fixture terisolasi per run; seed deterministik, cleanup, dan jangan menyentuh database pengguna.
 - [ ] M2.08 Cache dependency/build; affected testing memperhitungkan transitive dependents dan shared config. Promosi menjalankan suite penuh.
 - [ ] M2.09 Atur timeout, concurrency, pembatalan run usang, dan serialisasi penulisan branch/release.
