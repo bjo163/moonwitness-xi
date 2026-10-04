@@ -31,13 +31,28 @@ function run(args, label) {
 run(['build'], 'Build');
 
 const suites = [
-  { name: 'api', packageName: '@moonwitness/api', excludePostgres: true },
-  { name: 'auth', packageName: '@moonwitness/auth', typecheck: true },
+  {
+    name: 'api',
+    packageName: '@moonwitness/api',
+    excludePostgres: true,
+    coverage: ['src/auth/policy.ts', 'src/auth/rules.ts'],
+  },
+  {
+    name: 'auth',
+    packageName: '@moonwitness/auth',
+    typecheck: true,
+    coverage: ['src/service.ts', 'src/refresh-token.ts'],
+  },
   { name: 'client', packageName: '@moonwitness/client', typecheck: true },
-  { name: 'jobs', packageName: '@moonwitness/jobs', typecheck: true },
+  { name: 'jobs', packageName: '@moonwitness/jobs', typecheck: true, coverage: ['src/runtime.ts'] },
   { name: 'logger', packageName: '@moonwitness/logger' },
-  { name: 'orm', packageName: '@moonwitness/orm' },
-  { name: 'orm-base', packageName: '@moonwitness/orm-base', typecheck: true },
+  { name: 'orm', packageName: '@moonwitness/orm', coverage: ['src/addon.ts'] },
+  {
+    name: 'orm-base',
+    packageName: '@moonwitness/orm-base',
+    typecheck: true,
+    coverage: ['src/manifest.ts', 'src/data.ts'],
+  },
 ];
 
 for (const suite of suites) {
@@ -54,16 +69,18 @@ for (const suite of suites) {
     '--reporter=junit',
     `--outputFile.junit=${path.join(reportDirectory, `${suite.name}.xml`)}`
   );
-  if (suite.name === 'api') {
+  if (suite.coverage) {
     args.push(
       '--coverage',
       '--coverage.provider=v8',
-      '--coverage.reporter=text',
+      '--coverage.reporter=json',
       '--coverage.reporter=json-summary',
-      `--coverage.reportsDirectory=${path.join(root, 'test-results', 'coverage', 'api')}`
+      ...suite.coverage.map((file) => `--coverage.include=${file}`),
+      `--coverage.reportsDirectory=${path.join(root, 'test-results', 'coverage', suite.name)}`
     );
   }
   run(args, `${suite.name} tests`);
 }
 
+run(['exec', 'node', 'scripts/check-coverage.mjs'], 'Critical branch coverage');
 process.stdout.write(`JUnit reports written to ${path.relative(root, reportDirectory)}\n`);

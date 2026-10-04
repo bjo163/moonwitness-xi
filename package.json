@@ -30,6 +30,7 @@
     "promotion:approval-check": "node scripts/check-promotion-approval.mjs",
     "test:ci-gate": "node --test scripts/ci-gate.test.mjs",
     "test:artifact-safety": "node --test scripts/scan-test-reports.test.mjs",
+    "test:coverage-policy": "node --test scripts/check-coverage.test.mjs",
     "test:flaky-policy": "node --test scripts/flaky-policy.test.mjs scripts/playwright-flake-reporter.test.mjs",
     "ci:affected": "node scripts/select-affected.mjs",
     "test:affected": "node --test scripts/select-affected.test.mjs",

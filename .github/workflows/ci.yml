@@ -144,7 +144,7 @@ jobs:
           name: test-junit-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             test-results/junit/
-            test-results/coverage/api/coverage-summary.json
+            test-results/coverage/
           if-no-files-found: ignore
           retention-days: 14
       - name: Verify PostgreSQL backup and restore

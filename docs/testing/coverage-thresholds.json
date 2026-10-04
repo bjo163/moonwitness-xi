@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "metric": "branches",
+  "files": {
+    "apps/api/src/auth/policy.ts": 95,
+    "apps/api/src/auth/rules.ts": 91,
+    "packages/auth/src/service.ts": 58,
+    "packages/jobs/src/runtime.ts": 61,
+    "packages/orm/src/addon.ts": 67,
+    "packages/orm-base/src/data.ts": 75
+  }
+}
