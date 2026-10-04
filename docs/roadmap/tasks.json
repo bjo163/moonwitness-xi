@@ -442,6 +442,8 @@
     },
     {
       "id": "M4.09",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M4.09.md",
       "title": "Audit transaksi, constraint, indexes, concurrency edits, timezone, error mapping, dan rollback kegagalan upgrade programatis.",
       "milestone": "M4",
       "dependsOn": ["M4.02"],

@@ -577,6 +577,8 @@ describe('declarative addons', () => {
     const partner = await actor.query().insertAndFetch({ name: 'Audited Partner' });
     expect(Date.parse(partner.create_date ?? '')).not.toBeNaN();
     expect(Date.parse(partner.write_date ?? '')).not.toBeNaN();
+    expect(partner.create_date).toMatch(/Z$/u);
+    expect(partner.write_date).toMatch(/Z$/u);
     expect(partner.create_uid).toBe(42);
     expect(partner.write_uid).toBe(42);
 
@@ -620,5 +622,31 @@ describe('declarative addons', () => {
       version: '1.1.0',
     });
     await expect(installAddons(db, [first])).rejects.toThrow(/downgrade rejected/i);
+  });
+
+  it('rolls back upgrade DDL, data, and addon version when a programmatic upgrade fails', async () => {
+    const first = defineAddon({ name: 'upgrade.rollback', version: '1.0.0', models: [] });
+    const failingUpgrade = defineAddon({
+      name: 'upgrade.rollback',
+      version: '1.1.0',
+      models: [],
+      upgrade: {
+        '1.0.0': async (trx) => {
+          await trx.schema.createTable('upgrade_rollback_probe', (table) => table.string('value'));
+          await trx('upgrade_rollback_probe').insert({ value: 'must rollback' });
+          throw new Error('injected upgrade failure');
+        },
+      },
+    });
+
+    await installAddons(db, [first]);
+    await expect(installAddons(db, [failingUpgrade])).rejects.toThrow('injected upgrade failure');
+
+    expect(await db.schema.hasTable('upgrade_rollback_probe')).toBe(false);
+    expect(
+      await db('_orm_addons').where({ name: 'upgrade.rollback' }).first('version')
+    ).toMatchObject({
+      version: '1.0.0',
+    });
   });
 });

@@ -5,6 +5,7 @@ import type { FastifyInstance } from 'fastify';
 import { defineAddon, defineModel, fields, installAddons, ref, seed } from '@moonwitness/orm';
 import {
   Company,
+  AuditLog,
   Country,
   CountryState,
   Currency,
@@ -305,6 +306,58 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       headers: authorization,
     });
     expect(updated.json<{ data: { timezone: string } }>().data.timezone).toBe('Pacific/Honolulu');
+
+    const uniqueRecord = await app.inject({
+      method: 'POST',
+      url: '/api/base.partner',
+      headers: authorization,
+      payload: { name: 'PostgreSQL unique probe', email: 'postgres-unique-probe@example.test' },
+    });
+    expect(uniqueRecord.statusCode).toBe(201);
+    const duplicateRecord = await app.inject({
+      method: 'POST',
+      url: '/api/base.partner',
+      headers: authorization,
+      payload: {
+        name: 'Duplicate PostgreSQL unique probe',
+        email: 'postgres-unique-probe@example.test',
+      },
+    });
+    expect(duplicateRecord.statusCode).toBe(409);
+    expect(duplicateRecord.payload).not.toContain('postgres-unique-probe@example.test');
+    expect(duplicateRecord.payload).not.toContain('23505');
+
+    const concurrentRecord = await app.inject({
+      method: 'POST',
+      url: '/api/base.partner',
+      headers: authorization,
+      payload: { name: 'Concurrent update probe' },
+    });
+    const concurrentId = concurrentRecord.json<{ data: { id: number } }>().data.id;
+    const concurrentUpdates = await Promise.all([
+      app.inject({
+        method: 'PATCH',
+        url: `/api/base.partner/${concurrentId}`,
+        headers: authorization,
+        payload: { city: 'Concurrent A' },
+      }),
+      app.inject({
+        method: 'PATCH',
+        url: `/api/base.partner/${concurrentId}`,
+        headers: authorization,
+        payload: { city: 'Concurrent B' },
+      }),
+    ]);
+    expect(concurrentUpdates.map((response) => response.statusCode)).toEqual([200, 200]);
+    const finalConcurrentRecord = await Partner.query().findById(concurrentId).throwIfNotFound();
+    expect(['Concurrent A', 'Concurrent B']).toContain(finalConcurrentRecord.city);
+    expect(
+      await AuditLog.query().where({
+        model: 'base.partner',
+        record_id: concurrentId,
+        operation: 'write',
+      })
+    ).toHaveLength(2);
 
     await resetSuperadminPassword('postgres-flow-reset-password');
     expect((await login('postgres-flow-initial-password')).statusCode).toBe(401);

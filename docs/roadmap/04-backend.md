@@ -158,6 +158,8 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 2. Tetapkan concurrency editing policy sebelum menambah version field.
 3. Test transaction failure, timezone boundary, duplicate write dan error mapping.
 
+**Conflict contract:** Generic record updates use atomic transactions with audit/outbox writes. Concurrent writes follow last-commit-wins; there is no optimistic version token or stale-write conflict response yet. Clients that need conflict detection must serialize edits until a version contract is implemented.
+
 ### Verifikasi dan syarat selesai
 
 Constraint error memiliki response aman; rollback tidak meninggalkan setengah data; chosen conflict behavior terdokumentasi.
