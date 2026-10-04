@@ -1,0 +1,200 @@
+{
+  "schemaVersion": 1,
+  "flows": [
+    {
+      "id": "auth-refresh",
+      "title": "Access and refresh token rotation",
+      "description": "Board requests share one in-flight refresh; the API rotates hashed refresh tokens and retries the protected request once.",
+      "participants": [
+        { "id": "board", "label": "Board" },
+        { "id": "client", "label": "Client package" },
+        { "id": "api", "label": "API" },
+        { "id": "auth", "label": "Auth service" },
+        { "id": "database", "label": "PostgreSQL" }
+      ],
+      "messages": [
+        { "from": "board", "to": "api", "label": "Request protected resource with access token" },
+        { "from": "api", "to": "auth", "label": "Validate access token" },
+        { "from": "auth", "to": "api", "label": "Access token expired", "kind": "return" },
+        { "from": "api", "to": "board", "label": "401: access token expired", "kind": "return" },
+        {
+          "from": "board",
+          "to": "client",
+          "label": "Queue concurrent requests behind one refresh"
+        },
+        { "from": "client", "to": "api", "label": "POST /auth/refresh with refresh cookie" },
+        { "from": "api", "to": "auth", "label": "Hash, validate, and rotate token family" },
+        { "from": "auth", "to": "database", "label": "Revoke prior token and persist successor" },
+        { "from": "database", "to": "auth", "label": "Commit rotation", "kind": "return" },
+        {
+          "from": "auth",
+          "to": "api",
+          "label": "Return new access and refresh tokens",
+          "kind": "return"
+        },
+        {
+          "from": "api",
+          "to": "client",
+          "label": "Set rotated cookie and return access token",
+          "kind": "return"
+        },
+        {
+          "from": "client",
+          "to": "board",
+          "label": "Retry each queued request once",
+          "kind": "return"
+        }
+      ]
+    },
+    {
+      "id": "jobs-outbox",
+      "title": "Background jobs and transactional outbox",
+      "description": "Domain writes and outbox records commit together; workers claim, process, and record retry or dead-letter state.",
+      "participants": [
+        { "id": "api", "label": "API request" },
+        { "id": "database", "label": "PostgreSQL" },
+        { "id": "worker", "label": "Outbox worker" },
+        { "id": "handler", "label": "Idempotent handler" }
+      ],
+      "messages": [
+        {
+          "from": "api",
+          "to": "database",
+          "label": "Write domain state and outbox event in one transaction"
+        },
+        {
+          "from": "database",
+          "to": "api",
+          "label": "Commit both records atomically",
+          "kind": "return"
+        },
+        {
+          "from": "worker",
+          "to": "database",
+          "label": "Claim due rows using a lease and SKIP LOCKED"
+        },
+        {
+          "from": "database",
+          "to": "worker",
+          "label": "Return claimed event IDs and payloads",
+          "kind": "return"
+        },
+        { "from": "worker", "to": "handler", "label": "Dispatch event with stable event ID" },
+        {
+          "from": "handler",
+          "to": "worker",
+          "label": "Acknowledge success or retryable failure",
+          "kind": "return"
+        },
+        {
+          "from": "worker",
+          "to": "database",
+          "label": "Mark delivered, schedule retry, or move exhausted event to dead state"
+        }
+      ]
+    },
+    {
+      "id": "addon-install",
+      "title": "Programmatic addon installation",
+      "description": "Addon manifests determine dependency order, model synchronization, seed ownership, and runtime registration without handwritten SQL migration files.",
+      "participants": [
+        { "id": "application", "label": "API or worker startup" },
+        { "id": "manifest", "label": "Addon manifests" },
+        { "id": "sorter", "label": "Dependency sorter" },
+        { "id": "orm", "label": "ORM installer" },
+        { "id": "database", "label": "PostgreSQL" },
+        { "id": "registry", "label": "Runtime registry" }
+      ],
+      "messages": [
+        {
+          "from": "application",
+          "to": "manifest",
+          "label": "Load addon definitions and dependencies"
+        },
+        { "from": "manifest", "to": "sorter", "label": "Provide addon manifests and dependencies" },
+        { "from": "sorter", "to": "orm", "label": "Validate and pass addons in dependency order" },
+        { "from": "orm", "to": "database", "label": "Open transaction and acquire install lock" },
+        {
+          "from": "orm",
+          "to": "database",
+          "label": "Synchronize model schema and run versioned programmatic upgrades"
+        },
+        {
+          "from": "orm",
+          "to": "database",
+          "label": "Apply stable external-ID seeds and addon versions"
+        },
+        {
+          "from": "database",
+          "to": "orm",
+          "label": "Commit installation transaction",
+          "kind": "return"
+        },
+        {
+          "from": "orm",
+          "to": "registry",
+          "label": "Register models, views, and menus after commit"
+        },
+        {
+          "from": "registry",
+          "to": "application",
+          "label": "Expose installed addon capabilities",
+          "kind": "return"
+        }
+      ]
+    },
+    {
+      "id": "release-lifecycle",
+      "title": "Validated promotion and tagged release",
+      "description": "The dev-to-main promotion is CI-gated; risky changes require CODEOWNER approval. A tagged version is verified before an explicitly dispatched publish.",
+      "participants": [
+        { "id": "developer", "label": "Developer" },
+        { "id": "dev", "label": "dev branch CI" },
+        { "id": "promotion", "label": "Promotion workflow" },
+        { "id": "review", "label": "CODEOWNER / reviewer" },
+        { "id": "main", "label": "main branch" },
+        { "id": "release", "label": "Release workflow" }
+      ],
+      "messages": [
+        { "from": "developer", "to": "dev", "label": "Commit and push reviewed work" },
+        {
+          "from": "dev",
+          "to": "promotion",
+          "label": "Run full technical CI and classify changed risk"
+        },
+        {
+          "from": "promotion",
+          "to": "review",
+          "label": "Request fresh CODEOWNER approval for sensitive changes"
+        },
+        {
+          "from": "review",
+          "to": "promotion",
+          "label": "Approve sensitive promotion",
+          "kind": "return"
+        },
+        {
+          "from": "promotion",
+          "to": "main",
+          "label": "Merge dev to main only after required gate"
+        },
+        {
+          "from": "developer",
+          "to": "release",
+          "label": "Create version tag and explicitly dispatch publish"
+        },
+        {
+          "from": "release",
+          "to": "main",
+          "label": "Verify version, checks, integration, and images"
+        },
+        {
+          "from": "release",
+          "to": "developer",
+          "label": "Publish images and generated-notes GitHub Release when requested",
+          "kind": "return"
+        }
+      ]
+    }
+  ]
+}

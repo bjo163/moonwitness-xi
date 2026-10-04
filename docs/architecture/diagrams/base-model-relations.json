@@ -1,0 +1,287 @@
+{
+  "schemaVersion": 1,
+  "addon": "base",
+  "generatedFrom": "packages/orm-base/src/manifest.ts and model field metadata; no seed values included",
+  "sourceSha256": "f0714b4ea8d002c6d53dcc7b0b3378cac646f051b669c27230ba200b3f87d2e0",
+  "models": [
+    {
+      "name": "base.access_group",
+      "table": "access_groups"
+    },
+    {
+      "name": "base.activity",
+      "table": "activities"
+    },
+    {
+      "name": "base.attachment",
+      "table": "attachments"
+    },
+    {
+      "name": "base.audit_log",
+      "table": "audit_logs"
+    },
+    {
+      "name": "base.bank",
+      "table": "banks"
+    },
+    {
+      "name": "base.company",
+      "table": "companies"
+    },
+    {
+      "name": "base.company_membership",
+      "table": "company_memberships"
+    },
+    {
+      "name": "base.country",
+      "table": "countries"
+    },
+    {
+      "name": "base.country_state",
+      "table": "country_states"
+    },
+    {
+      "name": "base.currency",
+      "table": "currencies"
+    },
+    {
+      "name": "base.group_membership",
+      "table": "group_memberships"
+    },
+    {
+      "name": "base.language",
+      "table": "languages"
+    },
+    {
+      "name": "base.model_access",
+      "table": "model_access"
+    },
+    {
+      "name": "base.partner",
+      "table": "partners"
+    },
+    {
+      "name": "base.partner_address",
+      "table": "partner_addresses"
+    },
+    {
+      "name": "base.partner_bank",
+      "table": "partner_banks"
+    },
+    {
+      "name": "base.partner_category",
+      "table": "partner_categories"
+    },
+    {
+      "name": "base.partner_category_link",
+      "table": "partner_category_links"
+    },
+    {
+      "name": "base.sequence",
+      "table": "sequences"
+    },
+    {
+      "name": "base.tag",
+      "table": "tags"
+    },
+    {
+      "name": "base.tag_link",
+      "table": "tag_links"
+    },
+    {
+      "name": "base.user",
+      "table": "users"
+    }
+  ],
+  "relations": [
+    {
+      "from": "base.activity",
+      "field": "assigned_to",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.bank",
+      "field": "country",
+      "to": "base.country",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.company",
+      "field": "country",
+      "to": "base.country",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.company",
+      "field": "currency",
+      "to": "base.currency",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.company",
+      "field": "language",
+      "to": "base.language",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.company_membership",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.company_membership",
+      "field": "user",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.country_state",
+      "field": "country",
+      "to": "base.country",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.group_membership",
+      "field": "group",
+      "to": "base.access_group",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.group_membership",
+      "field": "user",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.model_access",
+      "field": "group",
+      "to": "base.access_group",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.partner",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.partner",
+      "field": "country",
+      "to": "base.country",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.partner",
+      "field": "parent",
+      "to": "base.partner",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.partner",
+      "field": "state",
+      "to": "base.country_state",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.partner_address",
+      "field": "country",
+      "to": "base.country",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.partner_address",
+      "field": "partner",
+      "to": "base.partner",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.partner_address",
+      "field": "state",
+      "to": "base.country_state",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.partner_bank",
+      "field": "bank",
+      "to": "base.bank",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.partner_bank",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.partner_bank",
+      "field": "currency",
+      "to": "base.currency",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.partner_bank",
+      "field": "partner",
+      "to": "base.partner",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.partner_category_link",
+      "field": "category",
+      "to": "base.partner_category",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.partner_category_link",
+      "field": "partner",
+      "to": "base.partner",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.tag_link",
+      "field": "tag",
+      "to": "base.tag",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.user",
+      "field": "language",
+      "to": "base.language",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.user",
+      "field": "partner",
+      "to": "base.partner",
+      "cardinality": "1:1",
+      "kind": "belongsTo"
+    }
+  ]
+}

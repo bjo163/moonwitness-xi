@@ -2,6 +2,10 @@
 
 Rencana pengembangan dan checklist jangka panjang: [Master Roadmap](ROADMAP.md).
 
+Diagram arsitektur, relasi model base, dan alur runtime tersedia di
+[Architecture diagrams](docs/architecture/diagrams/README.md) dan diperiksa
+otomatis agar tetap mengikuti metadata workspace.
+
 Arsitektur monorepo berkinerja tinggi menggunakan **pnpm workspaces** yang memisahkan core ORM, shared types, konfigurasi linter, dan service API.
 
 ---

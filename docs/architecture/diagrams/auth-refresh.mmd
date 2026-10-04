@@ -1,0 +1,18 @@
+sequenceDiagram
+  participant board as Board
+  participant client as Client package
+  participant api as API
+  participant auth as Auth service
+  participant database as PostgreSQL
+  board->>api: Request protected resource with access token
+  api->>auth: Validate access token
+  auth-->>api: Access token expired
+  api-->>board: 401: access token expired
+  board->>client: Queue concurrent requests behind one refresh
+  client->>api: POST /auth/refresh with refresh cookie
+  api->>auth: Hash, validate, and rotate token family
+  auth->>database: Revoke prior token and persist successor
+  database-->>auth: Commit rotation
+  auth-->>api: Return new access and refresh tokens
+  api-->>client: Set rotated cookie and return access token
+  client-->>board: Retry each queued request once

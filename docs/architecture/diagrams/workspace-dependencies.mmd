@@ -1,0 +1,28 @@
+flowchart LR
+  pkg0["@moonwitness/api"]
+  pkg1["@moonwitness/assets"]
+  pkg2["@moonwitness/auth"]
+  pkg3["@moonwitness/board"]
+  pkg4["@moonwitness/client"]
+  pkg5["@moonwitness/eslint-config"]
+  pkg6["@moonwitness/jobs"]
+  pkg7["@moonwitness/logger"]
+  pkg8["@moonwitness/orm"]
+  pkg9["@moonwitness/orm-base"]
+  pkg10["@moonwitness/types"]
+  pkg11["@moonwitness/ui"]
+  pkg0 -->|development| pkg4
+  pkg0 -->|runtime| pkg2
+  pkg0 -->|runtime| pkg6
+  pkg0 -->|runtime| pkg7
+  pkg0 -->|runtime| pkg8
+  pkg0 -->|runtime| pkg9
+  pkg0 -->|runtime| pkg10
+  pkg2 -->|runtime| pkg8
+  pkg2 -->|runtime| pkg9
+  pkg3 -->|runtime| pkg4
+  pkg3 -->|runtime| pkg11
+  pkg6 -->|runtime| pkg8
+  pkg6 -->|runtime| pkg9
+  pkg8 -->|runtime| pkg10
+  pkg9 -->|runtime| pkg8
