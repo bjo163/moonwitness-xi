@@ -3,6 +3,7 @@ name: Promote dev to main
 on:
   push:
     branches: [dev]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -25,7 +26,12 @@ jobs:
       - name: Skip stale promotion events
         env:
           EXPECTED_SHA: ${{ github.sha }}
+          EVENT_REF: ${{ github.ref }}
         run: |
+          if [[ "$EVENT_REF" != "refs/heads/dev" ]]; then
+            echo "Promotion must run from dev, received $EVENT_REF" >&2
+            exit 1
+          fi
           current_sha="$(git ls-remote origin refs/heads/dev | cut -f1)"
           if [[ "$current_sha" != "$EXPECTED_SHA" ]]; then
             echo "Skipping stale event for $EXPECTED_SHA; dev is now $current_sha"
