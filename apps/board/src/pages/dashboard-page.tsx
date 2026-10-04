@@ -276,7 +276,7 @@ export function DashboardPage() {
   });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 overflow-x-clip">
       {/* Hero Welcome Banner with Speedlines */}
       <div className="relative overflow-hidden border-4 border-ink bg-paper p-8 lg:p-12 shadow-ink-lg">
         <SpeedLines className="opacity-20" origin={[0.85, 0.4]} inner={0.15} count={60} />
