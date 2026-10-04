@@ -56,9 +56,17 @@ function run(command, args, options = {}) {
     ...options,
   });
   if (result.error || result.status !== 0) {
-    // Avoid forwarding subprocess diagnostics that could include connection credentials.
+    const diagnostics = [result.stderr, result.stdout]
+      .filter((output) => typeof output === 'string' && output.length > 0)
+      .join('\n')
+      .replace(/postgres(?:ql)?:\/\/[^\s"'<>]+/giu, '[PostgreSQL URL redacted]')
+      .replace(/((?:password|secret|token)(?:_hash)?\s*(?:=|:)\s*)[^,\s)]+/giu, '$1[redacted]')
+      .split(/\r?\n/u)
+      .slice(-10)
+      .join('\n')
+      .slice(-1600);
     throw new Error(
-      `${command} failed${result.status === null ? '' : ` with exit ${result.status}`}`
+      `${command} failed${result.status === null ? '' : ` with exit ${result.status}`}${diagnostics ? `:\n${diagnostics}` : ''}`
     );
   }
   return result.stdout.trim();
