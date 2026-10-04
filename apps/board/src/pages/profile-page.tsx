@@ -3,10 +3,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Building2, Contact, Mail, ShieldCheck, UserRound } from 'lucide-react';
 import { toast } from '@moonwitness/ui/components/toast';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@moonwitness/ui/components/button';
+import { Input } from '@moonwitness/ui/components/input';
 import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@moonwitness/ui/components/skeleton';
 import { useAuth } from '@/hooks/use-auth';
 import { client } from '@/lib/client';
 

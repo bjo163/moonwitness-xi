@@ -4,17 +4,17 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, MonitorCog, Moon, Sun } from 'lucide-react';
 import { toast } from '@moonwitness/ui/components/toast';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
-import { Button } from '@/components/ui/button';
+import { Button } from '@moonwitness/ui/components/button';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
+import { Input } from '@moonwitness/ui/components/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
+} from '@moonwitness/ui/components/select';
+import { Skeleton } from '@moonwitness/ui/components/skeleton';
 import { useAuth } from '@/hooks/use-auth';
 import { client } from '@/lib/client';
 import {

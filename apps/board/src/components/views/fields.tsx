@@ -5,7 +5,7 @@ import type { Domain, FieldMeta } from '@moonwitness/client';
 import { client } from '@/lib/client';
 import { scopedQueryKey } from '@/lib/query-scope';
 import { cn } from '@/lib/utils';
-import { Input } from '@/components/ui/input';
+import { Input } from '@moonwitness/ui/components/input';
 import { Switch } from '@/components/ui/switch';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
@@ -22,7 +22,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@moonwitness/ui/components/select';
 
 type Row = Record<string, unknown>;
 

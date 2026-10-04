@@ -25,14 +25,14 @@ import { useModels } from '@/hooks/use-model';
 import { modelIcon, modelLabel } from '@/lib/models';
 import { DEVELOPMENT_MODE_EVENT, readDevelopmentMode } from '@/lib/navigation';
 import { Doodle, SpeedLines } from '@/components/manga/effects';
-import { Button } from '@/components/ui/button';
+import { Button } from '@moonwitness/ui/components/button';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@/components/ui/dialog';
+} from '@moonwitness/ui/components/dialog';
 import { CronSchedulerPanel } from '@/components/layout/cron-scheduler-panel';
 import { cn } from '@/lib/utils';
 import { BarChart } from '@moonwitness/ui/components/chart';

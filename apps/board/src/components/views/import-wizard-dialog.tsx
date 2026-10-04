@@ -12,14 +12,14 @@ import {
 } from 'lucide-react';
 import type { ResolvedViews } from '@moonwitness/client';
 import { client } from '@/lib/client';
-import { Button } from '@/components/ui/button';
+import { Button } from '@moonwitness/ui/components/button';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@/components/ui/dialog';
+} from '@moonwitness/ui/components/dialog';
 import { Doodle } from '@/components/manga/effects';
 import { cn } from '@/lib/utils';
 

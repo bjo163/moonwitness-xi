@@ -3,8 +3,8 @@ import { ExternalLink, Loader2, Plus, Trash2 } from 'lucide-react';
 import { Link } from 'react-router';
 import type { Domain, FieldMeta } from '@moonwitness/client';
 import { useRecordMutations, useRecords, useViews } from '@/hooks/use-model';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@moonwitness/ui/components/button';
+import { Skeleton } from '@moonwitness/ui/components/skeleton';
 import { FieldCell } from './fields';
 
 interface One2ManyWidgetProps {

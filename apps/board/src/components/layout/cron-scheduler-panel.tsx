@@ -13,15 +13,15 @@ import {
 } from 'lucide-react';
 import { client } from '@/lib/client';
 import { scopedQueryKey } from '@/lib/query-scope';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@moonwitness/ui/components/button';
+import { Input } from '@moonwitness/ui/components/input';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@/components/ui/dialog';
+} from '@moonwitness/ui/components/dialog';
 import { Doodle } from '@/components/manga/effects';
 import { cn } from '@/lib/utils';
 

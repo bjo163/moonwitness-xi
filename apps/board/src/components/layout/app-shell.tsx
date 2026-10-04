@@ -29,8 +29,8 @@ import { useTheme } from '@/hooks/use-theme';
 import { DashboardIcon, modelIcon, modelLabel } from '@/lib/models';
 import { readDevelopmentMode, updateDevelopmentMode } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@moonwitness/ui/components/button';
+import { Skeleton } from '@moonwitness/ui/components/skeleton';
 import {
   CommandDialog,
   CommandEmpty,
@@ -46,7 +46,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@moonwitness/ui/components/dropdown-menu';
 import { Logo } from '@/components/manga/logo';
 import { Doodle } from '@/components/manga/effects';
 import { ShortcutsDialog } from '@/components/manga/shortcuts-dialog';
