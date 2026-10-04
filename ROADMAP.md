@@ -53,7 +53,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 - [x] M1.07 Atur CODEOWNERS untuk workflow, auth, akses, schema, dan release. Satu maintainer terdeteksi; assignment meminta focused review tanpa mewajibkan approval yang akan menghentikan auto-promotion. Bukti: [M1.07](docs/roadmap/evidence/M1.07.md).
 - [ ] M1.08 Tentukan kebijakan promosi: patch/minor kompatibel bisa otomatis; breaking change, perubahan destruktif, dan perubahan kebijakan keamanan memerlukan persetujuan eksplisit. Implementasi dan pengujian lokal: [M1.08](docs/roadmap/evidence/M1.08.md); tunggu CI jarak jauh, review CODEOWNER pada SHA PR terkini, dan bukti merge.
 - [x] M1.09 Sinkronkan `main → dev` tanpa force-push; perubahan bersamaan atau konflik menghasilkan laporan, bukan overwrite. Push + rekonsiliasi terjadwal + trigger manual terbukti pada run 37172778791.
-- [ ] M1.10 Lindungi tag release dari pemindahan/penghapusan rutin; periksa drift ruleset dan settings.
+- [x] M1.10 Lindungi tag release dari pemindahan/penghapusan rutin; ruleset aktif `Protect version tags` membatasi update/delete `refs/tags/v*`, tanpa bypass. Bukti: [M1.10](docs/roadmap/evidence/M1.10.md).
 - [ ] M1.11 Hapus alur staging/production deployment yang tidak digunakan; pertahankan smoke test lokal runner.
 - [ ] M1.12 Pastikan updater dependency, generator docs, dan release bot tidak membuat branch ketiga; dokumentasikan keterbatasan strict two-branch untuk kolaborasi.
 
