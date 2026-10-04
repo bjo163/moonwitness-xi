@@ -125,13 +125,13 @@ menjadi acceptance terpisah M6.07/M6.08.
 
 ### Langkah pelaksanaan
 
-1. Konfigurasi Pages source GitHub Actions dan workflow upload/deploy artifact dengan permissions sempit.
-2. Dev build artifact saja; trusted main/release mempublikasikan.
-3. Atur concurrency Pages agar publish lama tidak menimpa lebih baru; tidak create gh-pages.
+1. Konfigurasi Pages source GitHub Actions (repository sekarang: `build_type=workflow`) dan workflow upload/deploy artifact dengan permissions sempit.
+2. Dev build preview artifact saja; trusted main/release mempublikasikan setelah perubahan workflow dipromosikan.
+3. Gunakan concurrency group tunggal Pages agar publish tidak balapan; jangan create gh-pages.
 
 ### Verifikasi dan syarat selesai
 
-Workflow artifact memiliki index dan base paths benar; published source SHA sesuai yang dipilih.
+Workflow artifact memiliki index dan base paths benar; `build-info.json` merekam SHA checkout. Pemeriksaan lokal lolos; published source SHA akan dibuktikan dari deployment pertama di main/tag.
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M6.07.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
@@ -169,7 +169,7 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 Injected secret fixture menyebabkan publish check fail; output public allowlist terverifikasi.
 
-Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M6.09.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
+Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M6.09.md` sesuai template. Scan bersifat pattern-based, maka tetap sertakan review konten; jika pemeriksaan external belum tersedia, pisahkan implementasi lokal dari aktivasi yang terblokir. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
 ## M6.10 — Docs-only changes dapat dipublikasikan setelah verifikasi tanpa memaksa release aplikasi; source SHA harus terlacak.
 

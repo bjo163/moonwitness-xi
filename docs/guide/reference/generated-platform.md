@@ -1,6 +1,6 @@
 # Generated platform reference
 
-Source fingerprint: `a9d099254220ebad3237fe5e9596f687513595ca5d0792673a569681d8109282`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
+Source fingerprint: `498045234cdb4ca5b7a62edbec4fead0c1c67ac7f3cbe61cdbafb2d787bb0eac`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
 
 ## Workspace packages and apps
 
@@ -82,6 +82,7 @@ Value categories are inferred from variable names and example syntax; requiredne
 - `pnpm docs:generate`
 - `pnpm docs:links`
 - `pnpm docs:links:external`
+- `pnpm docs:publication:check`
 - `pnpm format`
 - `pnpm format:check`
 - `pnpm jobs:outbox`
@@ -105,6 +106,7 @@ Value categories are inferred from variable names and example syntax; requiredne
 - `pnpm test:coverage-policy`
 - `pnpm test:docs-navigation`
 - `pnpm test:docs-portal`
+- `pnpm test:docs-publication`
 - `pnpm test:e2e`
 - `pnpm test:flaky-policy`
 - `pnpm test:integration`

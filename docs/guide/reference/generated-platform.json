@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "a9d099254220ebad3237fe5e9596f687513595ca5d0792673a569681d8109282",
+  "generatedFromSha256": "498045234cdb4ca5b7a62edbec4fead0c1c67ac7f3cbe61cdbafb2d787bb0eac",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -186,6 +186,7 @@
       "docs:generate": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && node scripts/docs/generate-reference.mjs && node scripts/docs/update-readme.mjs",
       "docs:links": "node scripts/check-docs.mjs && node scripts/check-doc-navigation.mjs && node --test scripts/check-docs.test.mjs scripts/check-doc-navigation.test.mjs scripts/check-external-doc-links.test.mjs",
       "docs:links:external": "node scripts/check-external-doc-links.mjs",
+      "docs:publication:check": "node scripts/check-docs-publication.mjs",
       "format": "prettier --write .",
       "format:check": "prettier --check .",
       "jobs:outbox": "pnpm --filter @moonwitness/api jobs:outbox",
@@ -209,6 +210,7 @@
       "test:coverage-policy": "node --test scripts/check-coverage.test.mjs",
       "test:docs-navigation": "node --test scripts/check-doc-navigation.test.mjs",
       "test:docs-portal": "pnpm docs:build && pnpm --filter @moonwitness/docs test",
+      "test:docs-publication": "node --test scripts/check-docs-publication.test.mjs scripts/write-docs-metadata.test.mjs",
       "test:e2e": "node scripts/run-e2e.mjs",
       "test:flaky-policy": "node --test scripts/flaky-policy.test.mjs scripts/playwright-flake-reporter.test.mjs",
       "test:integration": "node scripts/run-postgres-tests.mjs",

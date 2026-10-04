@@ -733,7 +733,7 @@
       "title": "Gunakan Actions artifact untuk Pages tanpa branch tambahan; dev hanya menghasilkan preview artifact.",
       "milestone": "M6",
       "dependsOn": ["M6.06", "M0.04"],
-      "output": "pages.yml dan verified Pages configuration",
+      "output": "pages.yml, verified GitHub Pages configuration, preview/publish trust separation and source provenance",
       "detailFile": "docs/roadmap/06-documentation.md"
     },
     {
@@ -749,7 +749,7 @@
       "title": "Scan konten publik agar tidak berisi secret, data pribadi, real environment values, atau internal artifacts.",
       "milestone": "M6",
       "dependsOn": ["M6.04", "M6.06"],
-      "output": "Docs publication safety check",
+      "output": "Public documentation output scanner and adversarial tests",
       "detailFile": "docs/roadmap/06-documentation.md"
     },
     {
