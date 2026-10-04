@@ -375,6 +375,7 @@ export async function collectReferenceMetadata() {
   );
   return {
     schemaVersion: 1,
+    rootVersion: rootManifest.version,
     generatedFromSha256: hash.digest('hex'),
     safety: {
       applicationStarted: false,

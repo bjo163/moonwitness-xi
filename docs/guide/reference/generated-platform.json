@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedFromSha256": "f739faf14f7f54678bbe463ea2bb88c5463244f8b5b903b1e4a2c18ff589e765",
+  "rootVersion": "1.0.0-rc.1",
+  "generatedFromSha256": "10396f5e85da5878376ebf9c44c682fb7a3fd5431d86707f3f6803e730182816",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -166,7 +167,7 @@
       "ci:affected": "node scripts/select-affected.mjs",
       "dev": "pnpm --filter @moonwitness/api dev",
       "dev:board": "pnpm --filter @moonwitness/board dev",
-      "docs:check": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && node --test scripts/docs/generate-reference.test.mjs && node scripts/docs/generate-reference.mjs --check && node scripts/check-docs.mjs && node scripts/check-doc-navigation.mjs && node --test scripts/check-doc-navigation.test.mjs",
+      "docs:check": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && node --test scripts/docs/generate-reference.test.mjs scripts/docs/update-readme.test.mjs && node scripts/docs/generate-reference.mjs --check && node scripts/docs/update-readme.mjs --check && node scripts/check-docs.mjs && node scripts/check-doc-navigation.mjs && node --test scripts/check-doc-navigation.test.mjs",
       "docs:generate": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && node scripts/docs/generate-reference.mjs",
       "format": "prettier --write .",
       "format:check": "prettier --check .",
@@ -177,6 +178,8 @@
       "lint:fix": "eslint . --fix",
       "promotion:approval-check": "node scripts/check-promotion-approval.mjs",
       "promotion:risk": "node scripts/check-promotion-risk.mjs",
+      "readme:check": "node scripts/docs/update-readme.mjs --check",
+      "readme:generate": "pnpm docs:generate && node scripts/docs/update-readme.mjs",
       "release:check": "node scripts/check-release.mjs",
       "release:classify": "node scripts/classify-release-commits.mjs",
       "reset:superadmin-password": "pnpm --filter @moonwitness/api reset:superadmin-password",
