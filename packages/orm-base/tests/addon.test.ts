@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { RelationMappings } from 'objection';
 import knex, { type Knex } from 'knex';
 import {
   defineAddon,
@@ -185,6 +186,77 @@ describe('declarative addons', () => {
       unlink: false,
     });
     expect(await GroupMembership.query().resultSize()).toBe(1);
+  });
+
+  it('keeps addon metadata internally consistent across models, relations, views, menus, and seeds', async () => {
+    const modelNames = new Set(manifest.models.map((model) => model.modelName));
+    const viewsByModel = new Map((manifest.views ?? []).map((view) => [view.model, view]));
+    const menusByModel = new Map((manifest.menus ?? []).map((menu) => [menu.model, menu]));
+    const seededModels = new Set((manifest.data ?? []).map((record) => record.model.modelName));
+
+    expect(modelNames.size).toBe(manifest.models.length);
+    expect(viewsByModel.size).toBe(manifest.views?.length);
+    expect(menusByModel.size).toBe(manifest.menus?.length);
+    expect([...menusByModel.keys()].sort()).toEqual([...modelNames].sort());
+    const modelsWithoutSeeds = [...modelNames].filter((name) => !seededModels.has(name));
+    expect(modelsWithoutSeeds).toEqual([AuditLog.modelName]);
+
+    for (const model of manifest.models) {
+      const view = viewsByModel.get(model.modelName);
+      if (model !== AuditLog) {
+        expect(view, `${model.modelName} should declare a view`).toBeDefined();
+      }
+      expect(seededModels.has(model.modelName) || model === AuditLog).toBe(true);
+
+      for (const [name, field] of Object.entries(model.fields)) {
+        if (field.kind === 'belongsTo' || field.kind === 'hasMany') {
+          const target =
+            typeof field.target === 'function' && !('tableName' in field.target)
+              ? field.target()
+              : field.target;
+          expect(target, `${model.modelName}.${name} target`).toBeDefined();
+          if (target) {
+            expect(modelNames.has(target.modelName), `${model.modelName}.${name} target`).toBe(
+              true
+            );
+          }
+          const relationMappings = model.relationMappings as RelationMappings;
+          expect(relationMappings[name], `${model.modelName}.${name} mapping`).toBeDefined();
+        }
+      }
+
+      const fieldNames = new Set(Object.keys(model.fields));
+      const usedColumns = [
+        ...(view?.spec.list?.columns ?? []),
+        ...(view?.spec.search?.fields ?? []),
+        ...(view?.spec.form?.sections?.flatMap((section) => section.fields) ?? []),
+      ];
+      const columns = new Set([
+        ...Object.entries(model.fields).map(([name, field]) =>
+          field.kind === 'belongsTo' ? `${name}_id` : name
+        ),
+        'id',
+        'active',
+        'create_date',
+        'write_date',
+      ]);
+      for (const column of usedColumns) {
+        expect(columns.has(column), `${model.modelName} view column ${column}`).toBe(true);
+      }
+    }
+
+    const seedIds = (manifest.data ?? []).map((record) => record.id);
+    expect(new Set(seedIds).size).toBe(seedIds.length);
+    for (const record of manifest.data ?? []) {
+      for (const [name, value] of Object.entries(record.values)) {
+        const field = record.model.fields[name];
+        expect(field, `${record.id}.${name} field`).toBeDefined();
+        if (typeof value === 'object' && value !== null) {
+          expect(field?.kind, `${record.id}.${name} reference field`).toBe('belongsTo');
+          expect(seedIds, `${record.id}.${name} reference`).toContain(value.$ref);
+        }
+      }
+    }
   });
 
   it('keeps seed identities and edits after email and login change', async () => {

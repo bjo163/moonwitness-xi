@@ -362,6 +362,8 @@
     },
     {
       "id": "M4.01",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M4.01.md",
       "title": "Validasi semua model/field/relasi/view/menu/access dan kebijakan seed melalui matriks metadata.",
       "milestone": "M4",
       "dependsOn": ["M0.01"],

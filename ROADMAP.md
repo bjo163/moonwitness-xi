@@ -89,7 +89,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 
 ## M4 — Backend, ORM, base, dan reliability (jalur C)
 
-- [ ] M4.01 Validasi semua model/field/relasi/view/menu/access dan kebijakan seed melalui matriks metadata.
+- [x] M4.01 Validasi semua model/field/relasi/view/menu dan kebijakan seed melalui matriks metadata. Bukti: [M4.01](docs/roadmap/evidence/M4.01.md); 19 test addon lulus, termasuk integritas metadata.
 - [ ] M4.02 Test instalasi bersih, restart idempotent, upgrade legacy, seed reference, pelestarian edit pengguna, dan startup multi-replica.
 - [ ] M4.03 Verifikasi default system/superadmin, password awal dari konfigurasi, reset CLI/root script, dan tidak menimpa password yang sudah diubah.
 - [ ] M4.04 Verifikasi company default, reference countries, states, banks, partner bank, serta provenance/update policy data referensi; jangan mengklaim states lengkap bila hanya subset.
@@ -234,10 +234,11 @@ Jadwal GitHub bersifat best-effort; selalu sediakan manual dispatch dan pemeriks
 
 ## Log bukti dan keputusan
 
-| Tanggal    | Item        | Status   | Commit / run / artefak                    | Catatan                                                                                                                                                      |
-| ---------- | ----------- | -------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 2026-10-04 | Master plan | Disusun  | ROADMAP.md                                | Belum mengaktifkan implementasi milestone baru                                                                                                               |
-| 2026-10-04 | M3.08       | Selesai  | `5b2ff93`; CI 37188917137                 | Import/export formula-safe, activity dan attachment metadata ownership teruji; binary storage gap tercatat untuk M4.12/M9.02                                 |
-| 2026-10-04 | M3.09       | Selesai  | local verification; source commit pending | Query cache diskop per akun/company, retryable network errors, submit guard, dan 18 E2E lulus; hosted CI ditambahkan setelah push                            |
-| 2026-10-04 | M3.10       | Berjalan | local verification; `dev`                 | Failure trace lokal dan manual visual-review workflow tersedia; screenshot baseline dan pixel comparison yang direview masih menjadi acceptance work         |
-| 2026-10-04 | M3.11       | Berjalan | local verification; `dev`                 | Chromium, Firefox, WebKit masing-masing lulus 18 E2E; weekly browser matrix ditambahkan, aktivasi hosted masih menunggu default-branch workflow availability |
+| Tanggal    | Item        | Status   | Commit / run / artefak                          | Catatan                                                                                                                                                      |
+| ---------- | ----------- | -------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-10-04 | Master plan | Disusun  | ROADMAP.md                                      | Belum mengaktifkan implementasi milestone baru                                                                                                               |
+| 2026-10-04 | M3.08       | Selesai  | `5b2ff93`; CI 37188917137                       | Import/export formula-safe, activity dan attachment metadata ownership teruji; binary storage gap tercatat untuk M4.12/M9.02                                 |
+| 2026-10-04 | M3.09       | Selesai  | local verification; source commit pending       | Query cache diskop per akun/company, retryable network errors, submit guard, dan 18 E2E lulus; hosted CI ditambahkan setelah push                            |
+| 2026-10-04 | M3.10       | Berjalan | local verification; `dev`                       | Failure trace lokal dan manual visual-review workflow tersedia; screenshot baseline dan pixel comparison yang direview masih menjadi acceptance work         |
+| 2026-10-04 | M3.11       | Berjalan | local verification; `dev`                       | Chromium, Firefox, WebKit masing-masing lulus 18 E2E; weekly browser matrix ditambahkan, aktivasi hosted masih menunggu default-branch workflow availability |
+| 2026-10-04 | M4.01       | Selesai  | local verification; source changes pending push | Matriks test memverifikasi model, field, relasi, view, menu, dan external seed reference pada manifest base.                                                 |
