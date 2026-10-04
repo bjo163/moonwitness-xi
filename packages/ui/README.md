@@ -2,6 +2,8 @@
 
 MoonWitness design tokens and typed, tree-shakeable React icons. The stylesheet has no runtime dependency. Consumers that import icon components must provide React 18 or newer; CSS-only consumers do not need React.
 
+The base control subpaths also require React 18 or newer. `Button` composes through the optional `radix-ui` peer to support `asChild`; consumers using that component must provide `radix-ui` 1.6 or newer. Consumers importing only static tokens/assets do not need either runtime.
+
 Import an icon from its own subpath to keep unrelated icons out of the application bundle:
 
 ```tsx

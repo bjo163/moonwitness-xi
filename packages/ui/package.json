@@ -14,6 +14,31 @@
     "TOKENS.md"
   ],
   "exports": {
+    "./components.css": "./src/styles/components.css",
+    "./components/button": {
+      "types": "./dist/components/button.d.ts",
+      "import": "./dist/components/button.js"
+    },
+    "./components/input": {
+      "types": "./dist/components/input.d.ts",
+      "import": "./dist/components/input.js"
+    },
+    "./components/checkbox": {
+      "types": "./dist/components/checkbox.d.ts",
+      "import": "./dist/components/checkbox.js"
+    },
+    "./components/badge": {
+      "types": "./dist/components/badge.d.ts",
+      "import": "./dist/components/badge.js"
+    },
+    "./components/avatar": {
+      "types": "./dist/components/avatar.d.ts",
+      "import": "./dist/components/avatar.js"
+    },
+    "./components/select-field": {
+      "types": "./dist/components/select-field.d.ts",
+      "import": "./dist/components/select-field.js"
+    },
     "./icons": {
       "types": "./dist/icons/index.d.ts",
       "import": "./dist/icons/index.js"
@@ -29,9 +54,13 @@
     "test": "pnpm build && node --test tests/*.test.mjs"
   },
   "peerDependencies": {
+    "radix-ui": ">=1.6.7",
     "react": ">=18"
   },
   "peerDependenciesMeta": {
+    "radix-ui": {
+      "optional": true
+    },
     "react": {
       "optional": true
     }
@@ -39,6 +68,8 @@
   "devDependencies": {
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "radix-ui": "^1.6.7",
+    "radix-ui": "^1.6.7",
     "react-dom": "^19.3.0"
   }
 }

@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import '@moonwitness/ui/styles/tokens.css';
+@import '@moonwitness/ui/components.css';
 
 @custom-variant dark (&:where(.dark, .dark *));
 

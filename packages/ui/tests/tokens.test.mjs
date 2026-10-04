@@ -50,9 +50,13 @@ test('package exposes explicit stylesheet and tree-shakeable typed icon entries'
     import: './dist/icons/*.js',
   });
   assert.equal(packageJson.exports['./icons'].import, './dist/icons/index.js');
+  assert.equal(packageJson.exports['./components/button'].import, './dist/components/button.js');
+  assert.equal(packageJson.exports['./components.css'], './src/styles/components.css');
   assert.equal(packageJson.dependencies, undefined);
   assert.equal(packageJson.peerDependencies.react, '>=18');
   assert.equal(packageJson.peerDependenciesMeta.react.optional, true);
+  assert.equal(packageJson.peerDependencies['radix-ui'], '>=1.6.7');
+  assert.equal(packageJson.peerDependenciesMeta['radix-ui'].optional, true);
 });
 
 test('semantic text pairs meet WCAG AA in both theme mappings', () => {
