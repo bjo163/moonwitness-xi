@@ -383,6 +383,7 @@
     overflow: visible;
   }
   .mw-ui-bar-chart {
+    min-width: 0;
     max-height: 14rem;
   }
   .mw-ui-chart-label {
