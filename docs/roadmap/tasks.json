@@ -356,6 +356,8 @@
       "milestone": "M3",
       "dependsOn": ["M3.03", "M3.06", "M0.06"],
       "output": "Browser matrix workflow",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/M3.11.md",
       "detailFile": "docs/roadmap/03-board.md"
     },
     {
