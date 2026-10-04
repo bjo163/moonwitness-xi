@@ -9,4 +9,6 @@ backups/
 *.log
 logs/
 tmp-test-logs/
+test-results/
+playwright-report/
 .DS_Store

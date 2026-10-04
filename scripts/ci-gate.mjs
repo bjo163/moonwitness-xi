@@ -1,14 +1,14 @@
 import { stderr, env, argv } from 'node:process';
 import { exit } from 'node:process';
-import { URL } from 'node:url';
+import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 
-const requiredJobs = ['quality', 'integration', 'containers', 'automation'];
+const requiredJobs = ['quality', 'integration', 'browser', 'containers', 'automation'];
 
 export const isCiGatePassing = (results) => requiredJobs.every((job) => results[job] === 'success');
 
 const isDirectExecution =
-  argv[1] !== undefined &&
-  new URL(import.meta.url).pathname === new URL(`file://${argv[1]}`).pathname;
+  argv[1] !== undefined && fileURLToPath(import.meta.url) === resolve(argv[1]);
 
 if (isDirectExecution) {
   const results = Object.fromEntries(
