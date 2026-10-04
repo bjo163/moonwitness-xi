@@ -268,7 +268,7 @@ export function FormView({ model, views, recordId, onBack, onSaved }: FormViewPr
               variant="outline"
               size="sm"
               onClick={() => handleArchive(false)}
-              className="gap-1.5 hover:bg-pink hover:text-white"
+              className="gap-1.5 hover:bg-pink hover:text-on-pink"
               disabled={mutations.archive.isPending}
             >
               <Archive className="size-4" /> Archive
@@ -308,7 +308,7 @@ export function FormView({ model, views, recordId, onBack, onSaved }: FormViewPr
 
       {/* Notifications */}
       {error && (
-        <div className="border-2 border-ink bg-pink p-3 font-bold text-white shadow-ink">
+        <div className="border-2 border-ink bg-pink p-3 font-bold text-on-pink shadow-ink">
           {error}
         </div>
       )}

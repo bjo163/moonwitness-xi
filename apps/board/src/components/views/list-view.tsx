@@ -737,7 +737,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
       {isError && (
         <div
           role="alert"
-          className="flex flex-wrap items-center justify-between gap-3 border-2 border-ink bg-pink p-3 font-bold text-white shadow-ink"
+          className="flex flex-wrap items-center justify-between gap-3 border-2 border-ink bg-pink p-3 font-bold text-on-pink shadow-ink"
         >
           <span>Could not load records. Check your connection and try again.</span>
           <Button
@@ -745,7 +745,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
             size="sm"
             disabled={isFetching}
             onClick={() => void refetch()}
-            className="border-paper text-white hover:bg-white hover:text-ink"
+            className="border-paper text-on-pink hover:bg-white hover:text-ink"
           >
             {isFetching ? 'Retrying…' : 'Retry'}
           </Button>
@@ -1377,7 +1377,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
               size="sm"
               onClick={handleBulkArchive}
               disabled={isBulkArchiving}
-              className="gap-1.5 hover:bg-pink hover:text-white"
+              className="gap-1.5 hover:bg-pink hover:text-on-pink"
             >
               {isBulkArchiving ? (
                 <Loader2 className="size-3.5 animate-spin" />

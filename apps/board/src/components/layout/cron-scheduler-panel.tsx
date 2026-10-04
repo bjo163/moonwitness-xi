@@ -333,7 +333,7 @@ export function CronSchedulerPanel({ onOpenFailureTriage }: CronSchedulerPanelPr
               variant="outline"
               size="xs"
               onClick={onOpenFailureTriage}
-              className="gap-1 text-pink border-pink hover:bg-pink hover:text-white"
+              className="gap-1 text-pink border-pink hover:bg-pink hover:text-on-pink"
             >
               <AlertTriangle className="size-3.5" />
               <span>Dead Job Triage</span>
@@ -376,7 +376,7 @@ export function CronSchedulerPanel({ onOpenFailureTriage }: CronSchedulerPanelPr
                             : job.status === 'running'
                               ? 'border-ink bg-lime text-on-accent animate-pulse'
                               : job.status === 'dead'
-                                ? 'border-pink bg-pink text-white'
+                                ? 'border-pink bg-pink text-on-pink'
                                 : 'border-ink/40 bg-card text-ink-soft'
                         )}
                       >

@@ -80,7 +80,7 @@ const TYPE_COLORS = {
   todo: 'border-2 border-ink bg-lime text-on-accent',
   call: 'border-2 border-ink bg-paper-raised text-ink',
   meeting: 'border-2 border-ink bg-ink text-paper',
-  email: 'border-2 border-ink bg-pink text-white',
+  email: 'border-2 border-ink bg-pink text-on-pink',
 };
 
 function formatBytes(bytes: number) {
@@ -310,7 +310,7 @@ export function Chatter({ model, recordId }: ChatterProps) {
             <Clock className="size-3.5" />
             Activities
             {plannedCount > 0 && (
-              <span className="grid size-4 place-items-center border border-ink bg-pink text-[10px] font-bold text-white shadow-[1px_1px_0_0_var(--ink)]">
+              <span className="grid size-4 place-items-center border border-ink bg-pink text-[10px] font-bold text-on-pink shadow-[1px_1px_0_0_var(--ink)]">
                 {plannedCount}
               </span>
             )}
@@ -538,7 +538,7 @@ export function Chatter({ model, recordId }: ChatterProps) {
                               className={cn(
                                 'font-mono text-xs px-1.5 py-0.5 border',
                                 isOverdue
-                                  ? 'border-pink bg-pink text-white font-bold'
+                                  ? 'border-pink bg-pink text-on-pink font-bold'
                                   : 'border-ink/20 text-ink-faint'
                               )}
                             >
@@ -747,7 +747,7 @@ export function Chatter({ model, recordId }: ChatterProps) {
                               ? 'border-lime bg-lime text-on-accent'
                               : entry.operation === 'write'
                                 ? 'border-ink bg-ink text-paper'
-                                : 'border-pink bg-pink text-white'
+                                : 'border-pink bg-pink text-on-pink'
                           )}
                         >
                           {entry.operation}

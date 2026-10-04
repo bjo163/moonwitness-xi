@@ -543,6 +543,7 @@
     {
       "id": "M5.03",
       "title": "Buat tokens warna/semantik, tipografi, spacing, radius, shadow, motion, dan reduced-motion; dokumentasikan aturan penggunaan.",
+      "status": "in_progress",
       "milestone": "M5",
       "dependsOn": ["M5.01"],
       "output": "packages/ui/src/styles/tokens.css dan token guide",
@@ -583,6 +584,7 @@
     {
       "id": "M5.08",
       "title": "Buat `@moonwitness/ui` dengan exports jelas, tanpa dependency API/router/auth aplikasi dan tanpa side effect yang tidak terdokumentasi.",
+      "status": "in_progress",
       "milestone": "M5",
       "dependsOn": ["M0.07"],
       "output": "packages/ui scaffold dan consumer smoke test",

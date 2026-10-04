@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@moonwitness/ui": "workspace:*",
     "@moonwitness/client": "workspace:*",
     "@tanstack/react-query": "^5.104.0",
     "class-variance-authority": "^0.7.1",

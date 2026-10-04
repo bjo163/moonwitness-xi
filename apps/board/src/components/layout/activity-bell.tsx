@@ -101,7 +101,7 @@ export function ActivityBell() {
         >
           <Bell className="size-4" />
           {overdue.length > 0 ? (
-            <span className="absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center border-2 border-ink bg-pink text-[10px] font-bold text-white shadow-[1px_1px_0_0_var(--ink)] animate-pulse">
+            <span className="absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center border-2 border-ink bg-pink text-[10px] font-bold text-on-pink shadow-[1px_1px_0_0_var(--ink)] animate-pulse">
               {overdue.length}
             </span>
           ) : activities.length > 0 ? (
@@ -143,7 +143,9 @@ export function ActivityBell() {
             onClick={() => setActiveTab('overdue')}
             className={cn(
               'flex-1 py-1.5 text-center font-bold transition-colors',
-              activeTab === 'overdue' ? 'bg-pink text-white' : 'text-ink-soft hover:bg-paper-raised'
+              activeTab === 'overdue'
+                ? 'bg-pink text-on-pink'
+                : 'text-ink-soft hover:bg-paper-raised'
             )}
           >
             Overdue ({overdue.length})

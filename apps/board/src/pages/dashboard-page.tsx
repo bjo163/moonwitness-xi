@@ -434,7 +434,7 @@ export function DashboardPage() {
                 <span className="font-mono text-xs uppercase tracking-wider text-ink-faint">
                   Pending Tasks
                 </span>
-                <div className="size-8 border-2 border-ink bg-pink/20 flex items-center justify-center group-hover:bg-pink group-hover:text-white transition-colors">
+                <div className="size-8 border-2 border-ink bg-pink/20 flex items-center justify-center group-hover:bg-pink group-hover:text-on-pink transition-colors">
                   <CheckCircle2 className="size-4" />
                 </div>
               </div>
@@ -592,7 +592,7 @@ export function DashboardPage() {
                     <Button
                       size="sm"
                       onClick={() => setFailuresModalOpen(true)}
-                      className="gap-1.5 font-mono text-xs border-2 border-pink bg-pink text-white shadow-ink hover:bg-pink/90"
+                      className="gap-1.5 font-mono text-xs border-2 border-pink bg-pink text-on-pink shadow-ink hover:bg-pink/90"
                     >
                       <AlertTriangle className="size-3.5" />
                       Triage Failures (
@@ -822,7 +822,7 @@ export function DashboardPage() {
         <DialogContent className="max-w-2xl font-sans">
           <DialogHeader>
             <div className="flex items-center gap-2">
-              <span className="border-2 border-ink bg-pink p-1 text-white shadow-[1px_1px_0_0_var(--ink)]">
+              <span className="border-2 border-ink bg-pink p-1 text-on-pink shadow-[1px_1px_0_0_var(--ink)]">
                 <AlertTriangle className="size-4" />
               </span>
               <DialogTitle className="font-display text-xl uppercase tracking-wider text-ink">

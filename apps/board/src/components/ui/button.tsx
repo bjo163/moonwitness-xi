@@ -10,7 +10,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: 'press bg-lime text-on-accent',
-        destructive: 'press bg-pink text-white',
+        destructive: 'press bg-pink text-on-pink',
         outline: 'press bg-paper-raised text-ink hover:bg-lime hover:text-on-accent',
         secondary: 'press bg-ink text-paper',
         ghost: 'border-transparent hover:border-ink hover:bg-paper-raised',

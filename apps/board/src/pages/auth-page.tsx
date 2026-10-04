@@ -154,7 +154,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
                 role="alert"
                 initial={{ x: -8 }}
                 animate={{ x: [8, -6, 4, 0] }}
-                className="border-2 border-ink bg-pink px-3 py-2 text-sm font-bold text-white"
+                className="border-2 border-ink bg-pink px-3 py-2 text-sm font-bold text-on-pink"
               >
                 {error}
               </motion.p>

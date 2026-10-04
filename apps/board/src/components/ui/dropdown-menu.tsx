@@ -60,7 +60,7 @@ function DropdownMenuItem({
       data-inset={inset}
       data-variant={variant}
       className={cn(
-        "relative flex cursor-default items-center gap-2 rounded-none px-2.5 py-1.5 text-sm outline-hidden select-none focus:bg-lime focus:text-on-accent focus:font-bold data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8 data-[variant=destructive]:text-pink data-[variant=destructive]:focus:bg-pink data-[variant=destructive]:focus:text-white [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-ink-soft data-[variant=destructive]:*:[svg]:text-pink data-[variant=destructive]:focus:*:[svg]:text-white",
+        "relative flex cursor-default items-center gap-2 rounded-none px-2.5 py-1.5 text-sm outline-hidden select-none focus:bg-lime focus:text-on-accent focus:font-bold data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8 data-[variant=destructive]:text-pink data-[variant=destructive]:focus:bg-pink data-[variant=destructive]:focus:text-on-pink [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-ink-soft data-[variant=destructive]:*:[svg]:text-pink data-[variant=destructive]:focus:*:[svg]:text-on-pink",
         className
       )}
       {...props}

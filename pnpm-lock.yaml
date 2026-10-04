@@ -126,6 +126,9 @@ importers:
       '@moonwitness/client':
         specifier: workspace:*
         version: link:../../packages/client
+      '@moonwitness/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       '@tanstack/react-query':
         specifier: ^5.104.0
         version: 5.104.0(react@19.3.0)
@@ -359,6 +362,12 @@ importers:
       typescript:
         specifier: ~5.7.3
         version: 5.7.3
+
+  packages/ui:
+    dependencies:
+      react:
+        specifier: '>=18'
+        version: 19.3.0
 
 packages:
 

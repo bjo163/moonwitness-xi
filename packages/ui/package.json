@@ -1,0 +1,26 @@
+{
+  "name": "@moonwitness/ui",
+  "version": "1.0.0-rc.1",
+  "description": "Framework-independent MoonWitness interface tokens and styles",
+  "type": "module",
+  "license": "ISC",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "files": [
+    "src/styles",
+    "README.md",
+    "TOKENS.md"
+  ],
+  "exports": {
+    "./styles/tokens.css": "./src/styles/tokens.css"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  }
+}

@@ -135,7 +135,7 @@ export function One2ManyWidget({ field, parentId, isCreate }: One2ManyWidgetProp
                         <Button
                           variant="ghost"
                           size="xs"
-                          className="h-6 px-1.5 text-pink hover:bg-pink hover:text-white"
+                          className="h-6 px-1.5 text-pink hover:bg-pink hover:text-on-pink"
                           onClick={() => handleDelete(row.id as number)}
                           disabled={deletingId === row.id}
                           title="Archive item"
