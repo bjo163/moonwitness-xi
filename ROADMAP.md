@@ -52,7 +52,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 - [x] M1.06 Tetapkan required checks yang stabil dan tidak deadlock akibat filter path atau job skipped. Bukti: [M1.02–M1.06](docs/roadmap/evidence/M1.02-06.md).
 - [ ] M1.07 Atur CODEOWNERS untuk workflow, auth, akses, schema, dan release; tetapkan reviewer realistis sesuai jumlah maintainer.
 - [ ] M1.08 Tentukan kebijakan promosi: patch/minor kompatibel bisa otomatis; breaking change, perubahan destruktif, dan perubahan kebijakan keamanan memerlukan persetujuan eksplisit.
-- [ ] M1.09 Sinkronkan `main → dev` tanpa force-push; perubahan bersamaan atau konflik menghasilkan laporan, bukan overwrite.
+- [ ] M1.09 Sinkronkan `main → dev` tanpa force-push; perubahan bersamaan atau konflik menghasilkan laporan, bukan overwrite. Workflow sudah dibuat; tunggu bukti remote setelah promosi.
 - [ ] M1.10 Lindungi tag release dari pemindahan/penghapusan rutin; periksa drift ruleset dan settings.
 - [ ] M1.11 Hapus alur staging/production deployment yang tidak digunakan; pertahankan smoke test lokal runner.
 - [ ] M1.12 Pastikan updater dependency, generator docs, dan release bot tidak membuat branch ketiga; dokumentasikan keterbatasan strict two-branch untuk kolaborasi.

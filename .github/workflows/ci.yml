@@ -74,7 +74,7 @@ jobs:
           node-version: '22'
           pnpm-version: '11'
       - name: Validate GitHub workflows
-        run: docker run --rm -v "$PWD:/work" -w /work rhysd/actionlint:1.7.7 -color .github/workflows/ci.yml .github/workflows/release.yml .github/workflows/promote.yml
+        run: docker run --rm -v "$PWD:/work" -w /work rhysd/actionlint:1.7.7 -color .github/workflows/ci.yml .github/workflows/release.yml .github/workflows/promote.yml .github/workflows/sync-main-to-dev.yml
       - name: Test affected workspace selection and gate behavior
         run: pnpm test:ci-gate && pnpm test:affected
 
