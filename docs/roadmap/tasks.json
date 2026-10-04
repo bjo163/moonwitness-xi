@@ -513,7 +513,7 @@
     {
       "id": "M4.16",
       "title": "Dokumentasikan compatibility policy API/addon, deprecation, dan upgrade guidance.",
-      "status": "in_progress",
+      "status": "complete",
       "milestone": "M4",
       "dependsOn": ["M0.07"],
       "output": "docs/engineering/compatibility.md dan client→API/addon→ORM contract tests",
