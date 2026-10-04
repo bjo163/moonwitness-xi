@@ -128,7 +128,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 
 ## M6 — Dokumentasi dan GitHub Pages (jalur D; kontrak metadata M0)
 
-- [ ] M6.01 Buat struktur docs: quickstart, architecture, addon development, API, models, Board, jobs/outbox, security, troubleshooting, recovery, release/upgrade.
+- [x] M6.01 Buat struktur docs: quickstart, architecture, addon development, API, models, Board, jobs/outbox, security, troubleshooting, recovery, release/upgrade. [Evidence](docs/roadmap/evidence/M6.01.md); docs navigation and links, quality/typecheck, UI, browser, integration, container, and automation CI passed on `dev`; sensitive promotion still requires fresh CODEOWNER approval.
 - [ ] M6.02 Buat generator deterministik package/scripts/env schema/model/field/relasi/menu/access/seed dan referensi endpoint yang benar-benar valid.
 - [ ] M6.03 Pisahkan blok generated README dari penjelasan manual; jangan overwrite seluruh dokumen.
 - [ ] M6.04 Standardisasi docs:generate, docs:check, docs:build, docs:links; gagal saat hasil generator stale.
@@ -233,6 +233,8 @@ Jalur ini melengkapi M1/M7/M8, bukan membuat release pipeline kedua. Detail: [ka
 Jadwal GitHub bersifat best-effort; selalu sediakan manual dispatch dan pemeriksaan run yang terlewat. Automation tidak menggantikan pemantauan runtime aplikasi.
 
 ## Log bukti dan keputusan
+
+- 2026-10-05 — M6.01 completed on `dev` at source SHA `8eb12d26b737a7468aaf2ad502c83862c19cd6c0`; local docs/lint/format and hosted technical lanes passed. Hosted `ci-gate` requires fresh CODEOWNER approval for sensitive promotion; no bypass used. Evidence: [M6.01](docs/roadmap/evidence/M6.01.md), [CI run 37232775679](https://github.com/bjo163/moonwitness-xi/actions/runs/37232775679).
 
 | Tanggal    | Item        | Status   | Commit / run / artefak                         | Catatan                                                                                                                                                                                                                                                       |
 | ---------- | ----------- | -------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
