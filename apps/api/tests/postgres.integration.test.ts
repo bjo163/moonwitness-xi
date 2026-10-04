@@ -23,6 +23,9 @@ import { buildApp } from '../src/app.js';
 import { verifyDefaultBaseAccounts } from '../src/startup-checks.js';
 
 const connectionString = process.env.POSTGRES_TEST_URL;
+if (process.env.REQUIRE_POSTGRES_TESTS === 'true' && !connectionString) {
+  throw new Error('POSTGRES_TEST_URL is required when REQUIRE_POSTGRES_TESTS=true');
+}
 const postgresDescribe = connectionString ? describe : describe.skip;
 
 postgresDescribe('PostgreSQL addon upgrade integration', () => {
