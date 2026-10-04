@@ -37,7 +37,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate GitHub workflows
-        run: docker run --rm -v "$PWD:/work" -w /work rhysd/actionlint:1.7.7 -color .github/workflows/ci.yml .github/workflows/release.yml
+        run: docker run --rm -v "$PWD:/work" -w /work rhysd/actionlint:1.7.7 -color .github/workflows/ci.yml .github/workflows/release.yml .github/workflows/promote.yml
 
   integration:
     name: integration
