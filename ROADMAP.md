@@ -82,7 +82,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
   - [x] M3.05 Test profil sendiri, language/timezone, ganti password, login ulang, dan error validasi. Bukti: [M3.05](docs/roadmap/evidence/M3.05.md), [CI 37184757957](https://github.com/bjo163/moonwitness-xi/actions/runs/37184757957).
 - [x] M3.06 Test list/search/filter/sort/pagination/count, termasuk regresi `partner,language` dan count PostgreSQL. Bukti: [M3.06](docs/roadmap/evidence/M3.06.md), [CI 37185662813](https://github.com/bjo163/moonwitness-xi/actions/runs/37185662813).
 - [x] M3.07 Test create/edit/archive/delete sesuai kebijakan model, field relasi, serta filter country/state. Bukti: [M3.07](docs/roadmap/evidence/M3.07.md), [CI 37187634769](https://github.com/bjo163/moonwitness-xi/actions/runs/37187634769); seluruh lane implementasi lolos, promosi main menunggu CODEOWNER.
-- [ ] M3.08 Test import/export, attachment, activities, dan fitur Board lain jika ditemukan dalam inventarisasi.
+- [x] M3.08 Test import/export, attachment, activities, dan fitur Board lain jika ditemukan dalam inventarisasi. Bukti: [M3.08](docs/roadmap/evidence/M3.08.md), [push CI 37188917137](https://github.com/bjo163/moonwitness-xi/actions/runs/37188917137); seluruh technical lanes lulus setelah retry browser. Promotion PR #24 tetap menunggu approval CODEOWNER.
 - [ ] M3.09 Uji error/empty/loading states, jaringan terputus, stale data, double submit, dan pencegahan kebocoran cache antar-user/company.
 - [ ] M3.10 Simpan screenshot/trace saat gagal; buat visual baseline setelah audit manusia dan jangan auto-accept perubahan baseline.
 - [ ] M3.11 Jalankan browser utama pada perubahan rutin dan browser tambahan pada regresi terjadwal; dokumentasikan coverage browser.
@@ -234,6 +234,7 @@ Jadwal GitHub bersifat best-effort; selalu sediakan manual dispatch dan pemeriks
 
 ## Log bukti dan keputusan
 
-| Tanggal    | Item        | Status  | Commit / run / artefak | Catatan                                        |
-| ---------- | ----------- | ------- | ---------------------- | ---------------------------------------------- |
-| 2026-10-04 | Master plan | Disusun | ROADMAP.md             | Belum mengaktifkan implementasi milestone baru |
+| Tanggal    | Item        | Status  | Commit / run / artefak    | Catatan                                                                                                                      |
+| ---------- | ----------- | ------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-04 | Master plan | Disusun | ROADMAP.md                | Belum mengaktifkan implementasi milestone baru                                                                               |
+| 2026-10-04 | M3.08       | Selesai | `5b2ff93`; CI 37188917137 | Import/export formula-safe, activity dan attachment metadata ownership teruji; binary storage gap tercatat untuk M4.12/M9.02 |
