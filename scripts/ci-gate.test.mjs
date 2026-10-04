@@ -5,6 +5,7 @@ import { isCiGatePassing } from './ci-gate.mjs';
 const successfulResults = {
   quality: 'success',
   integration: 'success',
+  browser: 'success',
   containers: 'success',
   automation: 'success',
 };
@@ -26,6 +27,6 @@ test('rejects a skipped required job', () => {
 });
 
 test('rejects a missing required job', () => {
-  const { quality: _quality, ...missingQuality } = successfulResults;
-  assert.equal(isCiGatePassing(missingQuality), false);
+  const { browser: _browser, ...missingBrowser } = successfulResults;
+  assert.equal(isCiGatePassing(missingBrowser), false);
 });
