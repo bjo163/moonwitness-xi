@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { isCiGatePassing } from './ci-gate.mjs';
+import { isCiGatePassing, renderCiJobSummary } from './ci-gate.mjs';
 
 const successfulResults = {
   quality: 'success',
@@ -66,4 +66,16 @@ test('rejects unknown jobs in the plan', () => {
     isCiGatePassing(successfulResults, ['quality', 'automation', 'unknown'], 'success'),
     false
   );
+});
+
+test('summarizes success, failure, and intentionally skipped jobs without environment data', () => {
+  const summary = renderCiJobSummary(
+    { ...successfulResults, integration: 'failure', browser: 'skipped' },
+    ['quality', 'integration', 'automation'],
+    'success'
+  );
+  assert.match(summary, /Overall: \*\*failed\*\*/);
+  assert.match(summary, /\| integration \| failure \|/);
+  assert.match(summary, /\| browser \| not selected \|/);
+  assert.doesNotMatch(summary, /password|token|cookie|DATABASE_URL/i);
 });

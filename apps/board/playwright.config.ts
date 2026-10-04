@@ -19,14 +19,12 @@ export default defineConfig({
   forbidOnly: ci,
   retries: ci ? 1 : 0,
   workers: ci ? 1 : undefined,
-  reporter: [
-    ['list'],
-    ['html', { outputFolder: '../../test-results/playwright-report', open: 'never' }],
-  ],
+  reporter: [['list'], ['junit', { outputFile: '../../test-results/junit/board-e2e.xml' }]],
   outputDir: '../../test-results/playwright',
   use: {
     baseURL,
-    trace: 'retain-on-failure',
+    // Traces include request headers and cookies; CI uploads only sanitized JUnit and screenshots.
+    trace: 'off',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     viewport: { width: 1440, height: 1000 },

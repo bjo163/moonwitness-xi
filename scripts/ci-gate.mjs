@@ -1,4 +1,5 @@
 import { stderr, env, argv } from 'node:process';
+import { appendFile } from 'node:fs/promises';
 import { exit } from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
@@ -16,6 +17,31 @@ export const isCiGatePassing = (results, selectedJobs = requiredJobs, planResult
       : results[job] === 'skipped' || results[job] === 'success'
   );
 
+export function renderCiJobSummary(results, selectedJobs = requiredJobs, planResult = 'missing') {
+  const rows = [
+    ['plan', planResult],
+    ...requiredJobs.map((job) => [job, results[job] ?? 'missing']),
+  ];
+  const normalized = rows.map(([job, result]) => {
+    const status =
+      job !== 'plan' && !selectedJobs.includes(job) && result === 'skipped'
+        ? 'not selected'
+        : result;
+    return `| ${job} | ${status} |`;
+  });
+  const passed = isCiGatePassing(results, selectedJobs, planResult);
+  return [
+    '## CI result',
+    '',
+    `Overall: **${passed ? 'passed' : 'failed'}**`,
+    '',
+    '| Job | Result |',
+    '| --- | --- |',
+    ...normalized,
+    '',
+  ].join('\n');
+}
+
 const isDirectExecution =
   argv[1] !== undefined && fileURLToPath(import.meta.url) === resolve(argv[1]);
 
@@ -30,6 +56,12 @@ if (isDirectExecution) {
     selectedJobs = [];
   }
   const planResult = env.PLAN_RESULT ?? 'missing';
+  if (env.GITHUB_STEP_SUMMARY) {
+    await appendFile(
+      env.GITHUB_STEP_SUMMARY,
+      renderCiJobSummary(results, selectedJobs, planResult)
+    );
+  }
 
   if (!isCiGatePassing(results, selectedJobs, planResult)) {
     if (planResult !== 'success') stderr.write(`CI plan result was '${planResult}'\n`);

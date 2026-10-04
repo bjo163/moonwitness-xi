@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { mkdir } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,6 +16,7 @@ if (!existsSync(config)) {
   stderr.write('E2E is not configured yet; complete roadmap task M3.01 before running test:e2e.\n');
   exit(2);
 }
+await mkdir(resolve(root, 'test-results/junit'), { recursive: true });
 
 const packageManagerCli = env.npm_execpath;
 if (!packageManagerCli) {

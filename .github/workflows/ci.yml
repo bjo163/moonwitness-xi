@@ -130,8 +130,23 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11'
-      - run: pnpm test:unit
+      - name: Run unit tests and write JUnit reports
+        run: pnpm test:unit:ci
       - run: pnpm test:integration
+      - name: Scan reports for secrets before artifact upload
+        id: scan_reports
+        if: always()
+        run: node scripts/scan-test-reports.mjs
+      - name: Upload unit and integration test reports
+        if: always() && steps.scan_reports.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-junit-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            test-results/junit/
+            test-results/coverage/api/coverage-summary.json
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Verify PostgreSQL backup and restore
         env:
           PGPASSWORD: postgres
@@ -185,14 +200,18 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
       - name: Run Board browser tests
         run: pnpm test:e2e
-      - name: Upload browser report and failure evidence
+      - name: Scan browser reports for secrets before artifact upload
+        id: scan_browser_reports
         if: always()
+        run: node scripts/scan-test-reports.mjs
+      - name: Upload browser JUnit report and screenshots only
+        if: always() && steps.scan_browser_reports.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: board-playwright-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            test-results/playwright-report/
-            test-results/playwright/
+            test-results/junit/board-e2e.xml
+            test-results/playwright/**/*.png
           if-no-files-found: ignore
           retention-days: 7
 
@@ -224,7 +243,26 @@ jobs:
           node-version: '22'
           pnpm-version: '11'
       - name: Test CI gate decisions
-        run: pnpm test:ci-gate
+        run: pnpm test:ci-gate && pnpm test:artifact-safety
+      - name: Write CI job summary
+        if: always()
+        env:
+          PLAN_RESULT: ${{ needs.plan.result }}
+          SELECTED_JOBS: ${{ needs.plan.outputs.projects }}
+          QUALITY_RESULT: ${{ needs.quality.result }}
+          INTEGRATION_RESULT: ${{ needs.integration.result }}
+          BROWSER_RESULT: ${{ needs.browser.result }}
+          CONTAINERS_RESULT: ${{ needs.containers.result }}
+          AUTOMATION_RESULT: ${{ needs.automation.result }}
+        run: |
+          PLAN_RESULT="$PLAN_RESULT" \
+          SELECTED_JOBS="$SELECTED_JOBS" \
+          QUALITY_RESULT="$QUALITY_RESULT" \
+          INTEGRATION_RESULT="$INTEGRATION_RESULT" \
+          BROWSER_RESULT="$BROWSER_RESULT" \
+          CONTAINERS_RESULT="$CONTAINERS_RESULT" \
+          AUTOMATION_RESULT="$AUTOMATION_RESULT" \
+          node scripts/ci-gate.mjs || true
       - name: Require every mandatory job to succeed
         env:
           PLAN_RESULT: ${{ needs.plan.result }}
