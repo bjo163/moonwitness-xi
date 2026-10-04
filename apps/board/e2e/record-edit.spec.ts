@@ -63,8 +63,12 @@ test('record forms validate, edit relations, scope state by country, archive, re
   expect(partnerList.data).toHaveLength(1);
   const partnerId = partnerList.data[0].id;
 
-  await page.getByLabel('Name').fill(`${partnerName} Updated`);
-  await page.getByRole('button', { name: 'Save Record' }).click();
+  const nameField = page.getByLabel('Name');
+  await expect(nameField).toHaveValue(partnerName);
+  await nameField.fill(`${partnerName} Updated`);
+  const saveButton = page.getByRole('button', { name: 'Save Record' });
+  await expect(saveButton).toBeEnabled();
+  await saveButton.click();
   await expect(page.getByText('Record saved successfully!')).toBeVisible();
 
   const duplicatePartner = await page.request.post('/api/base.partner', {

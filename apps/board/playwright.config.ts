@@ -11,6 +11,7 @@ const baseURL = `http://127.0.0.1:${boardPort}`;
 const databaseUrl =
   env.POSTGRES_TEST_URL ?? 'postgresql://postgres:ci-only-password@127.0.0.1:55432/moonwitness_e2e';
 const ci = env.CI === 'true';
+const browserMatrix = env.MW_E2E_BROWSER_MATRIX === 'true';
 const buildScript = resolve(repositoryRoot, 'scripts/build-api-workspace.mjs');
 const flakyPolicyPath = resolve(repositoryRoot, 'docs/testing/flaky-tests.json');
 const flakyPolicyValue: unknown = JSON.parse(readFileSync(flakyPolicyPath, 'utf8'));
@@ -51,7 +52,15 @@ export default defineConfig({
     video: 'retain-on-failure',
     viewport: { width: 1440, height: 1000 },
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    ...(browserMatrix
+      ? [
+          { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+          { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+        ]
+      : []),
+  ],
   webServer: [
     {
       command: `pnpm exec node "${buildScript}" && pnpm --filter @moonwitness/api dev`,

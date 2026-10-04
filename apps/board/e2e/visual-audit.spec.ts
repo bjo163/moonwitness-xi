@@ -51,6 +51,12 @@ test('responsive screen audit: login across mobile, tablet, and desktop', async 
     await page.setViewportSize({ width: size.width, height: size.height });
     await page.goto('/login');
     await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+    // Wait for Motion entrance effects so axe does not audit text mid-fade in slower engines.
+    await expect(page.getByRole('heading', { name: 'Sign in' }).locator('..')).toHaveCSS(
+      'opacity',
+      '1'
+    );
+    await expect(page.locator('main .inline-block')).toHaveCSS('opacity', '1');
     await expectNoHorizontalOverflow(page, `login/${size.name}`);
     await page.screenshot({
       path: path.join(auditDirectory, `login-${size.name}-light.png`),
