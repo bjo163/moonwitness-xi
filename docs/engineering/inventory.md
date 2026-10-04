@@ -44,7 +44,9 @@ Dynamic generic operations are behavior families, not one route per model. Test 
 - Entrypoints: apps/api/src/commands/jobs-worker.ts, jobs-scheduler.ts, outbox-worker.ts. Runtime/data is in packages/jobs/src; specs exist under packages/jobs/tests/runtime.test.ts and apps/api/tests/jobs.test.ts.
 - Board: public auth-page; signed-in dashboard, profile, settings, generic model page. Shell/menu in components/layout/app-shell.tsx and lib/navigation.ts. Widgets include list, form, fields, one2many, query builder, import wizard, tags and chatter.
 - Board-local primitives are in components/ui; visual/logo files are in components/manga. Existing profile/settings are pages/profile-page.tsx and settings-page.tsx.
-- No Board test script or browser/component specs were found in first scan. Board typecheck/lint scripts are separate.
+- Board browser coverage is in `apps/board/e2e/`: authentication/session, account settings, navigation access, list and PostgreSQL relations/count, generic record forms, CSV import/export, chatter activity/attachment metadata, and responsive/accessibility audits. Run with root `pnpm test:e2e` and a dedicated `POSTGRES_TEST_URL`; the runner builds API workspace dependencies and resets the test superadmin fixture before Playwright.
+- Chatter attachment selection currently creates only a `base.attachment` metadata row with a generated `storage_key`; no binary is uploaded and no download route/provider is available. Track binary lifecycle and storage security under M4.12 and M9.02. Do not present metadata registration as completed binary storage.
+- CSV import sends rows independently and reports per-row failures; CSV export operates on selected rows from the currently loaded result page and neutralizes spreadsheet formula prefixes. Cross-page selection/export is not implemented.
 
 ## Tests and GitHub automation
 

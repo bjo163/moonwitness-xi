@@ -411,11 +411,12 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
       }),
     ]);
 
-    const escapeCsv = (val: string) => {
-      if (val.includes(',') || val.includes('"') || val.includes('\n')) {
-        return `"${val.replace(/"/g, '""')}"`;
+    const escapeCsv = (value: string) => {
+      const safeValue = /^[=+\-@]/u.test(value.trimStart()) ? `'${value}` : value;
+      if (safeValue.includes(',') || safeValue.includes('"') || safeValue.includes('\n')) {
+        return `"${safeValue.replace(/"/g, '""')}"`;
       }
-      return val;
+      return safeValue;
     };
 
     const csvContent = [
