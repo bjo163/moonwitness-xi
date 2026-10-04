@@ -38,7 +38,7 @@ jobs:
             echo 'projects=["quality","integration","browser","containers","automation"]' >> "$GITHUB_OUTPUT"
             echo 'plan={"mode":"full","reason":"main-promotion","projects":["quality","integration","browser","containers","automation"]}' >> "$GITHUB_OUTPUT"
           else
-            pnpm ci:affected -- "$BASE_SHA" "$HEAD_SHA" --json
+            pnpm ci:affected "$BASE_SHA" "$HEAD_SHA" --json
           fi
 
   quality:
