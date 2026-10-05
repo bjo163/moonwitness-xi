@@ -1,16 +1,16 @@
 # Runtime and maintenance support baseline
 
-Observed values on 2026-10-05:
+Observed values on 2026-10-06:
 
-| Component      | Repository configuration                                     | Local observation                                 | Policy status                                                              |
-| -------------- | ------------------------------------------------------------ | ------------------------------------------------- | -------------------------------------------------------------------------- |
-| Node.js        | Docker build/runtime Node 22; GitHub Actions node-version 22 | local Node v26.5.0                                | Node 22 is the validated CI/container line; local 26 is not validated      |
-| pnpm           | Corepack/Docker pnpm 11; actions setup version 11            | local pnpm 11.17.0                                | Major pinned; exact Corepack resolution is not pinned                      |
-| PostgreSQL     | Docker Compose/service postgres:16-alpine                    | CI integration and E2E services use PostgreSQL 16 | PostgreSQL 16 is the currently tested major                                |
-| Browser        | Playwright 1.63.0 from lockfile; CI installs Chromium        | Three Board E2E scenarios run in Chromium         | Chromium is the only tested browser; Firefox/WebKit are not claimed        |
-| Actions runner | ubuntu-24.04                                                 | Hosted jobs use the explicit Ubuntu 24.04 image   | Pinned ahead of the ubuntu-latest migration; Ubuntu 26 remains unvalidated |
-| Coverage       | No coverage baseline command/result recorded                 | unavailable                                       | Add scoped coverage to M2.13; don't assert zero or 100%                    |
-| Performance    | Board bundle build reports compressed and raw chunk sizes    | No stable application latency/load benchmark      | Establish repeatable app/query budgets before gating                       |
+| Component      | Repository configuration                                                          | Local observation                                                                        | Policy status                                                                                                                              |
+| -------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Node.js        | Docker build/runtime Node 22; GitHub Actions node-version 22                      | local Node v26.5.0                                                                       | Node 22 is the validated CI/container line; local 26 is not validated                                                                      |
+| pnpm           | Corepack/Docker pnpm 11; actions setup version 11                                 | local pnpm 11.17.0                                                                       | Major pinned; exact Corepack resolution is not pinned                                                                                      |
+| PostgreSQL     | Docker Compose/service postgres:16-alpine                                         | CI integration and E2E services use PostgreSQL 16                                        | PostgreSQL 16 is the currently tested major                                                                                                |
+| Browser        | Playwright 1.63.0; per-change Chromium plus weekly Chromium/Firefox/WebKit matrix | Full Board E2E passed locally on all three engines; hosted per-change Chromium is active | Hosted Firefox/WebKit matrix awaits workflow availability on `main`; responsive sizes are viewport emulation, not physical-device coverage |
+| Actions runner | ubuntu-24.04                                                                      | Hosted jobs use the explicit Ubuntu 24.04 image                                          | Pinned ahead of the ubuntu-latest migration; Ubuntu 26 remains unvalidated                                                                 |
+| Coverage       | No coverage baseline command/result recorded                                      | unavailable                                                                              | Add scoped coverage to M2.13; don't assert zero or 100%                                                                                    |
+| Performance    | Board bundle build reports compressed and raw chunk sizes                         | No stable application latency/load benchmark                                             | Establish repeatable app/query budgets before gating                                                                                       |
 
 ## Initial CI service objectives (measurement targets, not guarantees)
 
