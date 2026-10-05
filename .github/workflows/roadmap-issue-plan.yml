@@ -1,4 +1,4 @@
-name: Roadmap issue plan
+name: Roadmap issue sync
 
 on:
   push:
@@ -12,26 +12,37 @@ on:
       - '.github/actions/setup-pnpm/action.yml'
       - '.github/workflows/roadmap-issue-plan.yml'
   schedule:
-    - cron: '37 8 * * 1'
+    - cron: '13 9 * * 1'
   workflow_dispatch:
+    inputs:
+      apply:
+        description: Apply the selected issue batch (otherwise this run is read-only)
+        required: true
+        default: false
+        type: boolean
+      task_ids:
+        description: Comma-separated task IDs; apply is limited to five tasks per run
+        required: false
+        type: string
 
 permissions:
   contents: read
-  issues: read
 
 concurrency:
-  group: roadmap-issue-plan-${{ github.ref }}
+  group: roadmap-issue-sync-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   plan:
-    name: generate read-only issue reconciliation plan
+    name: Build read-only issue reconciliation plan
     if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
       contents: read
       issues: read
+    env:
+      TASK_IDS: ${{ inputs.task_ids }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -42,16 +53,50 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11'
-      - name: Build read-only reconciliation plan
-        run: node scripts/roadmap/sync-issues.mjs --output roadmap-issue-plan.json --quiet
+      - name: Plan exact source SHA without issue writes
+        run: |
+          args=(--quiet)
+          if [[ -n "$TASK_IDS" ]]; then
+            args+=(--task-ids "$TASK_IDS")
+          fi
+          node scripts/roadmap/sync-issues.mjs "${args[@]}"
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY_ID: ${{ github.repository_id }}
           GITHUB_SHA: ${{ github.sha }}
-      - name: Upload plan with source identity
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+
+  apply:
+    name: Apply an explicit bounded issue batch
+    if: github.event_name == 'workflow_dispatch' && inputs.apply && github.ref == 'refs/heads/dev'
+    needs: [plan]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    concurrency:
+      group: repository-write-coordinator
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      issues: write
+    env:
+      TASK_IDS: ${{ inputs.task_ids }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          name: roadmap-issue-plan-${{ github.sha }}
-          path: roadmap-issue-plan.json
-          if-no-files-found: error
-          retention-days: 7
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          node-version: '22'
+          pnpm-version: '11'
+      - name: Apply selected tasks with fresh-state and retry guards
+        run: |
+          if [[ -z "$TASK_IDS" ]]; then
+            echo 'Applying roadmap issues requires explicit task IDs.' >&2
+            exit 2
+          fi
+          node scripts/roadmap/sync-issues.mjs --quiet --apply --task-ids "$TASK_IDS"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY_ID: ${{ github.repository_id }}
+          GITHUB_SHA: ${{ github.sha }}

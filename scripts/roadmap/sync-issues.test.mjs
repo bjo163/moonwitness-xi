@@ -6,7 +6,9 @@ import {
   applyIssuePlan,
   createGitHubIssuesClient,
   planIssueSync,
+  renderIssuePlanSummary,
   renderTaskCardDetails,
+  selectTasksForSync,
 } from './sync-issues.mjs';
 
 const task = {
@@ -36,6 +38,61 @@ test('plan defaults to create and repeated identical remote state becomes no-op'
     milestone: { number: 11, title: 'M11' },
   };
   assert.equal(plan([issue]).operations[0].operation, 'noop');
+});
+
+test('task selection requires exact unique IDs and limits explicit writes to five tasks', () => {
+  const tasks = Array.from({ length: 6 }, (_, index) => ({
+    ...task,
+    id: `M11.0${index + 1}`,
+  }));
+  assert.equal(selectTasksForSync(tasks, undefined).length, 6);
+  assert.deepEqual(
+    selectTasksForSync(tasks, 'M11.04,M11.02', true).map(({ id }) => id),
+    ['M11.02', 'M11.04']
+  );
+  assert.throws(() => selectTasksForSync(tasks, undefined, true), /explicit --task-ids/u);
+  assert.throws(() => selectTasksForSync(tasks, 'M11.01,M11.01'), /duplicates/u);
+  assert.throws(() => selectTasksForSync(tasks, 'M11.01,', true), /comma-separated/u);
+  assert.throws(() => selectTasksForSync(tasks, 'M11.99'), /Unknown roadmap task/u);
+  assert.throws(
+    () => selectTasksForSync(tasks, 'M11.01,M11.02,M11.03,M11.04,M11.05,M11.06', true),
+    /limited to 5 tasks/u
+  );
+});
+
+test('issue plan summary is useful for operators without rendering issue bodies', () => {
+  const desired = plan();
+  const summary = renderIssuePlanSummary(desired);
+  assert.match(summary, new RegExp(`source SHA: ${sourceSha}`, 'u'));
+  assert.match(summary, /create: M11\.03/u);
+  assert.doesNotMatch(summary, /BEGIN MOONWITNESS MANAGED/u);
+  assert.doesNotMatch(summary, /Build planner/u);
+});
+
+test('issue sync workflow keeps writes opt-in, dev-only, and isolated to its apply job', async () => {
+  const workflow = await readFile(
+    new URL('../../.github/workflows/roadmap-issue-plan.yml', import.meta.url),
+    'utf8'
+  );
+  const jobs = workflow.slice(workflow.indexOf('\njobs:\n') + '\njobs:\n'.length);
+  const applyBoundary = jobs.indexOf('\n  apply:\n');
+  const planJob = jobs.slice(0, applyBoundary);
+  const applyJob = jobs.slice(applyBoundary);
+  assert.match(workflow, /branches: \[dev\]/u);
+  assert.match(workflow, /schedule:/u);
+  assert.match(workflow, /workflow_dispatch:/u);
+  assert.match(workflow, /default: false/u);
+  assert.match(workflow, /--apply --task-ids "\$TASK_IDS"/u);
+  assert.match(planJob, /issues: read/u);
+  assert.doesNotMatch(planJob, /issues: write/u);
+  assert.match(
+    applyJob,
+    /event_name == 'workflow_dispatch' && inputs\.apply && github\.ref == 'refs\/heads\/dev'/u
+  );
+  assert.match(applyJob, /issues: write/u);
+  assert.match(applyJob, /group: repository-write-coordinator/u);
+  assert.match(applyJob, /needs: \[plan\]/u);
+  assert.match(applyJob, /persist-credentials: false/u);
 });
 
 test('managed issue update preserves maintainer notes outside the generated block', () => {

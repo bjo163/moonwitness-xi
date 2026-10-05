@@ -9,6 +9,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const beginMarker = '<!-- BEGIN MOONWITNESS MANAGED -->';
 const endMarker = '<!-- END MOONWITNESS MANAGED -->';
+const maximumApplyBatchSize = 5;
 
 /**
  * @typedef {{ number: number, title: string, body: string, state: 'open'|'closed', labels?: Array<{name: string}>, milestone?: {number: number, title: string}|null, assignees?: Array<{login: string}>, pull_request?: unknown }} RemoteIssue
@@ -61,6 +62,43 @@ function taskCardSection(markdown, taskId) {
   if (start < 0) throw new Error(`Roadmap card is missing the ${taskId} section.`);
   const end = lines.findIndex((line, index) => index > start && /^##\s/u.test(line));
   return lines.slice(start, end < 0 ? lines.length : end).join('\n');
+}
+
+export function selectTasksForSync(tasks, rawTaskIds, apply = false) {
+  if (rawTaskIds === undefined || rawTaskIds.trim() === '') {
+    if (apply) throw new Error('--apply requires an explicit --task-ids selection.');
+    return tasks;
+  }
+
+  const requestedIds = rawTaskIds.split(',').map((taskId) => taskId.trim());
+  if (requestedIds.some((taskId) => !taskId))
+    throw new Error('--task-ids must be a comma-separated list of task IDs.');
+  const uniqueIds = new Set(requestedIds);
+  if (uniqueIds.size !== requestedIds.length)
+    throw new Error('--task-ids cannot contain duplicates.');
+  if (apply && requestedIds.length > maximumApplyBatchSize)
+    throw new Error(`--apply is limited to ${maximumApplyBatchSize} tasks per run.`);
+
+  const tasksById = new Map(tasks.map((task) => [task.id, task]));
+  const unknownIds = requestedIds.filter((taskId) => !tasksById.has(taskId));
+  if (unknownIds.length) throw new Error(`Unknown roadmap task ID(s): ${unknownIds.join(', ')}.`);
+  const requested = new Set(requestedIds);
+  return tasks.filter((task) => requested.has(task.id));
+}
+
+export function renderIssuePlanSummary(plan) {
+  const byOperation = Object.groupBy(plan.operations, ({ operation }) => operation);
+  return [
+    `Roadmap issue plan source SHA: ${plan.sourceSha}`,
+    `Remote input fingerprint: ${plan.inputHash}`,
+    `Planned ${plan.operations.length} task(s): ${['create', 'update', 'noop', 'conflict']
+      .map((operation) => `${operation}=${byOperation[operation]?.length ?? 0}`)
+      .join(', ')}.`,
+    ...['create', 'update', 'noop', 'conflict'].map(
+      (operation) =>
+        `${operation}: ${byOperation[operation]?.map(({ taskId }) => taskId).join(', ') || 'none'}`
+    ),
+  ].join('\n');
 }
 
 function subsection(markdown, heading) {
@@ -592,6 +630,13 @@ export async function applyIssuePlan({
 async function main() {
   const apply = process.argv.includes('--apply');
   const quiet = process.argv.includes('--quiet');
+  if (process.argv.includes('--help')) {
+    process.stdout.write(
+      'Usage: node scripts/roadmap/sync-issues.mjs [--quiet] [--output <path>] [--task-ids <id,id>] [--apply]\n' +
+        `Apply requires an explicit selection of at most ${maximumApplyBatchSize} roadmap tasks.\n`
+    );
+    return;
+  }
   const outputIndex = process.argv.indexOf('--output');
   const outputPath = outputIndex >= 0 ? process.argv[outputIndex + 1] : undefined;
   if (outputIndex >= 0 && (!outputPath || outputPath.startsWith('--')))
@@ -606,6 +651,10 @@ async function main() {
   const owner = process.env.GITHUB_REPOSITORY?.split('/')[0];
   const repo = process.env.GITHUB_REPOSITORY?.split('/')[1];
   const repositoryId = process.env.GITHUB_REPOSITORY_ID;
+  const taskIdsIndex = process.argv.indexOf('--task-ids');
+  const rawTaskIds = taskIdsIndex >= 0 ? process.argv[taskIdsIndex + 1] : undefined;
+  if (taskIdsIndex >= 0 && (!rawTaskIds || rawTaskIds.startsWith('--')))
+    throw new Error('--task-ids requires a comma-separated task ID list.');
   if (!owner || !repo || !repositoryId)
     throw new Error('Set GITHUB_REPOSITORY and GITHUB_REPOSITORY_ID.');
   const index = JSON.parse(
@@ -619,6 +668,7 @@ async function main() {
       stdio: 'inherit',
     }
   );
+  const tasks = selectTasksForSync(index.tasks, rawTaskIds, apply);
   const sha = process.env.GITHUB_SHA ?? process.env.SOURCE_SHA;
   const sourceSha =
     sha ??
@@ -626,11 +676,11 @@ async function main() {
   const token = process.env.GITHUB_TOKEN;
   const client = createGitHubIssuesClient({ token, owner, repo });
   const issues = await client.listAll();
-  const validAssignees = await client.validateAssignees(index.tasks);
+  const validAssignees = await client.validateAssignees(tasks);
   const repositoryUrl = `https://github.com/${owner}/${repo}`;
   const cardContents = new Map();
   const cardDetailsByTask = new Map();
-  for (const task of index.tasks) {
+  for (const task of tasks) {
     let markdown = cardContents.get(task.detailFile);
     if (markdown === undefined) {
       markdown = await readFile(path.join(repositoryRoot, task.detailFile), 'utf8');
@@ -639,7 +689,7 @@ async function main() {
     cardDetailsByTask.set(task.id, renderTaskCardDetails(markdown, task.id));
   }
   const plan = planIssueSync({
-    tasks: index.tasks,
+    tasks,
     issues,
     repositoryId,
     sourceSha,
@@ -649,12 +699,12 @@ async function main() {
   const metadata = await client.listMetadata();
   plan.metadata = {
     validAssignees,
-    milestonesToCreate: [...new Set(index.tasks.map(({ milestone }) => milestone))].filter(
+    milestonesToCreate: [...new Set(tasks.map(({ milestone }) => milestone))].filter(
       (title) => !metadata.milestones.some((milestone) => milestone.title === title)
     ),
     labelsToCreate: [
       ...new Set(
-        index.tasks.flatMap((task) => [
+        tasks.flatMap((task) => [
           'roadmap',
           `milestone:${task.milestone.toLowerCase()}`,
           ...(task.priority ? [`priority:${task.priority}`] : []),
@@ -668,18 +718,13 @@ async function main() {
   const renderedPlan = `${JSON.stringify(plan, null, 2)}\n`;
   if (resolvedOutput) await writeFile(resolvedOutput, renderedPlan, 'utf8');
   if (quiet) {
-    const counts = Object.groupBy(plan.operations, ({ operation }) => operation);
-    process.stdout.write(
-      `Planned ${plan.operations.length} task(s): ${['create', 'update', 'noop', 'conflict']
-        .map((operation) => `${operation}=${counts[operation]?.length ?? 0}`)
-        .join(', ')}.\n`
-    );
+    process.stdout.write(`${renderIssuePlanSummary(plan)}\n`);
   } else process.stdout.write(renderedPlan);
   if (!apply) return;
   const results = await applyIssuePlan({
     plan,
     client,
-    tasks: index.tasks,
+    tasks,
     repositoryId,
     sourceSha,
     repositoryUrl,
