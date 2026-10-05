@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildPlatformAudit, planArtifactCleanup } from './platform-audit.mjs';
+import {
+  auditScheduledWorkflows,
+  buildPlatformAudit,
+  planArtifactCleanup,
+} from './platform-audit.mjs';
 import { renderPlatformAuditSummary } from './write-platform-audit-summary.mjs';
 
 const generatedAt = '2026-10-05T00:00:00.000Z';
@@ -117,6 +121,53 @@ test('cleanup dry-run only selects old allowlisted disposable artifacts', () => 
   assert.throws(() => planArtifactCleanup([], 'invalid', 90), /valid timestamp/u);
 });
 
+test('scheduled regression audit detects healthy, missed, stale, and failing schedules', () => {
+  const checks = auditScheduledWorkflows(
+    [
+      {
+        name: 'Scheduled browser matrix',
+        event: 'schedule',
+        created_at: '2026-10-01T00:00:00.000Z',
+        conclusion: 'success',
+      },
+      {
+        name: 'Scheduled browser matrix',
+        event: 'schedule',
+        created_at: '2026-10-04T00:00:00.000Z',
+        conclusion: 'failure',
+      },
+      {
+        name: 'CodeQL',
+        event: 'schedule',
+        created_at: '2026-09-20T00:00:00.000Z',
+        conclusion: 'success',
+      },
+      {
+        name: 'Gitleaks',
+        event: 'schedule',
+        created_at: '2026-10-04T00:00:00.000Z',
+        conclusion: 'success',
+      },
+      {
+        name: 'Gitleaks',
+        event: 'workflow_dispatch',
+        created_at: '2026-10-05T00:00:00.000Z',
+        conclusion: 'success',
+      },
+    ],
+    generatedAt
+  );
+
+  assert.deepEqual(Object.fromEntries(checks.map(({ name, status }) => [name, status])), {
+    'Scheduled browser matrix': 'failing',
+    'Deep scheduled regression': 'missing-success',
+    CodeQL: 'stale',
+    Gitleaks: 'healthy',
+    'Monthly platform audit': 'missing-success',
+  });
+  assert.throws(() => auditScheduledWorkflows([], 'invalid'), /valid timestamp/u);
+});
+
 test('audit rejects invalid provenance and never presents missing values as zero', () => {
   assert.throws(
     () =>
@@ -150,7 +201,17 @@ test('summary reports unknown capabilities and never implies cleanup executed', 
     source: { sha: 'c'.repeat(40) },
     inventory: {
       artifacts: { count: 2, bytes: 512, expiringWithinSevenDays: 1 },
-      workflowRuns: { count: 3 },
+      workflowRuns: {
+        count: 3,
+        scheduledWorkflows: [
+          {
+            name: 'Deep scheduled regression',
+            status: 'missing-success',
+            lastSuccessAt: null,
+            maximumAgeDays: 8,
+          },
+        ],
+      },
       packages: { status: 'unknown' },
       billing: { status: 'unknown' },
     },
@@ -160,5 +221,6 @@ test('summary reports unknown capabilities and never implies cleanup executed', 
   const summary = renderPlatformAuditSummary(report);
   assert.match(summary, /Registry inventory: unknown; Actions billing: unknown/u);
   assert.match(summary, /0 allowlisted candidates; no delete capability/u);
+  assert.match(summary, /Schedule Deep scheduled regression: missing-success/u);
   assert.match(summary, /Limitation: Billing API unavailable\./u);
 });

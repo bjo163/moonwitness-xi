@@ -10,6 +10,10 @@ export function renderPlatformAuditSummary(report) {
     `- Source: \`${report.source.sha}\``,
     `- Active artifacts: ${report.inventory.artifacts.count} (${report.inventory.artifacts.bytes} bytes); expiring within seven days: ${report.inventory.artifacts.expiringWithinSevenDays}.`,
     `- Workflow runs inspected (90 days): ${report.inventory.workflowRuns.count}.`,
+    ...(report.inventory.workflowRuns.scheduledWorkflows ?? []).map(
+      (workflow) =>
+        `- Schedule ${workflow.name}: ${workflow.status}; last success ${workflow.lastSuccessAt ?? 'none'} (limit ${workflow.maximumAgeDays} days).`
+    ),
     `- Registry inventory: ${report.inventory.packages.status}; Actions billing: ${report.inventory.billing.status}.`,
     `- Cleanup: dry-run only; ${report.cleanupPlan.candidates.length} allowlisted candidates; no delete capability.`,
     '',

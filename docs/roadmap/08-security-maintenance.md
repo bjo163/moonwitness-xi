@@ -139,6 +139,8 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 - **Baca/periksa:** Reusable full verify; maintenance schedule.
 - **Deliverable:** Scheduled regression workflow.
 
+Implementasi terdiri dari matriks browser mingguan (`browser-matrix.yml`), regresi PostgreSQL upgrade/jobs recovery/restore mingguan (`deep-regression.yml`), serta CodeQL dan Gitleaks mingguan pada jadwal berbeda. Platform audit mencatat latest scheduled run dan latest successful run per workflow; dispatch manual tidak memenuhi bukti jadwal. Jadwal GitHub baru aktif dari default branch, jadi hasil hosted setelah promosi tetap acceptance terpisah.
+
 ### Langkah pelaksanaan
 
 1. Jadwalkan full browsers, upgrades, jobs recovery, restore drill dan rescan pada waktu staggered.

@@ -10,6 +10,14 @@ const protectedArtifactName =
 const disposableArtifactName =
   /^(?:board-[a-z0-9-]+-\d+-\d+|ui-catalog-playwright-\d+-\d+|dependency-update-plan-\d+|docs-preview-[a-f0-9]{40}|test-junit-\d+-\d+)$/u;
 
+const scheduledWorkflowExpectations = [
+  { name: 'Scheduled browser matrix', maximumAgeDays: 8 },
+  { name: 'Deep scheduled regression', maximumAgeDays: 8 },
+  { name: 'CodeQL', maximumAgeDays: 8 },
+  { name: 'Gitleaks', maximumAgeDays: 8 },
+  { name: 'Monthly platform audit', maximumAgeDays: 38 },
+];
+
 function knownApiFailure(error) {
   const output = `${error.stderr ?? ''} ${error.message ?? ''}`;
   const status = /HTTP (\d{3})/u.exec(output)?.[1];
@@ -19,6 +27,51 @@ function knownApiFailure(error) {
 function compareCounts(current, previous) {
   if (typeof current !== 'number' || typeof previous !== 'number') return null;
   return current - previous;
+}
+
+export function auditScheduledWorkflows(workflowRuns, generatedAt) {
+  const generatedTime = Date.parse(generatedAt);
+  if (!Number.isFinite(generatedTime)) {
+    throw new Error('Scheduled workflow audit requires a valid timestamp.');
+  }
+
+  return scheduledWorkflowExpectations.map(({ name, maximumAgeDays }) => {
+    const scheduledRuns = workflowRuns
+      .filter((run) => run.name === name && run.event === 'schedule')
+      .sort(
+        (left, right) => Date.parse(right.created_at ?? '') - Date.parse(left.created_at ?? '')
+      );
+    const latestRun = scheduledRuns[0];
+    const lastSuccess = scheduledRuns.find((run) => run.conclusion === 'success');
+    const lastRunTime = Date.parse(latestRun?.created_at ?? '');
+    const lastSuccessTime = Date.parse(lastSuccess?.created_at ?? '');
+    const lastSuccessAgeDays = Number.isFinite(lastSuccessTime)
+      ? Math.floor((generatedTime - lastSuccessTime) / (24 * 60 * 60 * 1000))
+      : null;
+    const lastRunAgeDays = Number.isFinite(lastRunTime)
+      ? Math.floor((generatedTime - lastRunTime) / (24 * 60 * 60 * 1000))
+      : null;
+    const status =
+      lastSuccessAgeDays === null
+        ? 'missing-success'
+        : lastSuccessAgeDays > maximumAgeDays
+          ? 'stale'
+          : latestRun?.conclusion !== 'success' && latestRun?.status !== 'in_progress'
+            ? 'failing'
+            : 'healthy';
+
+    return {
+      name,
+      event: 'schedule',
+      maximumAgeDays,
+      status,
+      lastRunAt: latestRun?.created_at ?? null,
+      lastRunConclusion: latestRun?.conclusion ?? latestRun?.status ?? null,
+      lastRunAgeDays,
+      lastSuccessAt: lastSuccess?.created_at ?? null,
+      lastSuccessAgeDays,
+    };
+  });
 }
 
 export function planArtifactCleanup(artifacts, generatedAt, minimumAgeDays = 90) {
@@ -101,6 +154,7 @@ export function buildPlatformAudit(input) {
   const cleanup = planArtifactCleanup(artifacts, generatedAt);
   const previousArtifacts = previous?.inventory?.artifacts;
   const previousRuns = previous?.inventory?.workflowRuns;
+  const scheduledWorkflows = auditScheduledWorkflows(workflowRuns, generatedAt);
 
   return {
     schemaVersion: 1,
@@ -125,7 +179,7 @@ export function buildPlatformAudit(input) {
             .filter((value) => typeof value === 'string')
             .sort()[0] ?? null,
       },
-      workflowRuns: { count: workflowRuns.length, conclusions },
+      workflowRuns: { count: workflowRuns.length, conclusions, scheduledWorkflows },
       packages,
       billing,
       permissions: {
@@ -165,6 +219,9 @@ export function buildPlatformAudit(input) {
       ...(workflowRuns.length >= 1000
         ? ['Workflow run inventory reached the GitHub API result limit.']
         : []),
+      ...scheduledWorkflows
+        .filter((workflow) => workflow.status !== 'healthy')
+        .map((workflow) => `Scheduled workflow ${workflow.name} is ${workflow.status}.`),
       'This command is read-only; cleanupPlan never performs deletion.',
       'Only Node.js end-of-life is checked automatically; other runtime policy rows require maintainer review against upstream sources.',
     ],

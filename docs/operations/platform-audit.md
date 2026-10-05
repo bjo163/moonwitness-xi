@@ -8,7 +8,9 @@ Run locally with an authenticated GitHub CLI:
 pnpm platform:audit -- --repo bjo163/moonwitness-xi --output platform-audit-baseline.json
 ```
 
-Use `--previous <report.json>` to calculate deltas from an earlier report. Never commit a report containing private repository metadata; the scheduled workflow stores its report as a 120-day Actions artifact and writes a concise summary. Monthly scheduling runs from the default branch; `workflow_dispatch` is available for a manual read-only snapshot.
+Use `--previous <report.json>` to calculate deltas from an earlier report. Never commit a report containing private repository metadata; the scheduled workflow stores its report as a 90-day Actions artifact and writes a concise summary. Monthly scheduling runs from the default branch; `workflow_dispatch` is available for a manual read-only snapshot.
+
+The monthly report checks scheduled-event freshness separately from manual dispatch for the weekly browser matrix, deep PostgreSQL/jobs/restore regression, CodeQL, Gitleaks, and the monthly audit itself. Each entry records its most recent run and successful run, with an 8-day weekly or 38-day monthly threshold. Missing scheduled history, a failed latest run, or a stale success is reported as a limitation; run status is not inferred from a manually dispatched success.
 
 The workflow token needs only `contents: read` and `actions: read`. Repository package inventory or billing APIs can return `403`/`404` when the repository/account plan or token does not expose those capabilities. Such fields remain `unknown`; they must not be interpreted as zero. Record the missing capability and owner in the next review.
 
