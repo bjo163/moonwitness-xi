@@ -183,7 +183,7 @@ Gate: audit fitur existing sebelum membuat package. Jalankan berurutan berdasark
 - [ ] M9.04 Evaluasi `orm-integration`: webhook subscriptions, scoped credential references, signing, idempotency, delivery/retry; validasi tujuan request untuk menghindari SSRF.
 - [x] M9.05 Evaluasi `orm-organization`: departments, teams, positions, memberships dan manager berdasarkan kebutuhan produk.
 - [ ] M9.06 Bangun satu addon bisnis contoh (request/approval atau CRM sederhana) untuk membuktikan extensibility tanpa perubahan core berulang.
-- [ ] M9.07 Untuk tiap addon: manifest/dependencies, minimal public API, access isolation, views/menu, required/demo seeds, docs, upgrade path, tests, dan compatibility policy.
+- [x] M9.07 Untuk tiap addon: manifest/dependencies, minimal public API, access isolation, views/menu, required/demo seeds, docs, upgrade path, tests, dan compatibility policy. Suite workspace memeriksa seluruh manifest runtime, install/reinstall dan seed preservation; API negative authorization lulus untuk model addon; installer upgrade hook teruji. [Evidence](docs/roadmap/evidence/M9.07.md).
 - [ ] M9.08 Audit ukuran base/API/Board setelah ekstraksi; package baru harus mengurangi coupling atau menghasilkan reuse yang terbukti.
 
 ## M10 — Acceptance dan pembuktian satu siklus nyata
