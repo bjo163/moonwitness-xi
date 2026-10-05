@@ -290,7 +290,7 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ## M7.16 — Sediakan dry-run/release-plan artifact sebelum publikasi pertama dan tautkan seluruh bukti ke release.
 
-`pnpm release:dry-run` now composes the canonical release preparation preview with its exact source/baseline SHAs, proposed version, generated changelog section, before/after file hashes, planned artifacts, and required gates marked `not-run`. It asserts no registry/release/Pages/deployment writes. The manual [release-plan workflow](../../.github/workflows/release-plan.yml) is restricted to `dev`, uses read-only repository permission, and uploads the JSON plan for review. Local output and limitations are recorded in [M7.16 evidence](evidence/M7.16.md).
+`pnpm release:dry-run` now composes the canonical release preparation preview with exact source/baseline SHAs, proposed version, generated changelog section, before/after file hashes, 19 phase-specific required gates marked `not-run`, and 9 release assets. Four required SBOM/provenance assets are explicitly marked `roadmap-pending`; the report does not imply the release is ready while those roadmap items remain. The command requires a clean checkout so the plan matches its source SHA. The manual [release-plan workflow](../../.github/workflows/release-plan.yml) is restricted to `dev`, uses read-only repository permission, and uploads the JSON plan for review. Local output and limitations are recorded in [M7.16 evidence](evidence/M7.16.md).
 
 - **Prasyarat:** M7.05, M7.06, M7.14, M7.15, M1.08
 - **Baca/periksa:** Release pipeline lengkap; first stable decision.

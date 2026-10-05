@@ -32,7 +32,7 @@ jobs:
       - name: Summarize planned version, assets, and pending gates
         run: |
           set -euo pipefail
-          jq -r '"### Release dry-run\n- Status: `\(.status)`\n- Source SHA: `\(.source.headSha)`\n- Proposed version: `\(.version // "none")`\n- Planned assets: \(.assets | length)\n- Gates not run: \([.gates[] | select(.status == "not-run")] | length)\n- Writes performed: `\(.writesPerformed)`"' "$RUNNER_TEMP/release-plan.json" >> "$GITHUB_STEP_SUMMARY"
+          jq -r '"### Release dry-run\n- Status: `\(.status)`\n- Source SHA: `\(.source.headSha)`\n- Proposed version: `\(.version // "none")`\n- Planned assets: \(.assets | length)\n- Required assets not implemented: \(.readinessFindings | length)\n- Gates not run: \([.gates[] | select(.status == "not-run")] | length)\n- Writes performed: `\(.writesPerformed)`"' "$RUNNER_TEMP/release-plan.json" >> "$GITHUB_STEP_SUMMARY"
       - name: Upload the release plan for review
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

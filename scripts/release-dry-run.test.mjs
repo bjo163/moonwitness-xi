@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildReleaseDryRunReport } from './release-dry-run.mjs';
+import {
+  assertCleanSource,
+  buildReleaseDryRunReport,
+  resolveRepositorySlug,
+} from './release-dry-run.mjs';
 
 const source = { headSha: 'a'.repeat(40), baselineSha: 'b'.repeat(40), baselineTag: 'v1.0.0-rc.1' };
 
@@ -26,18 +30,23 @@ test('dry-run report includes exact diffs, release assets, gates, and no-write i
     new Map([
       ['package.json', '{"name":"workspace","version":"1.0.0-rc.1"}\n'],
       ['CHANGELOG.md', '# Changelog\n'],
-    ])
+    ]),
+    'acme/moonwitness'
   );
   assert.deepEqual(report.versionDiff, [
     { path: 'package.json', from: '1.0.0-rc.1', to: '1.1.0-rc.1' },
   ]);
   assert.match(report.changelogDiff, /New feature/u);
   assert.equal(report.files.length, 2);
-  assert.equal(report.assets.length, 5);
+  assert.equal(report.assets.length, 9);
+  assert.equal(report.assets[0].name, 'ghcr.io/acme/moonwitness:v1.1.0-rc.1');
+  assert.equal(report.assets[5].implementationStatus, 'roadmap-pending');
+  assert.equal(report.readinessFindings.length, 4);
   assert.equal(
     report.gates.every((gate) => gate.status === 'not-run'),
     true
   );
+  assert.equal(report.gates.length, 19);
   assert.equal(report.writesPerformed, false);
   assert.equal(report.registryWritesPerformed, false);
   assert.equal(report.githubReleaseCreated, false);
@@ -51,5 +60,17 @@ test('no-release report has no version diff/assets while preserving read-only st
   assert.equal(report.version, null);
   assert.deepEqual(report.versionDiff, []);
   assert.deepEqual(report.assets, []);
+  assert.deepEqual(report.gates, []);
   assert.equal(report.writesPerformed, false);
+});
+
+test('source cleanliness and remote slug validation fail closed', () => {
+  assert.doesNotThrow(() => assertCleanSource(''));
+  assert.throws(() => assertCleanSource(' M package.json\n'), /clean checkout/u);
+  assert.equal(
+    resolveRepositorySlug('https://github.com/acme/moonwitness.git'),
+    'acme/moonwitness'
+  );
+  assert.equal(resolveRepositorySlug('git@github.com:acme/moonwitness.git'), 'acme/moonwitness');
+  assert.throws(() => resolveRepositorySlug('origin'), /GitHub HTTPS or SSH/u);
 });
