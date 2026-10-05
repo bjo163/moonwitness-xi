@@ -37,6 +37,13 @@ const dependencyCandidate = `
     gh workflow run promote.yml --repo "$GITHUB_REPOSITORY" --ref dev
     gh workflow run ci.yml --repo "$GH_REPO" --ref dev
 `;
+const releasePlan = `
+    if: github.ref == 'refs/heads/dev'
+permissions:
+  contents: read
+      - run: pnpm release:dry-run -- --output report.json
+      - uses: actions/upload-artifact@0123456789012345678901234567890123456789
+`;
 function policies(overrides = {}) {
   return inspectTrustedCheckoutPolicies({
     pages,
@@ -44,6 +51,7 @@ function policies(overrides = {}) {
     release,
     releasePrepare,
     dependencyCandidate,
+    releasePlan,
     ...overrides,
   });
 }
@@ -96,4 +104,20 @@ test('rejects untrusted release dispatch, stale preparation SHA, and missing fol
   assert.ok(findings.some((finding) => finding.includes('explicit dispatch on a version tag')));
   assert.ok(findings.some((finding) => finding.includes('input SHA different from the event SHA')));
   assert.ok(findings.some((finding) => finding.includes('explicitly dispatch full CI')));
+});
+
+test('rejects write-capable or non-reviewable release dry-run workflows', () => {
+  const findings = policies({
+    releasePlan: releasePlan
+      .replace("if: github.ref == 'refs/heads/dev'", "if: github.ref == 'refs/heads/feature'")
+      .replace('contents: read', 'packages: write')
+      .replace(
+        'actions/upload-artifact@0123456789012345678901234567890123456789',
+        'run: docker push image'
+      ),
+  });
+  assert.ok(findings.some((finding) => finding.includes('only run from dev')));
+  assert.ok(findings.some((finding) => finding.includes('remain read-only')));
+  assert.ok(findings.some((finding) => finding.includes('reviewable plan artifact')));
+  assert.ok(findings.some((finding) => finding.includes('must not publish')));
 });

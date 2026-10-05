@@ -25,6 +25,7 @@ export function inspectTrustedCheckoutPolicies({
   release,
   releasePrepare,
   dependencyCandidate,
+  releasePlan,
 }) {
   const findings = [];
   for (const [name, source] of [
@@ -115,23 +116,41 @@ export function inspectTrustedCheckoutPolicies({
       );
   }
 
+  if (releasePlan) {
+    if (!releasePlan.includes("if: github.ref == 'refs/heads/dev'"))
+      findings.push('Release dry-run must only run from dev.');
+    if (!releasePlan.includes('permissions:\n  contents: read'))
+      findings.push('Release dry-run workflow must remain read-only.');
+    if (!releasePlan.includes('pnpm release:dry-run'))
+      findings.push('Release dry-run workflow must use the shared release planner.');
+    if (!releasePlan.includes('actions/upload-artifact@'))
+      findings.push('Release dry-run workflow must retain a reviewable plan artifact.');
+    if (/packages:\s*write|deploy-pages|docker push|gh release create/u.test(releasePlan))
+      findings.push(
+        'Release dry-run workflow must not publish packages, releases, or deployments.'
+      );
+  }
+
   return findings;
 }
 
 async function main() {
-  const [pages, visualReview, release, releasePrepare, dependencyCandidate] = await Promise.all([
-    readFile(path.join(repositoryRoot, '.github/workflows/pages.yml'), 'utf8'),
-    readFile(path.join(repositoryRoot, '.github/workflows/visual-review.yml'), 'utf8'),
-    readFile(path.join(repositoryRoot, '.github/workflows/release.yml'), 'utf8'),
-    readFile(path.join(repositoryRoot, '.github/workflows/release-prepare.yml'), 'utf8'),
-    readFile(path.join(repositoryRoot, '.github/workflows/dependency-candidate.yml'), 'utf8'),
-  ]);
+  const [pages, visualReview, release, releasePrepare, dependencyCandidate, releasePlan] =
+    await Promise.all([
+      readFile(path.join(repositoryRoot, '.github/workflows/pages.yml'), 'utf8'),
+      readFile(path.join(repositoryRoot, '.github/workflows/visual-review.yml'), 'utf8'),
+      readFile(path.join(repositoryRoot, '.github/workflows/release.yml'), 'utf8'),
+      readFile(path.join(repositoryRoot, '.github/workflows/release-prepare.yml'), 'utf8'),
+      readFile(path.join(repositoryRoot, '.github/workflows/dependency-candidate.yml'), 'utf8'),
+      readFile(path.join(repositoryRoot, '.github/workflows/release-plan.yml'), 'utf8'),
+    ]);
   const findings = inspectTrustedCheckoutPolicies({
     pages,
     visualReview,
     release,
     releasePrepare,
     dependencyCandidate,
+    releasePlan,
   });
   if (findings.length) {
     for (const finding of findings) process.stderr.write(`${finding}\n`);

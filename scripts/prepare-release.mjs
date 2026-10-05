@@ -18,7 +18,7 @@ function parseArguments(args) {
   const options = new Map();
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
-    if (argument === '--apply') options.set(argument, true);
+    if (argument === '--apply' || argument === '--include-content') options.set(argument, true);
     else if (['--expected-head', '--date'].includes(argument)) {
       const value = args[index + 1];
       if (!value || value.startsWith('--')) throw new Error(`${argument} requires a value.`);
@@ -206,6 +206,7 @@ function assertExpectedDevHead(expectedHead) {
 async function main(args) {
   const options = parseArguments(args);
   const apply = options.has('--apply');
+  const includeContent = options.has('--include-content');
   const headSha = resolveCommit('HEAD');
   const expectedHead = options.get('--expected-head');
   if (apply) {
@@ -249,7 +250,16 @@ async function main(args) {
   });
   if (!apply) {
     process.stdout.write(
-      `${JSON.stringify({ ...preparation, files: preparation.files.map(({ path: filePath }) => filePath) }, null, 2)}\n`
+      `${JSON.stringify(
+        {
+          ...preparation,
+          files: includeContent
+            ? preparation.files
+            : preparation.files.map(({ path: filePath }) => filePath),
+        },
+        null,
+        2
+      )}\n`
     );
     return;
   }
@@ -290,7 +300,16 @@ async function main(args) {
     preparation.generatedDocs = true;
   }
   process.stdout.write(
-    `${JSON.stringify({ ...preparation, files: preparation.files.map(({ path: filePath }) => filePath) }, null, 2)}\n`
+    `${JSON.stringify(
+      {
+        ...preparation,
+        files: includeContent
+          ? preparation.files
+          : preparation.files.map(({ path: filePath }) => filePath),
+      },
+      null,
+      2
+    )}\n`
   );
 }
 
