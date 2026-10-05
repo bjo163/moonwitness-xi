@@ -71,7 +71,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 - [x] M2.10 Hasilkan test report, coverage, job summary, serta log/trace yang disanitasi dengan retensi terbatas. Full CI dan upload artefak tervalidasi: [M2.10](docs/roadmap/evidence/M2.10.md), [CI 37177300402](https://github.com/bjo163/moonwitness-xi/actions/runs/37177300402).
 - [x] M2.11 Workflow/shell lint, frozen install, fixture negatif, dan reproducibility generator lulus lokal + remote setelah M6.02 tersedia. Bukti: [M2.11](docs/roadmap/evidence/M2.11.md), [CI 37279429774](https://github.com/bjo163/moonwitness-xi/actions/runs/37279429774).
 - [x] M2.12 Retry dibatasi satu kali; first failure, metadata expiry, protected-test policy, dan upload retry report tervalidasi: [M2.12](docs/roadmap/evidence/M2.12.md), [CI 37178742717](https://github.com/bjo163/moonwitness-xi/actions/runs/37178742717).
-- [ ] M2.13 Ukur baseline coverage bagian kritis dan tetapkan threshold bertahap yang bermakna, bukan angka global arbitrer.
+- [x] M2.13 Ukur baseline coverage bagian kritis dan tetapkan threshold bertahap yang bermakna, bukan angka global arbitrer. Tujuh ambang branch kritis lulus pada unit suite dan seluruh technical CI jobs: [M2.13](docs/roadmap/evidence/M2.13.md), [CI 37319653342](https://github.com/bjo163/moonwitness-xi/actions/runs/37319653342). Promotion `ci-gate` tetap meminta fresh CODEOWNER approval.
 
 ## M3 — Board: audit visual dan E2E (jalur B; paralel dengan A/C)
 
