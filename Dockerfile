@@ -4,7 +4,10 @@ RUN corepack enable && corepack prepare pnpm@11 --activate
 WORKDIR /workspace
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json ./apps/api/package.json
+COPY apps/docs/package.json ./apps/docs/package.json
 COPY apps/board/package.json ./apps/board/package.json
+COPY apps/ui-catalog/package.json ./apps/ui-catalog/package.json
+COPY packages/assets/package.json ./packages/assets/package.json
 COPY packages/auth/package.json ./packages/auth/package.json
 COPY packages/client/package.json ./packages/client/package.json
 COPY packages/eslint-config/package.json ./packages/eslint-config/package.json
@@ -13,6 +16,7 @@ COPY packages/logger/package.json ./packages/logger/package.json
 COPY packages/orm-base/package.json ./packages/orm-base/package.json
 COPY packages/orm/package.json ./packages/orm/package.json
 COPY packages/types/package.json ./packages/types/package.json
+COPY packages/ui/package.json ./packages/ui/package.json
 RUN --mount=type=cache,id=moonwitness-pnpm-store,target=/root/.local/share/pnpm/store/v11 \
     pnpm install --frozen-lockfile
 COPY . .
@@ -37,6 +41,7 @@ FROM build AS board-build
 RUN pnpm --filter @moonwitness/board build && mkdir -p /deploy/board && cp -r apps/board/dist /deploy/board/dist
 
 FROM nginx:1.30.5-alpine AS board-runtime
+RUN apk upgrade --no-cache
 COPY --from=board-build /deploy/board/dist /usr/share/nginx/html
 COPY deploy/nginx-board.conf /etc/nginx/conf.d/default.conf
 EXPOSE 8080
