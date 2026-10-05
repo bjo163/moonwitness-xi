@@ -79,7 +79,7 @@ test('notification inbox displays a delivered message, marks it read, and expose
   expect((await read.json()).data).toMatchObject({ state: 'read' });
 
   await page.goto('/settings');
-  await expect(page.getByRole('heading', { name: 'Notifications' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Notifications' }).last()).toBeVisible();
   await expect(page.getByText('In-app inbox', { exact: true })).toBeVisible();
   await expect(
     page.getByText('Demo channel only. Delivery is suppressed; no email is sent.')
