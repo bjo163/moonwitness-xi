@@ -19,16 +19,37 @@ function sha256(value) {
 }
 
 function replaceManagedBlock(body, block) {
-  const start = body.indexOf(beginMarker);
-  const end = body.indexOf(endMarker);
-  if (start < 0 && end < 0) {
+  const currentBlock = readManagedBlock(body);
+  if (currentBlock === undefined) {
     const notes = body.trim();
     return [block, notes].filter(Boolean).join('\n\n');
   }
-  if (start < 0 || end <= start || body.indexOf(beginMarker, start + beginMarker.length) >= 0)
+  const start = body.indexOf(beginMarker);
+  const end = body.indexOf(endMarker, start) + endMarker.length;
+  const blockStart = start;
+  const blockEnd = end;
+  if (blockStart < 0 || blockEnd <= blockStart)
+    throw new Error('Issue body has malformed managed-block boundaries.');
+  return `${body.slice(0, blockStart)}${block}${body.slice(blockEnd)}`.trim();
+}
+
+function readManagedBlock(body) {
+  const start = body.indexOf(beginMarker);
+  const end = body.indexOf(endMarker);
+  const hasBegin = start >= 0;
+  const hasEnd = end >= 0;
+  if (!hasBegin && !hasEnd) return undefined;
+  if (
+    !hasBegin ||
+    !hasEnd ||
+    end <= start ||
+    body.indexOf(beginMarker, start + beginMarker.length) >= 0 ||
+    body.indexOf(endMarker, end + endMarker.length) >= 0
+  ) {
     throw new Error('Issue body has malformed or duplicate managed-block boundaries.');
+  }
   const after = end + endMarker.length;
-  return `${body.slice(0, start)}${block}${body.slice(after)}`.trim();
+  return body.slice(start, after);
 }
 
 function generatedBlock(task, repositoryId, sourceSha) {
@@ -93,7 +114,9 @@ export function planIssueSync({ tasks, issues, repositoryId, sourceSha }) {
       return { taskId: task.id, operation: 'create', title, body: `${marker}\n${block}\n` };
     const issue = matches[0];
     let body;
+    let currentBlock;
     try {
+      currentBlock = readManagedBlock(issue.body);
       body = replaceManagedBlock(issue.body, block);
     } catch (error) {
       return {
@@ -105,7 +128,7 @@ export function planIssueSync({ tasks, issues, repositoryId, sourceSha }) {
         body: '',
       };
     }
-    if (issue.title === title && issue.body.trimEnd() === `${marker}\n${block}`)
+    if (issue.title === title && currentBlock === block)
       return {
         taskId: task.id,
         operation: 'noop',

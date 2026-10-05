@@ -45,6 +45,21 @@ test('managed issue update preserves maintainer notes outside the generated bloc
   assert.match(operation.title, /Build robust planner/u);
 });
 
+test('unchanged managed content is a no-op even when maintainer notes are present', () => {
+  const generated = plan().operations[0];
+  const originalBody = `${generated.body}\n\n## Maintainer notes\nKeep this exact text.\n`;
+  const issue = {
+    number: 23,
+    title: generated.title,
+    body: originalBody,
+    state: 'open',
+  };
+
+  const operation = plan([issue]).operations[0];
+  assert.equal(operation.operation, 'noop');
+  assert.equal(operation.body, originalBody);
+});
+
 test('closed issues are discovered, pull requests ignored and duplicate identity conflicts', () => {
   const base = plan().operations[0];
   const issue = { number: 9, title: base.title, body: base.body, state: 'closed' };
@@ -71,6 +86,13 @@ test('repository identity is scoped and malformed generated boundaries conflict'
     state: 'open',
   };
   assert.equal(plan([malformed]).operations[0].operation, 'conflict');
+  const duplicateEnd = {
+    number: 3,
+    title: base.title,
+    body: `${base.body}\n${'<!-- END MOONWITNESS MANAGED -->'}`,
+    state: 'open',
+  };
+  assert.equal(plan([duplicateEnd]).operations[0].operation, 'conflict');
 });
 
 test('apply refuses stale plans and performs serial writes only for explicit operations', async () => {

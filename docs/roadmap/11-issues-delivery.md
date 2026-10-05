@@ -57,7 +57,7 @@ Simpan bukti aktual di `docs/roadmap/evidence/M11.02.md`. Jangan menandai aktiva
 
 ### Verifikasi dan syarat selesai
 
-Dua apply identik hanya membuat satu issue per ID; timeout create lalu retry menemukan issue yang sudah terbuat. Fixture tests menutup open/closed pagination, pull request filtering, repo scoping, duplicate markers, managed-block preservation, stale-plan rejection, no-op idempotence dan ambiguous create recovery. Acceptance remote apply tetap milik pilot/bootstrap M11.14; M11.03 sendiri tidak mengimpor seluruh roadmap.
+Dua apply identik hanya membuat satu issue per ID; timeout create lalu retry menemukan issue yang sudah terbuat. Fixture tests menutup open/closed pagination, pull request filtering, repo scoping, duplicate markers, managed-block preservation yang idempotent meskipun ada catatan maintainer, strict marker validation, stale-plan rejection, no-op idempotence dan ambiguous create recovery. Acceptance remote apply tetap milik pilot/bootstrap M11.14; M11.03 sendiri tidak mengimpor seluruh roadmap.
 
 Simpan bukti aktual di `docs/roadmap/evidence/M11.03.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.
 
