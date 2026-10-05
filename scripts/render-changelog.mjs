@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 const sectionTitles = Object.freeze({
   feat: 'Added',
   fix: 'Fixed',
@@ -9,6 +11,8 @@ const sectionTitles = Object.freeze({
 const repoPattern =
   /^https:\/\/github\.com\/(?<owner>[A-Za-z0-9_.-]+)\/(?<repo>[A-Za-z0-9_.-]+?)(?:\.git)?\/?$/;
 const breakingUpgrade = /^UPGRADE:\s*(\S.*(?:\n[ \t]+\S.*)*)$/im;
+export const releaseNotesBegin = '<!-- BEGIN MOONWITNESS GENERATED RELEASE NOTES -->';
+export const releaseNotesEnd = '<!-- END MOONWITNESS GENERATED RELEASE NOTES -->';
 
 function normalizeRepoUrl(value) {
   const match = repoPattern.exec(value ?? '');
@@ -31,6 +35,7 @@ export function renderChangelogSection({ plan, commits, repositoryUrl, date }) {
     throw new Error('A valid UTC release date is required in YYYY-MM-DD format.');
   }
   const repoUrl = normalizeRepoUrl(repositoryUrl);
+  const releaseInputSha = computeReleaseInputSha(plan);
   const bySha = new Map(commits.map((commit) => [commit.sha.toLowerCase(), commit]));
   const releaseCommits = plan.releasableCommitShas.map((sha) => {
     const commit = bySha.get(sha.toLowerCase());
@@ -82,10 +87,26 @@ export function renderChangelogSection({ plan, commits, repositoryUrl, date }) {
 
   if (blocks.length === 0) throw new Error('Release plan contains no public changelog entries.');
   return [
-    `## [${plan.nextVersion}] - ${date}`,
-    `<!-- release-source-sha: ${plan.source.headSha}; baseline: ${plan.source.baselineSha} -->`,
+    `## [${plan.nextVersion.replace(/^v/u, '')}] - ${date}`,
+    releaseNotesBegin,
+    `<!-- release-source-sha: ${plan.source.headSha}; baseline: ${plan.source.baselineSha}; input: ${releaseInputSha} -->`,
     '',
     blocks.join('\n\n'),
+    releaseNotesEnd,
     '',
   ].join('\n');
+}
+
+export function computeReleaseInputSha(plan) {
+  if (!plan?.source?.baselineSha || !plan.nextVersion || !Array.isArray(plan.releasableCommitShas))
+    throw new Error('Release input fingerprint requires baseline, version and source commits.');
+  return createHash('sha256')
+    .update(
+      JSON.stringify({
+        baselineSha: plan.source.baselineSha,
+        version: plan.nextVersion,
+        releasableCommitShas: [...plan.releasableCommitShas].sort(),
+      })
+    )
+    .digest('hex');
 }

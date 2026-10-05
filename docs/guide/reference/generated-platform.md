@@ -1,6 +1,6 @@
 # Generated platform reference
 
-Source fingerprint: `a596e225524ba2574d378372f4cc34f047fd22dd52910d12a59495be585c5bcd`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
+Source fingerprint: `e99207723c42a14cb65c608dc495db33349931d80b91957f73b9578b50acfff3`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
 
 ## Workspace packages and apps
 
@@ -111,6 +111,7 @@ Value categories are inferred from variable names and example syntax; requiredne
 - `pnpm release:check`
 - `pnpm release:classify`
 - `pnpm release:plan`
+- `pnpm release:prepare`
 - `pnpm reset:superadmin-password`
 - `pnpm revoke:auth-sessions`
 - `pnpm roadmap:issues:plan`
@@ -135,6 +136,8 @@ Value categories are inferred from variable names and example syntax; requiredne
 - `pnpm test:promotion-policy`
 - `pnpm test:release-classification`
 - `pnpm test:release-plan`
+- `pnpm test:release-prepare`
+- `pnpm test:release-prepare-workflow`
 - `pnpm test:render-changelog`
 - `pnpm test:restore-drill`
 - `pnpm test:roadmap`

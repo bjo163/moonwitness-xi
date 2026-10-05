@@ -1,0 +1,75 @@
+name: Prepare release candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_dev_sha:
+        description: Full dev SHA to prepare from; this prevents a stale release write
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-prepare-dev
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    concurrency:
+      group: repository-write-coordinator
+      cancel-in-progress: false
+    steps:
+      - name: Validate requested source SHA
+        env:
+          EXPECTED_SOURCE_SHA: ${{ inputs.expected_dev_sha }}
+          ACTUAL_SOURCE_SHA: ${{ github.sha }}
+        run: |
+          [[ "$EXPECTED_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$EXPECTED_SOURCE_SHA" = "$ACTUAL_SOURCE_SHA"
+      - name: Create disposable release preparation checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.expected_dev_sha }}
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          node-version: '22'
+          pnpm-version: '11'
+      - name: Verify checkout and prepare release files
+        env:
+          EXPECTED_SOURCE_SHA: ${{ inputs.expected_dev_sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          test "$(git ls-remote origin refs/heads/dev | cut -f1)" = "$EXPECTED_SOURCE_SHA"
+          pnpm release:prepare -- --expected-head "$EXPECTED_SOURCE_SHA" --apply
+      - name: Commit and push prepared release atomically
+        env:
+          EXPECTED_SOURCE_SHA: ${{ inputs.expected_dev_sha }}
+        run: |
+          if git diff --quiet; then
+            echo "No release preparation changes are needed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- package.json pnpm-lock.yaml CHANGELOG.md
+          while IFS= read -r -d '' file; do
+            case "$file" in
+              README.md|apps/*/package.json|packages/*/package.json|docs/*) git add -- "$file" ;;
+              *) echo "Unexpected generated release path: $file" >&2; exit 1 ;;
+            esac
+          done < <(git diff --name-only -z)
+          if git diff --cached --quiet; then
+            echo "No release preparation changes are staged."
+            exit 0
+          fi
+          git commit -m "chore(release): prepare workspace release"
+          node scripts/push-expected-ref.mjs origin HEAD refs/heads/dev "$EXPECTED_SOURCE_SHA"

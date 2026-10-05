@@ -42,8 +42,8 @@ test('groups notes and links the source commit, associated PR, version, and SHA'
     date: '2026-10-05',
   });
 
-  assert.match(output, /^## \[v1\.2\.0-rc\.1\] - 2026-10-05/m);
-  assert.match(output, /release-source-sha: [a]{40}; baseline: [b]{40}/);
+  assert.match(output, /^## \[1\.2\.0-rc\.1\] - 2026-10-05/m);
+  assert.match(output, /release-source-sha: [a]{40}; baseline: [b]{40}; input: [a-f0-9]{64}/);
   assert.match(output, /### Added/);
   assert.match(output, /add saved filters/);
   assert.match(output, /https:\/\/github\.com\/acme\/moonwitness\/commit\/[c]{40}/);
