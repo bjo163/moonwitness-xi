@@ -180,7 +180,7 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ### Verifikasi dan syarat selesai
 
-Perubahan layout nyata menghasilkan diff; auth secrets tidak tersimpan dalam artefak publik.
+Perubahan layout pada baseline terpilih menghasilkan diff; auth secrets tidak tersimpan dalam artefak publik. Gunakan `pnpm board:visual:update` hanya setelah memeriksa setiap perubahan screenshot secara visual.
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M3.10.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
