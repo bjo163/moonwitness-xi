@@ -39,35 +39,55 @@ export function plannedAssets(version, sourceSha, repository) {
       immutable: true,
     },
     { name: 'GitHub Release notes', kind: 'release-notes', immutable: true },
-    { name: 'release-artifacts.sha256', kind: 'artifact-checksum', immutable: true },
+    {
+      name: 'release-artifacts.sha256',
+      kind: 'transport-checksum',
+      location: 'workflow-artifact',
+      immutable: true,
+    },
     {
       name: `release-images-${sourceSha}`,
       kind: 'verified-image-transport',
       immutable: true,
     },
     {
-      name: `${imageRepository}:${tag}.sbom.spdx.json`,
+      name: 'release-api.spdx.json',
       kind: 'api-sbom',
+      location: 'github-release-asset',
       required: true,
-      implementationStatus: 'implemented-local-hosted-pending',
+      implementationStatus: 'hosted-acceptance-pending',
     },
     {
-      name: `${imageRepository}-board:${tag}.sbom.spdx.json`,
+      name: 'release-board.spdx.json',
       kind: 'board-sbom',
+      location: 'github-release-asset',
       required: true,
-      implementationStatus: 'implemented-local-hosted-pending',
+      implementationStatus: 'hosted-acceptance-pending',
+    },
+    {
+      name: 'release-assets.sha256',
+      kind: 'release-asset-checksum',
+      location: 'github-release-asset',
+      required: true,
+      implementationStatus: 'hosted-acceptance-pending',
     },
     {
       name: 'GitHub artifact provenance attestation',
       kind: 'artifact-provenance',
       required: true,
-      implementationStatus: 'implemented-local-hosted-pending',
+      implementationStatus: 'hosted-acceptance-pending',
     },
     {
       name: 'API and Board image provenance attestations',
       kind: 'image-provenance',
       required: true,
-      implementationStatus: 'implemented-local-hosted-pending',
+      implementationStatus: 'hosted-acceptance-pending',
+    },
+    {
+      name: 'API and Board image SPDX attestations',
+      kind: 'image-sbom-attestations',
+      required: true,
+      implementationStatus: 'hosted-acceptance-pending',
     },
   ];
 }
@@ -118,9 +138,15 @@ export function requiredGates(sourceSha, version) {
       status: 'not-run',
       command: 'docker compose -f docker-compose.production.yml config --quiet',
     },
+    { id: 'api-board-spdx-sbom', phase: 'verify', status: 'not-run' },
     { id: 'artifact-transport-checksum', phase: 'publish', status: 'not-run' },
+    { id: 'github-artifact-provenance', phase: 'publish', status: 'not-run' },
     { id: 'remote-tag-source-sha', phase: 'publish', status: 'not-run', sourceSha },
     { id: 'ghcr-image-reconciliation', phase: 'publish', status: 'not-run' },
+    { id: 'api-board-image-provenance', phase: 'publish', status: 'not-run' },
+    { id: 'api-board-image-sbom-attestations', phase: 'publish', status: 'not-run' },
+    { id: 'release-asset-reconciliation', phase: 'publish', status: 'not-run' },
+    { id: 'release-asset-attestations', phase: 'publish', status: 'not-run' },
     { id: 'github-release-reconciliation', phase: 'publish', status: 'not-run' },
     { id: 'stable-latest-digest-policy', phase: 'publish', status: 'not-run' },
   ];
@@ -199,8 +225,8 @@ export function buildReleaseDryRunReport(
       : [],
     readinessFindings: preparation.version
       ? plannedAssets(preparation.version, preparation.source.headSha, repository)
-          .filter((asset) => asset.implementationStatus === 'roadmap-pending')
-          .map((asset) => `${asset.kind} is required but not implemented in the release workflow`)
+          .filter((asset) => asset.required && asset.implementationStatus !== 'hosted-verified')
+          .map((asset) => `${asset.kind} requires hosted release acceptance`)
       : [],
     gates,
     writesPerformed: false,

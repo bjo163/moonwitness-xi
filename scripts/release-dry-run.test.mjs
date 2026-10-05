@@ -38,15 +38,21 @@ test('dry-run report includes exact diffs, release assets, gates, and no-write i
   ]);
   assert.match(report.changelogDiff, /New feature/u);
   assert.equal(report.files.length, 2);
-  assert.equal(report.assets.length, 9);
+  assert.equal(report.assets.length, 11);
   assert.equal(report.assets[0].name, 'ghcr.io/acme/moonwitness:v1.1.0-rc.1');
-  assert.equal(report.assets[5].implementationStatus, 'implemented-local-hosted-pending');
-  assert.equal(report.readinessFindings.length, 0);
+  assert.equal(report.assets[5].name, 'release-api.spdx.json');
+  assert.equal(report.assets[5].location, 'github-release-asset');
+  assert.equal(report.assets[6].name, 'release-board.spdx.json');
+  assert.equal(report.assets[7].name, 'release-assets.sha256');
+  assert.equal(report.assets[5].implementationStatus, 'hosted-acceptance-pending');
+  assert.equal(report.readinessFindings.length, 6);
+  assert.match(report.readinessFindings[0], /hosted release acceptance/u);
   assert.equal(
     report.gates.every((gate) => gate.status === 'not-run'),
     true
   );
-  assert.equal(report.gates.length, 19);
+  assert.equal(report.gates.length, 25);
+  assert.ok(report.gates.some((gate) => gate.id === 'api-board-image-sbom-attestations'));
   assert.equal(report.writesPerformed, false);
   assert.equal(report.registryWritesPerformed, false);
   assert.equal(report.githubReleaseCreated, false);
