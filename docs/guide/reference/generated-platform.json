@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "e890f4b6033df740c5a203db9b011b3fbedc60914eb66f375f39609425b47345",
+  "generatedFromSha256": "bf8a05a4178b2f728008f7dc614673d3da0b1ba3e34cbe5312e81d551568e113",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -15,6 +15,7 @@
       "version": "1.0.0-rc.1",
       "directory": "apps/api",
       "scripts": [
+        "attachments:reconcile",
         "build",
         "dev",
         "jobs:outbox",
@@ -98,6 +99,12 @@
       "scripts": ["build", "test"]
     },
     {
+      "name": "@moonwitness/orm-storage",
+      "version": "1.0.0-rc.1",
+      "directory": "packages/orm-storage",
+      "scripts": ["build", "test"]
+    },
+    {
       "name": "@moonwitness/types",
       "version": "1.0.0-rc.1",
       "directory": "packages/types",
@@ -112,6 +119,7 @@
   ],
   "scripts": {
     "@moonwitness/api": {
+      "attachments:reconcile": "tsx src/commands/attachments-reconcile.ts",
       "build": "tsc",
       "dev": "tsx watch src/server.ts",
       "jobs:outbox": "tsx src/commands/outbox-worker.ts",
@@ -169,6 +177,10 @@
       "build": "tsc",
       "test": "tsc -p tsconfig.check.json && vitest run"
     },
+    "@moonwitness/orm-storage": {
+      "build": "tsc",
+      "test": "tsc -p tsconfig.check.json && vitest run"
+    },
     "@moonwitness/types": {
       "build": "tsc"
     },
@@ -177,14 +189,15 @@
       "test": "pnpm build && node --test tests/*.test.mjs"
     },
     "root": {
-      "architecture:check": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && pnpm --filter @moonwitness/orm-notification build && node scripts/architecture/generate-diagrams.mjs --check",
-      "architecture:generate": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && pnpm --filter @moonwitness/orm-notification build && node scripts/architecture/generate-diagrams.mjs",
+      "architecture:check": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && pnpm --filter @moonwitness/orm-notification build && pnpm --filter @moonwitness/orm-storage build && node scripts/architecture/generate-diagrams.mjs --check",
+      "architecture:generate": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && pnpm --filter @moonwitness/orm-notification build && pnpm --filter @moonwitness/orm-storage build && node scripts/architecture/generate-diagrams.mjs",
       "assets:check:docs": "node scripts/export-doc-assets.mjs --check",
       "assets:export:docs": "node scripts/export-doc-assets.mjs",
       "assets:generate": "node packages/assets/scripts/generate.mjs && node packages/assets/scripts/generate-illustrations.mjs && node scripts/export-doc-assets.mjs",
       "assets:generate:illustrations": "node packages/assets/scripts/generate-illustrations.mjs && node scripts/export-doc-assets.mjs",
       "assets:render": "node packages/assets/scripts/render-social.mjs",
       "assets:validate": "node packages/assets/scripts/validate.mjs",
+      "attachments:reconcile": "pnpm --filter @moonwitness/api attachments:reconcile",
       "audit:workspace": "node scripts/audit-workspace.mjs",
       "build": "pnpm -r build",
       "ci:affected": "node scripts/select-affected.mjs",
@@ -194,9 +207,9 @@
       "dev:board": "pnpm --filter @moonwitness/board dev",
       "docs:build": "pnpm docs:check && node scripts/docs/build-guide.mjs && pnpm --filter @moonwitness/docs portal:build",
       "docs:change:classify": "node scripts/classify-docs-change.mjs",
-      "docs:check": "pnpm --filter @moonwitness/types build && pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && pnpm --filter @moonwitness/orm-notification build && node --test scripts/docs/generate-reference.test.mjs scripts/docs/update-readme.test.mjs scripts/docs/build-guide.test.mjs && node scripts/docs/generate-reference.mjs --check && node scripts/docs/update-readme.mjs --check && pnpm docs:links && pnpm docs:examples:check",
+      "docs:check": "pnpm --filter @moonwitness/types build && pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && pnpm --filter @moonwitness/orm-notification build && pnpm --filter @moonwitness/orm-storage build && node --test scripts/docs/generate-reference.test.mjs scripts/docs/update-readme.test.mjs scripts/docs/build-guide.test.mjs && node scripts/docs/generate-reference.mjs --check && node scripts/docs/update-readme.mjs --check && pnpm docs:links && pnpm docs:examples:check",
       "docs:examples:check": "pnpm --filter @moonwitness/orm build && pnpm exec tsc --noEmit -p packages/orm/examples/tsconfig.json && pnpm --filter @moonwitness/orm exec vitest run tests/addon.test.ts",
-      "docs:generate": "pnpm --filter @moonwitness/types build && pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && pnpm --filter @moonwitness/orm-notification build && node scripts/docs/generate-reference.mjs && node scripts/docs/update-readme.mjs",
+      "docs:generate": "pnpm --filter @moonwitness/types build && pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && pnpm --filter @moonwitness/orm-notification build && pnpm --filter @moonwitness/orm-storage build && node scripts/docs/generate-reference.mjs && node scripts/docs/update-readme.mjs",
       "docs:links": "node scripts/check-docs.mjs && node scripts/check-doc-navigation.mjs && node --test scripts/check-docs.test.mjs scripts/check-doc-navigation.test.mjs scripts/check-external-doc-links.test.mjs",
       "docs:links:external": "node scripts/check-external-doc-links.mjs",
       "docs:publication:check": "node scripts/check-docs-publication.mjs",
@@ -237,7 +250,7 @@
       "test:ui": "pnpm --filter @moonwitness/ui build && node --test packages/ui/tests/*.test.mjs && node packages/ui/scripts/verify-package.mjs",
       "test:ui-budget": "node --test apps/ui-catalog/tests/bundle-budget.test.mjs && pnpm --filter @moonwitness/ui-catalog build && pnpm ui:budget",
       "test:ui-catalog": "pnpm --filter @moonwitness/ui-catalog build && pnpm --filter @moonwitness/ui-catalog test",
-      "test:unit": "pnpm build && pnpm --filter @moonwitness/api exec vitest run --exclude tests/postgres.integration.test.ts --exclude tests/postgres.performance.integration.test.ts && pnpm --filter @moonwitness/auth test && pnpm --filter @moonwitness/client test && pnpm --filter @moonwitness/jobs test && pnpm --filter @moonwitness/logger test && pnpm --filter @moonwitness/orm test && pnpm --filter @moonwitness/orm-base test && pnpm --filter @moonwitness/orm-notification test && pnpm test:assets && pnpm test:ui",
+      "test:unit": "pnpm build && pnpm --filter @moonwitness/api exec vitest run --exclude tests/postgres.integration.test.ts --exclude tests/postgres.performance.integration.test.ts && pnpm --filter @moonwitness/auth test && pnpm --filter @moonwitness/client test && pnpm --filter @moonwitness/jobs test && pnpm --filter @moonwitness/logger test && pnpm --filter @moonwitness/orm test && pnpm --filter @moonwitness/orm-base test && pnpm --filter @moonwitness/orm-notification test && pnpm --filter @moonwitness/orm-storage test && pnpm test:assets && pnpm test:ui",
       "test:unit:ci": "node scripts/run-unit-tests.mjs",
       "typecheck": "pnpm build && pnpm --filter @moonwitness/board typecheck",
       "ui:budget": "node scripts/check-ui-catalog-budget.mjs",
@@ -3139,6 +3152,16 @@
           "unlink": false
         }
       ]
+    },
+    {
+      "name": "orm-storage",
+      "version": "1.0.0",
+      "depends": [],
+      "models": [],
+      "menus": [],
+      "views": [],
+      "seeds": {},
+      "accessRules": []
     }
   ],
   "routes": [

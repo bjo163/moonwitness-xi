@@ -30,6 +30,12 @@ const addonManifestPaths = [
     sourceRoot: 'packages/orm-notification/src',
     manifest: 'manifest.ts',
   },
+  {
+    entry: 'packages/orm-storage/dist/index.js',
+    sourceRoot: 'packages/orm-storage/src',
+    exportName: 'storageManifest',
+    manifest: 'index.ts',
+  },
 ];
 
 function compareText(left, right) {

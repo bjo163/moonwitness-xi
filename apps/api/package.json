@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "reset:superadmin-password": "tsx src/commands/reset-superadmin-password.ts",
+    "attachments:reconcile": "tsx src/commands/attachments-reconcile.ts",
     "jobs:worker": "tsx src/commands/jobs-worker.ts",
     "jobs:scheduler": "tsx src/commands/jobs-scheduler.ts",
     "jobs:outbox": "tsx src/commands/outbox-worker.ts",
@@ -34,6 +35,7 @@
     "@moonwitness/jobs": "workspace:*",
     "@moonwitness/logger": "workspace:*",
     "@moonwitness/orm-notification": "workspace:*",
+    "@moonwitness/orm-storage": "workspace:*",
     "@moonwitness/orm": "workspace:*",
     "@moonwitness/orm-base": "workspace:*",
     "@moonwitness/types": "workspace:*",

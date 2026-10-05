@@ -253,16 +253,19 @@ export async function collectReferenceMetadata() {
   const authPath = path.join(root, 'packages/auth/dist/manifest.js');
   const jobsPath = path.join(root, 'packages/jobs/dist/models.js');
   const notificationPath = path.join(root, 'packages/orm-notification/dist/manifest.js');
+  const storagePath = path.join(root, 'packages/orm-storage/dist/index.js');
   const [
     { manifest: base },
     { manifest: auth },
     { jobsManifest: jobs },
     { manifest: notification },
+    { storageManifest },
   ] = await Promise.all([
     import(pathToFileURL(basePath).href),
     import(pathToFileURL(authPath).href),
     import(pathToFileURL(jobsPath).href),
     import(pathToFileURL(notificationPath).href),
+    import(pathToFileURL(storagePath).href),
   ]);
   const addonSources = [
     ...(await filesUnder('packages/orm/src', '.ts')),
@@ -270,8 +273,9 @@ export async function collectReferenceMetadata() {
     ...(await filesUnder('packages/auth/src', '.ts')),
     ...(await filesUnder('packages/jobs/src', '.ts')),
     ...(await filesUnder('packages/orm-notification/src', '.ts')),
+    ...(await filesUnder('packages/orm-storage/src', '.ts')),
   ];
-  const addons = [base, auth, jobs, notification]
+  const addons = [base, auth, jobs, notification, storageManifest]
     .sort((left, right) => compare(left.name, right.name))
     .map((addon) => {
       const models = addon.models
@@ -356,6 +360,7 @@ export async function collectReferenceMetadata() {
     ...(await filesUnder('apps/api/src', '.ts')),
     ...(await filesUnder('packages/jobs/src', '.ts')),
     ...(await filesUnder('packages/orm-notification/src', '.ts')),
+    ...(await filesUnder('packages/orm-storage/src', '.ts')),
   ].sort(compare);
   const envSources = await Promise.all(
     envSourcePaths.map(async (file) => ({

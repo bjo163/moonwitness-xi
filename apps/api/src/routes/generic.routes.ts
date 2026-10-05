@@ -1,8 +1,7 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
-import path from 'node:path';
 import { databaseErrorCode } from '../database/errors.js';
+import type { AttachmentStorage } from '@moonwitness/orm-storage';
 import {
   BaseModel,
   Registry,
@@ -655,7 +654,7 @@ async function executeRpc(
 }
 
 interface GenericRoutesOptions {
-  attachmentStorageDirectory: string;
+  attachmentStorage: AttachmentStorage;
 }
 
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
@@ -693,11 +692,6 @@ function safeAttachmentName(value: string | undefined): string | null {
   const name = value.normalize('NFC').trim();
   if (!name || name === '.' || name === '..' || name.includes('..')) return null;
   return name;
-}
-
-function attachmentPath(directory: string, key: string): string {
-  if (!/^[0-9a-f-]{36}$/i.test(key)) throw new Error('Invalid attachment storage key');
-  return path.join(directory, key);
 }
 
 function encodedAttachmentName(name: string): string {
@@ -777,14 +771,10 @@ export const genericRoutes: FastifyPluginAsync<GenericRoutesOptions> = async (fa
         return reply.code(413).send({ success: false, error: 'Attachment exceeds 10 MiB limit' });
 
       const key = randomUUID();
-      const target = attachmentPath(options.attachmentStorageDirectory, key);
-      const temporary = `${target}.tmp`;
       const checksum = createHash('sha256').update(req.body).digest('hex');
       let persisted = false;
       try {
-        await mkdir(options.attachmentStorageDirectory, { recursive: true });
-        await writeFile(temporary, req.body, { flag: 'wx', mode: 0o600 });
-        await rename(temporary, target);
+        await options.attachmentStorage.put(key, req.body);
         persisted = true;
         const record = await inRequestTransaction(req, async (trx) => {
           const AttachmentModel = req.env.get('base.attachment');
@@ -823,8 +813,7 @@ export const genericRoutes: FastifyPluginAsync<GenericRoutesOptions> = async (fa
         });
         return reply.code(201).send({ success: true, data: record });
       } catch (error) {
-        if (persisted) await rm(target, { force: true }).catch(() => undefined);
-        await rm(temporary, { force: true }).catch(() => undefined);
+        if (persisted) await options.attachmentStorage.delete(key).catch(() => undefined);
         throw error;
       }
     }
@@ -844,7 +833,9 @@ export const genericRoutes: FastifyPluginAsync<GenericRoutesOptions> = async (fa
     if (typeof key !== 'string' || typeof name !== 'string' || typeof mimetype !== 'string')
       return reply.code(404).send({ success: false, error: 'Attachment content not found' });
     try {
-      const content = await readFile(attachmentPath(options.attachmentStorageDirectory, key));
+      const content = await options.attachmentStorage.get(key);
+      if (!content)
+        return reply.code(404).send({ success: false, error: 'Attachment content not found' });
       reply
         .header('Content-Type', mimetype)
         .header('Content-Length', content.length)
@@ -1257,9 +1248,7 @@ export const genericRoutes: FastifyPluginAsync<GenericRoutesOptions> = async (fa
       if ('reference' in deletion && typeof deletion.reference === 'string')
         return relationConflict(reply, req.params.model, deletion.reference);
       if (typeof deletion.storageKey === 'string') {
-        await rm(attachmentPath(options.attachmentStorageDirectory, deletion.storageKey), {
-          force: true,
-        });
+        await options.attachmentStorage.delete(deletion.storageKey);
       }
       return {
         success: true,

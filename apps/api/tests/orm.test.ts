@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import knex, { type Knex } from 'knex';
 import { Model } from 'objection';
 import type { QueryContext } from 'objection';
-import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { BaseModel, Registry, Environment } from '@moonwitness/orm';
@@ -400,7 +400,14 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
     expect(downloaded.headers['content-disposition']).toContain('proposal.pdf');
     expect(downloaded.payload).toBe('%PDF attachment content');
     expect(downloaded.headers['x-content-type-options']).toBe('nosniff');
-    expect(await readdir(attachmentStorageDirectory)).toHaveLength(1);
+    const storageFiles = await readdir(attachmentStorageDirectory);
+    expect(storageFiles).toHaveLength(1);
+    const preexistingKey = storageFiles[0];
+    if (!preexistingKey) throw new Error('Expected uploaded attachment file');
+    await writeFile(
+      path.join(attachmentStorageDirectory, preexistingKey),
+      Buffer.from('legacy bytes')
+    );
     const invalidAttachmentUpdate = await send({
       method: 'PATCH',
       url: `/api/base.attachment/${attachmentId}`,
@@ -423,7 +430,7 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
       method: 'GET',
       url: `/api/base.attachment/${attachmentId}/download`,
     });
-    expect(restoredDownload.payload).toBe('%PDF attachment content');
+    expect(restoredDownload.payload).toBe('legacy bytes');
     const deletedAttachment = await send({
       method: 'DELETE',
       url: `/api/base.attachment/${attachmentId}?hard=true`,

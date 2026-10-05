@@ -1,6 +1,6 @@
 # Generated model and addon reference
 
-Source fingerprint: `e890f4b6033df740c5a203db9b011b3fbedc60914eb66f375f39609425b47345`. Seed values and field defaults are intentionally omitted.
+Source fingerprint: `bf8a05a4178b2f728008f7dc614673d3da0b1ba3e34cbe5312e81d551568e113`. Seed values and field defaults are intentionally omitted.
 
 ## Addon `auth`
 
@@ -333,3 +333,17 @@ Models: 3; declared views: 3; menu entries: 3; seed rows: 8.
 | ----------------- | --------------------------- | ---- | ------ | ----- | ------ |
 | `base.group_user` | `notification.notification` | Yes  | No     | No    | No     |
 | `base.group_user` | `notification.preference`   | Yes  | No     | No    | No     |
+
+## Addon `orm-storage`
+
+Version: `1.0.0`; dependencies: none.
+
+Models: 0; declared views: 0; menu entries: 0; seed rows: 0.
+
+| Model | Table | Field | Kind | Required | Optional | Default | Relation |
+| ----- | ----- | ----- | ---- | -------- | -------- | ------- | -------- |
+
+### Menus and seed coverage
+
+| Menu model | Label | Group | Sequence | Visibility |
+| ---------- | ----- | ----- | -------: | ---------- |

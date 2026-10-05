@@ -178,7 +178,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 Gate: audit fitur existing sebelum membuat package. Jalankan berurutan berdasarkan kebutuhan; jangan mengembangkan seluruh domain sekaligus.
 
 - [x] M9.01 Evaluasi dan implementasikan `orm-notification`: preferences, templates, inbox, delivery status; reuse jobs/outbox dan cegah pengiriman contoh ke penerima nyata. [Evidence](docs/roadmap/evidence/M9.01.md); source `5a16992c2472ee3f465c4ebf5775665f2b6bf15d`, hosted browser/quality/container/automation/CI gate run 37287740858 and hosted PostgreSQL integration run 37286902732 passed.
-- [ ] M9.02 Evaluasi `orm-storage`: storage adapters, attachment ownership/download/retention; migrasikan dengan kompatibilitas data existing.
+- [ ] M9.02 Ekstrak storage attachment ke `orm-storage`: typed provider, local adapter kompatibel, authenticated lifecycle, dan bounded dry-run-first reconciliation; pertahankan metadata/data existing. [Detail](docs/roadmap/09-addons.md); [evidence](docs/roadmap/evidence/M9.02.md). Local verification passed; hosted CI/remote source SHA pending.
 - [ ] M9.03 Evaluasi `orm-workflow`: state transition, approval policy, authorization, history, timeout, dan audit.
 - [ ] M9.04 Evaluasi `orm-integration`: webhook subscriptions, scoped credential references, signing, idempotency, delivery/retry; validasi tujuan request untuk menghindari SSRF.
 - [ ] M9.05 Evaluasi `orm-organization`: departments, teams, positions, memberships dan manager berdasarkan kebutuhan produk.

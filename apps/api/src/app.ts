@@ -14,6 +14,7 @@ import { healthRoutes } from './routes/health.routes.js';
 import { jobsRoutes } from './routes/jobs.routes.js';
 import { notificationRoutes } from './routes/notification.routes.js';
 import { config } from './config/env.js';
+import { LocalFileAttachmentStorage } from '@moonwitness/orm-storage';
 import { createDatabase } from './database/knex.js';
 import { databaseErrorCode, databaseErrorContext } from './database/errors.js';
 import type { Knex } from 'knex';
@@ -41,7 +42,9 @@ export interface BuildAppOptions {
   /** Overrides AUTH_LOGIN_RATE_MAX (used by tests). */
   loginRateMax?: number;
   metricsToken?: string;
-  /** Overrides ATTACHMENT_STORAGE_DIR for isolated tests. */
+  /** Overrides attachment storage for isolated tests or custom providers. */
+  attachmentStorage?: LocalFileAttachmentStorage;
+  /** @deprecated Use attachmentStorage; retained for existing test/app callers. */
   attachmentStorageDirectory?: string;
 }
 
@@ -205,8 +208,11 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     loginRateMax: options.loginRateMax ?? authConfig.loginRateMax,
   });
   await app.register(genericRoutes, {
-    attachmentStorageDirectory:
-      options.attachmentStorageDirectory ?? config.attachmentStorageDirectory,
+    attachmentStorage:
+      options.attachmentStorage ??
+      new LocalFileAttachmentStorage(
+        options.attachmentStorageDirectory ?? config.attachmentStorageDirectory
+      ),
   });
   await app.register(jobsRoutes);
   await app.register(notificationRoutes);

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "apps/*/package.json and packages/*/package.json",
-  "sourceSha256": "039351c5002ea1e14f2bc43028cf4e229128341fc5d1ea1925716b57a3f25449",
+  "sourceSha256": "cf636a135c00b3400b5273c0c1138446f8b57e879eb5f93b7e80d4c44c793916",
   "packages": [
     {
       "name": "@moonwitness/api",
@@ -76,6 +76,12 @@
       "manifest": "packages/orm-notification"
     },
     {
+      "name": "@moonwitness/orm-storage",
+      "kind": "package",
+      "version": "1.0.0-rc.1",
+      "manifest": "packages/orm-storage"
+    },
+    {
       "name": "@moonwitness/types",
       "kind": "package",
       "version": "1.0.0-rc.1",
@@ -134,6 +140,12 @@
     {
       "from": "@moonwitness/api",
       "to": "@moonwitness/orm-notification",
+      "kind": "runtime",
+      "manifest": "apps/api"
+    },
+    {
+      "from": "@moonwitness/api",
+      "to": "@moonwitness/orm-storage",
       "kind": "runtime",
       "manifest": "apps/api"
     },
@@ -220,6 +232,12 @@
       "to": "@moonwitness/orm-base",
       "kind": "runtime",
       "manifest": "packages/orm-notification"
+    },
+    {
+      "from": "@moonwitness/orm-storage",
+      "to": "@moonwitness/orm",
+      "kind": "runtime",
+      "manifest": "packages/orm-storage"
     },
     {
       "from": "@moonwitness/ui-catalog",

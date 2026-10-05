@@ -23,18 +23,20 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 ## M9.02 — Evaluasi `orm-storage`: storage adapters, attachment ownership/download/retention; migrasikan dengan kompatibilitas data existing.
 
 - **Prasyarat:** M4.12, M4.16
-- **Baca/periksa:** Attachment implementation; M4.12.
-- **Deliverable:** orm-storage adapter contract dan migration guide.
+- **Baca/periksa:** [Attachment contract](../engineering/attachments.md), authenticated upload/download/hard-delete routes, attachment seed placeholder, restore drill, and current `ATTACHMENT_STORAGE_DIR` configuration.
+- **Deliverable:** typed `@moonwitness/orm-storage` provider contract, compatible local provider, bounded orphan-reference reconciliation CLI, migration/operations guide, and tests proving UUID-keyed legacy files remain downloadable without metadata rewrite.
 
 ### Langkah pelaksanaan
 
-1. Tentukan metadata tetap kompatibel dan abstraction storage put/get/delete/metadata yang typed.
-2. Buat adapter lokal test plus interface object storage; auth tetap lewat API, bukan public path.
-3. Rancang migrasi/extraction tanpa mengganti IDs/ownership existing.
+1. Extract key validation, atomic put, get, delete, list and object metadata behind a typed provider API; reject non-UUID keys and preserve the existing direct UUID filename layout.
+2. Inject the provider into API routes; retain parent-row/company authorization, MIME/size limits, checksum and transaction cleanup in the API. Keep the old `ATTACHMENT_STORAGE_DIR` constructor option as a documented transition.
+3. Add a local provider first. Define a provider seam for cloud adapters without adding unconfigured credentials, public URLs, external network writes or fake S3 support.
+4. Reconcile database references against local objects and report missing, corrupt and orphaned objects. Default to dry-run; deletion requires an explicit cutoff/grace period and bounded batch size. Never delete fresh temp files or non-UUID files.
+5. Add the root `attachments:reconcile` command and API package runner, document operator review and shared-volume constraints, and add deterministic tests for old UUID files and data integrity.
 
 ### Verifikasi dan syarat selesai
 
-Upload/download/delete isolation dan orphan cleanup teruji; existing attachments tetap terbaca.
+Upload/download/delete isolation, database rollback cleanup, legacy UUID reads, content checksum/size mismatch, dry-run, bounded stale orphan deletion and missing/corrupt reports are tested. No attachment IDs, owner/resource relations or stored-key values change. Cloud adapter remains explicitly unsupported until provider-specific credentials and integration tests exist.
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M9.02.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
