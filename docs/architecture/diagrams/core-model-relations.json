@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "addons": ["auth", "base", "jobs", "notification"],
   "generatedFrom": "core addon manifests and model field metadata; no seed values included",
-  "sourceSha256": "f24d6ccffdbeb5c4b90730654ca3570c46fdccf58c7a02d173e48bed596f2db8",
+  "sourceSha256": "c162b4a461478aae24ca9ee9bfc4e09cf2edb9b491697f2b42ba36d26b9f2cb3",
   "models": [
     {
       "name": "auth.refresh_token",
@@ -123,6 +123,22 @@
     {
       "name": "notification.template",
       "table": "notification_templates"
+    },
+    {
+      "name": "workflow.approval",
+      "table": "workflow_approvals"
+    },
+    {
+      "name": "workflow.definition",
+      "table": "workflow_definitions"
+    },
+    {
+      "name": "workflow.event",
+      "table": "workflow_events"
+    },
+    {
+      "name": "workflow.instance",
+      "table": "workflow_instances"
     }
   ],
   "relations": [
@@ -402,6 +418,55 @@
     {
       "from": "notification.preference",
       "field": "user",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "workflow.approval",
+      "field": "actor",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "workflow.approval",
+      "field": "instance",
+      "to": "workflow.instance",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "workflow.event",
+      "field": "actor",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "workflow.event",
+      "field": "instance",
+      "to": "workflow.instance",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "workflow.instance",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "workflow.instance",
+      "field": "definition",
+      "to": "workflow.definition",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "workflow.instance",
+      "field": "started_by",
       "to": "base.user",
       "cardinality": "N:1",
       "kind": "belongsTo"

@@ -1,6 +1,6 @@
 # Generated model and addon reference
 
-Source fingerprint: `bf8a05a4178b2f728008f7dc614673d3da0b1ba3e34cbe5312e81d551568e113`. Seed values and field defaults are intentionally omitted.
+Source fingerprint: `1ef0c2768ba5e5cc5d1917ce81acec73fee0d8a1aacb63d86db1e17f16cf011d`. Seed values and field defaults are intentionally omitted.
 
 ## Addon `auth`
 
@@ -347,3 +347,67 @@ Models: 0; declared views: 0; menu entries: 0; seed rows: 0.
 
 | Menu model | Label | Group | Sequence | Visibility |
 | ---------- | ----- | ----- | -------: | ---------- |
+
+## Addon `workflow`
+
+Version: `1.0.0`; dependencies: `base`, `jobs`.
+
+Models: 4; declared views: 4; menu entries: 4; seed rows: 6.
+
+| Model                 | Table                  | Field                 | Kind      | Required | Optional | Default    | Relation              |
+| --------------------- | ---------------------- | --------------------- | --------- | -------- | -------- | ---------- | --------------------- |
+| `workflow.approval`   | `workflow_approvals`   | `action`              | string    | Yes      | No       | No         | —                     |
+| `workflow.approval`   | `workflow_approvals`   | `actor`               | belongsTo | Yes      | No       | No         | `base.user`           |
+| `workflow.approval`   | `workflow_approvals`   | `comment`             | text      | No       | Yes      | No         | —                     |
+| `workflow.approval`   | `workflow_approvals`   | `decided_at`          | string    | Yes      | No       | No         | —                     |
+| `workflow.approval`   | `workflow_approvals`   | `decision`            | enum      | Yes      | No       | No         | —                     |
+| `workflow.approval`   | `workflow_approvals`   | `instance`            | belongsTo | Yes      | No       | No         | `workflow.instance`   |
+| `workflow.definition` | `workflow_definitions` | `code`                | string    | Yes      | No       | No         | —                     |
+| `workflow.definition` | `workflow_definitions` | `config`              | text      | Yes      | No       | No         | —                     |
+| `workflow.definition` | `workflow_definitions` | `enabled`             | boolean   | No       | Yes      | [redacted] | —                     |
+| `workflow.definition` | `workflow_definitions` | `name`                | string    | Yes      | No       | No         | —                     |
+| `workflow.definition` | `workflow_definitions` | `version`             | integer   | No       | Yes      | [redacted] | —                     |
+| `workflow.event`      | `workflow_events`      | `action`              | string    | Yes      | No       | No         | —                     |
+| `workflow.event`      | `workflow_events`      | `actor`               | belongsTo | No       | Yes      | No         | `base.user`           |
+| `workflow.event`      | `workflow_events`      | `comment`             | text      | No       | Yes      | No         | —                     |
+| `workflow.event`      | `workflow_events`      | `created_at`          | string    | Yes      | No       | No         | —                     |
+| `workflow.event`      | `workflow_events`      | `from_state`          | string    | Yes      | No       | No         | —                     |
+| `workflow.event`      | `workflow_events`      | `idempotency_key`     | string    | Yes      | No       | No         | —                     |
+| `workflow.event`      | `workflow_events`      | `instance`            | belongsTo | Yes      | No       | No         | `workflow.instance`   |
+| `workflow.event`      | `workflow_events`      | `revision`            | integer   | Yes      | No       | No         | —                     |
+| `workflow.event`      | `workflow_events`      | `sequence`            | integer   | Yes      | No       | No         | —                     |
+| `workflow.event`      | `workflow_events`      | `to_state`            | string    | Yes      | No       | No         | —                     |
+| `workflow.instance`   | `workflow_instances`   | `company`             | belongsTo | Yes      | No       | No         | `base.company`        |
+| `workflow.instance`   | `workflow_instances`   | `completed_at`        | string    | No       | Yes      | No         | —                     |
+| `workflow.instance`   | `workflow_instances`   | `current_state`       | string    | Yes      | No       | No         | —                     |
+| `workflow.instance`   | `workflow_instances`   | `definition`          | belongsTo | Yes      | No       | No         | `workflow.definition` |
+| `workflow.instance`   | `workflow_instances`   | `definition_snapshot` | text      | Yes      | No       | No         | —                     |
+| `workflow.instance`   | `workflow_instances`   | `definition_version`  | integer   | Yes      | No       | No         | —                     |
+| `workflow.instance`   | `workflow_instances`   | `due_at`              | string    | No       | Yes      | No         | —                     |
+| `workflow.instance`   | `workflow_instances`   | `resource_id`         | integer   | Yes      | No       | No         | —                     |
+| `workflow.instance`   | `workflow_instances`   | `resource_model`      | string    | Yes      | No       | No         | —                     |
+| `workflow.instance`   | `workflow_instances`   | `revision`            | integer   | No       | Yes      | [redacted] | —                     |
+| `workflow.instance`   | `workflow_instances`   | `started_by`          | belongsTo | Yes      | No       | No         | `base.user`           |
+| `workflow.instance`   | `workflow_instances`   | `status`              | enum      | No       | Yes      | [redacted] | —                     |
+
+### Menus and seed coverage
+
+| Menu model            | Label                | Group     | Sequence | Visibility       |
+| --------------------- | -------------------- | --------- | -------: | ---------------- |
+| `workflow.approval`   | Workflow Approvals   | Workspace |       20 | Standard         |
+| `workflow.definition` | Workflow Definitions | Technical |      480 | Development mode |
+| `workflow.event`      | Workflow History     | Workspace |       19 | Standard         |
+| `workflow.instance`   | Workflows            | Workspace |       18 | Standard         |
+
+- Seed coverage: `base.cron` has 1 declared seed row(s); seed values are not included.
+- Seed coverage: `base.model_access` has 4 declared seed row(s); seed values are not included.
+- Seed coverage: `workflow.definition` has 1 declared seed row(s); seed values are not included.
+
+### Seeded model access rules
+
+| Group reference   | Model                 | Read | Create | Write | Delete |
+| ----------------- | --------------------- | ---- | ------ | ----- | ------ |
+| `base.group_user` | `workflow.approval`   | Yes  | No     | No    | No     |
+| `base.group_user` | `workflow.definition` | Yes  | No     | No    | No     |
+| `base.group_user` | `workflow.event`      | Yes  | No     | No    | No     |
+| `base.group_user` | `workflow.instance`   | Yes  | No     | No    | No     |

@@ -1,6 +1,6 @@
 # Generated platform reference
 
-Source fingerprint: `bf8a05a4178b2f728008f7dc614673d3da0b1ba3e34cbe5312e81d551568e113`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
+Source fingerprint: `1ef0c2768ba5e5cc5d1917ce81acec73fee0d8a1aacb63d86db1e17f16cf011d`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
 
 ## Workspace packages and apps
 
@@ -20,6 +20,7 @@ Source fingerprint: `bf8a05a4178b2f728008f7dc614673d3da0b1ba3e34cbe5312e81d55156
 | `@moonwitness/orm-base`         | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                       |
 | `@moonwitness/orm-notification` | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                       |
 | `@moonwitness/orm-storage`      | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                       |
+| `@moonwitness/orm-workflow`     | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                       |
 | `@moonwitness/types`            | Package | 1.0.0-rc.1 | `build`                                                                                                                               |
 | `@moonwitness/ui`               | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                       |
 

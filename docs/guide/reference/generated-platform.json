@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "bf8a05a4178b2f728008f7dc614673d3da0b1ba3e34cbe5312e81d551568e113",
+  "generatedFromSha256": "1ef0c2768ba5e5cc5d1917ce81acec73fee0d8a1aacb63d86db1e17f16cf011d",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -105,6 +105,12 @@
       "scripts": ["build", "test"]
     },
     {
+      "name": "@moonwitness/orm-workflow",
+      "version": "1.0.0-rc.1",
+      "directory": "packages/orm-workflow",
+      "scripts": ["build", "test"]
+    },
+    {
       "name": "@moonwitness/types",
       "version": "1.0.0-rc.1",
       "directory": "packages/types",
@@ -181,6 +187,10 @@
       "build": "tsc",
       "test": "tsc -p tsconfig.check.json && vitest run"
     },
+    "@moonwitness/orm-workflow": {
+      "build": "tsc",
+      "test": "tsc -p tsconfig.check.json && vitest run"
+    },
     "@moonwitness/types": {
       "build": "tsc"
     },
@@ -189,8 +199,8 @@
       "test": "pnpm build && node --test tests/*.test.mjs"
     },
     "root": {
-      "architecture:check": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && pnpm --filter @moonwitness/orm-notification build && pnpm --filter @moonwitness/orm-storage build && node scripts/architecture/generate-diagrams.mjs --check",
-      "architecture:generate": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && pnpm --filter @moonwitness/orm-notification build && pnpm --filter @moonwitness/orm-storage build && node scripts/architecture/generate-diagrams.mjs",
+      "architecture:check": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && pnpm --filter @moonwitness/orm-notification build && pnpm --filter @moonwitness/orm-storage build && pnpm --filter @moonwitness/orm-workflow build && node scripts/architecture/generate-diagrams.mjs --check",
+      "architecture:generate": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && pnpm --filter @moonwitness/orm-notification build && pnpm --filter @moonwitness/orm-storage build && pnpm --filter @moonwitness/orm-workflow build && node scripts/architecture/generate-diagrams.mjs",
       "assets:check:docs": "node scripts/export-doc-assets.mjs --check",
       "assets:export:docs": "node scripts/export-doc-assets.mjs",
       "assets:generate": "node packages/assets/scripts/generate.mjs && node packages/assets/scripts/generate-illustrations.mjs && node scripts/export-doc-assets.mjs",
@@ -207,9 +217,9 @@
       "dev:board": "pnpm --filter @moonwitness/board dev",
       "docs:build": "pnpm docs:check && node scripts/docs/build-guide.mjs && pnpm --filter @moonwitness/docs portal:build",
       "docs:change:classify": "node scripts/classify-docs-change.mjs",
-      "docs:check": "pnpm --filter @moonwitness/types build && pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && pnpm --filter @moonwitness/orm-notification build && pnpm --filter @moonwitness/orm-storage build && node --test scripts/docs/generate-reference.test.mjs scripts/docs/update-readme.test.mjs scripts/docs/build-guide.test.mjs && node scripts/docs/generate-reference.mjs --check && node scripts/docs/update-readme.mjs --check && pnpm docs:links && pnpm docs:examples:check",
+      "docs:check": "pnpm --filter @moonwitness/types build && pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && pnpm --filter @moonwitness/orm-notification build && pnpm --filter @moonwitness/orm-storage build && pnpm --filter @moonwitness/orm-workflow build && node --test scripts/docs/generate-reference.test.mjs scripts/docs/update-readme.test.mjs scripts/docs/build-guide.test.mjs && node scripts/docs/generate-reference.mjs --check && node scripts/docs/update-readme.mjs --check && pnpm docs:links && pnpm docs:examples:check",
       "docs:examples:check": "pnpm --filter @moonwitness/orm build && pnpm exec tsc --noEmit -p packages/orm/examples/tsconfig.json && pnpm --filter @moonwitness/orm exec vitest run tests/addon.test.ts",
-      "docs:generate": "pnpm --filter @moonwitness/types build && pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && pnpm --filter @moonwitness/orm-notification build && pnpm --filter @moonwitness/orm-storage build && node scripts/docs/generate-reference.mjs && node scripts/docs/update-readme.mjs",
+      "docs:generate": "pnpm --filter @moonwitness/types build && pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && pnpm --filter @moonwitness/orm-notification build && pnpm --filter @moonwitness/orm-storage build && pnpm --filter @moonwitness/orm-workflow build && node scripts/docs/generate-reference.mjs && node scripts/docs/update-readme.mjs",
       "docs:links": "node scripts/check-docs.mjs && node scripts/check-doc-navigation.mjs && node --test scripts/check-docs.test.mjs scripts/check-doc-navigation.test.mjs scripts/check-external-doc-links.test.mjs",
       "docs:links:external": "node scripts/check-external-doc-links.mjs",
       "docs:publication:check": "node scripts/check-docs-publication.mjs",
@@ -250,7 +260,7 @@
       "test:ui": "pnpm --filter @moonwitness/ui build && node --test packages/ui/tests/*.test.mjs && node packages/ui/scripts/verify-package.mjs",
       "test:ui-budget": "node --test apps/ui-catalog/tests/bundle-budget.test.mjs && pnpm --filter @moonwitness/ui-catalog build && pnpm ui:budget",
       "test:ui-catalog": "pnpm --filter @moonwitness/ui-catalog build && pnpm --filter @moonwitness/ui-catalog test",
-      "test:unit": "pnpm build && pnpm --filter @moonwitness/api exec vitest run --exclude tests/postgres.integration.test.ts --exclude tests/postgres.performance.integration.test.ts && pnpm --filter @moonwitness/auth test && pnpm --filter @moonwitness/client test && pnpm --filter @moonwitness/jobs test && pnpm --filter @moonwitness/logger test && pnpm --filter @moonwitness/orm test && pnpm --filter @moonwitness/orm-base test && pnpm --filter @moonwitness/orm-notification test && pnpm --filter @moonwitness/orm-storage test && pnpm test:assets && pnpm test:ui",
+      "test:unit": "pnpm build && pnpm --filter @moonwitness/api exec vitest run --exclude tests/postgres.integration.test.ts --exclude tests/postgres.performance.integration.test.ts && pnpm --filter @moonwitness/auth test && pnpm --filter @moonwitness/client test && pnpm --filter @moonwitness/jobs test && pnpm --filter @moonwitness/logger test && pnpm --filter @moonwitness/orm test && pnpm --filter @moonwitness/orm-base test && pnpm --filter @moonwitness/orm-notification test && pnpm --filter @moonwitness/orm-storage test && pnpm --filter @moonwitness/orm-workflow test && pnpm test:assets && pnpm test:ui",
       "test:unit:ci": "node scripts/run-unit-tests.mjs",
       "typecheck": "pnpm build && pnpm --filter @moonwitness/board typecheck",
       "ui:budget": "node scripts/check-ui-catalog-budget.mjs",
@@ -3162,6 +3172,454 @@
       "views": [],
       "seeds": {},
       "accessRules": []
+    },
+    {
+      "name": "workflow",
+      "version": "1.0.0",
+      "depends": ["base", "jobs"],
+      "models": [
+        {
+          "name": "workflow.approval",
+          "table": "workflow_approvals",
+          "fields": [
+            {
+              "name": "action",
+              "kind": "string",
+              "column": "action",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "actor",
+              "kind": "belongsTo",
+              "column": "actor_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.user"
+            },
+            {
+              "name": "comment",
+              "kind": "text",
+              "column": "comment",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "decided_at",
+              "kind": "string",
+              "column": "decided_at",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "decision",
+              "kind": "enum",
+              "column": "decision",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "values": ["approved", "rejected"]
+            },
+            {
+              "name": "instance",
+              "kind": "belongsTo",
+              "column": "instance_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "workflow.instance"
+            }
+          ],
+          "uniqueConstraints": [["action", "actor", "instance"]]
+        },
+        {
+          "name": "workflow.definition",
+          "table": "workflow_definitions",
+          "fields": [
+            {
+              "name": "code",
+              "kind": "string",
+              "column": "code",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "config",
+              "kind": "text",
+              "column": "config",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "enabled",
+              "kind": "boolean",
+              "column": "enabled",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "name",
+              "kind": "string",
+              "column": "name",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "version",
+              "kind": "integer",
+              "column": "version",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            }
+          ],
+          "uniqueConstraints": [["code", "version"]]
+        },
+        {
+          "name": "workflow.event",
+          "table": "workflow_events",
+          "fields": [
+            {
+              "name": "action",
+              "kind": "string",
+              "column": "action",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "actor",
+              "kind": "belongsTo",
+              "column": "actor_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false,
+              "relation": "base.user"
+            },
+            {
+              "name": "comment",
+              "kind": "text",
+              "column": "comment",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "created_at",
+              "kind": "string",
+              "column": "created_at",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "from_state",
+              "kind": "string",
+              "column": "from_state",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "idempotency_key",
+              "kind": "string",
+              "column": "idempotency_key",
+              "declaredRequired": true,
+              "required": true,
+              "unique": true,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "instance",
+              "kind": "belongsTo",
+              "column": "instance_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "workflow.instance"
+            },
+            {
+              "name": "revision",
+              "kind": "integer",
+              "column": "revision",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "sequence",
+              "kind": "integer",
+              "column": "sequence",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "to_state",
+              "kind": "string",
+              "column": "to_state",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            }
+          ],
+          "uniqueConstraints": [["instance", "sequence"]]
+        },
+        {
+          "name": "workflow.instance",
+          "table": "workflow_instances",
+          "fields": [
+            {
+              "name": "company",
+              "kind": "belongsTo",
+              "column": "company_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.company"
+            },
+            {
+              "name": "completed_at",
+              "kind": "string",
+              "column": "completed_at",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "current_state",
+              "kind": "string",
+              "column": "current_state",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "definition",
+              "kind": "belongsTo",
+              "column": "definition_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "workflow.definition"
+            },
+            {
+              "name": "definition_snapshot",
+              "kind": "text",
+              "column": "definition_snapshot",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "definition_version",
+              "kind": "integer",
+              "column": "definition_version",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "due_at",
+              "kind": "string",
+              "column": "due_at",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "resource_id",
+              "kind": "integer",
+              "column": "resource_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "resource_model",
+              "kind": "string",
+              "column": "resource_model",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "revision",
+              "kind": "integer",
+              "column": "revision",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "started_by",
+              "kind": "belongsTo",
+              "column": "started_by_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.user"
+            },
+            {
+              "name": "status",
+              "kind": "enum",
+              "column": "status",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]",
+              "values": ["active", "cancelled", "completed", "rejected", "timed_out"]
+            }
+          ],
+          "uniqueConstraints": []
+        }
+      ],
+      "menus": [
+        {
+          "model": "workflow.approval",
+          "label": "Workflow Approvals",
+          "group": "Workspace",
+          "sequence": 20,
+          "developmentOnly": false
+        },
+        {
+          "model": "workflow.definition",
+          "label": "Workflow Definitions",
+          "group": "Technical",
+          "sequence": 480,
+          "developmentOnly": true
+        },
+        {
+          "model": "workflow.event",
+          "label": "Workflow History",
+          "group": "Workspace",
+          "sequence": 19,
+          "developmentOnly": false
+        },
+        {
+          "model": "workflow.instance",
+          "label": "Workflows",
+          "group": "Workspace",
+          "sequence": 18,
+          "developmentOnly": false
+        }
+      ],
+      "views": ["workflow.approval", "workflow.definition", "workflow.event", "workflow.instance"],
+      "seeds": {
+        "workflow.definition": 1,
+        "base.model_access": 4,
+        "base.cron": 1
+      },
+      "accessRules": [
+        {
+          "group": "base.group_user",
+          "model": "workflow.approval",
+          "read": true,
+          "create": false,
+          "write": false,
+          "unlink": false
+        },
+        {
+          "group": "base.group_user",
+          "model": "workflow.definition",
+          "read": true,
+          "create": false,
+          "write": false,
+          "unlink": false
+        },
+        {
+          "group": "base.group_user",
+          "model": "workflow.event",
+          "read": true,
+          "create": false,
+          "write": false,
+          "unlink": false
+        },
+        {
+          "group": "base.group_user",
+          "model": "workflow.instance",
+          "read": true,
+          "create": false,
+          "write": false,
+          "unlink": false
+        }
+      ]
     }
   ],
   "routes": [
@@ -3328,6 +3786,22 @@
     {
       "method": "GET",
       "path": "/readyz"
+    },
+    {
+      "method": "GET",
+      "path": "/workflows/instances"
+    },
+    {
+      "method": "POST",
+      "path": "/workflows/instances"
+    },
+    {
+      "method": "GET",
+      "path": "/workflows/instances/:id"
+    },
+    {
+      "method": "POST",
+      "path": "/workflows/instances/:id/actions"
     }
   ]
 }

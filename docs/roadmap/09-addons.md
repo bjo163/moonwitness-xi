@@ -40,21 +40,25 @@ Upload/download/delete isolation, database rollback cleanup, legacy UUID reads, 
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M9.02.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
-## M9.03 — Evaluasi `orm-workflow`: state transition, approval policy, authorization, history, timeout, dan audit.
+## M9.03 — Implementasikan `orm-workflow`: state transition, approval policy, authorization, history, timeout, dan audit.
 
 - **Prasyarat:** M4.06, M4.10
 - **Baca/periksa:** Activities/access groups/jobs; one business example.
-- **Deliverable:** orm-workflow minimal engine dan example.
+- **Deliverable:** typed `@moonwitness/orm-workflow` addon, sample approval definition, authenticated company-scoped API, scheduled expiry worker, generated API/model/architecture docs, and package/API verification.
 
 ### Langkah pelaksanaan
 
-1. Definisikan workflow definition/version/state/transition/approval instance dan audit event.
-2. Validate allowed transitions, actor/company, optimistic version dan timeout behavior.
-3. Sediakan demo draft→submitted→approved/rejected dengan actors sintetis.
+1. Define versioned definitions, immutable instance snapshots, approval votes and append-only audit events through ORM models and a manifest; seed one safe example without synthetic runtime activity.
+2. Validate configuration shape, roles, resource-model allowlists, state/action transitions, company and actor scope, optimistic revision, quorum and requester/reviewer separation.
+3. Require scoped idempotency keys for starts/actions, protect collisions across actor/company/resource/action, and make duplicate requests safe.
+4. Add authenticated API list/start/detail/action routes; verify underlying resource read access and row rules before start; block generic CRUD/RPC access to internal workflow tables.
+5. Register bounded timeout expiry as a jobs handler and seed an enabled cron; load the addon in API, scheduler and worker processes.
+6. Add API/package tests for authorization, company boundaries, snapshots, timeout, duplicate approval, invalid transitions, event history and malformed payloads.
+7. Include the package in root scripts, unit coverage, workspace docs/catalog and architecture generators; regenerate references and README.
 
 ### Verifikasi dan syarat selesai
 
-Forbidden transition dan duplicate approval ditolak; definition change tidak merusak instance lama.
+Forbidden transition, cross-company access, idempotency collision, invalid revision, duplicate approval, and self-approval are denied; definition edits do not alter active snapshots; expiry runs once and preserves event sequence. API and package test suites, typecheck, lint, format, docs, architecture and hosted technical CI pass. A visual Board workflow UI and business-specific request addon are follow-up scope (M9.06), not claimed by this engine milestone.
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M9.03.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 

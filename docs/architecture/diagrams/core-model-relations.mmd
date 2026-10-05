@@ -29,6 +29,10 @@ flowchart LR
   model27["notification.notification"]
   model28["notification.preference"]
   model29["notification.template"]
+  model30["workflow.approval"]
+  model31["workflow.definition"]
+  model32["workflow.event"]
+  model33["workflow.instance"]
   model0 -->|user N:1| model26
   model2 -->|assigned_to N:1| model26
   model5 -->|country N:1| model8
@@ -69,3 +73,10 @@ flowchart LR
   model27 -->|template N:1| model29
   model28 -->|company N:1| model6
   model28 -->|user N:1| model26
+  model30 -->|actor N:1| model26
+  model30 -->|instance N:1| model33
+  model32 -->|actor N:1| model26
+  model32 -->|instance N:1| model33
+  model33 -->|company N:1| model6
+  model33 -->|definition N:1| model31
+  model33 -->|started_by N:1| model26

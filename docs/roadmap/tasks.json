@@ -1003,10 +1003,10 @@
     },
     {
       "id": "M9.03",
-      "title": "Evaluasi `orm-workflow`: state transition, approval policy, authorization, history, timeout, dan audit.",
+      "title": "Implementasikan `orm-workflow`: typed state/approval engine, authenticated company-scoped API, jobs expiry, audit history, dan generated docs.",
       "milestone": "M9",
       "dependsOn": ["M4.06", "M4.10"],
-      "output": "orm-workflow minimal engine dan example",
+      "output": "Typed workflow addon, sample definition, authenticated API, expiry jobs, tests, and generated references",
       "detailFile": "docs/roadmap/09-addons.md"
     },
     {

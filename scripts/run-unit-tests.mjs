@@ -65,6 +65,12 @@ const suites = [
     typecheck: true,
     coverage: ['src/index.ts'],
   },
+  {
+    name: 'orm-workflow',
+    packageName: '@moonwitness/orm-workflow',
+    typecheck: true,
+    coverage: ['src/manifest.ts', 'src/runtime.ts'],
+  },
 ];
 
 for (const suite of suites) {

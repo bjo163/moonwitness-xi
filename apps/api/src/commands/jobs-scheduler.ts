@@ -3,6 +3,7 @@ import { installAddons } from '@moonwitness/orm';
 import { manifest as baseManifest } from '@moonwitness/orm-base';
 import { jobsManifest, runSchedulerLoop } from '@moonwitness/jobs';
 import { readWorkerHealthPort, startWorkerHealthServer } from './worker-health.js';
+import { manifest as workflowAddon } from '@moonwitness/orm-workflow';
 
 const db = createDatabase();
 const stop = new AbortController();
@@ -15,7 +16,7 @@ process.once('SIGINT', stopScheduler);
 process.once('SIGTERM', stopScheduler);
 
 try {
-  await installAddons(db, [baseManifest, jobsManifest]);
+  await installAddons(db, [baseManifest, jobsManifest, workflowAddon]);
   if (!stop.signal.aborted) {
     workerHealth = await startWorkerHealthServer({
       db,

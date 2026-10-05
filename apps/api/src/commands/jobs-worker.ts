@@ -6,6 +6,10 @@ import { installAddons } from '@moonwitness/orm';
 import { manifest as baseManifest } from '@moonwitness/orm-base';
 import { jobsManifest, registerJobHandler, runWorkerLoop } from '@moonwitness/jobs';
 import { readWorkerHealthPort, startWorkerHealthServer } from './worker-health.js';
+import {
+  manifest as workflowAddon,
+  registerWorkflowExpiryHandler,
+} from '@moonwitness/orm-workflow';
 
 const db = createDatabase();
 const stop = new AbortController();
@@ -18,7 +22,7 @@ process.once('SIGINT', stopWorker);
 process.once('SIGTERM', stopWorker);
 
 try {
-  await installAddons(db, [baseManifest, jobsManifest]);
+  await installAddons(db, [baseManifest, jobsManifest, workflowAddon]);
   const handlerModule = process.env.JOB_HANDLERS_MODULE;
   if (handlerModule) await import(pathToFileURL(path.resolve(handlerModule)).href);
   if (!stop.signal.aborted) {
@@ -29,7 +33,7 @@ try {
       port: readWorkerHealthPort(process.env.JOBS_WORKER_HEALTH_PORT, 'JOBS_WORKER_HEALTH_PORT'),
     });
   }
-  const unregister = registerJobHandler({
+  const unregisterExample = registerJobHandler({
     name: 'example.noop',
     version: 1,
     parse(payload: unknown): unknown {
@@ -39,10 +43,12 @@ try {
       return { completed: true };
     },
   });
+  const unregisterWorkflow = registerWorkflowExpiryHandler();
   try {
     await runWorkerLoop({ workerId: `moonwitness-${randomUUID()}` }, stop.signal);
   } finally {
-    unregister();
+    unregisterWorkflow();
+    unregisterExample();
   }
 } finally {
   await workerHealth?.close();

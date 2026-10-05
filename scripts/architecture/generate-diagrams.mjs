@@ -36,6 +36,11 @@ const addonManifestPaths = [
     exportName: 'storageManifest',
     manifest: 'index.ts',
   },
+  {
+    entry: 'packages/orm-workflow/dist/manifest.js',
+    sourceRoot: 'packages/orm-workflow/src',
+    manifest: 'manifest.ts',
+  },
 ];
 
 function compareText(left, right) {

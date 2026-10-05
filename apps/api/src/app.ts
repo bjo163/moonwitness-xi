@@ -13,6 +13,7 @@ import { genericRoutes } from './routes/generic.routes.js';
 import { healthRoutes } from './routes/health.routes.js';
 import { jobsRoutes } from './routes/jobs.routes.js';
 import { notificationRoutes } from './routes/notification.routes.js';
+import { workflowRoutes } from './routes/workflow.routes.js';
 import { config } from './config/env.js';
 import { LocalFileAttachmentStorage } from '@moonwitness/orm-storage';
 import { createDatabase } from './database/knex.js';
@@ -23,6 +24,7 @@ import { installAddons } from '@moonwitness/orm';
 import { manifest as authAddon, createAuthService } from '@moonwitness/auth';
 import { jobsManifest } from '@moonwitness/jobs';
 import { manifest as notificationAddon } from '@moonwitness/orm-notification';
+import { manifest as workflowAddon } from '@moonwitness/orm-workflow';
 
 import { createLogger, type LogLevel } from '@moonwitness/logger';
 import observabilityPlugin from './plugins/observability.plugin.js';
@@ -67,7 +69,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
 
   const db = options.db ?? createDatabase();
   try {
-    await installAddons(db, [baseAddon, authAddon, jobsManifest, notificationAddon]);
+    await installAddons(db, [baseAddon, authAddon, jobsManifest, notificationAddon, workflowAddon]);
     await initializeSuperadminPassword(superadminPassword);
   } catch (error) {
     if (!options.db) await db.destroy();
@@ -216,6 +218,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   });
   await app.register(jobsRoutes);
   await app.register(notificationRoutes);
+  await app.register(workflowRoutes);
 
   return app;
 }
