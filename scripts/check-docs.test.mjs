@@ -19,6 +19,7 @@ test('heading anchors follow stable GitHub-like slugs and duplicate headings', (
   assert.equal(anchors.has('repeated'), true);
   assert.equal(anchors.has('repeated-1'), true);
   assert.equal(slugHeading('User Profile / Settings'), 'user-profile-settings');
+  assert.equal(slugHeading('A <em>styled</em> heading'), 'a-styled-heading');
 });
 
 test('links in code blocks are ignored and local fragments are validated', async () => {

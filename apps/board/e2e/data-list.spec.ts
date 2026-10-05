@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { E2E_SUPERADMIN_PASSWORD } from './constants.js';
+import { createE2eSuffix, E2E_SUPERADMIN_PASSWORD } from './constants.js';
 
 interface BoardSession {
   access_token: string;
@@ -13,7 +13,7 @@ interface ApiListResponse<TRecord> {
 test('list search, filters, sorting, pagination, counts, and user relations work on PostgreSQL', async ({
   page,
 }) => {
-  const suffix = `${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
+  const suffix = createE2eSuffix();
   const prefix = `List E2E ${suffix}`;
 
   await page.goto('/login');

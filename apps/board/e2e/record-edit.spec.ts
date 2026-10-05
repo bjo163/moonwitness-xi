@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { E2E_SUPERADMIN_PASSWORD } from './constants.js';
+import { createE2eSuffix, E2E_SUPERADMIN_PASSWORD } from './constants.js';
 
 interface BoardSession {
   access_token: string;
@@ -13,7 +13,7 @@ test('record forms validate, edit relations, scope state by country, archive, re
   page,
 }) => {
   test.setTimeout(90_000);
-  const suffix = `${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
+  const suffix = createE2eSuffix();
   const partnerName = `Record E2E ${suffix}`;
   const partnerEmail = `record-${suffix}@example.test`;
 

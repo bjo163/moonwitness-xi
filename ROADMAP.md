@@ -163,7 +163,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 
 - [ ] M8.01 Default workflow read-only; scoped writes untuk bot/promosi/release/Pages dan gunakan GitHub App bila dibutuhkan.
 - [ ] M8.02 Pin external Actions ke SHA tervalidasi, perbarui berkala; pisahkan eksekusi kode tak tepercaya dari job berkredensial.
-- [ ] M8.03 Aktifkan code/dependency/secret scanning yang tersedia; scan container dan tetapkan severity policy serta exception beralasan dengan expiry. [Evidence](docs/roadmap/evidence/M8.03.md); hosted CodeQL/Trivy pipelines report findings; critical-only SARIF gate awaits hosted rerun and CodeQL High findings (including auth and workflow trust) remain under triage; Dependabot/security scanning enabled where supported.
+- [ ] M8.03 Aktifkan code/dependency/secret scanning yang tersedia; scan container dan tetapkan severity policy serta exception beralasan dengan expiry. [Evidence](docs/roadmap/evidence/M8.03.md); Trivy lockfile/API/Board scans and critical-only gate pass, fixing Board `CVE-2026-31789`; CodeQL findings have targeted fixes on `dev` awaiting hosted re-analysis; Dependabot/security scanning enabled where supported (non-provider patterns remain disabled).
 - [ ] M8.04 Simpan dokumentasi satu kali konfigurasi App/settings; jangan menyimpan credential bot dalam repo.
 - [ ] M8.05 Updater mingguan menyiapkan dependency runtime/dev/actions dalam kelompok; tidak membuat branch ketiga.
 - [ ] M8.06 Uji kandidat update sebelum menulis ke dev; periksa SHA asal, serialisasi bot writes, dan jangan mencampur beberapa major upgrade.

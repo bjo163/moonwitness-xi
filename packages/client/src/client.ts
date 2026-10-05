@@ -59,6 +59,12 @@ interface ErrorBody {
 
 type SessionListener = (user: UserProfile | null) => void;
 
+function trimTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47) end -= 1;
+  return value.slice(0, end);
+}
+
 export class MoonWitnessClient implements HttpClient {
   readonly baseUrl: string;
   private readonly storage: TokenStorage;
@@ -74,7 +80,7 @@ export class MoonWitnessClient implements HttpClient {
   private readonly hydrated: Promise<void>;
 
   constructor(options: MoonWitnessClientOptions) {
-    this.baseUrl = options.baseUrl.replace(/\/+$/, '');
+    this.baseUrl = trimTrailingSlashes(options.baseUrl);
     this.storage = options.storage ?? defaultStorage();
     this.storageKey = options.storageKey ?? 'moonwitness_auth';
     this.fetchImpl = options.fetch ?? globalThis.fetch.bind(globalThis);

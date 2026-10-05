@@ -1,10 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { E2E_SUPERADMIN_PASSWORD } from './constants.js';
+import { createE2eSuffix, E2E_SUPERADMIN_PASSWORD } from './constants.js';
 
 test('users can edit only their profile, persist preferences, and change password safely', async ({
   page,
 }) => {
-  const suffix = `${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
+  const suffix = createE2eSuffix();
   const login = `e2e-account-${suffix}`;
   const initialPassword = `account-e2e-${suffix}`;
   const updatedPassword = `account-updated-${suffix}`;

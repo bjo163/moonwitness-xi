@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
-import { E2E_SUPERADMIN_PASSWORD } from './constants.js';
+import { createE2eSuffix, E2E_SUPERADMIN_PASSWORD } from './constants.js';
 
 interface BoardSession {
   access_token: string;
@@ -26,7 +26,7 @@ async function loginSuperadmin(page: Page): Promise<string> {
 test('CSV import rejects invalid rows, reports partial failures, and exports only the active search scope', async ({
   page,
 }) => {
-  const suffix = `${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
+  const suffix = createE2eSuffix();
   const token = await loginSuperadmin(page);
   const authorization = { authorization: `Bearer ${token}` };
   const duplicateEmail = `duplicate-${suffix}@example.test`;
@@ -157,7 +157,7 @@ test('user password write-only field is absent from list and CSV export', async 
 test('record chatter persists activity and attachment metadata with owner and permission boundaries', async ({
   page,
 }) => {
-  const suffix = `${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
+  const suffix = createE2eSuffix();
   const token = await loginSuperadmin(page);
   const authorization = { authorization: `Bearer ${token}` };
   const partnerResponse = await page.request.post('/api/base.partner', {

@@ -78,7 +78,8 @@ export function createAuthService(options: AuthServiceOptions = {}) {
   const ttlMs = (options.refreshTtlSeconds ?? 14 * 24 * 60 * 60) * 1000;
   // Verified against when the login is unknown, so response time does not reveal which
   // logins exist. Computed once, up front, to keep the first miss as slow as a hit.
-  const dummyHash = hashPassword('moonwitness-timing-equaliser');
+  // Use the same scrypt work factor for unknown logins without a fixed dummy password.
+  const dummyHash = hashPassword(randomBytes(32).toString('base64url'));
 
   async function revokeFamily(family: string, trx?: Transaction) {
     await RefreshToken.query(trx)

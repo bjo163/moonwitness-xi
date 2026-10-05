@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { E2E_SUPERADMIN_PASSWORD } from './constants.js';
+import { createE2eSuffix, E2E_SUPERADMIN_PASSWORD } from './constants.js';
 
 interface BoardSession {
   access_token: string;
@@ -78,7 +78,7 @@ test('list loading, offline errors, retry, and empty results preserve the curren
 
 test('rapid duplicate save submits a new record only once', async ({ page }) => {
   const session = await loginSuperadmin(page);
-  const suffix = `${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
+  const suffix = createE2eSuffix();
   const name = `Resilience Save ${suffix}`;
   const email = `resilience-save-${suffix}@example.test`;
   let createRequests = 0;
@@ -113,7 +113,7 @@ test('rapid duplicate save submits a new record only once', async ({ page }) => 
 
 test('signing into another account clears the previous account records', async ({ page }) => {
   const administrator = await loginSuperadmin(page);
-  const suffix = `${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
+  const suffix = createE2eSuffix();
   const adminOnlyName = `Account A Private ${suffix}`;
   const viewerName = `Account B Private ${suffix}`;
   const headers = { authorization: `Bearer ${administrator.access_token}` };
@@ -160,7 +160,7 @@ test('switching companies never renders a record from the previous query scope',
 }) => {
   const session = await loginSuperadmin(page);
   const headers = { authorization: `Bearer ${session.access_token}` };
-  const suffix = `${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
+  const suffix = createE2eSuffix();
   const companyName = `Resilience Company ${suffix}`;
   const companyResponse = await page.request.post('/api/base.company', {
     headers,

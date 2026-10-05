@@ -21,13 +21,16 @@ const tokens = (access: string, refresh = `r-${access}`) => ({
   },
 });
 
-function makeClient(handler: (url: URL, init?: RequestInit) => Response | Promise<Response>) {
+function makeClient(
+  handler: (url: URL, init?: RequestInit) => Response | Promise<Response>,
+  baseUrl = 'http://api.test/'
+) {
   const fetchMock = vi.fn(async (input: string, init?: RequestInit) =>
     handler(new URL(input), init)
   );
   const storage = new MemoryStorage();
   const client = new MoonWitnessClient({
-    baseUrl: 'http://api.test/',
+    baseUrl,
     fetch: fetchMock as unknown as typeof fetch,
     storage,
   });
@@ -35,6 +38,11 @@ function makeClient(handler: (url: URL, init?: RequestInit) => Response | Promis
 }
 
 describe('MoonWitnessClient', () => {
+  it('removes all trailing slashes from the configured API URL', () => {
+    const { client } = makeClient(() => json({}), 'http://api.test////');
+    expect(client.baseUrl).toBe('http://api.test');
+  });
+
   it('uploads file bytes and downloads attachments as blobs', async () => {
     let uploadBody: BodyInit | null | undefined;
     let uploadHeaders: Record<string, string> = {};

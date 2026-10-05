@@ -13,11 +13,28 @@ export function stripFencedCode(source) {
   );
 }
 
+function stripInlineHtmlTags(value) {
+  let result = '';
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index];
+    const next = value[index + 1] ?? '';
+    const mayStartTag = character === '<' && /[A-Za-z!?/]/u.test(next);
+    if (mayStartTag) {
+      const tagEnd = value.indexOf('>', index + 1);
+      if (tagEnd !== -1) {
+        index = tagEnd;
+        continue;
+      }
+    }
+    result += character;
+  }
+  return result;
+}
+
 export function slugHeading(heading) {
-  return heading
-    .replace(/\s+#+\s*$/u, '')
-    .replace(/!?\[([^\]]*)\]\([^)]*\)/gu, '$1')
-    .replace(/<[^>]*>/gu, '')
+  return stripInlineHtmlTags(
+    heading.replace(/\s+#+\s*$/u, '').replace(/!?\[([^\]]*)\]\([^)]*\)/gu, '$1')
+  )
     .replace(/`([^`]*)`/gu, '$1')
     .toLocaleLowerCase('en')
     .replace(/[^\p{Letter}\p{Number}\p{Mark}\s_-]/gu, '')

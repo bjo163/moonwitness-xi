@@ -1,6 +1,6 @@
 import { createHmac } from 'node:crypto';
 import { expect, test, type Page } from '@playwright/test';
-import { E2E_JWT_SECRET, E2E_SUPERADMIN_PASSWORD } from './constants.js';
+import { createE2eSuffix, E2E_JWT_SECRET, E2E_SUPERADMIN_PASSWORD } from './constants.js';
 
 interface E2EUser {
   id: number;
@@ -109,7 +109,7 @@ test('disabled accounts cannot establish an authentication session', async ({ pa
   );
   expect(session).not.toBeNull();
   const headers = { authorization: `Bearer ${session!.access_token}` };
-  const suffix = `${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
+  const suffix = createE2eSuffix();
   const login = `e2e-disabled-${suffix}`;
   const password = `e2e-disabled-password-${suffix}`;
 
