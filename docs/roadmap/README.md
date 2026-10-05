@@ -12,7 +12,8 @@ Roadmap ini terdiri dari 148 kartu kerja. Jangan mencoba mengimplementasikan sel
 6. Untuk desain dan UI, baca [DESIGN-SPEC.md](DESIGN-SPEC.md).
 7. Untuk test, baca [TEST-SCENARIOS.md](TEST-SCENARIOS.md).
 8. Untuk Issues/auto-PR/commit-push, baca [ISSUE-SYNC-CONTRACT.md](ISSUE-SYNC-CONTRACT.md).
-9. Salin [template evidence](evidence/TEMPLATE.md) untuk hasil pekerjaan.
+9. Untuk otoritas field dan lifecycle Issues, baca [kebijakan issue sync](../engineering/issue-sync-policy.md).
+10. Salin [template evidence](evidence/TEMPLATE.md) untuk hasil pekerjaan.
 
 ## Kartu kerja
 

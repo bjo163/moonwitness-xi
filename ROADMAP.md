@@ -203,7 +203,7 @@ Gate: audit fitur existing sebelum membuat package. Jalankan berurutan berdasark
 
 Jalur ini melengkapi M1/M7/M8, bukan membuat release pipeline kedua. Detail: [kartu M11](docs/roadmap/11-issues-delivery.md) dan [kontrak sinkronisasi](docs/roadmap/ISSUE-SYNC-CONTRACT.md).
 
-- [ ] M11.01 Tetapkan kontrak sinkronisasi roadmap ↔ GitHub Issues dan otoritas setiap field.
+- [x] M11.01 Tetapkan kontrak sinkronisasi roadmap ↔ GitHub Issues dan otoritas setiap field. Task ID, source acceptance, data manusia, lifecycle/status, close manual, untrusted issue input, dan batas aktivasi sudah ditetapkan: [policy](docs/engineering/issue-sync-policy.md), [evidence](docs/roadmap/evidence/M11.01.md). Belum ada bootstrap/sync issue yang diklaim aktif.
 - [ ] M11.02 Buat schema task tracking, identitas issue stabil, dan validator silang dokumen.
 - [ ] M11.03 Buat planner dry-run dan apply mode untuk create/update issue tanpa duplikasi.
 - [ ] M11.04 Sinkronkan isi issue lengkap, milestone, labels dan dependencies yang dapat ditelusuri.
