@@ -214,7 +214,7 @@ Jalur ini melengkapi M1/M7/M8, bukan membuat release pipeline kedua. Detail: [ka
 - [ ] M11.09 Buat dashboard kemajuan dan GitHub Projects projection bila tersedia.
 - [ ] M11.10 Buat/perbarui PR dev → main otomatis dengan daftar task, hasil test, release plan dan risiko.
 - [ ] M11.11 Aktifkan auto-merge profesional dengan expected SHA, required checks dan review policy.
-- [ ] M11.12 Terapkan aturan commit dan push per unit pekerjaan yang selesai.
+- [x] M11.12 Terapkan aturan commit dan push per unit pekerjaan yang selesai. Protokol Conventional Commit, stage path terpilih, push normal ke `dev`, verifikasi SHA remote, CI state yang akurat, no-op tanpa empty commit, dan pemisahan promotion/release sudah dibuktikan pada M11.03: [evidence](docs/roadmap/evidence/M11.12.md).
 - [ ] M11.13 Gabungkan commit/push, version bump, docs dan issue sync tanpa release loop.
 - [ ] M11.14 Uji seluruh siklus roadmap → issue → commit → CI → PR → merge → release → status.
 - [ ] M11.15 Sediakan runbook audit/recovery dan pemeriksaan drift issue/roadmap.
