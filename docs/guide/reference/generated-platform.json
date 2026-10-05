@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "9913dd3c04fc6aafd953932c162b100a321230f544761327f2628f9e6961e536",
+  "generatedFromSha256": "96024b4f92b6035a4eb0c067133fe44c1d785c765a7ad9facc6b878ed79e5668",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -285,6 +285,7 @@
       "test:release-plan": "node --test scripts/release-plan.test.mjs",
       "test:release-prepare": "node --test scripts/prepare-release.test.mjs",
       "test:release-prepare-workflow": "node --test scripts/release-prepare-workflow.test.mjs",
+      "test:release-workflow": "node --test scripts/release-workflow.test.mjs",
       "test:render-changelog": "node --test scripts/render-changelog.test.mjs",
       "test:restore-drill": "node scripts/verify-application-restore.mjs",
       "test:roadmap": "node --test scripts/roadmap/validate-roadmap.test.mjs scripts/roadmap/sync-issues.test.mjs",
@@ -293,7 +294,7 @@
       "test:ui": "pnpm --filter @moonwitness/ui build && node --test packages/ui/tests/*.test.mjs && node packages/ui/scripts/verify-package.mjs",
       "test:ui-budget": "node --test apps/ui-catalog/tests/bundle-budget.test.mjs && pnpm --filter @moonwitness/ui-catalog build && pnpm ui:budget",
       "test:ui-catalog": "pnpm --filter @moonwitness/ui-catalog build && pnpm --filter @moonwitness/ui-catalog test",
-      "test:unit": "pnpm build && pnpm --filter @moonwitness/api exec vitest run --exclude tests/postgres.integration.test.ts --exclude tests/postgres.performance.integration.test.ts && pnpm --filter @moonwitness/auth test && pnpm --filter @moonwitness/client test && pnpm --filter @moonwitness/jobs test && pnpm --filter @moonwitness/logger test && pnpm --filter @moonwitness/orm test && pnpm test:addon-conformance && pnpm --filter @moonwitness/orm-base test && pnpm --filter @moonwitness/orm-notification test && pnpm --filter @moonwitness/orm-organization test && pnpm --filter @moonwitness/orm-storage test && pnpm --filter @moonwitness/orm-workflow test && pnpm test:assets && pnpm test:ui && pnpm test:platform-audit",
+      "test:unit": "pnpm build && pnpm --filter @moonwitness/api exec vitest run --exclude tests/postgres.integration.test.ts --exclude tests/postgres.performance.integration.test.ts && pnpm --filter @moonwitness/auth test && pnpm --filter @moonwitness/client test && pnpm --filter @moonwitness/jobs test && pnpm --filter @moonwitness/logger test && pnpm --filter @moonwitness/orm test && pnpm test:addon-conformance && pnpm --filter @moonwitness/orm-base test && pnpm --filter @moonwitness/orm-notification test && pnpm --filter @moonwitness/orm-organization test && pnpm --filter @moonwitness/orm-storage test && pnpm --filter @moonwitness/orm-workflow test && pnpm test:assets && pnpm test:ui && pnpm test:platform-audit && pnpm test:release-workflow",
       "test:unit:ci": "node scripts/run-unit-tests.mjs",
       "test:workflow-trust": "node --test scripts/check-workflow-checkout-trust.test.mjs",
       "test:workspace-version-policy": "node --test scripts/workspace-version-policy.test.mjs",

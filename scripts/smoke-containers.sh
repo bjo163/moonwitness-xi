@@ -13,7 +13,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
-"${compose[@]}" up --detach --build --wait --wait-timeout 180 api board
+if [[ "${SMOKE_USE_PREBUILT_IMAGES:-false}" == "true" ]]; then
+  "${compose[@]}" up --detach --no-build --wait --wait-timeout 180 api board
+else
+  "${compose[@]}" up --detach --build --wait --wait-timeout 180 api board
+fi
 
 api_info="$(curl --fail --silent --show-error --retry 20 --retry-connrefused --retry-delay 2 http://127.0.0.1:3000/)"
 grep -q 'MoonWitness Enterprise ORM API' <<< "$api_info"

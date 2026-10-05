@@ -6,6 +6,8 @@ serta hasil CI pada source SHA yang dipilih. **Verifikasi lokal:** `pnpm release
 `pnpm release:check v1.0.0-rc.1` (samakan tag dengan versi root yang sedang dicek) dan
 `pnpm test:release-classification` harus lolos.
 
+Alur image kandidat dan promosi job terpisah dijelaskan di [release artifact flow](../../operations/release-artifact-flow.md).
+
 ## Sebelum upgrade
 
 1. Identifikasi versi monorepo/addon saat ini, source SHA target, perubahan breaking dan migrasi data.

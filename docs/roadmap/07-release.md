@@ -116,6 +116,8 @@ Renderer read-only menerima file output `release:plan` dan tanggal eksplisit: `p
 
 ## M7.07 — Jalankan CI lengkap pada commit hasil persiapan; verifikasi lagi main merge SHA sebelum publikasi.
 
+Release workflow pada tag memeriksa ancestor `main` dan `ci-gate` sukses pada run `push` di exact source SHA. Bukti unit ada di [M7.07](evidence/M7.07.md); hosted dispatch dan publication belum diverifikasi.
+
 - **Prasyarat:** M2.05
 - **Baca/periksa:** Prepared dev SHA; PR merge SHA; ci-gate.
 - **Deliverable:** Verified source gate.
@@ -151,6 +153,8 @@ Concurrent dependency dan release runs mempertahankan semua substantive changes.
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M7.08.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
 ## M7.09 — Bangun sekali artefak release dari SHA tervalidasi lalu promosikan artefak yang sama; jangan rebuild tanpa verifikasi identitas.
+
+Image artifact handoff, source labels, same-image smoke/CRITICAL scan, dan publish tanpa rebuild sudah dikontrak di [M7.09](evidence/M7.09.md). Hosted artifact digest equality/push verification tetap acceptance work.
 
 - **Prasyarat:** M7.07, M4.13
 - **Baca/periksa:** Dockerfile; build outputs; verification jobs.
