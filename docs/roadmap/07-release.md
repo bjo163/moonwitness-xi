@@ -192,7 +192,7 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ## M7.11 — Tag image memakai versi/SHA; update latest hanya setelah seluruh artefak wajib berhasil. Tidak deploy aplikasi.
 
-Stable `latest` hanya dimajukan bila tag candidate secara semver lebih baru dari stable GitHub Release yang sudah dipublikasikan. Prerelease, versi sama, dan versi lama tidak menulis alias tersebut; detail dan hasil test ada di [M7.11](evidence/M7.11.md). Hosted release masih perlu membuktikan policy berjalan dengan token repository.
+Stable `latest` hanya dimajukan bila tag candidate secara semver lebih baru dari stable GitHub Release lain yang sudah dipublikasikan. Retry untuk tag candidate yang sama tetap menerapkan ulang alias dengan digest yang sama; prerelease dan kandidat lebih lama tidak menurunkan alias. Detail dan hasil test ada di [M7.11](evidence/M7.11.md). Hosted release masih perlu membuktikan policy berjalan dengan token repository.
 
 - **Prasyarat:** M7.10
 - **Baca/periksa:** Candidate digests; semver/prerelease state.
@@ -229,6 +229,8 @@ Tampered artifact atau wrong repository identity ditolak oleh verification fixtu
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M7.12.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
 ## M7.13 — Retry release yang sama melanjutkan aset kurang tanpa bump/tag/release duplikat atau overwrite aset berbeda.
+
+Publisher OCI melakukan read-before-write dan hanya reuse existing tag bila image ID, source SHA, versi, dan registry digest cocok; konflik ditolak tanpa mutasi. Workflow juga memeriksa ulang remote tag SHA sesudah verify serta memakai kembali GitHub Release published yang bertipe sesuai. Bukti lokal ada di [M7.13](evidence/M7.13.md); simulasi hosted retry/race masih pending.
 
 - **Prasyarat:** M7.10
 - **Baca/periksa:** Release manifest; GitHub/GHCR APIs.

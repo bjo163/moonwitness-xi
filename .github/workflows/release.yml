@@ -225,6 +225,15 @@ jobs:
           done
           test "$(docker image inspect moonwitness-api:production --format '{{.Id}}')" = "$(jq -r '.apiImageId' release-image-manifest.json)"
           test "$(docker image inspect moonwitness-board:production --format '{{.Id}}')" = "$(jq -r '.boardImageId' release-image-manifest.json)"
+      - name: Require the source tag to remain on the verified SHA
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          EXPECTED_SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          remote_tag_sha="$(git ls-remote origin "refs/tags/$RELEASE_TAG" "refs/tags/$RELEASE_TAG^{}" | awk 'END { print $1 }')"
+          test -n "$remote_tag_sha"
+          test "$remote_tag_sha" = "$EXPECTED_SOURCE_SHA"
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
       - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
@@ -252,29 +261,35 @@ jobs:
       - name: Publish the verified API image to GitHub Container Registry
         id: publish_api
         env:
-          IMAGE_URI: ghcr.io/${{ github.repository }}
-          TAG: ${{ github.ref_name }}
+          SOURCE_IMAGE: moonwitness-api:production
+          IMAGE_REPOSITORY: ghcr.io/${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          SOURCE_SHA: ${{ github.sha }}
+          RELEASE_VERSION: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          image="$(printf '%s' "$IMAGE_URI" | tr '[:upper:]' '[:lower:]')"
-          docker tag moonwitness-api:production "$image:$TAG"
-          version_digest="$(docker push "$image:$TAG" 2>&1 | tee /dev/stderr | grep -oE 'digest: sha256:[a-f0-9]{64}' | awk '{print $2}' | tail -n 1)"
-          test -n "$version_digest"
-          echo "digest=$version_digest" >> "$GITHUB_OUTPUT"
-          echo "- API image `$image:$TAG`: `$version_digest`" >> "$GITHUB_STEP_SUMMARY"
+          result="$(node scripts/publish-release-image.mjs)"
+          action="$(jq -r '.action' <<< "$result")"
+          digest="$(jq -r '.digest' <<< "$result")"
+          test -n "$digest"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "- API image publication: `$action`, `$digest`." >> "$GITHUB_STEP_SUMMARY"
       - name: Publish the verified Board image to GitHub Container Registry
         id: publish_board
         env:
-          IMAGE_URI: ghcr.io/${{ github.repository }}-board
-          TAG: ${{ github.ref_name }}
+          SOURCE_IMAGE: moonwitness-board:production
+          IMAGE_REPOSITORY: ghcr.io/${{ github.repository }}-board
+          RELEASE_TAG: ${{ github.ref_name }}
+          SOURCE_SHA: ${{ github.sha }}
+          RELEASE_VERSION: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          image="$(printf '%s' "$IMAGE_URI" | tr '[:upper:]' '[:lower:]')"
-          docker tag moonwitness-board:production "$image:$TAG"
-          version_digest="$(docker push "$image:$TAG" 2>&1 | tee /dev/stderr | grep -oE 'digest: sha256:[a-f0-9]{64}' | awk '{print $2}' | tail -n 1)"
-          test -n "$version_digest"
-          echo "digest=$version_digest" >> "$GITHUB_OUTPUT"
-          echo "- Board image `$image:$TAG`: `$version_digest`" >> "$GITHUB_STEP_SUMMARY"
+          result="$(node scripts/publish-release-image.mjs)"
+          action="$(jq -r '.action' <<< "$result")"
+          digest="$(jq -r '.digest' <<< "$result")"
+          test -n "$digest"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "- Board image publication: `$action`, `$digest`." >> "$GITHUB_STEP_SUMMARY"
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -287,6 +302,13 @@ jobs:
             test "$(jq -r '.isDraft' <<< "$release")" = 'false'
             if [[ "$TAG" == *-* ]]; then expected_prerelease=true; else expected_prerelease=false; fi
             test "$(jq -r '.isPrerelease' <<< "$release")" = "$expected_prerelease"
+            if [[ "$TAG" == *-* ]]; then
+              gh release edit "$TAG" --prerelease --latest=false
+            elif [[ "$UPDATE_LATEST" == 'true' ]]; then
+              gh release edit "$TAG" --latest
+            else
+              gh release edit "$TAG" --latest=false
+            fi
             echo "Reusing the existing published GitHub Release for $TAG."
           elif [[ "$TAG" == *-* ]]; then
             gh release create "$TAG" --verify-tag --generate-notes --prerelease --latest=false

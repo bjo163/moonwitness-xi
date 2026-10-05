@@ -22,7 +22,12 @@ test('only a strictly newer stable version advances latest', () => {
     latest: 'v1.9.9',
   });
   assert.equal(planLatestPromotion('v1.9.8', ['v1.9.9']).reason, 'older-release');
-  assert.equal(planLatestPromotion('v1.9.9', ['v1.9.9']).reason, 'already-current');
+  assert.deepEqual(planLatestPromotion('v1.9.9', ['v1.9.9']), {
+    advance: true,
+    reason: 'first-stable-release',
+    latest: null,
+  });
+  assert.equal(planLatestPromotion('v1.9.9', ['v1.9.9', '1.9.9+other-build']).advance, false);
 });
 
 test('stable release versions outrank prereleases and prereleases order correctly', () => {

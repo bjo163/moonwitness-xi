@@ -55,11 +55,12 @@ export function planLatestPromotion(candidateTag, publishedTags) {
   if (candidate.prerelease.length > 0)
     return { advance: false, reason: 'prerelease', latest: null };
 
-  const stable = publishedTags.filter((tag) => {
+  const otherPublishedTags = publishedTags.filter((tag) => tag !== candidateTag);
+  const stable = otherPublishedTags.filter((tag) => {
     const parsed = parseVersion(tag);
     return parsed && parsed.prerelease.length === 0;
   });
-  for (const tag of publishedTags) {
+  for (const tag of otherPublishedTags) {
     if (typeof tag === 'string' && tag.startsWith('v') && !parseVersion(tag))
       throw new Error(`Published release tag is not semantic version: ${tag}`);
   }
