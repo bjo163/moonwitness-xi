@@ -177,13 +177,16 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ### Langkah pelaksanaan
 
-1. Audit growth/retention/permission drift dan runtime end-of-support.
-2. Buat report bulanan dengan baseline/trend/action owner.
-3. Cleanup hanya disposable assets sesuai policy; preserve released digests dan bukti penting.
+1. Ambil snapshot API Actions yang dipaginasi untuk artifacts, workflow runs, retention, allowed actions, default token permission dan nilai repo override; simpan timestamp, SHA audit, perintah, dan keterbatasan akses.
+2. Bandingkan runtime (Node, pnpm, Postgres, browser, runner image) dengan support upstream; sertakan pemilik, tanggal tindak lanjut, dan bukti validasi.
+3. Buat report bulanan dengan baseline/trend/action owner. Registry atau billing yang tidak dapat dibaca harus ditulis sebagai unknown beserta permission yang kurang, bukan nol.
+4. Cleanup harus berupa rencana dry-run dengan daftar ID, klasifikasi disposable/immutable, umur, dan alasan. Hapus hanya setelah tiap target lolos allowlist disposable; preserve released digests dan bukti penting.
 
 ### Verifikasi dan syarat selesai
 
 Dry-run cleanup tidak memilih immutable releases; permissions drift ditampilkan.
+
+Snapshot parsial 2026-10-05 ada di [evidence M8.10](evidence/M8.10.md). Jangan menandai milestone selesai sampai audit otomatis, baseline bulanan yang dapat dibandingkan, biaya/registry yang terukur atau terjelaskan, dan dry-run cleanup yang melindungi artifacts immutable tervalidasi.
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M8.10.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 

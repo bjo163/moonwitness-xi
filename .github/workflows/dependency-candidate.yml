@@ -19,7 +19,7 @@ jobs:
   candidate:
     name: test-one-dependency-on-source-sha
     if: github.ref == 'refs/heads/dev'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
     services:
       postgres:
@@ -165,7 +165,7 @@ jobs:
   publish:
     name: verify-head-and-fast-forward-dev
     needs: candidate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:
       group: repository-write-coordinator
@@ -218,7 +218,7 @@ jobs:
   dispatch:
     name: request-promotion-and-full-ci
     needs: publish
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       actions: write

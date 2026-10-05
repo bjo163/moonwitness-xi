@@ -20,7 +20,7 @@ concurrency:
 jobs:
   plan:
     name: plan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
       projects: ${{ steps.affected.outputs.projects }}
@@ -68,7 +68,7 @@ jobs:
     name: quality
     needs: [plan]
     if: contains(fromJSON(needs.plan.outputs.projects), 'quality')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -90,7 +90,7 @@ jobs:
     name: automation
     needs: [plan]
     if: contains(fromJSON(needs.plan.outputs.projects), 'automation')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -109,7 +109,7 @@ jobs:
     name: integration
     needs: [plan]
     if: contains(fromJSON(needs.plan.outputs.projects), 'integration')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     services:
       postgres:
@@ -163,7 +163,7 @@ jobs:
     name: browser
     needs: [plan]
     if: contains(fromJSON(needs.plan.outputs.projects), 'browser')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     services:
       postgres:
@@ -217,7 +217,7 @@ jobs:
     name: ui
     needs: [plan]
     if: contains(fromJSON(needs.plan.outputs.projects), 'ui')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -254,7 +254,7 @@ jobs:
     name: containers
     needs: [plan]
     if: contains(fromJSON(needs.plan.outputs.projects), 'containers')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: read
@@ -331,7 +331,7 @@ jobs:
     name: ci-gate
     if: always()
     needs: [plan, quality, integration, browser, containers, automation, ui]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4

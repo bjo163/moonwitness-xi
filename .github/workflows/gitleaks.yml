@@ -19,7 +19,7 @@ concurrency:
 jobs:
   scan:
     name: Scan repository history for secrets
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
       contents: read

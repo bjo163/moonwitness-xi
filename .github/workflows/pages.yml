@@ -45,7 +45,7 @@ jobs:
   change-detection:
     name: Detect documentation changes
     if: github.event_name == 'push' && github.ref_type == 'branch'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       docs: ${{ steps.filter.outputs.docs }}
       docs_only: ${{ steps.classification.outputs.docs_only }}
@@ -104,7 +104,7 @@ jobs:
     name: Build and verify documentation
     needs: change-detection
     if: always() && (needs.change-detection.result == 'skipped' || needs.change-detection.outputs.docs == 'true')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: read
@@ -278,7 +278,7 @@ jobs:
     name: Publish trusted documentation
     needs: [change-detection, build]
     if: always() && needs.build.result == 'success' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.publish == true))
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     concurrency:
       group: repository-write-coordinator
@@ -299,7 +299,7 @@ jobs:
     name: Report documentation publication failure
     if: always() && (needs.build.result == 'failure' || needs.deploy.result == 'failure') && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.publish == true))
     needs: [change-detection, build, deploy]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     concurrency:
       group: repository-write-coordinator
