@@ -137,7 +137,7 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ## M6.08 — Publikasikan dokumentasi stable yang sesuai release; tentukan retensi versi dokumentasi dan URL latest.
 
-Dispatch publikasi Pages kini menolak prerelease/build-metadata tags dan memeriksa GitHub Release berstatus stable-published. Ini menutup pemilihan RC sebagai sumber docs stable, tetapi versioned path retention dan selector/latest mapping belum dibuat; milestone tetap partial.
+Stable docs disimpan sebagai arsip deterministik `docs-site-vX.Y.Z.tar.gz` pada GitHub Release immutable, lalu Pages merakit `/vX.Y.Z/` untuk lima stable release terbaru. `/latest/` hanya mengarah ke stable release paling baru apabila arsip docs-nya tersedia; `/` adalah selector, `/next/` memuat main, dan dev tetap hanya menghasilkan preview artifact. Arsip lama tetap berada di Release walau keluar dari lima path aktif Pages. Hosted acceptance masih pending karena belum ada stable release yang dipublikasikan pada repo.
 
 - **Prasyarat:** M7.02, M6.06
 - **Baca/periksa:** Release version contract; docs portal.
@@ -145,13 +145,15 @@ Dispatch publikasi Pages kini menolak prerelease/build-metadata tags dan memerik
 
 ### Langkah pelaksanaan
 
-1. Tetapkan URL stable/latest dan versioned docs; tentukan versi yang disimpan sesuai ukuran.
-2. Build dari tag/source SHA tertentu dan tampilkan versi+link source.
-3. Jangan mengklaim dev docs sebagai stable; preserve older version paths yang didukung.
+1. Gunakan URL `/vX.Y.Z/`, alias `/latest/`, selector root, dan lima snapshot stable terbaru pada Pages.
+2. Build dari tag stable Release yang sudah published, pastikan tag reachable dari main, serta tampilkan kanal, versi aplikasi dan link source.
+3. Buat arsip USTAR/gzip reproducible, canonicalize metadata run-specific, validasi checksum/path saat extract, dan simpan arsip ke Release tanpa overwrite.
+4. Compose Pages dari inventory GitHub Release aktual; asset reuse harus cocok digest dan ukuran. Dokumen main ditempatkan di `/next/`; dev tidak memperoleh publish permission.
+5. Scan gabungan seluruh output sebelum artifact Pages diunggah; catat manifest `docs-versions.json` beserta SHA source dan retensi.
 
 ### Verifikasi dan syarat selesai
 
-Memilih versi membawa reference sesuai schema versi itu; latest hanya stable published.
+Retensi semver dan archive/extract/compose diuji lokal termasuk corrupt archive dan missing latest; browser build/test berjalan pada root repo dan nested stable base path. Deploy mensyaratkan Pages artifact hasil compose; belum menyatakan milestone hosted-complete sampai ada stable release dan publish berhasil.
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M6.08.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 

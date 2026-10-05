@@ -33,7 +33,7 @@ export function MarkdownContent({
         components={{
           a: ({ href, children, ...props }: ComponentProps<'a'>) => {
             const destination = resolveHref(href);
-            if (destination.startsWith('/guide/')) {
+            if (destination.startsWith(`${import.meta.env.BASE_URL}guide/`)) {
               return <Link to={destination}>{children}</Link>;
             }
             return (

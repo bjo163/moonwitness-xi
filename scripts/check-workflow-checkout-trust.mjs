@@ -157,6 +157,28 @@ export function inspectTrustedCheckoutPolicies({
       );
   }
 
+  if (pages.includes('compose-site:')) {
+    if (!pages.includes('docs-site-$TAG.tar.gz'))
+      findings.push(
+        'Versioned Pages snapshots must use stable-tagged immutable release asset names.'
+      );
+    if (
+      !pages.includes('jq -r \'.digest // empty\' <<< "$asset"') ||
+      !pages.includes('jq -r \'.size\' <<< "$asset"')
+    )
+      findings.push('Versioned Pages assets must be reconciled by digest and size before reuse.');
+    if (!pages.includes('name: Upload stable documentation archive'))
+      findings.push('Stable docs archive must be available to the immutable release-asset job.');
+    if (!pages.includes('versioned-site.mjs compose'))
+      findings.push(
+        'Pages must compose the retained version map before uploading the deploy artifact.'
+      );
+    if (!pages.includes("needs.compose-site.result == 'success'"))
+      findings.push('Pages deployment must require a successfully composed versioned site.');
+    if (!pages.includes('versioned-site.mjs plan --releases release-inventory.json --limit 5'))
+      findings.push('Pages must apply the five-stable-release snapshot retention plan.');
+  }
+
   return findings;
 }
 

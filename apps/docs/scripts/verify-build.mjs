@@ -7,10 +7,12 @@ const index = await readFile(
   fileURLToPath(new FileURL('../dist/index.html', import.meta.url)),
   'utf8'
 );
+const basePath = process.env.MW_DOCS_BASE_PATH ?? '/moonwitness-xi/';
+const escapedBasePath = basePath.replaceAll('/', '\\/');
 const fallback = await readFile(
   fileURLToPath(new FileURL('../dist/404.html', import.meta.url)),
   'utf8'
 );
 assert.equal(fallback, index, 'GitHub Pages 404 fallback must load the same SPA shell');
-assert.match(index, /(?:src|href)="\/moonwitness-xi\/assets\//u);
+assert.match(index, new RegExp(`(?:src|href)="${escapedBasePath}assets/`, 'u'));
 process.stdout.write('Verified the GitHub Pages base path and nested-route 404 fallback.\n');

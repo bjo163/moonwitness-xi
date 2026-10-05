@@ -30,6 +30,7 @@ function run(args, label) {
 
 run(['build'], 'Build');
 run(['exec', 'node', '--test', 'scripts/roadmap/addon-conformance.test.mjs'], 'Addon conformance');
+run(['run', 'test:versioned-docs'], 'Versioned documentation');
 
 const suites = [
   {

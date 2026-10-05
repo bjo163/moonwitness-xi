@@ -52,9 +52,20 @@ permissions:
       - run: pnpm release:dry-run -- --output report.json
       - uses: actions/upload-artifact@0123456789012345678901234567890123456789
 `;
+const versionedPages = `${pages}
+  - name: Upload stable documentation archive
+  store-versioned-docs:
+    file="versioned-docs/docs-site-$TAG.tar.gz"
+    test "$(jq -r '.digest // empty' <<< "$asset")" = "$expected"
+    test "$(jq -r '.size' <<< "$asset")" = "$expected_size"
+  compose-site:
+    if: needs.compose-site.result == 'success'
+    run: node scripts/docs/versioned-site.mjs compose
+    run: node scripts/docs/versioned-site.mjs plan --releases release-inventory.json --limit 5
+`;
 function policies(overrides = {}) {
   return inspectTrustedCheckoutPolicies({
-    pages,
+    pages: versionedPages,
     visualReview,
     release,
     releasePrepare,
@@ -66,6 +77,18 @@ function policies(overrides = {}) {
 
 test('accepts immutable event-SHA checkout and trusted dispatch restrictions', () => {
   assert.deepEqual(policies(), []);
+});
+
+test('requires immutable versioned docs assets and successful five-release composition', () => {
+  const unsafePages = versionedPages
+    .replace('jq -r \'.digest // empty\' <<< "$asset"', 'true')
+    .replace(
+      'versioned-site.mjs plan --releases release-inventory.json --limit 5',
+      'versioned-site.mjs plan'
+    );
+  const findings = policies({ pages: unsafePages });
+  assert.ok(findings.some((finding) => finding.includes('digest and size')));
+  assert.ok(findings.some((finding) => finding.includes('five-stable-release snapshot retention')));
 });
 
 test('rejects arbitrary workflow-dispatch checkout refs and persisted credentials', () => {

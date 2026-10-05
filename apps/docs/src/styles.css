@@ -257,6 +257,26 @@ a:focus-visible {
   font-size: 11px;
   line-height: 1.5;
 }
+.docs-version {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 18px 0 6px;
+  padding: 9px 11px;
+  color: #d4e1d8;
+  background: #1b2722;
+  border: 1px solid #34453c;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 650;
+}
+.docs-version span {
+  color: #b5c6bc;
+  font-family: var(--mw-font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  font-weight: 500;
+}
 .sidebar-footnote code {
   color: #415c39;
   font: 10px var(--mw-font-mono, monospace);

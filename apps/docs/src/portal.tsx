@@ -36,6 +36,8 @@ type SearchPageData = GuideItem & { route: string; searchText: string };
 const guideBundle: GuideBundle = guideBundleSource;
 const repository = 'https://github.com/bjo163/moonwitness-xi';
 const sourceRef = import.meta.env.MW_DOCS_SOURCE_REF ?? 'main';
+const applicationVersion = import.meta.env.MW_DOCS_APPLICATION_VERSION;
+const docsChannel = import.meta.env.MW_DOCS_CHANNEL ?? 'preview';
 const pages: SearchPageData[] = guideBundle.sections.flatMap((section) =>
   section.items.map((item) => ({
     ...item,
@@ -209,6 +211,10 @@ function PortalLayout() {
           aria-label="Navigasi dokumentasi"
         >
           <p className="sidebar-eyebrow">PLATFORM GUIDE</p>
+          <p className="docs-version" aria-label="Versi dokumentasi">
+            {docsChannel === 'stable' ? 'Stable' : docsChannel === 'next' ? 'Next' : 'Preview'}
+            <span>{applicationVersion}</span>
+          </p>
           {guideBundle.sections.map((section) => (
             <section className="nav-section" key={section.title}>
               <h2>{section.title}</h2>

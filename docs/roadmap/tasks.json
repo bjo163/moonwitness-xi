@@ -742,7 +742,9 @@
       "milestone": "M6",
       "dependsOn": ["M7.02", "M6.06"],
       "output": "Docs version manifest",
-      "detailFile": "docs/roadmap/06-documentation.md"
+      "detailFile": "docs/roadmap/06-documentation.md",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/M6.08.md"
     },
     {
       "id": "M6.09",
