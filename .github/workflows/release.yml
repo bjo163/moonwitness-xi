@@ -231,7 +231,26 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Plan stable latest promotion against published GitHub releases
+        id: latest_policy
+        if: ${{ !contains(github.ref_name, '-') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+          CANDIDATE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          stable_tags="$(gh api --paginate "repos/$GH_REPOSITORY/releases?per_page=100" --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name')"
+          plan="$(printf '%s\n' "$stable_tags" | node scripts/release-latest-policy.mjs "$CANDIDATE_TAG")"
+          advance="$(jq -r '.advance' <<< "$plan")"
+          reason="$(jq -r '.reason' <<< "$plan")"
+          latest="$(jq -r '.latest // ""' <<< "$plan")"
+          echo "advance=$advance" >> "$GITHUB_OUTPUT"
+          echo "reason=$reason" >> "$GITHUB_OUTPUT"
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+          echo "- Stable latest promotion: `$advance` (`$reason`; current stable release: `${latest:-none}`)." >> "$GITHUB_STEP_SUMMARY"
       - name: Publish the verified API image to GitHub Container Registry
+        id: publish_api
         env:
           IMAGE_URI: ghcr.io/${{ github.repository }}
           TAG: ${{ github.ref_name }}
@@ -241,13 +260,10 @@ jobs:
           docker tag moonwitness-api:production "$image:$TAG"
           version_digest="$(docker push "$image:$TAG" 2>&1 | tee /dev/stderr | grep -oE 'digest: sha256:[a-f0-9]{64}' | awk '{print $2}' | tail -n 1)"
           test -n "$version_digest"
-          if [[ "$TAG" != *-* ]]; then
-            docker tag moonwitness-api:production "$image:latest"
-            latest_digest="$(docker push "$image:latest" 2>&1 | tee /dev/stderr | grep -oE 'digest: sha256:[a-f0-9]{64}' | awk '{print $2}' | tail -n 1)"
-            test "$latest_digest" = "$version_digest"
-          fi
+          echo "digest=$version_digest" >> "$GITHUB_OUTPUT"
           echo "- API image `$image:$TAG`: `$version_digest`" >> "$GITHUB_STEP_SUMMARY"
       - name: Publish the verified Board image to GitHub Container Registry
+        id: publish_board
         env:
           IMAGE_URI: ghcr.io/${{ github.repository }}-board
           TAG: ${{ github.ref_name }}
@@ -257,13 +273,53 @@ jobs:
           docker tag moonwitness-board:production "$image:$TAG"
           version_digest="$(docker push "$image:$TAG" 2>&1 | tee /dev/stderr | grep -oE 'digest: sha256:[a-f0-9]{64}' | awk '{print $2}' | tail -n 1)"
           test -n "$version_digest"
-          if [[ "$TAG" != *-* ]]; then
-            docker tag moonwitness-board:production "$image:latest"
-            latest_digest="$(docker push "$image:latest" 2>&1 | tee /dev/stderr | grep -oE 'digest: sha256:[a-f0-9]{64}' | awk '{print $2}' | tail -n 1)"
-            test "$latest_digest" = "$version_digest"
-          fi
+          echo "digest=$version_digest" >> "$GITHUB_OUTPUT"
           echo "- Board image `$image:$TAG`: `$version_digest`" >> "$GITHUB_STEP_SUMMARY"
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes
+          TAG: ${{ github.ref_name }}
+          UPDATE_LATEST: ${{ steps.latest_policy.outputs.advance || 'false' }}
+        run: |
+          set -euo pipefail
+          if release="$(gh release view "$TAG" --json tagName,isDraft,isPrerelease 2>/dev/null)"; then
+            test "$(jq -r '.tagName' <<< "$release")" = "$TAG"
+            test "$(jq -r '.isDraft' <<< "$release")" = 'false'
+            if [[ "$TAG" == *-* ]]; then expected_prerelease=true; else expected_prerelease=false; fi
+            test "$(jq -r '.isPrerelease' <<< "$release")" = "$expected_prerelease"
+            echo "Reusing the existing published GitHub Release for $TAG."
+          elif [[ "$TAG" == *-* ]]; then
+            gh release create "$TAG" --verify-tag --generate-notes --prerelease --latest=false
+          elif [[ "$UPDATE_LATEST" == 'true' ]]; then
+            gh release create "$TAG" --verify-tag --generate-notes --latest
+          else
+            gh release create "$TAG" --verify-tag --generate-notes --latest=false
+          fi
+      - name: Advance stable API latest after release completion
+        if: steps.latest_policy.outputs.advance == 'true'
+        env:
+          IMAGE_URI: ghcr.io/${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+          VERSION_DIGEST: ${{ steps.publish_api.outputs.digest }}
+        run: |
+          set -euo pipefail
+          image="$(printf '%s' "$IMAGE_URI" | tr '[:upper:]' '[:lower:]')"
+          docker tag moonwitness-api:production "$image:latest"
+          latest_digest="$(docker push "$image:latest" 2>&1 | tee /dev/stderr | grep -oE 'digest: sha256:[a-f0-9]{64}' | awk '{print $2}' | tail -n 1)"
+          test -n "$latest_digest"
+          test "$latest_digest" = "$VERSION_DIGEST"
+          echo "- API stable latest advanced to `$TAG` at `$latest_digest`." >> "$GITHUB_STEP_SUMMARY"
+      - name: Advance stable Board latest after release completion
+        if: steps.latest_policy.outputs.advance == 'true'
+        env:
+          IMAGE_URI: ghcr.io/${{ github.repository }}-board
+          TAG: ${{ github.ref_name }}
+          VERSION_DIGEST: ${{ steps.publish_board.outputs.digest }}
+        run: |
+          set -euo pipefail
+          image="$(printf '%s' "$IMAGE_URI" | tr '[:upper:]' '[:lower:]')"
+          docker tag moonwitness-board:production "$image:latest"
+          latest_digest="$(docker push "$image:latest" 2>&1 | tee /dev/stderr | grep -oE 'digest: sha256:[a-f0-9]{64}' | awk '{print $2}' | tail -n 1)"
+          test -n "$latest_digest"
+          test "$latest_digest" = "$VERSION_DIGEST"
+          echo "- Board stable latest advanced to `$TAG` at `$latest_digest`." >> "$GITHUB_STEP_SUMMARY"

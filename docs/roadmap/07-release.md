@@ -192,6 +192,8 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ## M7.11 — Tag image memakai versi/SHA; update latest hanya setelah seluruh artefak wajib berhasil. Tidak deploy aplikasi.
 
+Stable `latest` hanya dimajukan bila tag candidate secara semver lebih baru dari stable GitHub Release yang sudah dipublikasikan. Prerelease, versi sama, dan versi lama tidak menulis alias tersebut; detail dan hasil test ada di [M7.11](evidence/M7.11.md). Hosted release masih perlu membuktikan policy berjalan dengan token repository.
+
 - **Prasyarat:** M7.10
 - **Baca/periksa:** Candidate digests; semver/prerelease state.
 - **Deliverable:** Registry promotion policy dan tests.

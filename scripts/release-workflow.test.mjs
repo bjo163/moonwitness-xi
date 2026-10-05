@@ -60,7 +60,7 @@ test('the verified and scanned API and Board images are smoke-tested and handed 
     (publish.match(/docker push "\$image:\$TAG"[\s\S]*?test -n "\$version_digest"/gu) ?? []).length,
     2
   );
-  assert.equal((publish.match(/test "\$latest_digest" = "\$version_digest"/gu) ?? []).length, 2);
+  assert.equal((publish.match(/test "\$latest_digest" = "\$VERSION_DIGEST"/gu) ?? []).length, 2);
   assert.doesNotMatch(publish, /docker (?:build|buildx build)/u);
   assert.match(publish, /needs: verify/u);
   assert.match(
@@ -70,10 +70,26 @@ test('the verified and scanned API and Board images are smoke-tested and handed 
   assert.doesNotMatch(publish, /deploy-pages|kubectl|docker compose up/u);
 });
 
-test('critical candidate vulnerabilities fail verification and prereleases never move latest', () => {
+test('critical candidates fail verification and latest only advances for a newer stable release', () => {
   assert.equal((verify.match(/severity: CRITICAL/gu) ?? []).length, 2);
   assert.equal((verify.match(/exit-code: '1'/gu) ?? []).length, 2);
-  const stableTagChecks = publish.match(/if \[\[ "\$TAG" != \*-[*] \]\]; then/gu);
-  assert.equal(stableTagChecks?.length ?? 0, 2);
+  assert.match(publish, /Plan stable latest promotion against published GitHub releases/u);
+  assert.match(publish, /gh api --paginate .*releases\?per_page=100/u);
+  assert.match(publish, /node scripts\/release-latest-policy\.mjs "\$CANDIDATE_TAG"/u);
+  assert.match(publish, /if: \$\{\{ !contains\(github\.ref_name, '-'\) \}\}/u);
+  assert.match(
+    publish,
+    /UPDATE_LATEST: \$\{\{ steps\.latest_policy\.outputs\.advance \|\| 'false' \}\}/u
+  );
+  assert.equal(
+    (publish.match(/if: steps\.latest_policy\.outputs\.advance == 'true'/gu) ?? []).length,
+    2
+  );
   assert.equal((publish.match(/docker push "\$image:latest"/gu) ?? []).length, 2);
+  assert.equal((publish.match(/test "\$latest_digest" = "\$VERSION_DIGEST"/gu) ?? []).length, 2);
+  assert.ok(
+    publish.indexOf('Create GitHub release') < publish.indexOf('Advance stable API latest')
+  );
+  assert.match(publish, /--prerelease --latest=false/u);
+  assert.match(publish, /--latest=false/u);
 });
