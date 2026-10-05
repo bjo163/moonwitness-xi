@@ -58,3 +58,7 @@ These names are documentation only; the current workflows do not read them. Neve
 - `dev` is the only integration branch. Do not configure an App or updater to create another long-lived branch.
 - A bot must not mark roadmap work complete without linked evidence and successful checks on the exact source SHA.
 - Record any unavailable GitHub account capability as a limitation; do not claim that a setting is enabled based on documentation alone.
+
+## Documentation publication incident lifecycle
+
+The Pages workflow manages only open issues with the exact `docs-publication` label. Failures update one issue body with the newest run and up to ten distinct run links; the reporter does not create per-run comments. The body uses a managed block, so maintainer notes and labels outside that block remain intact. Duplicate matching issues or malformed markers stop the reporter before it writes. A successful trusted Pages deploy resolves that docs-only incident. The reporter never searches or mutates security-report issues, and its job receives only `issues: write`.

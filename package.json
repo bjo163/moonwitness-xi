@@ -48,7 +48,7 @@
     "docs:publication:check": "node scripts/check-docs-publication.mjs",
     "docs:change:classify": "node scripts/classify-docs-change.mjs",
     "test:docs-portal": "pnpm docs:build && pnpm --filter @moonwitness/docs test",
-    "test:docs-publication": "node --test scripts/check-docs-publication.test.mjs scripts/write-docs-metadata.test.mjs scripts/classify-docs-change.test.mjs scripts/main-ci-policy.test.mjs",
+    "test:docs-publication": "node --test scripts/check-docs-publication.test.mjs scripts/write-docs-metadata.test.mjs scripts/classify-docs-change.test.mjs scripts/main-ci-policy.test.mjs scripts/docs-publication-incident.test.mjs",
     "test:docs-navigation": "node --test scripts/check-doc-navigation.test.mjs",
     "architecture:generate": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && pnpm --filter @moonwitness/orm-notification build && pnpm --filter @moonwitness/orm-organization build && pnpm --filter @moonwitness/orm-storage build && pnpm --filter @moonwitness/orm-workflow build && node scripts/architecture/generate-diagrams.mjs",
     "architecture:check": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && pnpm --filter @moonwitness/orm-notification build && pnpm --filter @moonwitness/orm-organization build && pnpm --filter @moonwitness/orm-storage build && pnpm --filter @moonwitness/orm-workflow build && node scripts/architecture/generate-diagrams.mjs --check",

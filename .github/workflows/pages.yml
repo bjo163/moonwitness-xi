@@ -15,6 +15,8 @@ on:
       - 'scripts/classify-docs-change.mjs'
       - 'scripts/docs-change-policy.mjs'
       - 'scripts/main-ci-policy.mjs'
+      - 'scripts/docs-publication-incident.mjs'
+      - 'scripts/docs-publication-incident.test.mjs'
       - 'scripts/write-docs-metadata.mjs'
       - 'packages/assets/**'
       - 'packages/ui/**'
@@ -105,6 +107,8 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
   build:
     name: Build and verify documentation
+    outputs:
+      source_sha: ${{ steps.source_sha.outputs.sha }}
     needs: change-detection
     if: always() && (needs.change-detection.result == 'skipped' || needs.change-detection.outputs.docs == 'true')
     runs-on: ubuntu-24.04
@@ -275,7 +279,7 @@ jobs:
 
   report-failure:
     name: Report documentation publication failure
-    if: always() && (needs.build.result == 'failure' || needs.deploy.result == 'failure') && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.publish == true))
+    if: always() && needs.build.outputs.source_sha != '' && (needs.build.result == 'failure' || needs.deploy.result == 'failure') && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.publish == true))
     needs: [change-detection, build, deploy]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -284,35 +288,37 @@ jobs:
       cancel-in-progress: false
     permissions:
       issues: write
-      actions: read
     steps:
-      - name: Find or open the docs publication incident issue
+      - name: Upsert the documentation publication incident
         env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
           SOURCE_REF: ${{ inputs.source_ref }}
-          PUBLISH: ${{ inputs.publish }}
-          EVENT_NAME: ${{ github.event_name }}
           EVENT_REF_NAME: ${{ github.ref_name }}
-          SOURCE_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
-            if [[ "$PUBLISH" == "true" && ( "$SOURCE_REF" == "main" || "$SOURCE_REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ) ]]; then
-              :
-            elif [[ "$PUBLISH" != "true" ]]; then
-              SOURCE_REF=dev
-            else
-              SOURCE_REF=invalid
-            fi
-          else
-            SOURCE_REF="$EVENT_REF_NAME"
-          fi
-          number="$(gh issue list --repo "$GH_REPO" --label docs-publication --state open --json number --jq '.[0].number // empty')"
-          if [[ -z "$number" ]]; then
-            gh label create docs-publication --repo "$GH_REPO" --color 1D76DB --description 'Documentation publication status' --force
-            url="$(gh issue create --repo "$GH_REPO" --title "Documentation publication failed: $SOURCE_REF" --label docs-publication --body "The static documentation publication check failed.\n\n- Source ref: \`$SOURCE_REF\`\n- Event SHA: \`$SOURCE_SHA\`\n- Workflow run: https://github.com/$GH_REPO/actions/runs/$RUN_ID\n\nReview the workflow logs, fix the issue, then use the Pages workflow dispatch to retry from the verified source. This issue is not an application release signal.")"
-            number="${url##*/}"
-          fi
-          gh issue comment "$number" --repo "$GH_REPO" --body "Documentation publication attempt failed for \`$SOURCE_REF\` (event SHA \`$SOURCE_SHA\`). Workflow: https://github.com/$GH_REPO/actions/runs/$RUN_ID. Inspect failing job logs, correct the problem, and retry Pages from a verified ref. No application release or version bump is created by this retry."
+          SOURCE_SHA: ${{ needs.build.outputs.source_sha }}
+          INCIDENT_STATUS: failed
+        run: node scripts/docs-publication-incident.mjs
+
+  resolve-failure:
+    name: Resolve recovered documentation publication incident
+    if: always() && needs.build.result == 'success' && needs.deploy.result == 'success' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.publish == true))
+    needs: [change-detection, build, deploy]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    concurrency:
+      group: repository-write-coordinator
+      cancel-in-progress: false
+    permissions:
+      issues: write
+    steps:
+      - name: Resolve the documentation publication incident after successful deploy
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          SOURCE_REF: ${{ inputs.source_ref }}
+          EVENT_REF_NAME: ${{ github.ref_name }}
+          SOURCE_SHA: ${{ needs.build.outputs.source_sha }}
+          INCIDENT_STATUS: recovered
+        run: node scripts/docs-publication-incident.mjs
