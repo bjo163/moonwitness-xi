@@ -64,7 +64,7 @@
     "test:affected": "node --test scripts/select-affected.test.mjs",
     "test:release-classification": "node --test scripts/release-classification.test.mjs",
     "test:promotion-policy": "node --test scripts/git-range.test.mjs scripts/promotion-risk.test.mjs scripts/promotion-approval.test.mjs",
-    "test:security-policy": "node --test scripts/security-scan-policy.test.mjs"
+    "test:security-policy": "node --test scripts/security-scan-policy.test.mjs scripts/check-trivy-sarif.test.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -1,7 +1,8 @@
-import { deepEqual, equal } from 'node:assert/strict';
+import { deepEqual, equal, throws } from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   evaluateScanResult,
+  extractSarifFindings,
   isExceptionActive,
   validateExceptions,
 } from './security-scan-policy.mjs';
@@ -21,6 +22,42 @@ test('scanner errors fail closed rather than reporting a clean scan', () => {
   });
   equal(result.passed, false);
   equal(result.reason, 'scanner-error');
+});
+
+test('extracts severities from SARIF and allows high findings under a critical-only gate', () => {
+  const sarif = {
+    runs: [
+      {
+        tool: {
+          driver: {
+            rules: [
+              { id: 'critical-fixture', properties: { tags: ['CRITICAL', 'security'] } },
+              { id: 'high-fixture', properties: { tags: ['HIGH', 'security'] } },
+            ],
+          },
+        },
+        results: [{ ruleId: 'critical-fixture' }, { ruleId: 'high-fixture' }],
+      },
+    ],
+  };
+  const findings = extractSarifFindings(sarif);
+  deepEqual(findings, [
+    { id: 'critical-fixture', severity: 'CRITICAL' },
+    { id: 'high-fixture', severity: 'HIGH' },
+  ]);
+  equal(evaluateScanResult({ exitCode: 0, findings }).passed, false);
+  equal(evaluateScanResult({ exitCode: 0, findings: findings.slice(1) }).passed, true);
+});
+
+test('rejects malformed SARIF and dangling result rule references', () => {
+  throws(() => extractSarifFindings({ runs: [] }), /at least one run/);
+  throws(
+    () =>
+      extractSarifFindings({
+        runs: [{ tool: { driver: { rules: [] } }, results: [{ ruleId: 'missing' }] }],
+      }),
+    /missing vulnerability rule/
+  );
 });
 
 test('only unexpired ISO date exceptions remain active', () => {

@@ -269,38 +269,41 @@ jobs:
       - name: Smoke test API and Board containers against isolated PostgreSQL
         run: bash scripts/smoke-containers.sh
       - name: Scan locked workspace runtime dependencies for CRITICAL vulnerabilities
+        id: trivy-workspace
+        continue-on-error: true
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
         with:
           scan-type: fs
           scan-ref: .
           scanners: vuln
-          severity: CRITICAL
           ignore-unfixed: true
           format: sarif
           output: trivy-results.sarif
-          exit-code: '1'
+          exit-code: '0'
       - name: Scan production API image for CRITICAL vulnerabilities
+        id: trivy-api-image
+        continue-on-error: true
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
         with:
           scan-type: image
           image-ref: moonwitness-api:production
           vuln-type: os,library
-          severity: CRITICAL
           ignore-unfixed: true
           format: sarif
           output: trivy-api-image.sarif
-          exit-code: '1'
+          exit-code: '0'
       - name: Scan production Board image for CRITICAL vulnerabilities
+        id: trivy-board-image
+        continue-on-error: true
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
         with:
           scan-type: image
           image-ref: moonwitness-board:production
           vuln-type: os,library
-          severity: CRITICAL
           ignore-unfixed: true
           format: sarif
           output: trivy-board-image.sarif
-          exit-code: '1'
+          exit-code: '0'
       - name: Upload locked workspace scan SARIF
         if: always() && hashFiles('trivy-results.sarif') != ''
         uses: github/codeql-action/upload-sarif@1190a975f95ce23525efb6a3fc21ea29567c1b52 # v3
@@ -319,6 +322,11 @@ jobs:
         with:
           sarif_file: trivy-board-image.sarif
           category: trivy-board-image
+      - name: Require successful scans and block CRITICAL vulnerabilities
+        if: always()
+        env:
+          TRIVY_SCAN_OUTCOMES: '["${{ steps.trivy-workspace.outcome }}","${{ steps.trivy-api-image.outcome }}","${{ steps.trivy-board-image.outcome }}"]'
+        run: node scripts/check-trivy-sarif.mjs trivy-results.sarif trivy-api-image.sarif trivy-board-image.sarif
   ci-gate:
     name: ci-gate
     if: always()
