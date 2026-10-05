@@ -36,7 +36,7 @@ CMD ["node", "dist/server.js"]
 FROM build AS board-build
 RUN pnpm --filter @moonwitness/board build && mkdir -p /deploy/board && cp -r apps/board/dist /deploy/board/dist
 
-FROM nginx:1.27-alpine AS board-runtime
+FROM nginx:1.30.5-alpine AS board-runtime
 COPY --from=board-build /deploy/board/dist /usr/share/nginx/html
 COPY deploy/nginx-board.conf /etc/nginx/conf.d/default.conf
 EXPOSE 8080
