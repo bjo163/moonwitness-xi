@@ -1,0 +1,57 @@
+name: Roadmap issue plan
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - 'ROADMAP.md'
+      - 'docs/roadmap/**'
+      - 'scripts/roadmap/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/actions/setup-pnpm/action.yml'
+      - '.github/workflows/roadmap-issue-plan.yml'
+  schedule:
+    - cron: '37 8 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: read
+
+concurrency:
+  group: roadmap-issue-plan-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: generate read-only issue reconciliation plan
+    if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      issues: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          node-version: '22'
+          pnpm-version: '11'
+      - name: Build read-only reconciliation plan
+        run: node scripts/roadmap/sync-issues.mjs --output roadmap-issue-plan.json --quiet
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY_ID: ${{ github.repository_id }}
+          GITHUB_SHA: ${{ github.sha }}
+      - name: Upload plan with source identity
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: roadmap-issue-plan-${{ github.sha }}
+          path: roadmap-issue-plan.json
+          if-no-files-found: error
+          retention-days: 7

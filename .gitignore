@@ -10,6 +10,7 @@ storage/attachments/
 *.log
 logs/
 tmp-test-logs/
+roadmap-issue-plan.json
 test-results/
 playwright-report/
 .DS_Store

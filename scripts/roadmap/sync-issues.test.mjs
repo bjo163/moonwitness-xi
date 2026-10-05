@@ -163,15 +163,15 @@ test('update re-reads the issue and preserves concurrent maintainer notes and me
     title: '[M11.03] old title',
     body: `${generated.body}\n\nMaintainer note: original`,
     state: 'open',
-    labels: [{ name: 'roadmap' }],
-    assignees: [{ login: 'planner' }],
+    labels: [{ name: 'roadmap' }, { name: 'removed-by-maintainer' }],
+    assignees: [{ login: 'planner' }, { login: 'removed-reviewer' }],
     milestone: { number: 11, title: 'M11' },
   };
   const latest = {
     ...original,
     body: `${original.body}\n\nConcurrent note: preserve me`,
-    labels: [...original.labels, { name: 'maintainer-label' }],
-    assignees: [...original.assignees, { login: 'reviewer' }],
+    labels: [{ name: 'roadmap' }, { name: 'maintainer-label' }],
+    assignees: [{ login: 'planner' }, { login: 'reviewer' }],
   };
   let patched;
   const client = {
@@ -347,6 +347,80 @@ test('GitHub issue adapter follows open and closed pagination and serializes iss
   assert.equal(calls[3].init.body.includes('test-token'), false);
   await client.getIssue(42);
   assert.equal(calls[4].url.endsWith('/issues/42'), true);
+});
+
+test('GitHub adapter honors bounded rate-limit delays on reads', async () => {
+  const delays = [];
+  let calls = 0;
+  const client = createGitHubIssuesClient({
+    token: 'test-token',
+    owner: 'owner',
+    repo: 'repo',
+    sleepImpl: async (milliseconds) => delays.push(milliseconds),
+    fetchImpl: async () => {
+      calls += 1;
+      if (calls === 1)
+        return {
+          ok: false,
+          status: 429,
+          headers: { get: (name) => (name === 'retry-after' ? '2' : null) },
+          text: async () => 'API rate limit exceeded',
+        };
+      return { ok: true, status: 200, json: async () => [] };
+    },
+  });
+  assert.deepEqual(await client.listAll(), []);
+  assert.equal(calls, 3);
+  assert.deepEqual(delays, [2000]);
+});
+
+test('GitHub adapter distinguishes permission failures and never retries writes blindly', async () => {
+  let calls = 0;
+  const client = createGitHubIssuesClient({
+    token: 'test-token',
+    owner: 'owner',
+    repo: 'repo',
+    sleepImpl: async () => assert.fail('permission failures must not be retried'),
+    fetchImpl: async () => {
+      calls += 1;
+      return {
+        ok: false,
+        status: calls === 1 ? 403 : 503,
+        headers: { get: () => null },
+        text: async () => (calls === 1 ? 'Resource not accessible by integration' : 'unavailable'),
+      };
+    },
+  });
+  await assert.rejects(client.listAll(), /API 403: Resource not accessible/u);
+  assert.equal(calls, 1);
+  await assert.rejects(client.create({ title: 'test', body: 'body' }), /API 503/u);
+  assert.equal(calls, 2);
+});
+
+test('GitHub adapter stops when a rate-limit reset exceeds its retry window', async () => {
+  let calls = 0;
+  const client = createGitHubIssuesClient({
+    token: 'test-token',
+    owner: 'owner',
+    repo: 'repo',
+    now: () => 1_000_000,
+    maxRetryDelayMs: 5000,
+    sleepImpl: async () => assert.fail('over-bound retries must stop without sleeping'),
+    fetchImpl: async () => {
+      calls += 1;
+      return {
+        ok: false,
+        status: 403,
+        headers: {
+          get: (name) =>
+            name === 'x-ratelimit-remaining' ? '0' : name === 'x-ratelimit-reset' ? '1060' : null,
+        },
+        text: async () => 'API rate limit exceeded',
+      };
+    },
+  });
+  await assert.rejects(client.listAll(), /exceeds the configured 5000ms bound/u);
+  assert.equal(calls, 1);
 });
 
 test('task renderer extracts implementation and acceptance sections from its exact card', () => {

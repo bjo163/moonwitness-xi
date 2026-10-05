@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
+import { setTimeout as sleep } from 'node:timers/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -11,7 +12,7 @@ const endMarker = '<!-- END MOONWITNESS MANAGED -->';
 
 /**
  * @typedef {{ number: number, title: string, body: string, state: 'open'|'closed', labels?: Array<{name: string}>, milestone?: {number: number, title: string}|null, assignees?: Array<{login: string}>, pull_request?: unknown }} RemoteIssue
- * @typedef {{ taskId: string, operation: 'create'|'update'|'noop'|'conflict', issueNumber?: number, reason?: string, title: string, body: string, labels?: string[], assignees?: string[], milestoneTitle?: string, expectedTitle?: string, expectedManagedBlock?: string, expectedMilestoneTitle?: string }} IssueOperation
+ * @typedef {{ taskId: string, operation: 'create'|'update'|'noop'|'conflict', issueNumber?: number, reason?: string, title: string, body: string, labels?: string[], assignees?: string[], managedLabels?: string[], managedAssignees?: string[], milestoneTitle?: string, expectedTitle?: string, expectedManagedBlock?: string, expectedMilestoneTitle?: string }} IssueOperation
  */
 
 function sha256(value) {
@@ -187,6 +188,7 @@ export function planIssueSync({
         ...(task.assignee ? [task.assignee] : []),
       ]),
     ].sort();
+    const managedAssignees = task.assignee ? [task.assignee] : [];
     if (matches.length === 0)
       return {
         taskId: task.id,
@@ -195,6 +197,8 @@ export function planIssueSync({
         body: `${marker}\n${block}\n`,
         labels: [...new Set(managedLabels)].sort(),
         assignees,
+        managedLabels: [...new Set(managedLabels)].sort(),
+        managedAssignees,
         milestoneTitle: task.milestone,
       };
     const issue = matches[0];
@@ -237,6 +241,8 @@ export function planIssueSync({
         body: issue.body,
         labels: desiredLabels,
         assignees,
+        managedLabels: [...new Set(managedLabels)].sort(),
+        managedAssignees,
         milestoneTitle: task.milestone,
       };
     return {
@@ -247,6 +253,8 @@ export function planIssueSync({
       body,
       labels: desiredLabels,
       assignees,
+      managedLabels: [...new Set(managedLabels)].sort(),
+      managedAssignees,
       milestoneTitle: task.milestone,
       expectedTitle: issue.title,
       expectedManagedBlock: currentBlock,
@@ -276,22 +284,70 @@ export function planIssueSync({
 }
 
 /** GitHub REST adapter; list-all follows pagination and retains closed issues. */
-export function createGitHubIssuesClient({ token, owner, repo, fetchImpl = globalThis.fetch }) {
+export function createGitHubIssuesClient({
+  token,
+  owner,
+  repo,
+  fetchImpl = globalThis.fetch,
+  sleepImpl = sleep,
+  now = Date.now,
+  maxRetryDelayMs = 60_000,
+}) {
   if (!token) throw new Error('GITHUB_TOKEN is required for GitHub API access.');
   const base = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues`;
   async function request(url, init = {}) {
-    const response = await fetchImpl(url, {
-      ...init,
-      headers: {
-        Accept: 'application/vnd.github+json',
-        Authorization: `Bearer ${token}`,
-        'X-GitHub-Api-Version': '2022-11-28',
-        ...(init.headers ?? {}),
-      },
-    });
-    if (!response.ok)
-      throw new Error(`GitHub Issues API ${response.status}: ${await response.text()}`);
-    return response.status === 204 ? null : response.json();
+    const method = init.method ?? 'GET';
+    const canRetry = method === 'GET';
+    for (let attempt = 0; ; attempt += 1) {
+      let response;
+      try {
+        response = await fetchImpl(url, {
+          ...init,
+          headers: {
+            Accept: 'application/vnd.github+json',
+            Authorization: `Bearer ${token}`,
+            'X-GitHub-Api-Version': '2022-11-28',
+            ...(init.headers ?? {}),
+          },
+        });
+      } catch (error) {
+        if (!canRetry || attempt >= 3)
+          throw new Error(`GitHub Issues API request failed: ${error.message}`, { cause: error });
+        await sleepImpl(Math.min(500 * 2 ** attempt, maxRetryDelayMs));
+        continue;
+      }
+      if (response.ok) return response.status === 204 ? null : response.json();
+
+      const message = await response.text();
+      const retryAfter = response.headers?.get('retry-after');
+      const resetAt = Number(response.headers?.get('x-ratelimit-reset'));
+      const remaining = response.headers?.get('x-ratelimit-remaining');
+      const rateLimited =
+        response.status === 429 ||
+        (response.status === 403 && (remaining === '0' || /rate limit/iu.test(message)));
+      const transient = [500, 502, 503, 504].includes(response.status);
+      if (!canRetry || attempt >= 3 || (!rateLimited && !transient))
+        throw new Error(`GitHub Issues API ${response.status}: ${message}`);
+
+      let delayMs;
+      if (retryAfter !== null && retryAfter !== undefined) {
+        const seconds = Number(retryAfter);
+        const retryDate = Date.parse(retryAfter);
+        delayMs = Number.isFinite(seconds)
+          ? seconds * 1000
+          : Number.isFinite(retryDate)
+            ? Math.max(0, retryDate - now())
+            : undefined;
+      }
+      if (delayMs === undefined && rateLimited && Number.isFinite(resetAt) && resetAt > 0)
+        delayMs = Math.max(0, resetAt * 1000 - now());
+      delayMs ??= Math.min(500 * 2 ** attempt, maxRetryDelayMs);
+      if (delayMs > maxRetryDelayMs)
+        throw new Error(
+          `GitHub Issues API ${response.status} retry delay ${delayMs}ms exceeds the configured ${maxRetryDelayMs}ms bound: ${message}`
+        );
+      await sleepImpl(delayMs);
+    }
   }
   async function listPages(url) {
     const result = [];
@@ -496,8 +552,10 @@ export async function applyIssuePlan({
       );
       const metadataAlreadyCurrent =
         latest.milestone?.title === operation.milestoneTitle &&
-        (operation.labels ?? []).every((label) => currentLabels.has(label.toLowerCase())) &&
-        (operation.assignees ?? []).every((login) => currentAssignees.has(login.toLowerCase()));
+        (operation.managedLabels ?? []).every((label) => currentLabels.has(label.toLowerCase())) &&
+        (operation.managedAssignees ?? []).every((login) =>
+          currentAssignees.has(login.toLowerCase())
+        );
       if (
         latestBlock === desiredBlock &&
         latest.title === operation.title &&
@@ -513,11 +571,11 @@ export async function applyIssuePlan({
       const mergedLabels = new Map(
         (latest.labels ?? []).map(({ name }) => [name.toLowerCase(), name])
       );
-      for (const label of operation.labels ?? [])
+      for (const label of operation.managedLabels ?? [])
         if (!mergedLabels.has(label.toLowerCase())) mergedLabels.set(label.toLowerCase(), label);
       const mergedAssignees = new Set([
         ...(latest.assignees ?? []).map(({ login }) => login),
-        ...(operation.assignees ?? []),
+        ...(operation.managedAssignees ?? []),
       ]);
       const reconciled = {
         ...operation,
@@ -533,6 +591,18 @@ export async function applyIssuePlan({
 
 async function main() {
   const apply = process.argv.includes('--apply');
+  const quiet = process.argv.includes('--quiet');
+  const outputIndex = process.argv.indexOf('--output');
+  const outputPath = outputIndex >= 0 ? process.argv[outputIndex + 1] : undefined;
+  if (outputIndex >= 0 && (!outputPath || outputPath.startsWith('--')))
+    throw new Error('--output requires a repository-relative file path.');
+  const resolvedOutput = outputPath ? path.resolve(repositoryRoot, outputPath) : undefined;
+  if (
+    resolvedOutput &&
+    resolvedOutput !== repositoryRoot &&
+    !resolvedOutput.startsWith(`${repositoryRoot}${path.sep}`)
+  )
+    throw new Error('--output must stay inside the repository.');
   const owner = process.env.GITHUB_REPOSITORY?.split('/')[0];
   const repo = process.env.GITHUB_REPOSITORY?.split('/')[1];
   const repositoryId = process.env.GITHUB_REPOSITORY_ID;
@@ -595,7 +665,16 @@ async function main() {
       (name) => !metadata.labels.some((label) => label.name.toLowerCase() === name.toLowerCase())
     ),
   };
-  process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
+  const renderedPlan = `${JSON.stringify(plan, null, 2)}\n`;
+  if (resolvedOutput) await writeFile(resolvedOutput, renderedPlan, 'utf8');
+  if (quiet) {
+    const counts = Object.groupBy(plan.operations, ({ operation }) => operation);
+    process.stdout.write(
+      `Planned ${plan.operations.length} task(s): ${['create', 'update', 'noop', 'conflict']
+        .map((operation) => `${operation}=${counts[operation]?.length ?? 0}`)
+        .join(', ')}.\n`
+    );
+  } else process.stdout.write(renderedPlan);
   if (!apply) return;
   const results = await applyIssuePlan({
     plan,
