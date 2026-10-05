@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Archive, ArrowLeft, Check, Loader2, Save, Trash2, Zap } from 'lucide-react';
 import { evalDomain, type FieldMeta, type ResolvedViews } from '@moonwitness/client';
 import { useRecord, useRecordMutations } from '@/hooks/use-model';
@@ -19,12 +19,45 @@ interface FormViewProps {
   onSaved?: (id: number) => void;
 }
 
-export function FormView({ model, views, recordId, onBack, onSaved }: FormViewProps) {
+export function FormView(props: FormViewProps) {
+  const { data: initialRecord, isLoading } = useRecord(props.model, props.recordId);
+  if (props.recordId !== undefined && isLoading) {
+    return (
+      <div className="ink-panel p-8 space-y-6 bg-card">
+        <Skeleton className="h-10 w-full bg-ink/10" />
+        <Skeleton className="h-10 w-full bg-ink/10" />
+        <Skeleton className="h-10 w-2/3 bg-ink/10" />
+      </div>
+    );
+  }
+  return (
+    <FormEditor
+      key={`${props.model}:${props.recordId ?? 'new'}`}
+      {...props}
+      initialRecord={initialRecord}
+    />
+  );
+}
+
+function FormEditor({
+  model,
+  views,
+  recordId,
+  onBack,
+  onSaved,
+  initialRecord,
+}: FormViewProps & { initialRecord?: Record<string, unknown> }) {
   const isCreate = recordId === undefined;
-  const { data: initialRecord, isLoading } = useRecord(model, recordId);
   const mutations = useRecordMutations(model);
 
-  const [formData, setFormData] = useState<Record<string, unknown>>({});
+  const [formData, setFormData] = useState<Record<string, unknown>>(() => {
+    if (initialRecord) return { ...initialRecord };
+    return Object.fromEntries(
+      views.fields
+        .filter((field) => field.default !== undefined)
+        .map((field) => [field.name, field.default])
+    );
+  });
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -34,23 +67,6 @@ export function FormView({ model, views, recordId, onBack, onSaved }: FormViewPr
   const fieldMap = useMemo(() => {
     return new Map<string, FieldMeta>(views.fields.map((f) => [f.name, f]));
   }, [views]);
-
-  // Populate form defaults or loaded record
-  useEffect(() => {
-    if (isCreate) {
-      const defaults: Record<string, unknown> = {};
-      for (const f of views.fields) {
-        if (f.default !== undefined) {
-          defaults[f.name] = f.default;
-        }
-      }
-      setFormData(defaults);
-      setDirty(false);
-    } else if (initialRecord) {
-      setFormData({ ...initialRecord });
-      setDirty(false);
-    }
-  }, [isCreate, initialRecord, views]);
 
   // Warn on browser tab close or reload if dirty
   useEffect(() => {
@@ -64,27 +80,12 @@ export function FormView({ model, views, recordId, onBack, onSaved }: FormViewPr
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [dirty]);
 
-  const handleBackSafe = () => {
+  const handleBackSafe = useCallback(() => {
     if (dirty && !window.confirm('You have unsaved changes. Are you sure you want to leave?')) {
       return;
     }
     onBack();
-  };
-
-  // Keyboard shortcut listener: Ctrl+S to save, Esc to go back
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === 's' && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        void handleSave();
-      }
-      if (e.key === 'Escape') {
-        handleBackSafe();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [dirty, formData, handleSave, handleBackSafe]);
+  }, [dirty, onBack]);
 
   function handleChange(name: string, val: unknown) {
     setFormData((prev) => {
@@ -103,66 +104,85 @@ export function FormView({ model, views, recordId, onBack, onSaved }: FormViewPr
     setSuccessMsg(null);
   }
 
-  async function handleSave(e?: React.FormEvent) {
-    if (e) e.preventDefault();
-    if (saveInFlight.current) return;
-    setError(null);
-    setSuccessMsg(null);
+  const handleSave = useCallback(
+    async (e?: React.FormEvent) => {
+      if (e) e.preventDefault();
+      if (saveInFlight.current) return;
+      setError(null);
+      setSuccessMsg(null);
 
-    // Validate required fields (respecting dynamic visibility and required predicates)
-    for (const [name, f] of fieldMap.entries()) {
-      if (f.type === 'one2many') continue;
-      const isInvisible = evalDomain(f.invisible, formData);
-      const isRequired = f.required || evalDomain(f.requiredIf, formData);
+      // Validate required fields (respecting dynamic visibility and required predicates)
+      for (const [name, f] of fieldMap.entries()) {
+        if (f.type === 'one2many') continue;
+        const isInvisible = evalDomain(f.invisible, formData);
+        const isRequired = f.required || evalDomain(f.requiredIf, formData);
 
-      if (
-        !isInvisible &&
-        isRequired &&
-        (formData[name] === undefined || formData[name] === null || formData[name] === '')
-      ) {
-        setError(`Field '${f.label}' is required.`);
-        return;
-      }
-    }
-
-    try {
-      const cleanValues: Record<string, unknown> = {};
-      for (const [key, val] of Object.entries(formData)) {
-        if (['id', 'create_date', 'write_date', 'create_uid', 'write_uid'].includes(key)) continue;
-        const field = fieldMap.get(key);
-        if (field && (field.readonly || field.type === 'one2many')) continue;
-        if (typeof val === 'object' && val !== null && !Array.isArray(val) && !field) continue;
-        cleanValues[key] = val;
-      }
-      for (const field of views.fields) {
         if (
-          field.default !== undefined &&
-          !Object.hasOwn(cleanValues, field.name) &&
-          !field.readonly &&
-          field.type !== 'one2many'
+          !isInvisible &&
+          isRequired &&
+          (formData[name] === undefined || formData[name] === null || formData[name] === '')
         ) {
-          cleanValues[field.name] = field.default;
+          setError(`Field '${f.label}' is required.`);
+          return;
         }
       }
 
-      saveInFlight.current = true;
-      const saved = await mutations.save.mutateAsync({
-        id: recordId,
-        values: cleanValues,
-      });
-      setDirty(false);
-      setSuccessMsg('Record saved successfully!');
-      setTimeout(() => setSuccessMsg(null), 3500);
+      try {
+        const cleanValues: Record<string, unknown> = {};
+        for (const [key, val] of Object.entries(formData)) {
+          if (['id', 'create_date', 'write_date', 'create_uid', 'write_uid'].includes(key))
+            continue;
+          const field = fieldMap.get(key);
+          if (field && (field.readonly || field.type === 'one2many')) continue;
+          if (typeof val === 'object' && val !== null && !Array.isArray(val) && !field) continue;
+          cleanValues[key] = val;
+        }
+        for (const field of views.fields) {
+          if (
+            field.default !== undefined &&
+            !Object.hasOwn(cleanValues, field.name) &&
+            !field.readonly &&
+            field.type !== 'one2many'
+          ) {
+            cleanValues[field.name] = field.default;
+          }
+        }
 
-      if (isCreate && saved?.id) {
-        onSaved?.(saved.id);
+        saveInFlight.current = true;
+        const saved = await mutations.save.mutateAsync({
+          id: recordId,
+          values: cleanValues,
+        });
+        setDirty(false);
+        setSuccessMsg('Record saved successfully!');
+        setTimeout(() => setSuccessMsg(null), 3500);
+
+        if (isCreate && saved?.id) {
+          onSaved?.(saved.id);
+        }
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Failed to save record.');
+      } finally {
+        saveInFlight.current = false;
       }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to save record.');
-    } finally {
-      saveInFlight.current = false;
-    }
-  }
+    },
+    [fieldMap, formData, views.fields, mutations.save, recordId, isCreate, onSaved]
+  );
+
+  // Keyboard shortcut listener: Ctrl+S to save, Esc to go back
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === 's' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        void handleSave();
+      }
+      if (e.key === 'Escape') {
+        handleBackSafe();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleSave, handleBackSafe]);
 
   async function handleArchive(hard = false) {
     if (!recordId) return;
@@ -320,117 +340,106 @@ export function FormView({ model, views, recordId, onBack, onSaved }: FormViewPr
       )}
 
       {/* Form sections */}
-      {isLoading ? (
-        <div className="ink-panel p-8 space-y-6 bg-card">
-          <Skeleton className="h-10 w-full bg-ink/10" />
-          <Skeleton className="h-10 w-full bg-ink/10" />
-          <Skeleton className="h-10 w-2/3 bg-ink/10" />
-        </div>
-      ) : (
-        <form onSubmit={handleSave} className="space-y-6">
-          {sections.map((section, sIdx) => {
-            const visibleFields = section.fields
-              .map((fieldName) => fieldMap.get(fieldName))
-              .filter((f): f is FieldMeta => f !== undefined && f.name !== 'id');
+      <form onSubmit={handleSave} className="space-y-6">
+        {sections.map((section, sIdx) => {
+          const visibleFields = section.fields
+            .map((fieldName) => fieldMap.get(fieldName))
+            .filter((f): f is FieldMeta => f !== undefined && f.name !== 'id');
 
-            return (
-              <div key={sIdx} className="ink-panel bg-card p-6 sm:p-8">
-                {section.title && (
-                  <div className="mb-6 border-b-2 border-ink pb-2">
-                    <h2 className="font-display text-xl uppercase tracking-wider">
-                      {section.title}
-                    </h2>
-                  </div>
-                )}
+          return (
+            <div key={sIdx} className="ink-panel bg-card p-6 sm:p-8">
+              {section.title && (
+                <div className="mb-6 border-b-2 border-ink pb-2">
+                  <h2 className="font-display text-xl uppercase tracking-wider">{section.title}</h2>
+                </div>
+              )}
 
-                <div className="grid gap-6 sm:grid-cols-2">
-                  {visibleFields.map((field) => {
-                    const isInvisible = evalDomain(field.invisible, formData);
-                    if (isInvisible) return null;
+              <div className="grid gap-6 sm:grid-cols-2">
+                {visibleFields.map((field) => {
+                  const isInvisible = evalDomain(field.invisible, formData);
+                  if (isInvisible) return null;
 
-                    const isReadonly = field.readonly || evalDomain(field.readonlyIf, formData);
-                    const isRequired = field.required || evalDomain(field.requiredIf, formData);
+                  const isReadonly = field.readonly || evalDomain(field.readonlyIf, formData);
+                  const isRequired = field.required || evalDomain(field.requiredIf, formData);
 
-                    if (field.type === 'one2many') {
-                      return (
-                        <div key={field.name} className="sm:col-span-2 pt-2">
-                          <One2ManyWidget field={field} parentId={recordId} isCreate={isCreate} />
-                        </div>
-                      );
-                    }
-
-                    const isFullWidth =
-                      field.type === 'string' && field.name.includes('description');
-                    const relatedObj = initialRecord?.[relationKey(field)] as Record<
-                      string,
-                      unknown
-                    > | null;
-
-                    const effectiveField: FieldMeta = {
-                      ...field,
-                      readonly: isReadonly,
-                      required: isRequired,
-                    };
-
-                    const contextDomain = (() => {
-                      if (field.name === 'state' || field.name === 'state_id') {
-                        const countryVal = formData.country_id ?? formData.country;
-                        if (countryVal) {
-                          return [['country_id', '=', countryVal]] as Array<
-                            [string, string, unknown]
-                          >;
-                        }
-                      }
-                      if (field.name === 'bank' || field.name === 'bank_id') {
-                        const countryVal = formData.country_id ?? formData.country;
-                        if (countryVal) {
-                          return [['country_id', '=', countryVal]] as Array<
-                            [string, string, unknown]
-                          >;
-                        }
-                      }
-                      return undefined;
-                    })();
-
+                  if (field.type === 'one2many') {
                     return (
-                      <div
-                        key={field.name}
-                        className={isFullWidth ? 'sm:col-span-2 space-y-2' : 'space-y-2'}
-                      >
-                        <div className="flex items-center justify-between">
-                          <Label
-                            htmlFor={`field-${field.name}`}
-                            className="font-bold text-xs uppercase tracking-wider"
-                          >
-                            {field.label}
-                            {isRequired && <span className="ml-1 text-pink">*</span>}
-                          </Label>
-                          {isReadonly && (
-                            <span className="font-mono text-[10px] uppercase text-ink-faint">
-                              Readonly
-                            </span>
-                          )}
-                        </div>
-
-                        <FieldWidget
-                          id={`field-${field.name}`}
-                          field={effectiveField}
-                          value={formData[field.name] ?? field.default}
-                          onChange={(val) => handleChange(field.name, val)}
-                          related={relatedObj}
-                          contextDomain={contextDomain}
-                        />
-
-                        {field.help && <p className="text-xs text-ink-faint">{field.help}</p>}
+                      <div key={field.name} className="sm:col-span-2 pt-2">
+                        <One2ManyWidget field={field} parentId={recordId} isCreate={isCreate} />
                       </div>
                     );
-                  })}
-                </div>
+                  }
+
+                  const isFullWidth = field.type === 'string' && field.name.includes('description');
+                  const relatedObj = initialRecord?.[relationKey(field)] as Record<
+                    string,
+                    unknown
+                  > | null;
+
+                  const effectiveField: FieldMeta = {
+                    ...field,
+                    readonly: isReadonly,
+                    required: isRequired,
+                  };
+
+                  const contextDomain = (() => {
+                    if (field.name === 'state' || field.name === 'state_id') {
+                      const countryVal = formData.country_id ?? formData.country;
+                      if (countryVal) {
+                        return [['country_id', '=', countryVal]] as Array<
+                          [string, string, unknown]
+                        >;
+                      }
+                    }
+                    if (field.name === 'bank' || field.name === 'bank_id') {
+                      const countryVal = formData.country_id ?? formData.country;
+                      if (countryVal) {
+                        return [['country_id', '=', countryVal]] as Array<
+                          [string, string, unknown]
+                        >;
+                      }
+                    }
+                    return undefined;
+                  })();
+
+                  return (
+                    <div
+                      key={field.name}
+                      className={isFullWidth ? 'sm:col-span-2 space-y-2' : 'space-y-2'}
+                    >
+                      <div className="flex items-center justify-between">
+                        <Label
+                          htmlFor={`field-${field.name}`}
+                          className="font-bold text-xs uppercase tracking-wider"
+                        >
+                          {field.label}
+                          {isRequired && <span className="ml-1 text-pink">*</span>}
+                        </Label>
+                        {isReadonly && (
+                          <span className="font-mono text-[10px] uppercase text-ink-faint">
+                            Readonly
+                          </span>
+                        )}
+                      </div>
+
+                      <FieldWidget
+                        id={`field-${field.name}`}
+                        field={effectiveField}
+                        value={formData[field.name] ?? field.default}
+                        onChange={(val) => handleChange(field.name, val)}
+                        related={relatedObj}
+                        contextDomain={contextDomain}
+                      />
+
+                      {field.help && <p className="text-xs text-ink-faint">{field.help}</p>}
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
-        </form>
-      )}
+            </div>
+          );
+        })}
+      </form>
 
       {/* Audit Trail & Meta box */}
       {!isCreate && initialRecord && (
