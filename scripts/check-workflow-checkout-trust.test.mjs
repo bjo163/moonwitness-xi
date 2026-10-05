@@ -13,8 +13,11 @@ const pages = `
     if [[ "$DISPATCH_REF" != "refs/heads/main" ]]; then exit 1; fi
     [[ "$SOURCE_REF" =~ ^v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$ ]]
     select(.publishedAt != null and .isDraft == false and .isPrerelease == false)
+    name: Verify and select a published stable release tag
     git merge-base --is-ancestor "$release_sha" refs/remotes/origin/main
     git checkout --detach "$RELEASE_TAG"
+    test "$(git rev-parse HEAD)" = "$release_sha"
+    name: Verify and select an immutable main source SHA
     git merge-base --is-ancestor "$SOURCE_SHA" refs/remotes/origin/main
     git cat-file -e "$SOURCE_SHA^{commit}"
     git checkout --detach "$SOURCE_SHA"

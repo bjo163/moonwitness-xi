@@ -65,6 +65,16 @@ export function inspectTrustedCheckoutPolicies({
   ) {
     findings.push('Pages must validate a release tag before checking out its source code.');
   }
+  if (!pages.includes('test "$(git rev-parse HEAD)" = "$release_sha"'))
+    findings.push(
+      'Pages must verify the checked-out release tag still matches its resolved commit.'
+    );
+  if (
+    pages.indexOf('git checkout --detach "$RELEASE_TAG"') >
+    pages.indexOf('name: Verify and select an immutable main source SHA')
+  ) {
+    findings.push('Pages must keep stable-tag checkout in its tag-selection step.');
+  }
   if (!pages.includes('isPrerelease == false'))
     findings.push('Pages must reject prerelease releases as stable documentation sources.');
   if (!pages.includes('SOURCE_REF" =~ ^v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$'))

@@ -165,6 +165,8 @@ jobs:
             echo "Release tag $RELEASE_TAG does not point to a commit reachable from trusted main." >&2
             exit 1
           fi
+          git checkout --detach "$RELEASE_TAG"
+          test "$(git rev-parse HEAD)" = "$release_sha"
       - name: Verify and select an immutable main source SHA for Pages recovery
         if: github.event_name == 'workflow_dispatch' && inputs.publish == true && inputs.source_ref != 'main' && !startsWith(inputs.source_ref, 'v')
         env:
@@ -177,11 +179,6 @@ jobs:
           git merge-base --is-ancestor "$SOURCE_SHA" refs/remotes/origin/main
           git checkout --detach "$SOURCE_SHA"
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
-          git checkout --detach "$RELEASE_TAG"
-          if [[ "$(git rev-parse HEAD)" != "$release_sha" ]]; then
-            echo "Release tag checkout does not match the validated tag SHA." >&2
-            exit 1
-          fi
       - name: Record immutable source SHA
         id: source_sha
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
