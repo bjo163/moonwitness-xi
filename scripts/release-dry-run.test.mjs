@@ -40,8 +40,8 @@ test('dry-run report includes exact diffs, release assets, gates, and no-write i
   assert.equal(report.files.length, 2);
   assert.equal(report.assets.length, 9);
   assert.equal(report.assets[0].name, 'ghcr.io/acme/moonwitness:v1.1.0-rc.1');
-  assert.equal(report.assets[5].implementationStatus, 'roadmap-pending');
-  assert.equal(report.readinessFindings.length, 4);
+  assert.equal(report.assets[5].implementationStatus, 'implemented-local-hosted-pending');
+  assert.equal(report.readinessFindings.length, 0);
   assert.equal(
     report.gates.every((gate) => gate.status === 'not-run'),
     true

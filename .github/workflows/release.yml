@@ -29,6 +29,8 @@ jobs:
     permissions:
       contents: read
       actions: read
+      id-token: write
+      attestations: write
     services:
       postgres:
         image: postgres:16-alpine
@@ -113,6 +115,26 @@ jobs:
           set -euo pipefail
           docker build --label "org.opencontainers.image.revision=$GITHUB_SHA" --label "org.opencontainers.image.version=$RELEASE_VERSION" --tag moonwitness-api:production .
           docker build --target board-runtime --label "org.opencontainers.image.revision=$GITHUB_SHA" --label "org.opencontainers.image.version=$RELEASE_VERSION" --tag moonwitness-board:production .
+      - name: Generate the API image SPDX SBOM
+        if: github.ref_type == 'tag'
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          image: moonwitness-api:production
+          format: spdx-json
+          output-file: release-api.spdx.json
+          syft-version: v1.40.0
+          upload-artifact: false
+          upload-release-assets: false
+      - name: Generate the Board image SPDX SBOM
+        if: github.ref_type == 'tag'
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          image: moonwitness-board:production
+          format: spdx-json
+          output-file: release-board.spdx.json
+          syft-version: v1.40.0
+          upload-artifact: false
+          upload-release-assets: false
       - name: Smoke test the exact release images against isolated PostgreSQL
         env:
           SMOKE_USE_PREBUILT_IMAGES: 'true'
@@ -158,7 +180,8 @@ jobs:
             --arg boardImageId "$board_image_id" \
             '{sourceSha: $sourceSha, version: $version, apiImageId: $apiImageId, boardImageId: $boardImageId}' \
             > release-image-manifest.json
-          sha256sum release-images.tar release-image-manifest.json > release-artifacts.sha256
+          sha256sum release-images.tar release-image-manifest.json release-api.spdx.json release-board.spdx.json > release-artifacts.sha256
+          sha256sum release-api.spdx.json release-board.spdx.json > release-assets.sha256
       - name: Upload the exact release images for promotion
         id: upload_images
         if: github.ref_type == 'tag'
@@ -168,7 +191,10 @@ jobs:
           path: |
             release-images.tar
             release-image-manifest.json
+            release-api.spdx.json
+            release-board.spdx.json
             release-artifacts.sha256
+            release-assets.sha256
           if-no-files-found: error
           retention-days: 30
           compression-level: 0
@@ -189,9 +215,38 @@ jobs:
             echo "- Artifact digest: `$ARTIFACT_DIGEST`"
           } >> "$GITHUB_STEP_SUMMARY"
 
+  attest-artifact:
+    if: github.ref_type == 'tag'
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+      attestations: write
+      id-token: write
+    steps:
+      - name: Download the verified release bundle
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: release-images-${{ github.sha }}
+          path: release-images
+      - name: Verify the exact files before creating provenance
+        working-directory: release-images
+        run: sha256sum --check release-artifacts.sha256
+      - name: Attest the exact release transport and SBOM files
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: |
+            release-images/release-images.tar
+            release-images/release-image-manifest.json
+            release-images/release-api.spdx.json
+            release-images/release-board.spdx.json
+            release-images/release-assets.sha256
+
   publish:
     if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref_type == 'tag'
-    needs: verify
+    needs: [verify, attest-artifact]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     concurrency:
@@ -200,6 +255,8 @@ jobs:
     permissions:
       contents: write
       packages: write
+      attestations: write
+      id-token: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Download the images produced and verified by the release gate
@@ -290,7 +347,47 @@ jobs:
           test -n "$digest"
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
           echo "- Board image publication: `$action`, `$digest`." >> "$GITHUB_STEP_SUMMARY"
-      - name: Create GitHub release
+      - name: Resolve canonical OCI image names
+        id: image_names
+        env:
+          API_IMAGE: ghcr.io/${{ github.repository }}
+          BOARD_IMAGE: ghcr.io/${{ github.repository }}-board
+        run: |
+          set -euo pipefail
+          echo "api=$(printf '%s' "$API_IMAGE" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+          echo "board=$(printf '%s' "$BOARD_IMAGE" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+      - name: Attest API image build provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ steps.image_names.outputs.api }}
+          subject-digest: ${{ steps.publish_api.outputs.digest }}
+          push-to-registry: true
+          create-storage-record: false
+      - name: Attest Board image build provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ steps.image_names.outputs.board }}
+          subject-digest: ${{ steps.publish_board.outputs.digest }}
+          push-to-registry: true
+          create-storage-record: false
+      - name: Attest API image SPDX SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ steps.image_names.outputs.api }}
+          subject-digest: ${{ steps.publish_api.outputs.digest }}
+          sbom-path: release-images/release-api.spdx.json
+          push-to-registry: true
+          create-storage-record: false
+      - name: Attest Board image SPDX SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ steps.image_names.outputs.board }}
+          subject-digest: ${{ steps.publish_board.outputs.digest }}
+          sbom-path: release-images/release-board.spdx.json
+          push-to-registry: true
+          create-storage-record: false
+      - name: Ensure a draft GitHub release exists
+        id: draft_release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.ref_name }}
@@ -299,23 +396,64 @@ jobs:
           set -euo pipefail
           if release="$(gh release view "$TAG" --json tagName,isDraft,isPrerelease 2>/dev/null)"; then
             test "$(jq -r '.tagName' <<< "$release")" = "$TAG"
-            test "$(jq -r '.isDraft' <<< "$release")" = 'false'
+            is_draft="$(jq -r '.isDraft' <<< "$release")"
             if [[ "$TAG" == *-* ]]; then expected_prerelease=true; else expected_prerelease=false; fi
             test "$(jq -r '.isPrerelease' <<< "$release")" = "$expected_prerelease"
-            if [[ "$TAG" == *-* ]]; then
-              gh release edit "$TAG" --prerelease --latest=false
-            elif [[ "$UPDATE_LATEST" == 'true' ]]; then
-              gh release edit "$TAG" --latest
-            else
-              gh release edit "$TAG" --latest=false
-            fi
-            echo "Reusing the existing published GitHub Release for $TAG."
+            echo "Reusing the existing GitHub Release for $TAG."
           elif [[ "$TAG" == *-* ]]; then
-            gh release create "$TAG" --verify-tag --generate-notes --prerelease --latest=false
-          elif [[ "$UPDATE_LATEST" == 'true' ]]; then
-            gh release create "$TAG" --verify-tag --generate-notes --latest
+            gh release create "$TAG" --verify-tag --generate-notes --draft --prerelease --latest=false
+            is_draft=true
           else
-            gh release create "$TAG" --verify-tag --generate-notes --latest=false
+            gh release create "$TAG" --verify-tag --generate-notes --draft --latest=false
+            is_draft=true
+          fi
+          echo "is_draft=$is_draft" >> "$GITHUB_OUTPUT"
+          echo "draft release ready for required asset reconciliation: $TAG"
+      - name: Reconcile immutable release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+          IS_DRAFT: ${{ steps.draft_release.outputs.is_draft }}
+        run: |
+          set -euo pipefail
+          release_id="$(gh api "repos/$GH_REPOSITORY/releases/tags/$TAG" --jq '.id')"
+          assets="$(gh api --paginate "repos/$GH_REPOSITORY/releases/$release_id/assets?per_page=100")"
+          for file in release-images/release-api.spdx.json release-images/release-board.spdx.json release-images/release-assets.sha256; do
+            name="$(basename "$file")"
+            expected="sha256:$(sha256sum "$file" | awk '{print $1}')"
+            asset="$(jq -c --arg name "$name" '[.[] | select(.name == $name)] | first // empty' <<< "$assets")"
+            if [[ -n "$asset" ]]; then
+              actual="$(jq -r '.digest // empty' <<< "$asset")"
+              test "$actual" = "$expected"
+              test "$(jq -r '.size' <<< "$asset")" = "$(wc -c < "$file" | tr -d ' ')"
+              echo "Reusing exact immutable release asset $name ($actual)."
+            else
+              test "$IS_DRAFT" = 'true'
+              if ! gh release upload "$TAG" "$file"; then
+                assets="$(gh api --paginate "repos/$GH_REPOSITORY/releases/$release_id/assets?per_page=100")"
+                asset="$(jq -c --arg name "$name" '[.[] | select(.name == $name)] | first // empty' <<< "$assets")"
+                test -n "$asset"
+                test "$(jq -r '.digest // empty' <<< "$asset")" = "$expected"
+                test "$(jq -r '.size' <<< "$asset")" = "$(wc -c < "$file" | tr -d ' ')"
+              fi
+            fi
+          done
+      - name: Verify release assets before completing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          UPDATE_LATEST: ${{ steps.latest_policy.outputs.advance || 'false' }}
+        run: |
+          set -euo pipefail
+          gh release verify-asset "$TAG" release-images/release-api.spdx.json
+          gh release verify-asset "$TAG" release-images/release-board.spdx.json
+          if [[ "$TAG" == *-* ]]; then
+            gh release edit "$TAG" --draft=false --prerelease --latest=false
+          elif [[ "$UPDATE_LATEST" == 'true' ]]; then
+            gh release edit "$TAG" --draft=false --latest
+          else
+            gh release edit "$TAG" --draft=false --latest=false
           fi
       - name: Advance stable API latest after release completion
         if: steps.latest_policy.outputs.advance == 'true'

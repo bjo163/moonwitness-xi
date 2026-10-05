@@ -49,25 +49,25 @@ export function plannedAssets(version, sourceSha, repository) {
       name: `${imageRepository}:${tag}.sbom.spdx.json`,
       kind: 'api-sbom',
       required: true,
-      implementationStatus: 'roadmap-pending',
+      implementationStatus: 'implemented-local-hosted-pending',
     },
     {
       name: `${imageRepository}-board:${tag}.sbom.spdx.json`,
       kind: 'board-sbom',
       required: true,
-      implementationStatus: 'roadmap-pending',
+      implementationStatus: 'implemented-local-hosted-pending',
     },
     {
       name: 'GitHub artifact provenance attestation',
       kind: 'artifact-provenance',
       required: true,
-      implementationStatus: 'roadmap-pending',
+      implementationStatus: 'implemented-local-hosted-pending',
     },
     {
       name: 'API and Board image provenance attestations',
       kind: 'image-provenance',
       required: true,
-      implementationStatus: 'roadmap-pending',
+      implementationStatus: 'implemented-local-hosted-pending',
     },
   ];
 }

@@ -174,6 +174,8 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ## M7.10 — Buat tag immutable, draft/release completion flow, changelog, checksums, GHCR API/Board, SBOM dan provenance attestations.
 
+Workflow lokal kini membangun SPDX SBOM untuk kedua image, membuat checksums bundle dan asset, membuat artifact + OCI image provenance/SBOM attestations, menahan GitHub Release sebagai draft sampai assets cocok dengan nama/digest/ukuran yang diharapkan, lalu verifikasi asset sebelum publish. Implementasi kontrak telah dites lokal; full hosted GHCR/GitHub Release run masih acceptance wajib. Lihat [runbook release artifact](../operations/release-artifact-flow.md).
+
 - **Prasyarat:** M7.09, M7.06, M8.01
 - **Baca/periksa:** Release candidate manifest; GHCR; GITHUB_TOKEN/App permissions.
 - **Deliverable:** Release manifest, draft flow dan publishing jobs.
@@ -211,6 +213,8 @@ Retry older release tidak menurunkan latest; prerelease tidak mengganti stable l
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M7.11.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
 ## M7.12 — Verifikasi provenance/digest dan dokumentasikan cara konsumen memeriksanya.
+
+CLI `pnpm release:verify-attestations` memeriksa checksum, source SHA dan version, lalu memverifikasi bundle/SBOM/image attestations dengan repository dan signer workflow yang eksplisit. Fixture lokal menolak data terubah serta workflow repository salah. Hosted attestation identity/digest belum dibuktikan sampai release workflow dijalankan di GitHub; lihat [consumer verification runbook](../operations/release-artifact-flow.md#consumer-verification).
 
 - **Prasyarat:** M7.10
 - **Baca/periksa:** Attestation outputs; checksums; docs release guide.
@@ -290,7 +294,7 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ## M7.16 — Sediakan dry-run/release-plan artifact sebelum publikasi pertama dan tautkan seluruh bukti ke release.
 
-`pnpm release:dry-run` now composes the canonical release preparation preview with exact source/baseline SHAs, proposed version, generated changelog section, before/after file hashes, 19 phase-specific required gates marked `not-run`, and 9 release assets. Four required SBOM/provenance assets are explicitly marked `roadmap-pending`; the report does not imply the release is ready while those roadmap items remain. The command requires a clean checkout so the plan matches its source SHA. The manual [release-plan workflow](../../.github/workflows/release-plan.yml) is restricted to `dev`, uses read-only repository permission, and uploads the JSON plan for review. Local output and limitations are recorded in [M7.16 evidence](evidence/M7.16.md).
+`pnpm release:dry-run` now composes the canonical release preparation preview with exact source/baseline SHAs, proposed version, generated changelog section, before/after file hashes, 19 phase-specific required gates marked `not-run`, and 9 release assets. SBOM/provenance are implemented in the local workflow contract; hosted acceptance remains pending, so the report never treats gates as passed. The command requires a clean checkout so the plan matches its source SHA. The manual [release-plan workflow](../../.github/workflows/release-plan.yml) is restricted to `dev`, uses read-only repository permission, and uploads the JSON plan for review. Local output and limitations are recorded in [M7.16 evidence](evidence/M7.16.md).
 
 - **Prasyarat:** M7.05, M7.06, M7.14, M7.15, M1.08
 - **Baca/periksa:** Release pipeline lengkap; first stable decision.

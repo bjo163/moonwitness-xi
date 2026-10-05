@@ -52,7 +52,7 @@ test('the verified and scanned API and Board images are smoke-tested and handed 
   );
   assert.match(
     verify,
-    /sha256sum release-images\.tar release-image-manifest\.json > release-artifacts\.sha256/u
+    /sha256sum release-images\.tar release-image-manifest\.json release-api\.spdx\.json release-board\.spdx\.json > release-artifacts\.sha256/u
   );
   assert.match(publish, /actions\/download-artifact@/u);
   assert.match(verify, /name: release-images-\$\{\{ github\.sha \}\}/u);
@@ -76,12 +76,38 @@ test('the verified and scanned API and Board images are smoke-tested and handed 
   );
   assert.equal((publish.match(/test "\$latest_digest" = "\$VERSION_DIGEST"/gu) ?? []).length, 2);
   assert.doesNotMatch(publish, /docker (?:build|buildx build)/u);
-  assert.match(publish, /needs: verify/u);
+  assert.match(publish, /needs: \[verify, attest-artifact\]/u);
   assert.match(
     publish,
     /github\.event_name == 'workflow_dispatch' && inputs\.publish && github\.ref_type == 'tag'/u
   );
   assert.doesNotMatch(publish, /deploy-pages|kubectl|docker compose up/u);
+});
+
+test('tag releases publish SPDX SBOMs and attest artifact/image subjects before Release completion', () => {
+  assert.equal((verify.match(/uses: anchore\/sbom-action@/gu) ?? []).length, 2);
+  assert.match(verify, /output-file: release-api\.spdx\.json/u);
+  assert.match(verify, /output-file: release-board\.spdx\.json/u);
+  assert.match(verify, /format: spdx-json/u);
+  assert.match(verify, /upload-artifact: false/u);
+  assert.match(publish, /needs: \[verify, attest-artifact\]/u);
+  assert.equal((publish.match(/uses: actions\/attest@/gu) ?? []).length, 4);
+  assert.equal((publish.match(/push-to-registry: true/gu) ?? []).length, 4);
+  assert.equal((publish.match(/create-storage-record: false/gu) ?? []).length, 4);
+  const attestationJob = workflow.slice(workflow.indexOf('  attest-artifact:'), publishStart);
+  assert.match(attestationJob, /attestations: write/u);
+  assert.match(attestationJob, /id-token: write/u);
+  assert.match(attestationJob, /release-images\.tar/u);
+  assert.match(attestationJob, /release-api\.spdx\.json/u);
+  assert.ok(attestationJob.indexOf('uses: actions/attest@') >= 0);
+  assert.ok(
+    publish.indexOf('Attest API image SPDX SBOM') <
+      publish.indexOf('Ensure a draft GitHub release exists')
+  );
+  assert.ok(
+    publish.indexOf('Attest Board image build provenance') <
+      publish.indexOf('Ensure a draft GitHub release exists')
+  );
 });
 
 test('critical candidates fail verification and latest only advances for a newer stable release', () => {
@@ -102,11 +128,27 @@ test('critical candidates fail verification and latest only advances for a newer
   assert.equal((publish.match(/docker push "\$image:latest"/gu) ?? []).length, 2);
   assert.equal((publish.match(/test "\$latest_digest" = "\$VERSION_DIGEST"/gu) ?? []).length, 2);
   assert.ok(
-    publish.indexOf('Create GitHub release') < publish.indexOf('Advance stable API latest')
+    publish.indexOf('Ensure a draft GitHub release exists') <
+      publish.indexOf('Reconcile immutable release assets')
+  );
+  assert.ok(
+    publish.indexOf('Reconcile immutable release assets') <
+      publish.indexOf('Verify release assets before completing release')
+  );
+  assert.ok(
+    publish.indexOf('Verify release assets before completing release') <
+      publish.indexOf('Advance stable API latest')
   );
   assert.match(publish, /--prerelease --latest=false/u);
   assert.match(publish, /--latest=false/u);
-  assert.match(publish, /gh release edit "\$TAG" --latest/u);
+  assert.match(publish, /gh release edit "\$TAG" --draft=false --latest/u);
+  assert.match(publish, /--draft --prerelease/u);
+  assert.match(publish, /--draft=false/u);
+  assert.match(publish, /gh release verify-asset/u);
+  assert.doesNotMatch(publish, /gh release upload .*--clobber/u);
+  assert.match(publish, /\.digest \/\/ empty/u);
+  assert.match(publish, /IS_DRAFT: \$\{\{ steps\.draft_release\.outputs\.is_draft \}\}/u);
+  assert.match(publish, /test "\$IS_DRAFT" = 'true'/u);
 });
 
 test('publish revalidates the source tag after verification before any image write', () => {
