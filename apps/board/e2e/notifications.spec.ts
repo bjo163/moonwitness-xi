@@ -67,7 +67,7 @@ test('notification inbox displays a delivered message, marks it read, and expose
   const inboxButton = page.getByRole('button', { name: /Notifications, \d+ unread/u });
   await expect(inboxButton).toBeVisible();
   await inboxButton.click();
-  await expect(page.getByRole('heading', { name: 'Notifications' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Notifications' }).last()).toBeVisible();
   await expect(page.getByText(title)).toBeVisible();
   await page.getByRole('button', { name: 'Mark read' }).click();
   await expect(page.getByRole('button', { name: 'Notifications' })).toBeVisible();
