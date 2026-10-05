@@ -2,6 +2,8 @@
 
 Evidence means a test has actually executed against the current implementation; a test filename alone does not establish coverage. Rows describe exercised cases and the gaps still open.
 
+The full per-feature status, accountable owner, priority, assertion references, audited SHA, and explicit gap register are maintained in the [feature coverage report](feature-coverage.md). The report supersedes this baseline matrix's evidence summaries where they differ.
+
 | ID               | Feature                    | Roles/scope                         | Positive case                                   | Negative/regression case                                                                   | Existing evidence                     | Missing evidence                                 |
 | ---------------- | -------------------------- | ----------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------- | ------------------------------------------------ |
 | AUTH-LOGIN       | POST /auth/login           | anonymous, active/inactive account  | valid credentials return session                | wrong password vs unknown login; inactive partner                                          | API auth specs + Board E2E; M4.05     | throttle extremes                                |
