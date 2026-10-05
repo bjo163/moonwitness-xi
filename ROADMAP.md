@@ -205,7 +205,7 @@ Jalur ini melengkapi M1/M7/M8, bukan membuat release pipeline kedua. Detail: [ka
 
 - [x] M11.01 Tetapkan kontrak sinkronisasi roadmap ↔ GitHub Issues dan otoritas setiap field. Task ID, source acceptance, data manusia, lifecycle/status, close manual, untrusted issue input, dan batas aktivasi sudah ditetapkan: [policy](docs/engineering/issue-sync-policy.md), [evidence](docs/roadmap/evidence/M11.01.md). Belum ada bootstrap/sync issue yang diklaim aktif.
 - [x] M11.02 Buat schema task tracking, identitas issue stabil, dan validator silang dokumen. JSON Schema versioned, repository-ID + Task-ID contract, validator offline untuk 148 task, evidence, checkbox, dependency DAG dan safe paths; 6 fixture/live tests lulus: [schema](docs/roadmap/task.schema.json), [evidence](docs/roadmap/evidence/M11.02.md). Tidak ada remote issue yang dibuat.
-- [ ] M11.03 Buat planner dry-run dan apply mode untuk create/update issue tanpa duplikasi.
+- [ ] M11.03 Buat planner dry-run dan apply mode untuk create/update issue tanpa duplikasi. Planner, pagination open/closed, conflict/no-op detection, maintainer-note preservation, stale-plan rejection, pre-write fail-closed dan timeout recovery memiliki 14 test; live dry-run read-only menemukan 148 create dan tidak mengubah issue. Apply pilot belum dijalankan; lihat [evidence](docs/roadmap/evidence/M11.03.md).
 - [ ] M11.04 Sinkronkan isi issue lengkap, milestone, labels dan dependencies yang dapat ditelusuri.
 - [ ] M11.05 Pelihara catatan manusia saat bot memperbarui issue.
 - [ ] M11.06 Buat workflow sync terjadwal, push-triggered dan manual dengan batching/rate-limit handling.

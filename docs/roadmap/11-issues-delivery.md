@@ -48,13 +48,16 @@ Simpan bukti aktual di `docs/roadmap/evidence/M11.02.md`. Jangan menandai aktiva
 
 ### Langkah pelaksanaan
 
-1. Enumerasi semua managed issues open/closed memakai pagination dan filter PR entries.
-2. Hitung operations create/update/no-op berdasarkan stable ID dan normalized generated block.
-3. Sediakan plan-only default, apply eksplisit, source SHA report dan no-delete behavior.
+1. Enumerasi issues open dan closed dengan pagination 100 per halaman; buang pull request entries dan batasi identity ke repository numeric ID yang sedang diproses.
+2. Hitung create/update/no-op/conflict berdasarkan marker repo ID + task ID dan konten generated; judul tidak menjadi identity. Duplicate marker atau generated-block yang rusak harus menjadi conflict tanpa mutasi.
+3. Pertahankan seluruh isi body di luar managed block (termasuk catatan maintainer), jangan menghapus issue, label manusia atau komentar, dan jangan pernah menjalankan shell berdasarkan issue content.
+4. Dry-run menjadi default. Tampilkan source SHA, hash input plan dan daftar operasi; mutasi hanya melalui `--apply` eksplisit dengan token scoped dari environment.
+5. Sebelum apply, ambil ulang remote state dan tolak plan jika hash berubah. Jalankan API write serial. Jika create timeout, baca ulang marker sebelum mempertimbangkan retry agar create yang sebenarnya sukses tidak menjadi duplikat.
+6. Validasi seluruh task/index sebelum remote read/write; fail closed pada autentikasi, rate limit, response invalid, duplicate identity atau malformed generated boundaries.
 
 ### Verifikasi dan syarat selesai
 
-Dua apply identik hanya membuat satu issue per ID; timeout create lalu retry menemukan issue yang sudah terbuat.
+Dua apply identik hanya membuat satu issue per ID; timeout create lalu retry menemukan issue yang sudah terbuat. Fixture tests menutup open/closed pagination, pull request filtering, repo scoping, duplicate markers, managed-block preservation, stale-plan rejection, no-op idempotence dan ambiguous create recovery. Acceptance remote apply tetap milik pilot/bootstrap M11.14; M11.03 sendiri tidak mengimpor seluruh roadmap.
 
 Simpan bukti aktual di `docs/roadmap/evidence/M11.03.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.
 
