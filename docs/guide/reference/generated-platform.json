@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "2efceff235fe1704b01849c76054092e214673b6ecc1fd8032cc053e10432296",
+  "generatedFromSha256": "c03529acc64cab4bb2c5055070b55f6449076c8c8110ef794d07c044dc5d887e",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -210,6 +210,7 @@
       "attachments:reconcile": "pnpm --filter @moonwitness/api attachments:reconcile",
       "audit:workspace": "node scripts/audit-workspace.mjs",
       "automation:check:action-pins": "node scripts/check-action-pins.mjs",
+      "automation:check:secrets": "node scripts/check-gitleaks-config.mjs",
       "build": "pnpm -r build",
       "ci:affected": "node scripts/select-affected.mjs",
       "dependency:candidate": "node scripts/dependency-candidate.mjs",
@@ -262,6 +263,7 @@
       "test:release-plan": "node --test scripts/release-plan.test.mjs",
       "test:render-changelog": "node --test scripts/render-changelog.test.mjs",
       "test:restore-drill": "node scripts/verify-application-restore.mjs",
+      "test:secrets": "node --test scripts/check-gitleaks-config.test.mjs",
       "test:security-policy": "node --test scripts/security-scan-policy.test.mjs scripts/check-trivy-sarif.test.mjs",
       "test:ui": "pnpm --filter @moonwitness/ui build && node --test packages/ui/tests/*.test.mjs && node packages/ui/scripts/verify-package.mjs",
       "test:ui-budget": "node --test apps/ui-catalog/tests/bundle-budget.test.mjs && pnpm --filter @moonwitness/ui-catalog build && pnpm ui:budget",

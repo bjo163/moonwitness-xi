@@ -919,7 +919,8 @@
       "milestone": "M8",
       "dependsOn": ["M0.04", "M2.04"],
       "output": "Security workflow dan policy",
-      "detailFile": "docs/roadmap/08-security-maintenance.md"
+      "detailFile": "docs/roadmap/08-security-maintenance.md",
+      "status": "in_progress"
     },
     {
       "id": "M8.04",

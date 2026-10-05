@@ -1,0 +1,73 @@
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+import process from 'node:process';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const workflowPath = path.join(root, '.github', 'workflows', 'gitleaks.yml');
+const configPath = path.join(root, '.gitleaks.toml');
+const actionReference = /gitleaks\/gitleaks-action@[0-9a-f]{40}\s+#\s*v\d+\.\d+\.\d+/;
+const allowedLines = [
+  /^JWT_SECRET=PcsOJSAhpYuu3r8sDvRyUTVav-xzq6_HlJV9lVlU5jg$/u,
+  /^SUPERADMIN_PASSWORD=Youknowm@3$/u,
+  /^\s*"tokensSha256": "269a6e000da6fa288380cf36ec127df09cc86d6a38a1d4613a975b54d3664d5a"$/u,
+  /^\s*idempotencyKey: 'duplicate-vote-0001',$/u,
+  /^\s*idempotencyKey: 'reject-decision-0001',$/u,
+];
+
+export function validateGitleaksSetup(workflow, config) {
+  const problems = [];
+  if (!actionReference.test(workflow))
+    problems.push('Gitleaks Action must use a pinned full SHA and version.');
+  if (!/^\s*contents:\s*read\s*$/m.test(workflow))
+    problems.push('Gitleaks workflow must grant contents: read.');
+  if (
+    /pull_request_target|permissions:\s*write|GITLEAKS_ENABLE_COMMENTS:\s*['"]?true/i.test(workflow)
+  ) {
+    problems.push(
+      'Gitleaks must not use privileged PR triggers, write permissions, or PR comments.'
+    );
+  }
+  if (!/fetch-depth:\s*0/.test(workflow)) problems.push('Gitleaks must scan full Git history.');
+  if (!/regexTarget\s*=\s*"line"/.test(config))
+    problems.push('Allowlist must match exact lines, not whole files or commits.');
+
+  const configuredLines = [...config.matchAll(/'''(.*?)'''/gs)].map((match) => match[1]);
+  if (configuredLines.length !== allowedLines.length) {
+    problems.push('Allowlist must contain exactly the reviewed synthetic/local-only lines.');
+  } else {
+    for (const [index, expression] of configuredLines.entries()) {
+      const expected = [
+        '^JWT_SECRET=PcsOJSAhpYuu3r8sDvRyUTVav-xzq6_HlJV9lVlU5jg$',
+        '^SUPERADMIN_PASSWORD=Youknowm@3$',
+        '^\\s*"tokensSha256": "269a6e000da6fa288380cf36ec127df09cc86d6a38a1d4613a975b54d3664d5a"$',
+        "^\\s*idempotencyKey: 'duplicate-vote-0001',$",
+        "^\\s*idempotencyKey: 'reject-decision-0001',$",
+      ][index];
+      if (expression !== expected)
+        problems.push(`Allowlist entry ${index + 1} differs from its reviewed fixture.`);
+    }
+  }
+  return problems;
+}
+
+async function main() {
+  const [workflow, config] = await Promise.all([
+    readFile(workflowPath, 'utf8'),
+    readFile(configPath, 'utf8'),
+  ]);
+  const problems = validateGitleaksSetup(workflow, config);
+  if (problems.length) {
+    for (const problem of problems) process.stderr.write(`${problem}\n`);
+    process.exitCode = 1;
+    return;
+  }
+  process.stdout.write('Gitleaks workflow and exact-line allowlist are valid.\n');
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    process.stderr.write(`${error.message}\n`);
+    process.exitCode = 1;
+  });
+}

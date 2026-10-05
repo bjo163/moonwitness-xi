@@ -53,6 +53,8 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 3. Definisikan exception minimum (ID, owner, alasan, expiry ISO); exception kedaluwarsa atau format invalid menggagalkan CI. Scanner error harus fail-closed dan tidak boleh dinyatakan sebagai scan bersih.
 4. Rekam status secret scanning/push protection dan keterbatasan alert/dependency settings dari GitHub; aktifkan dependency alerts yang tersedia setelah hak akses terkonfirmasi.
 
+5. Jalankan Gitleaks atas seluruh riwayat pada PR/push ke `dev` dan `main`, jadwal mingguan, serta dispatch manual. Beri workflow `contents: read`, pin action ke SHA, jangan izinkan komentar atau upload laporan yang dapat membocorkan nilai; allowlist hanya baris fixture/local yang ditinjau.
+
 ### Verifikasi dan syarat selesai
 
 Seeded vulnerable fixture terdeteksi; expired exception gagal; no false promise fitur akun unsupported.
