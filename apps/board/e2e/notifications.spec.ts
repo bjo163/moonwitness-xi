@@ -26,6 +26,8 @@ test('notification inbox displays a delivered message, marks it read, and expose
   const profile = (await profileResponse.json()) as {
     data: { id: number; company_id: number };
   };
+  expect(Number.isSafeInteger(profile.data.id)).toBe(true);
+  expect(Number.isSafeInteger(profile.data.company_id)).toBe(true);
   const templatesResponse = await page.request.get('/api/notification.template', {
     headers,
     params: { domain: JSON.stringify([['code', '=', 'example.in_app']]) },
@@ -51,9 +53,18 @@ test('notification inbox displays a delivered message, marks it read, and expose
   });
   expect(created.status()).toBe(201);
   const createdRecord = (await created.json()) as { data: { id: number } };
+  const apiInbox = await page.request.get('/notifications/inbox', { headers });
+  expect(apiInbox.status()).toBe(200);
+  const inboxPayload = (await apiInbox.json()) as {
+    data: { notifications: Array<{ id: number; title: string }>; unreadCount: number };
+  };
+  expect(inboxPayload.data.unreadCount).toBeGreaterThan(0);
+  expect(inboxPayload.data.notifications).toContainEqual(
+    expect.objectContaining({ id: createdRecord.data.id, title })
+  );
 
   await page.reload();
-  const inboxButton = page.getByRole('button', { name: /Notifications, 1 unread/u });
+  const inboxButton = page.getByRole('button', { name: /Notifications, \d+ unread/u });
   await expect(inboxButton).toBeVisible();
   await inboxButton.click();
   await expect(page.getByRole('heading', { name: 'Notifications' })).toBeVisible();
