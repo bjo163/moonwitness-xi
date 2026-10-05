@@ -232,10 +232,13 @@ jobs:
           set -euo pipefail
           gh workflow run promote.yml --repo "$GITHUB_REPOSITORY" --ref dev
           number=""
-          for attempt in $(seq 1 60); do
+          attempt=0
+          while [[ -z "$number" && "$attempt" -lt 60 ]]; do
             number="$(gh pr list --repo "$GH_REPO" --base main --head dev --state open --json number --jq '.[0].number // empty')"
-            if [[ -n "$number" ]]; then break; fi
-            sleep 5
+            if [[ -z "$number" ]]; then
+              attempt=$((attempt + 1))
+              sleep 5
+            fi
           done
           if [[ -z "$number" ]]; then
             echo "Promotion PR did not become available after dispatch; candidate remains on dev for recovery." >&2
