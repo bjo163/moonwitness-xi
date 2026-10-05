@@ -278,13 +278,13 @@ export function DashboardPage() {
   return (
     <div className="space-y-8">
       {/* Hero Welcome Banner with Speedlines */}
-      <div className="relative overflow-hidden border-4 border-ink bg-paper p-8 lg:p-12 shadow-ink-lg">
+      <div className="relative overflow-hidden border-4 border-ink bg-paper p-5 sm:p-8 lg:p-12 shadow-ink-lg">
         <SpeedLines className="opacity-20" origin={[0.85, 0.4]} inner={0.15} count={60} />
         <div className="relative max-w-2xl space-y-4">
           <div className="inline-flex items-center gap-2 border-2 border-ink bg-lime px-3 py-1 font-mono text-xs font-bold uppercase tracking-wider text-on-accent">
             <Sparkles className="size-3.5" /> MoonWitness Mission Control
           </div>
-          <h1 className="ink-title text-4xl sm:text-6xl">
+          <h1 className="ink-title text-3xl leading-tight sm:text-6xl sm:leading-none">
             Welcome, <span className="marker">{user?.login}</span>!
           </h1>
           <p className="text-base sm:text-lg text-ink-soft">
