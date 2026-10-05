@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "a160e8a5e9fdace006c309b00b9998558e28f0aac9af07e3df88e39a8b9134fb",
+  "generatedFromSha256": "d56ba2ebfb876b2b5447554d92b05bb30360c78249749423e3a734a90c7138c2",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -212,6 +212,7 @@
       "automation:check:action-pins": "node scripts/check-action-pins.mjs",
       "automation:check:roadmap": "node scripts/roadmap/validate-roadmap.mjs",
       "automation:check:secrets": "node scripts/check-gitleaks-config.mjs",
+      "board:visual:update": "pnpm test:e2e --grep 'responsive screen audit|responsive protected screens' --update-snapshots",
       "build": "pnpm -r build",
       "ci:affected": "node scripts/select-affected.mjs",
       "dependency:candidate": "node scripts/dependency-candidate.mjs",

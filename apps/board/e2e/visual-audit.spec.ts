@@ -18,6 +18,11 @@ const views = [
   { name: 'profile', path: '/profile', heading: 'Profile' },
   { name: 'settings', path: '/settings', heading: 'Settings' },
 ] as const;
+const visualBaselines = new Set([
+  'list/desktop-1440/light',
+  'profile/desktop-1440/light',
+  'settings/desktop-1440/dark',
+]);
 
 async function expectNoHorizontalOverflow(page: Page, label: string) {
   const dimensions = await page.evaluate(() => ({
@@ -104,6 +109,18 @@ test('responsive protected screens fit and remain accessible in both themes', as
           await expect(
             page.getByRole('img', { name: 'Background job status distribution' })
           ).toBeVisible();
+        }
+        const visualKey = `${view.name}/${size.name}/${theme}`;
+        if (visualBaselines.has(visualKey)) {
+          if (view.name === 'list') {
+            await page.getByPlaceholder('Search partners...').fill('Acme Studio');
+            await expect(page.getByText('Acme Studio', { exact: true })).toBeVisible();
+          }
+          await expect(page).toHaveScreenshot(`board-${view.name}-${size.name}-${theme}.png`, {
+            animations: 'disabled',
+            caret: 'hide',
+            fullPage: true,
+          });
         }
         await page.screenshot({
           path: path.join(auditDirectory, `${view.name}-${size.name}-${theme}.png`),
