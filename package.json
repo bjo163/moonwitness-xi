@@ -66,7 +66,8 @@
     "test:promotion-policy": "node --test scripts/git-range.test.mjs scripts/promotion-risk.test.mjs scripts/promotion-approval.test.mjs",
     "test:security-policy": "node --test scripts/security-scan-policy.test.mjs scripts/check-trivy-sarif.test.mjs",
     "dependency:plan": "node scripts/dependency-update-plan.mjs",
-    "test:dependency-plan": "node --test scripts/dependency-update-plan.test.mjs"
+    "test:dependency-plan": "node --test scripts/dependency-update-plan.test.mjs",
+    "test:expected-ref": "node --test scripts/push-expected-ref.test.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -149,7 +149,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 - [ ] M7.05 Siapkan version/changelog/docs pada dev tanpa release branch; persiapan berulang harus idempotent.
 - [ ] M7.06 Changelog berisi fitur/fix/security/breaking/upgrade dan tautan commit/PR; breaking notes divalidasi.
 - [ ] M7.07 Jalankan CI lengkap pada commit hasil persiapan; verifikasi lagi main merge SHA sebelum publikasi.
-- [ ] M7.08 Gunakan concurrency lock dan pengecekan expected SHA sebelum bot menulis; perubahan dev baru membatalkan rencana lama.
+- [ ] M7.08 Gunakan concurrency lock dan pengecekan expected SHA sebelum bot menulis; perubahan dev baru membatalkan rencana lama. [Evidence](docs/roadmap/evidence/M7.08.md); shared writer group, non-force expected-ref sync helper, and stale-head race test implemented; hosted CI/sync run verification remains pending.
 - [ ] M7.09 Bangun sekali artefak release dari SHA tervalidasi lalu promosikan artefak yang sama; jangan rebuild tanpa verifikasi identitas.
 - [ ] M7.10 Buat tag immutable, draft/release completion flow, changelog, checksums, GHCR API/Board, SBOM dan provenance attestations.
 - [ ] M7.11 Tag image memakai versi/SHA; update latest hanya setelah seluruh artefak wajib berhasil. Tidak deploy aplikasi.

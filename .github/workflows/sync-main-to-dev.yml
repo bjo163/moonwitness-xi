@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: sync-main-into-dev
+  group: repository-write-coordinator
   cancel-in-progress: false
 
 jobs:
@@ -63,4 +63,4 @@ jobs:
             exit 1
           fi
 
-          git push origin HEAD:refs/heads/dev
+          node scripts/push-expected-ref.mjs origin HEAD refs/heads/dev "$expected_dev"

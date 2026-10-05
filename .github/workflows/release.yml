@@ -77,6 +77,9 @@ jobs:
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    concurrency:
+      group: repository-write-coordinator
+      cancel-in-progress: false
     permissions:
       contents: write
       packages: write

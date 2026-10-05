@@ -11,7 +11,7 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: promote-dev-to-main
+  group: repository-write-coordinator
   cancel-in-progress: false
 
 jobs:
