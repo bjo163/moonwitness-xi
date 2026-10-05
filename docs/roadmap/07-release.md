@@ -270,6 +270,8 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ## M7.15 — Rancang trigger eksplisit melalui reusable workflow/dispatch; jangan mengandalkan event GITHUB_TOKEN yang tidak memicu workflow berikutnya.
 
+Local workflow trust validation now pins the trigger contract for release publishing, release preparation, and dependency automation. See [the workflow trigger and trust map](../operations/workflow-triggers.md) and [M7.15 evidence](evidence/M7.15.md). Hosted dispatch runs still need to verify the configured repository permissions and actual downstream run behavior.
+
 - **Prasyarat:** M8.04, M2.01
 - **Baca/periksa:** Workflow graph; token behavior; App permissions.
 - **Deliverable:** Trigger graph dan trust validation.

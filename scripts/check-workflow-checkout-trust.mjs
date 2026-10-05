@@ -19,7 +19,13 @@ function checkoutSteps(source) {
   });
 }
 
-export function inspectTrustedCheckoutPolicies({ pages, visualReview }) {
+export function inspectTrustedCheckoutPolicies({
+  pages,
+  visualReview,
+  release,
+  releasePrepare,
+  dependencyCandidate,
+}) {
   const findings = [];
   for (const [name, source] of [
     ['pages.yml', pages],
@@ -64,15 +70,69 @@ export function inspectTrustedCheckoutPolicies({ pages, visualReview }) {
   if (visualReview.split(/\r?\n/u).some((line) => line.startsWith('    inputs:')))
     findings.push('Visual review must not accept an arbitrary ref input.');
 
+  if (release) {
+    if (
+      !release.includes(
+        "if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref_type == 'tag'"
+      )
+    )
+      findings.push('Release publishing must require an explicit dispatch on a version tag.');
+    if (!release.includes('needs: verify'))
+      findings.push('Release publishing must depend on the verification job.');
+    if (!release.includes('test "$remote_tag_sha" = "$EXPECTED_SOURCE_SHA"'))
+      findings.push('Release publishing must revalidate the exact source tag SHA before writes.');
+  }
+
+  if (releasePrepare) {
+    if (!releasePrepare.includes("if: github.ref == 'refs/heads/dev'"))
+      findings.push('Release preparation must only run from dev.');
+    if (!releasePrepare.includes('test "$EXPECTED_SOURCE_SHA" = "$ACTUAL_SOURCE_SHA"'))
+      findings.push('Release preparation must reject an input SHA different from the event SHA.');
+    if (!releasePrepare.includes('node scripts/push-expected-ref.mjs origin HEAD refs/heads/dev'))
+      findings.push('Release preparation must publish with an expected-dev-SHA guard.');
+  }
+
+  if (dependencyCandidate) {
+    if (!dependencyCandidate.includes("if: github.ref == 'refs/heads/dev'"))
+      findings.push('Dependency candidate workflow must only run from dev.');
+    if (
+      !dependencyCandidate.includes(
+        'node scripts/push-expected-ref.mjs origin "$EXPECTED_CANDIDATE_SHA" refs/heads/dev "$EXPECTED_SOURCE_SHA"'
+      )
+    )
+      findings.push('Dependency candidate publication must use the expected source SHA guard.');
+    if (
+      !dependencyCandidate.includes(
+        'gh workflow run promote.yml --repo "$GITHUB_REPOSITORY" --ref dev'
+      )
+    )
+      findings.push(
+        'Dependency candidate must explicitly dispatch promotion after its GITHUB_TOKEN push.'
+      );
+    if (!dependencyCandidate.includes('gh workflow run ci.yml --repo "$GH_REPO" --ref dev'))
+      findings.push(
+        'Dependency candidate must explicitly dispatch full CI after its GITHUB_TOKEN push.'
+      );
+  }
+
   return findings;
 }
 
 async function main() {
-  const [pages, visualReview] = await Promise.all([
+  const [pages, visualReview, release, releasePrepare, dependencyCandidate] = await Promise.all([
     readFile(path.join(repositoryRoot, '.github/workflows/pages.yml'), 'utf8'),
     readFile(path.join(repositoryRoot, '.github/workflows/visual-review.yml'), 'utf8'),
+    readFile(path.join(repositoryRoot, '.github/workflows/release.yml'), 'utf8'),
+    readFile(path.join(repositoryRoot, '.github/workflows/release-prepare.yml'), 'utf8'),
+    readFile(path.join(repositoryRoot, '.github/workflows/dependency-candidate.yml'), 'utf8'),
   ]);
-  const findings = inspectTrustedCheckoutPolicies({ pages, visualReview });
+  const findings = inspectTrustedCheckoutPolicies({
+    pages,
+    visualReview,
+    release,
+    releasePrepare,
+    dependencyCandidate,
+  });
   if (findings.length) {
     for (const finding of findings) process.stderr.write(`${finding}\n`);
     process.exitCode = 1;

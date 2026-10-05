@@ -156,7 +156,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 - [ ] M7.12 Verifikasi provenance/digest dan dokumentasikan cara konsumen memeriksanya.
 - [ ] M7.13 Publisher kini melakukan read-before-write pada tag OCI: image identik dan berlabel source/version yang sama di-reuse tanpa push ulang; konflik digest, ID, atau provenance ditolak. SHA remote tag diverifikasi lagi sebelum publish, dan release existing bertipe benar di-reuse; 6 fixture adapter tests pass lokal. Hosted fault/retry lifecycle belum dijalankan. [Evidence](docs/roadmap/evidence/M7.13.md).
 - [ ] M7.14 Release fault-injection lokal kini meliputi ambiguous GHCR push lalu exact retry recovery, auth/network fail-closed tanpa write, digest/image/provenance conflict, no-release planner, stale expected-ref race via bare Git remotes, integrity artifact checksum, dan reuse existing GitHub Release; test masuk quality CI. Hosted fault run dengan credential/registry nyata tetap pending. [Evidence](docs/roadmap/evidence/M7.14.md).
-- [ ] M7.15 Rancang trigger eksplisit melalui reusable workflow/dispatch; jangan mengandalkan event GITHUB_TOKEN yang tidak memicu workflow berikutnya.
+- [ ] M7.15 Trust validator dan mutation tests kini mengunci dispatch release eksplisit dari version tag sesudah verify, release preparation event-SHA di dev, expected-ref publication, serta dispatch eksplisit promotion/full CI setelah dependency bot push. Trigger graph dan trust boundaries didokumentasikan; hosted dispatch behavior masih perlu dibuktikan. [Evidence](docs/roadmap/evidence/M7.15.md).
 - [ ] M7.16 Sediakan dry-run/release-plan artifact sebelum publikasi pertama dan tautkan seluruh bukti ke release.
 
 ## M8 — Security dan maintenance automation (jalur A/C)

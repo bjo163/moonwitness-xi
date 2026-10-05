@@ -1,0 +1,29 @@
+# Workflow trigger and trust map
+
+This map records which events start repository automation, what source each job trusts, and how jobs continue after a workflow-scoped `GITHUB_TOKEN` write. GitHub intentionally does not start most new workflow runs from a `GITHUB_TOKEN`-generated push, so downstream work is requested explicitly with `gh workflow run`.
+
+## Trusted flows
+
+| Flow                    | Entry event and trusted source                                                                                                                                                              | Write boundary and downstream trigger                                                                                                                                                              |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pull request validation | `pull_request` CI checks the PR merge candidate with read-only repository permissions.                                                                                                      | No branch or release writes. Promotion PR requires `ci-gate` and CODEOWNER approval for sensitive changes.                                                                                         |
+| Promotion               | `push` to `dev` or manual `workflow_dispatch`; the job rejects any event ref other than `refs/heads/dev` and ignores stale events when remote `dev` has advanced.                           | Creates/updates the `dev` → `main` PR with scoped PR/content permissions. The merge is still gated by required CI and review.                                                                      |
+| Release preparation     | Manual `workflow_dispatch` from `dev`; required `expected_dev_sha` must equal the event SHA and remote `dev` SHA.                                                                           | Generates a candidate in a disposable checkout, then publishes with the expected-ref helper. No release tag, image, or GitHub Release is made here.                                                |
+| Release verification    | Version-tag `push` verifies the exact tag commit is reachable from `main` and has a successful exact-SHA `ci-gate` from a `main` push.                                                      | Read-only verification builds/tests/scans API and Board images once and stores them with source/version metadata and checksums. It does not publish or deploy.                                     |
+| Release publication     | Explicit `workflow_dispatch` with `publish=true`, selecting a version tag. Job depends on successful verification and rechecks remote tag SHA before registry writes.                       | Scoped `contents: write` and `packages: write` publish/reconcile GHCR images and GitHub Release; stable aliases are updated only under the release policy. No application deployment is triggered. |
+| Dependency candidate    | Manual dispatch from protected `dev`; workflow checks out the current dev SHA, applies one exact planned patch/minor update in a disposable worktree, and runs candidate gates read-only.   | A separate job verifies candidate bundle/source parent and expected remote SHA before fast-forwarding `dev`; a final low-permission job explicitly dispatches promotion and full CI.               |
+| GitHub Pages            | Push to `main` publishes only after exact main SHA CI verification. Manual preview must select protected `dev`; manual publication must select protected `main` or a validated release tag. | Only deployment job has Pages write permission. Preview does not publish public Pages.                                                                                                             |
+| Visual review           | Manual dispatch is restricted to protected `dev`; checkout uses immutable event SHA, no arbitrary ref input, and does not persist credentials.                                              | Produces review artifacts only; no repository writes.                                                                                                                                              |
+
+## Trust invariants
+
+- Never checkout a user-supplied SHA/ref in a job that has write credentials or secrets.
+- Verify an input source SHA against both the dispatch event and current remote branch before publishing.
+- Keep validation and privileged writes in separate jobs; make write permissions job-scoped.
+- Do not rely on a bot push to trigger CI, promotion, release, or Pages implicitly. Dispatch the named workflow explicitly and pass only a protected branch ref.
+- A dispatch is a request, not proof of completion. Operators must inspect the downstream run conclusion and exact head SHA; automation records these hosted results as evidence.
+- `workflow_run` must not check out or execute artifacts from an untrusted PR. The current flows use explicit dispatch instead.
+
+## Hosted configuration still to verify
+
+Confirm `dev` and `main` are the only long-lived branches, `main` requires the merge queue/required `ci-gate` and CODEOWNER review where configured, GitHub Actions permissions allow only the documented job grants, and the explicit downstream dispatches actually start on `dev` with the expected SHA. Keep this list as external acceptance; local tests cannot prove repository settings or hosted token behavior.
