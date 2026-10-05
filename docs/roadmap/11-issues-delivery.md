@@ -32,6 +32,8 @@ Simpan bukti aktual di `docs/roadmap/evidence/M11.01.md`. Jangan menandai aktiva
 2. Gunakan marker machine-readable repo+task ID pada issue; nomor issue dicari dari remote, bukan hardcoded source utama.
 3. Validasi unique ID, missing card, dependency cycle, checkbox/evidence mismatch serta paths aman.
 
+Implementasi minimum: `docs/roadmap/task.schema.json` mendefinisikan task index versioned dan property yang diperbolehkan. `pnpm automation:check:roadmap` memeriksa index aktual terhadap master checklist, card heading dan evidence link; `pnpm test:roadmap` menguji fixture valid, duplicate ID, dependency missing/cycle, path traversal, checkbox drift, malformed metadata dan evidence yang hilang. Marker remote memakai repository ID yang diperoleh dari GitHub API saat apply, bersama Task ID; jangan menyimpan nomor issue atau repository ID fork di tasks.json.
+
 ### Verifikasi dan syarat selesai
 
 Task invalid menolak sync sebelum API write; rename title tidak membuat issue baru.

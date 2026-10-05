@@ -79,7 +79,9 @@
     "test:dependency-candidate": "node --test scripts/dependency-candidate.test.mjs",
     "test:expected-ref": "node --test scripts/push-expected-ref.test.mjs",
     "automation:check:secrets": "node scripts/check-gitleaks-config.mjs",
-    "test:secrets": "node --test scripts/check-gitleaks-config.test.mjs"
+    "test:secrets": "node --test scripts/check-gitleaks-config.test.mjs",
+    "automation:check:roadmap": "node scripts/roadmap/validate-roadmap.mjs",
+    "test:roadmap": "node --test scripts/roadmap/validate-roadmap.test.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

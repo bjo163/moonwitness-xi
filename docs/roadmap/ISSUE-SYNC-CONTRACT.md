@@ -27,7 +27,7 @@ Identitas stabil menggunakan repository ID plus task ID. Title dapat berubah, no
 Contoh body target:
 
 ```markdown
-<!-- moonwitness-task: M11.03 -->
+<!-- moonwitness-task: <numeric-repository-id>:M11.03 -->
 <!-- BEGIN MOONWITNESS MANAGED -->
 
 Task: M11.03

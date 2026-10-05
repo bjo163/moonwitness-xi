@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://moonwitness.dev/schemas/roadmap-task-index.schema.json",
+  "title": "MoonWitness roadmap task index",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "description", "tasks"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "description": { "type": "string", "minLength": 1 },
+    "tasks": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/task" }
+    }
+  },
+  "$defs": {
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "milestone", "dependsOn", "output", "detailFile"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^M(?:0|[1-9][0-9]*)\\.[0-9]{2}$" },
+        "title": { "type": "string", "minLength": 1 },
+        "milestone": { "type": "string", "pattern": "^M(?:0|[1-9][0-9]*)$" },
+        "dependsOn": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^M(?:0|[1-9][0-9]*)\\.[0-9]{2}$" }
+        },
+        "output": { "type": "string", "minLength": 1 },
+        "detailFile": {
+          "type": "string",
+          "pattern": "^docs/roadmap/[a-z0-9-]+\\.md$"
+        },
+        "labels": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9:-]{0,49}$" }
+        },
+        "priority": { "enum": ["p0", "p1", "p2", "p3"] },
+        "assignee": { "type": "string", "pattern": "^[A-Za-z0-9-]{1,39}$" },
+        "status": { "enum": ["todo", "in_progress", "blocked", "complete"] },
+        "evidence": {
+          "type": "string",
+          "pattern": "^docs/roadmap/evidence/M(?:0|[1-9][0-9]*)\\.[0-9]{2}\\.md$"
+        }
+      }
+    }
+  }
+}
