@@ -114,7 +114,7 @@ test('responsive protected screens fit and remain accessible in both themes', as
         if (visualBaselines.has(visualKey)) {
           if (view.name === 'list') {
             await page.getByPlaceholder('Search partners...').fill('Acme Studio');
-            await expect(page.getByText('Acme Studio', { exact: true })).toBeVisible();
+            await expect(page.getByRole('table').getByText('Acme Studio')).toBeVisible();
           }
           await expect(page).toHaveScreenshot(`board-${view.name}-${size.name}-${theme}.png`, {
             animations: 'disabled',
