@@ -1,25 +1,26 @@
 # Architecture diagrams
 
 Generated exports in this directory are checked against repository metadata by
-`pnpm architecture:check`. When a package manifest or base model field changes,
+`pnpm architecture:check`. When a package manifest or core addon model field changes,
 run `pnpm architecture:generate`, review the updated sources and exports, then
 commit them with the implementation.
 
-## Workspace and base addon
+## Workspace and core addons
 
 The package map includes internal runtime, peer, and development dependencies,
-including packages with no internal edges. The base relation map is built from
-the exported addon model declarations and also lists models without relations;
-it contains model and field names only, never seed record values.
+including packages with no internal edges. The core relation map is built from
+the exported base, auth, jobs, and notification addon model declarations and
+also lists models without relations; it contains model and field names only,
+never seed record values.
 
 | Diagram                                                | Editable source                       | Data export                                                   |
 | ------------------------------------------------------ | ------------------------------------- | ------------------------------------------------------------- |
 | [Workspace dependency map](workspace-dependencies.svg) | [Mermaid](workspace-dependencies.mmd) | [JSON with manifest source hash](workspace-dependencies.json) |
-| [Base addon model relations](base-model-relations.svg) | [Mermaid](base-model-relations.mmd)   | [JSON with model source hash](base-model-relations.json)      |
+| [Core addon model relations](core-model-relations.svg) | [Mermaid](core-model-relations.mmd)   | [JSON with model source hash](core-model-relations.json)      |
 
 ![MoonWitness workspace dependency map](workspace-dependencies.svg)
 
-![Base addon model relations](base-model-relations.svg)
+![Core addon model relations](core-model-relations.svg)
 
 ## Curated runtime and delivery flows
 

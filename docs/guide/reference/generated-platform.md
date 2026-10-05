@@ -1,25 +1,26 @@
 # Generated platform reference
 
-Source fingerprint: `4559b649b4ce0dbc1a57c2a8716edd7db3e0be05d4f0e93f52ce97eea037cae8`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
+Source fingerprint: `e890f4b6033df740c5a203db9b011b3fbedc60914eb66f375f39609425b47345`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
 
 ## Workspace packages and apps
 
-| Name                         | Kind    | Version    | Scripts                                                                                                      |
-| ---------------------------- | ------- | ---------- | ------------------------------------------------------------------------------------------------------------ |
-| `@moonwitness/api`           | App     | 1.0.0-rc.1 | `build`, `dev`, `jobs:outbox`, `jobs:scheduler`, `jobs:worker`, `reset:superadmin-password`, `start`, `test` |
-| `@moonwitness/board`         | App     | 1.0.0-rc.1 | `build`, `dev`, `lint`, `preview`, `typecheck`                                                               |
-| `@moonwitness/docs`          | App     | 1.0.0-rc.1 | `dev`, `portal:build`, `preview`, `test`, `typecheck`                                                        |
-| `@moonwitness/ui-catalog`    | App     | 1.0.0-rc.1 | `build`, `dev`, `preview`, `test`                                                                            |
-| `@moonwitness/assets`        | Package | 1.0.0-rc.1 | —                                                                                                            |
-| `@moonwitness/auth`          | Package | 1.0.0-rc.1 | `build`, `test`                                                                                              |
-| `@moonwitness/client`        | Package | 1.0.0-rc.1 | `build`, `test`                                                                                              |
-| `@moonwitness/eslint-config` | Package | 1.0.0-rc.1 | —                                                                                                            |
-| `@moonwitness/jobs`          | Package | 1.0.0-rc.1 | `build`, `test`                                                                                              |
-| `@moonwitness/logger`        | Package | 1.0.0-rc.1 | `build`, `test`                                                                                              |
-| `@moonwitness/orm`           | Package | 1.0.0-rc.1 | `build`, `test`                                                                                              |
-| `@moonwitness/orm-base`      | Package | 1.0.0-rc.1 | `build`, `test`                                                                                              |
-| `@moonwitness/types`         | Package | 1.0.0-rc.1 | `build`                                                                                                      |
-| `@moonwitness/ui`            | Package | 1.0.0-rc.1 | `build`, `test`                                                                                              |
+| Name                            | Kind    | Version    | Scripts                                                                                                      |
+| ------------------------------- | ------- | ---------- | ------------------------------------------------------------------------------------------------------------ |
+| `@moonwitness/api`              | App     | 1.0.0-rc.1 | `build`, `dev`, `jobs:outbox`, `jobs:scheduler`, `jobs:worker`, `reset:superadmin-password`, `start`, `test` |
+| `@moonwitness/board`            | App     | 1.0.0-rc.1 | `build`, `dev`, `lint`, `preview`, `typecheck`                                                               |
+| `@moonwitness/docs`             | App     | 1.0.0-rc.1 | `dev`, `portal:build`, `preview`, `test`, `typecheck`                                                        |
+| `@moonwitness/ui-catalog`       | App     | 1.0.0-rc.1 | `build`, `dev`, `preview`, `test`                                                                            |
+| `@moonwitness/assets`           | Package | 1.0.0-rc.1 | —                                                                                                            |
+| `@moonwitness/auth`             | Package | 1.0.0-rc.1 | `build`, `test`                                                                                              |
+| `@moonwitness/client`           | Package | 1.0.0-rc.1 | `build`, `test`                                                                                              |
+| `@moonwitness/eslint-config`    | Package | 1.0.0-rc.1 | —                                                                                                            |
+| `@moonwitness/jobs`             | Package | 1.0.0-rc.1 | `build`, `test`                                                                                              |
+| `@moonwitness/logger`           | Package | 1.0.0-rc.1 | `build`, `test`                                                                                              |
+| `@moonwitness/orm`              | Package | 1.0.0-rc.1 | `build`, `test`                                                                                              |
+| `@moonwitness/orm-base`         | Package | 1.0.0-rc.1 | `build`, `test`                                                                                              |
+| `@moonwitness/orm-notification` | Package | 1.0.0-rc.1 | `build`, `test`                                                                                              |
+| `@moonwitness/types`            | Package | 1.0.0-rc.1 | `build`                                                                                                      |
+| `@moonwitness/ui`               | Package | 1.0.0-rc.1 | `build`, `test`                                                                                              |
 
 ## Environment variable names
 

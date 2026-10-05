@@ -2,12 +2,35 @@ import { createHash } from 'node:crypto';
 import { readdir, readFile, mkdir, writeFile } from 'node:fs/promises';
 import process from 'node:process';
 import path from 'node:path';
+import prettier from 'prettier';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const rootDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const outputDirectory = path.join(rootDirectory, 'docs/architecture/diagrams');
 const flowSourcePath = path.join(rootDirectory, 'scripts/architecture/flows.json');
-const manifestPath = path.join(rootDirectory, 'packages/orm-base/dist/index.js');
+const addonManifestPaths = [
+  {
+    entry: 'packages/orm-base/dist/index.js',
+    sourceRoot: 'packages/orm-base/src',
+    manifest: 'manifest.ts',
+  },
+  {
+    entry: 'packages/auth/dist/index.js',
+    sourceRoot: 'packages/auth/src',
+    manifest: 'manifest.ts',
+  },
+  {
+    entry: 'packages/jobs/dist/index.js',
+    exportName: 'jobsManifest',
+    sourceRoot: 'packages/jobs/src',
+    manifest: 'models.ts',
+  },
+  {
+    entry: 'packages/orm-notification/dist/index.js',
+    sourceRoot: 'packages/orm-notification/src',
+    manifest: 'manifest.ts',
+  },
+];
 
 function compareText(left, right) {
   return left.localeCompare(right, 'en');
@@ -199,8 +222,8 @@ export function renderModelSvg(graph) {
     .filter(({ name }) => !representedModels.has(name))
     .map(({ name }) => ({ from: name, field: '—', cardinality: 'no relations', to: '—' }));
   return relationRowsSvg({
-    title: 'Base addon model relations',
-    description: `${graph.entities.length} models and ${graph.edges.length} relations generated from the base addon model field metadata.`,
+    title: 'Core addon model relations',
+    description: `${graph.entities.length} models and ${graph.edges.length} relations generated from the base, auth, jobs, and notification addon model field metadata.`,
     edges: [...graph.edges, ...isolatedModels],
     leftHeader: 'Source model',
     middleHeader: 'Relation field · cardinality',
@@ -359,7 +382,13 @@ async function collectManifests() {
   return { manifests, sources };
 }
 
-function createArtifacts({ packageGraph, modelGraph, packageSourceHash, modelSourceHash, flows }) {
+async function createArtifacts({
+  packageGraph,
+  modelGraph,
+  packageSourceHash,
+  modelSourceHash,
+  flows,
+}) {
   const packageMetadata = {
     schemaVersion: 1,
     generatedFrom: 'apps/*/package.json and packages/*/package.json',
@@ -369,20 +398,25 @@ function createArtifacts({ packageGraph, modelGraph, packageSourceHash, modelSou
   };
   const modelMetadata = {
     schemaVersion: 1,
-    addon: 'base',
-    generatedFrom:
-      'packages/orm-base/src/manifest.ts and model field metadata; no seed values included',
+    addons: ['auth', 'base', 'jobs', 'notification'],
+    generatedFrom: 'core addon manifests and model field metadata; no seed values included',
     sourceSha256: modelSourceHash,
     models: modelGraph.entities,
     relations: modelGraph.edges,
   };
   const artifacts = new Map([
-    ['workspace-dependencies.json', `${JSON.stringify(packageMetadata, null, 2)}\n`],
+    [
+      'workspace-dependencies.json',
+      await prettier.format(`${JSON.stringify(packageMetadata, null, 2)}\n`, { parser: 'json' }),
+    ],
     ['workspace-dependencies.mmd', mermaidWorkspace(packageGraph)],
     ['workspace-dependencies.svg', renderWorkspaceSvg(packageGraph)],
-    ['base-model-relations.json', `${JSON.stringify(modelMetadata, null, 2)}\n`],
-    ['base-model-relations.mmd', mermaidModels(modelGraph)],
-    ['base-model-relations.svg', renderModelSvg(modelGraph)],
+    [
+      'core-model-relations.json',
+      await prettier.format(`${JSON.stringify(modelMetadata, null, 2)}\n`, { parser: 'json' }),
+    ],
+    ['core-model-relations.mmd', mermaidModels(modelGraph)],
+    ['core-model-relations.svg', renderModelSvg(modelGraph)],
   ]);
   for (const flow of flows) {
     artifacts.set(`${flow.id}.mmd`, renderMermaidFlow(flow));
@@ -392,18 +426,30 @@ function createArtifacts({ packageGraph, modelGraph, packageSourceHash, modelSou
 }
 
 export async function generateArchitectureDiagrams({ check = false } = {}) {
-  const [{ manifests: packageManifests, sources: packageSources }, { manifest }, flowSource] =
+  const [{ manifests: packageManifests, sources: packageSources }, addonModules, flowSource] =
     await Promise.all([
       collectManifests(),
-      import(pathToFileURL(manifestPath).href),
+      Promise.all(
+        addonManifestPaths.map(
+          ({ entry }) => import(pathToFileURL(path.join(rootDirectory, entry)).href)
+        )
+      ),
       readFile(flowSourcePath, 'utf8').then(JSON.parse),
     ]);
-  const modelSourcePaths = [
-    'packages/orm-base/src/manifest.ts',
-    ...(await readdir(path.join(rootDirectory, 'packages/orm-base/src/models')))
-      .filter((name) => name.endsWith('.ts'))
-      .map((name) => `packages/orm-base/src/models/${name}`),
-  ];
+  const modelSourcePaths = [];
+  for (const { sourceRoot, manifest } of addonManifestPaths) {
+    modelSourcePaths.push(`${sourceRoot}/${manifest}`);
+    const modelRoot = path.join(rootDirectory, sourceRoot, 'models');
+    try {
+      modelSourcePaths.push(
+        ...(await readdir(modelRoot))
+          .filter((name) => name.endsWith('.ts'))
+          .map((name) => `${sourceRoot}/models/${name}`)
+      );
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+    }
+  }
   const modelSources = await Promise.all(
     modelSourcePaths.map(async (relativePath) => ({
       path: relativePath,
@@ -411,8 +457,12 @@ export async function generateArchitectureDiagrams({ check = false } = {}) {
     }))
   );
   const packageGraph = createWorkspaceGraph(packageManifests);
-  const modelGraph = createModelGraph(manifest.models);
-  const artifacts = createArtifacts({
+  const modelGraph = createModelGraph(
+    addonModules.flatMap(
+      (module, index) => module[addonManifestPaths[index].exportName ?? 'manifest'].models
+    )
+  );
+  const artifacts = await createArtifacts({
     packageGraph,
     modelGraph,
     packageSourceHash: hashSources(packageSources),
@@ -455,7 +505,7 @@ if (invokedPath === fileURLToPath(import.meta.url)) {
     .then((result) => {
       const action = check ? 'Verified' : 'Generated';
       process.stdout.write(
-        `${action} ${result.artifactCount} architecture artifacts from ${result.packageCount} packages, ${result.modelCount} base models, and ${result.relationCount} model relations.\n`
+        `${action} ${result.artifactCount} architecture artifacts from ${result.packageCount} packages, ${result.modelCount} core addon models, and ${result.relationCount} model relations.\n`
       );
     })
     .catch((error) => {

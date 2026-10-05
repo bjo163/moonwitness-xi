@@ -1,9 +1,13 @@
 {
   "schemaVersion": 1,
-  "addon": "base",
-  "generatedFrom": "packages/orm-base/src/manifest.ts and model field metadata; no seed values included",
-  "sourceSha256": "f0714b4ea8d002c6d53dcc7b0b3378cac646f051b669c27230ba200b3f87d2e0",
+  "addons": ["auth", "base", "jobs", "notification"],
+  "generatedFrom": "core addon manifests and model field metadata; no seed values included",
+  "sourceSha256": "219bf7bc9c32de7756f68fa704a40ca8fab3da246b93b12648edc9216c24d578",
   "models": [
+    {
+      "name": "auth.refresh_token",
+      "table": "auth_refresh_tokens"
+    },
     {
       "name": "base.access_group",
       "table": "access_groups"
@@ -41,6 +45,10 @@
       "table": "country_states"
     },
     {
+      "name": "base.cron",
+      "table": "crons"
+    },
+    {
       "name": "base.currency",
       "table": "currencies"
     },
@@ -49,12 +57,24 @@
       "table": "group_memberships"
     },
     {
+      "name": "base.job",
+      "table": "jobs"
+    },
+    {
+      "name": "base.job_run",
+      "table": "job_runs"
+    },
+    {
       "name": "base.language",
       "table": "languages"
     },
     {
       "name": "base.model_access",
       "table": "model_access"
+    },
+    {
+      "name": "base.outbox_event",
+      "table": "outbox_events"
     },
     {
       "name": "base.partner",
@@ -91,9 +111,28 @@
     {
       "name": "base.user",
       "table": "users"
+    },
+    {
+      "name": "notification.notification",
+      "table": "notifications"
+    },
+    {
+      "name": "notification.preference",
+      "table": "notification_preferences"
+    },
+    {
+      "name": "notification.template",
+      "table": "notification_templates"
     }
   ],
   "relations": [
+    {
+      "from": "auth.refresh_token",
+      "field": "user",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
     {
       "from": "base.activity",
       "field": "assigned_to",
@@ -151,6 +190,20 @@
       "kind": "belongsTo"
     },
     {
+      "from": "base.cron",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.cron",
+      "field": "requested_by",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
       "from": "base.group_membership",
       "field": "group",
       "to": "base.access_group",
@@ -165,9 +218,44 @@
       "kind": "belongsTo"
     },
     {
+      "from": "base.job",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.job",
+      "field": "requested_by",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.job_run",
+      "field": "job",
+      "to": "base.job",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
       "from": "base.model_access",
       "field": "group",
       "to": "base.access_group",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.outbox_event",
+      "field": "actor",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.outbox_event",
+      "field": "company",
+      "to": "base.company",
       "cardinality": "N:1",
       "kind": "belongsTo"
     },
@@ -281,6 +369,41 @@
       "field": "partner",
       "to": "base.partner",
       "cardinality": "1:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "notification.notification",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "notification.notification",
+      "field": "recipient",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "notification.notification",
+      "field": "template",
+      "to": "notification.template",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "notification.preference",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "notification.preference",
+      "field": "user",
+      "to": "base.user",
+      "cardinality": "N:1",
       "kind": "belongsTo"
     }
   ]

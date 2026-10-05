@@ -51,6 +51,7 @@ import { Logo } from '@/components/manga/logo';
 import { Doodle } from '@/components/manga/effects';
 import { ShortcutsDialog } from '@/components/manga/shortcuts-dialog';
 import { ActivityBell } from './activity-bell';
+import { NotificationBell } from './notification-bell';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 function NavItem({
@@ -430,6 +431,7 @@ export function AppShell() {
 
             {/* Activity Notification Center */}
             <ActivityBell />
+            <NotificationBell />
 
             {/* Keyboard Shortcuts Trigger */}
             <Button

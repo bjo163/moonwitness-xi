@@ -252,18 +252,26 @@ export async function collectReferenceMetadata() {
   const basePath = path.join(root, 'packages/orm-base/dist/manifest.js');
   const authPath = path.join(root, 'packages/auth/dist/manifest.js');
   const jobsPath = path.join(root, 'packages/jobs/dist/models.js');
-  const [{ manifest: base }, { manifest: auth }, { jobsManifest: jobs }] = await Promise.all([
+  const notificationPath = path.join(root, 'packages/orm-notification/dist/manifest.js');
+  const [
+    { manifest: base },
+    { manifest: auth },
+    { jobsManifest: jobs },
+    { manifest: notification },
+  ] = await Promise.all([
     import(pathToFileURL(basePath).href),
     import(pathToFileURL(authPath).href),
     import(pathToFileURL(jobsPath).href),
+    import(pathToFileURL(notificationPath).href),
   ]);
   const addonSources = [
     ...(await filesUnder('packages/orm/src', '.ts')),
     ...(await filesUnder('packages/orm-base/src', '.ts')),
     ...(await filesUnder('packages/auth/src', '.ts')),
     ...(await filesUnder('packages/jobs/src', '.ts')),
+    ...(await filesUnder('packages/orm-notification/src', '.ts')),
   ];
-  const addons = [base, auth, jobs]
+  const addons = [base, auth, jobs, notification]
     .sort((left, right) => compare(left.name, right.name))
     .map((addon) => {
       const models = addon.models
@@ -320,6 +328,9 @@ export async function collectReferenceMetadata() {
       };
     });
   const addonNames = new Set(addons.map((addon) => addon.name));
+  const installedModelNames = new Set(
+    addons.flatMap((addon) => addon.models.map((model) => model.name))
+  );
   for (const addon of addons) {
     for (const dependency of addon.depends) {
       if (!addonNames.has(dependency)) {
@@ -335,7 +346,7 @@ export async function collectReferenceMetadata() {
       if (!modelNames.has(model)) throw new Error(`View references unknown model '${model}'`);
     }
     for (const modelName of Object.keys(addon.seeds)) {
-      if (!modelNames.has(modelName))
+      if (!installedModelNames.has(modelName))
         throw new Error(`Seed references unknown model '${modelName}'`);
     }
   }
@@ -344,6 +355,7 @@ export async function collectReferenceMetadata() {
   const envSourcePaths = [
     ...(await filesUnder('apps/api/src', '.ts')),
     ...(await filesUnder('packages/jobs/src', '.ts')),
+    ...(await filesUnder('packages/orm-notification/src', '.ts')),
   ].sort(compare);
   const envSources = await Promise.all(
     envSourcePaths.map(async (file) => ({

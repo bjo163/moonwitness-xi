@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "4559b649b4ce0dbc1a57c2a8716edd7db3e0be05d4f0e93f52ce97eea037cae8",
+  "generatedFromSha256": "e890f4b6033df740c5a203db9b011b3fbedc60914eb66f375f39609425b47345",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -92,6 +92,12 @@
       "scripts": ["build", "test"]
     },
     {
+      "name": "@moonwitness/orm-notification",
+      "version": "1.0.0-rc.1",
+      "directory": "packages/orm-notification",
+      "scripts": ["build", "test"]
+    },
+    {
       "name": "@moonwitness/types",
       "version": "1.0.0-rc.1",
       "directory": "packages/types",
@@ -159,6 +165,10 @@
       "build": "tsc",
       "test": "tsc -p tsconfig.check.json && vitest run"
     },
+    "@moonwitness/orm-notification": {
+      "build": "tsc",
+      "test": "tsc -p tsconfig.check.json && vitest run"
+    },
     "@moonwitness/types": {
       "build": "tsc"
     },
@@ -167,8 +177,8 @@
       "test": "pnpm build && node --test tests/*.test.mjs"
     },
     "root": {
-      "architecture:check": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && node scripts/architecture/generate-diagrams.mjs --check",
-      "architecture:generate": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && node scripts/architecture/generate-diagrams.mjs",
+      "architecture:check": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && pnpm --filter @moonwitness/orm-notification build && node scripts/architecture/generate-diagrams.mjs --check",
+      "architecture:generate": "pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && pnpm --filter @moonwitness/orm-notification build && node scripts/architecture/generate-diagrams.mjs",
       "assets:check:docs": "node scripts/export-doc-assets.mjs --check",
       "assets:export:docs": "node scripts/export-doc-assets.mjs",
       "assets:generate": "node packages/assets/scripts/generate.mjs && node packages/assets/scripts/generate-illustrations.mjs && node scripts/export-doc-assets.mjs",
@@ -184,9 +194,9 @@
       "dev:board": "pnpm --filter @moonwitness/board dev",
       "docs:build": "pnpm docs:check && node scripts/docs/build-guide.mjs && pnpm --filter @moonwitness/docs portal:build",
       "docs:change:classify": "node scripts/classify-docs-change.mjs",
-      "docs:check": "pnpm --filter @moonwitness/types build && pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && node --test scripts/docs/generate-reference.test.mjs scripts/docs/update-readme.test.mjs scripts/docs/build-guide.test.mjs && node scripts/docs/generate-reference.mjs --check && node scripts/docs/update-readme.mjs --check && pnpm docs:links && pnpm docs:examples:check",
+      "docs:check": "pnpm --filter @moonwitness/types build && pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && pnpm --filter @moonwitness/orm-notification build && node --test scripts/docs/generate-reference.test.mjs scripts/docs/update-readme.test.mjs scripts/docs/build-guide.test.mjs && node scripts/docs/generate-reference.mjs --check && node scripts/docs/update-readme.mjs --check && pnpm docs:links && pnpm docs:examples:check",
       "docs:examples:check": "pnpm --filter @moonwitness/orm build && pnpm exec tsc --noEmit -p packages/orm/examples/tsconfig.json && pnpm --filter @moonwitness/orm exec vitest run tests/addon.test.ts",
-      "docs:generate": "pnpm --filter @moonwitness/types build && pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && node scripts/docs/generate-reference.mjs && node scripts/docs/update-readme.mjs",
+      "docs:generate": "pnpm --filter @moonwitness/types build && pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && pnpm --filter @moonwitness/orm-notification build && node scripts/docs/generate-reference.mjs && node scripts/docs/update-readme.mjs",
       "docs:links": "node scripts/check-docs.mjs && node scripts/check-doc-navigation.mjs && node --test scripts/check-docs.test.mjs scripts/check-doc-navigation.test.mjs scripts/check-external-doc-links.test.mjs",
       "docs:links:external": "node scripts/check-external-doc-links.mjs",
       "docs:publication:check": "node scripts/check-docs-publication.mjs",
@@ -227,7 +237,7 @@
       "test:ui": "pnpm --filter @moonwitness/ui build && node --test packages/ui/tests/*.test.mjs && node packages/ui/scripts/verify-package.mjs",
       "test:ui-budget": "node --test apps/ui-catalog/tests/bundle-budget.test.mjs && pnpm --filter @moonwitness/ui-catalog build && pnpm ui:budget",
       "test:ui-catalog": "pnpm --filter @moonwitness/ui-catalog build && pnpm --filter @moonwitness/ui-catalog test",
-      "test:unit": "pnpm build && pnpm --filter @moonwitness/api exec vitest run --exclude tests/postgres.integration.test.ts --exclude tests/postgres.performance.integration.test.ts && pnpm --filter @moonwitness/auth test && pnpm --filter @moonwitness/client test && pnpm --filter @moonwitness/jobs test && pnpm --filter @moonwitness/logger test && pnpm --filter @moonwitness/orm test && pnpm --filter @moonwitness/orm-base test && pnpm test:assets && pnpm test:ui",
+      "test:unit": "pnpm build && pnpm --filter @moonwitness/api exec vitest run --exclude tests/postgres.integration.test.ts --exclude tests/postgres.performance.integration.test.ts && pnpm --filter @moonwitness/auth test && pnpm --filter @moonwitness/client test && pnpm --filter @moonwitness/jobs test && pnpm --filter @moonwitness/logger test && pnpm --filter @moonwitness/orm test && pnpm --filter @moonwitness/orm-base test && pnpm --filter @moonwitness/orm-notification test && pnpm test:assets && pnpm test:ui",
       "test:unit:ci": "node scripts/run-unit-tests.mjs",
       "typecheck": "pnpm build && pnpm --filter @moonwitness/board typecheck",
       "ui:budget": "node scripts/check-ui-catalog-budget.mjs",
@@ -2820,6 +2830,315 @@
         "base.cron": 1
       },
       "accessRules": []
+    },
+    {
+      "name": "notification",
+      "version": "1.0.0",
+      "depends": ["base", "jobs"],
+      "models": [
+        {
+          "name": "notification.notification",
+          "table": "notifications",
+          "fields": [
+            {
+              "name": "body",
+              "kind": "text",
+              "column": "body",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "channel",
+              "kind": "enum",
+              "column": "channel",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "values": ["email", "in_app"]
+            },
+            {
+              "name": "company",
+              "kind": "belongsTo",
+              "column": "company_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.company"
+            },
+            {
+              "name": "delivered_at",
+              "kind": "string",
+              "column": "delivered_at",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "delivery_status",
+              "kind": "enum",
+              "column": "delivery_status",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "values": ["delivered", "suppressed"]
+            },
+            {
+              "name": "idempotency_key",
+              "kind": "string",
+              "column": "idempotency_key",
+              "declaredRequired": true,
+              "required": true,
+              "unique": true,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "read_at",
+              "kind": "string",
+              "column": "read_at",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "recipient",
+              "kind": "belongsTo",
+              "column": "recipient_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.user"
+            },
+            {
+              "name": "resource_id",
+              "kind": "integer",
+              "column": "resource_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "resource_model",
+              "kind": "string",
+              "column": "resource_model",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "state",
+              "kind": "enum",
+              "column": "state",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]",
+              "values": ["archived", "read", "unread"]
+            },
+            {
+              "name": "template",
+              "kind": "belongsTo",
+              "column": "template_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "notification.template"
+            },
+            {
+              "name": "title",
+              "kind": "string",
+              "column": "title",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            }
+          ],
+          "uniqueConstraints": []
+        },
+        {
+          "name": "notification.preference",
+          "table": "notification_preferences",
+          "fields": [
+            {
+              "name": "channel",
+              "kind": "enum",
+              "column": "channel",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "values": ["email", "in_app"]
+            },
+            {
+              "name": "company",
+              "kind": "belongsTo",
+              "column": "company_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.company"
+            },
+            {
+              "name": "enabled",
+              "kind": "boolean",
+              "column": "enabled",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "user",
+              "kind": "belongsTo",
+              "column": "user_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.user"
+            }
+          ],
+          "uniqueConstraints": [["channel", "company", "user"]]
+        },
+        {
+          "name": "notification.template",
+          "table": "notification_templates",
+          "fields": [
+            {
+              "name": "body",
+              "kind": "text",
+              "column": "body",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "channel",
+              "kind": "enum",
+              "column": "channel",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]",
+              "values": ["email", "in_app"]
+            },
+            {
+              "name": "code",
+              "kind": "string",
+              "column": "code",
+              "declaredRequired": true,
+              "required": true,
+              "unique": true,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "locale",
+              "kind": "string",
+              "column": "locale",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "title",
+              "kind": "string",
+              "column": "title",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            }
+          ],
+          "uniqueConstraints": []
+        }
+      ],
+      "menus": [
+        {
+          "model": "notification.notification",
+          "label": "Notifications",
+          "group": "Workspace",
+          "sequence": 15,
+          "developmentOnly": false
+        },
+        {
+          "model": "notification.preference",
+          "label": "Notification Preferences",
+          "group": "Settings",
+          "sequence": 80,
+          "developmentOnly": false
+        },
+        {
+          "model": "notification.template",
+          "label": "Notification Templates",
+          "group": "Technical",
+          "sequence": 470,
+          "developmentOnly": true
+        }
+      ],
+      "views": ["notification.notification", "notification.preference", "notification.template"],
+      "seeds": {
+        "notification.template": 2,
+        "notification.preference": 4,
+        "base.model_access": 2
+      },
+      "accessRules": [
+        {
+          "group": "base.group_user",
+          "model": "notification.notification",
+          "read": true,
+          "create": false,
+          "write": false,
+          "unlink": false
+        },
+        {
+          "group": "base.group_user",
+          "model": "notification.preference",
+          "read": true,
+          "create": false,
+          "write": false,
+          "unlink": false
+        }
+      ]
     }
   ],
   "routes": [
@@ -2966,6 +3285,22 @@
     {
       "method": "GET",
       "path": "/metrics"
+    },
+    {
+      "method": "PATCH",
+      "path": "/notifications/:id/read"
+    },
+    {
+      "method": "GET",
+      "path": "/notifications/inbox"
+    },
+    {
+      "method": "GET",
+      "path": "/notifications/preferences"
+    },
+    {
+      "method": "PUT",
+      "path": "/notifications/preferences/:channel"
     },
     {
       "method": "GET",

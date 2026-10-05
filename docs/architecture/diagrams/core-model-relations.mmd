@@ -1,0 +1,71 @@
+flowchart LR
+  model0["auth.refresh_token"]
+  model1["base.access_group"]
+  model2["base.activity"]
+  model3["base.attachment"]
+  model4["base.audit_log"]
+  model5["base.bank"]
+  model6["base.company"]
+  model7["base.company_membership"]
+  model8["base.country"]
+  model9["base.country_state"]
+  model10["base.cron"]
+  model11["base.currency"]
+  model12["base.group_membership"]
+  model13["base.job"]
+  model14["base.job_run"]
+  model15["base.language"]
+  model16["base.model_access"]
+  model17["base.outbox_event"]
+  model18["base.partner"]
+  model19["base.partner_address"]
+  model20["base.partner_bank"]
+  model21["base.partner_category"]
+  model22["base.partner_category_link"]
+  model23["base.sequence"]
+  model24["base.tag"]
+  model25["base.tag_link"]
+  model26["base.user"]
+  model27["notification.notification"]
+  model28["notification.preference"]
+  model29["notification.template"]
+  model0 -->|user N:1| model26
+  model2 -->|assigned_to N:1| model26
+  model5 -->|country N:1| model8
+  model6 -->|country N:1| model8
+  model6 -->|currency N:1| model11
+  model6 -->|language N:1| model15
+  model7 -->|company N:1| model6
+  model7 -->|user N:1| model26
+  model9 -->|country N:1| model8
+  model10 -->|company N:1| model6
+  model10 -->|requested_by N:1| model26
+  model12 -->|group N:1| model1
+  model12 -->|user N:1| model26
+  model13 -->|company N:1| model6
+  model13 -->|requested_by N:1| model26
+  model14 -->|job N:1| model13
+  model16 -->|group N:1| model1
+  model17 -->|actor N:1| model26
+  model17 -->|company N:1| model6
+  model18 -->|company N:1| model6
+  model18 -->|country N:1| model8
+  model18 -->|parent N:1| model18
+  model18 -->|state N:1| model9
+  model19 -->|country N:1| model8
+  model19 -->|partner N:1| model18
+  model19 -->|state N:1| model9
+  model20 -->|bank N:1| model5
+  model20 -->|company N:1| model6
+  model20 -->|currency N:1| model11
+  model20 -->|partner N:1| model18
+  model22 -->|category N:1| model21
+  model22 -->|partner N:1| model18
+  model25 -->|tag N:1| model24
+  model26 -->|language N:1| model15
+  model26 -->|partner 1:1| model18
+  model27 -->|company N:1| model6
+  model27 -->|recipient N:1| model26
+  model27 -->|template N:1| model29
+  model28 -->|company N:1| model6
+  model28 -->|user N:1| model26

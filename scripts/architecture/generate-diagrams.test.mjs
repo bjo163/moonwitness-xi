@@ -196,18 +196,19 @@ test('curated architecture flows are valid and have unique Mermaid identifiers',
 test('generated model metadata includes provenance without seed records or values', async () => {
   const metadata = JSON.parse(
     await readFile(
-      new URL('../../docs/architecture/diagrams/base-model-relations.json', import.meta.url),
+      new URL('../../docs/architecture/diagrams/core-model-relations.json', import.meta.url),
       'utf8'
     )
   );
   assert.deepEqual(Object.keys(metadata), [
     'schemaVersion',
-    'addon',
+    'addons',
     'generatedFrom',
     'sourceSha256',
     'models',
     'relations',
   ]);
+  assert.deepEqual(metadata.addons, ['auth', 'base', 'jobs', 'notification']);
   assert.match(metadata.sourceSha256, /^[a-f0-9]{64}$/u);
   assert.ok(
     metadata.models.every((model) =>

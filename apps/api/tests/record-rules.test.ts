@@ -84,6 +84,23 @@ describe('Row-Level Security & Multi-Tenancy Record Rules', () => {
     ).toEqual([]);
   });
 
+  it('scopes notification inbox and preferences by company and authenticated recipient', async () => {
+    const userReq = {
+      auth: { userId: 42, role: 'user', companyId: 10 },
+      env: app.env,
+    } as unknown as SecurityContext['request'] & {
+      auth: { userId: number; role: string; companyId: number };
+    };
+    await expect(getRecordRuleDomain(userReq, 'notification.notification')).resolves.toEqual([
+      ['company_id', '=', 10],
+      ['recipient_id', '=', 42],
+    ]);
+    await expect(getRecordRuleDomain(userReq, 'notification.preference')).resolves.toEqual([
+      ['company_id', '=', 10],
+      ['user_id', '=', 42],
+    ]);
+  });
+
   it('multi-tenant requests resolve company from X-Company-Id header', async () => {
     const loginRes = await app.inject({
       method: 'POST',

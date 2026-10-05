@@ -28,6 +28,7 @@ import {
   runOneJob,
 } from '@moonwitness/jobs';
 import { manifest as baseManifest } from '@moonwitness/orm-base';
+import { manifest as notificationManifest } from '@moonwitness/orm-notification';
 import { buildApp } from '../src/app.js';
 import { verifyDefaultBaseAccounts } from '../src/startup-checks.js';
 import { createPostgresKnexConfig } from '../src/config/knexfile.js';
@@ -221,25 +222,36 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     });
     try {
       await Promise.all([
-        installAddons(concurrentDb, [manifest, authManifest, jobsManifest]),
-        installAddons(concurrentDb, [manifest, authManifest, jobsManifest]),
+        installAddons(concurrentDb, [manifest, authManifest, jobsManifest, notificationManifest]),
+        installAddons(concurrentDb, [manifest, authManifest, jobsManifest, notificationManifest]),
       ]);
       expect(Number((await concurrentDb('_orm_addons').count({ count: '*' }).first())?.count)).toBe(
-        3
+        4
       );
       expect(Number((await concurrentDb('users').count({ count: '*' }).first())?.count)).toBe(2);
       const seedCount = baseManifest.data?.length ?? 0;
       expect(Number((await concurrentDb('_orm_data').count({ count: '*' }).first())?.count)).toBe(
-        seedCount + (authManifest.data?.length ?? 0) + (jobsManifest.data?.length ?? 0)
+        seedCount +
+          (authManifest.data?.length ?? 0) +
+          (jobsManifest.data?.length ?? 0) +
+          (notificationManifest.data?.length ?? 0)
       );
       const seededSuperadmin = await concurrentDb('_orm_data')
         .where({ id: 'base.user_superadmin', model: 'base.user' })
         .first('record_id');
       expect(seededSuperadmin).toBeDefined();
 
-      await installAddons(concurrentDb, [manifest, authManifest, jobsManifest]);
+      await installAddons(concurrentDb, [
+        manifest,
+        authManifest,
+        jobsManifest,
+        notificationManifest,
+      ]);
       expect(Number((await concurrentDb('_orm_data').count({ count: '*' }).first())?.count)).toBe(
-        seedCount + (authManifest.data?.length ?? 0) + (jobsManifest.data?.length ?? 0)
+        seedCount +
+          (authManifest.data?.length ?? 0) +
+          (jobsManifest.data?.length ?? 0) +
+          (notificationManifest.data?.length ?? 0)
       );
       await expect(
         concurrentDb('_orm_data')

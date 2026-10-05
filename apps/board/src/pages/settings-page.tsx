@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, MonitorCog, Moon, Sun } from 'lucide-react';
 import { toast } from '@moonwitness/ui/components/toast';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
+import { NotificationPreferences } from '@/components/settings/notification-preferences';
 import { Button } from '@moonwitness/ui/components/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@moonwitness/ui/components/input';
@@ -169,6 +170,8 @@ export function SettingsPage() {
           })}
         </div>
       </section>
+
+      <NotificationPreferences />
 
       <section className="ink-panel space-y-6 bg-card p-5 sm:p-8">
         <div>

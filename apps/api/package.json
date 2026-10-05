@@ -33,6 +33,7 @@
     "@moonwitness/auth": "workspace:*",
     "@moonwitness/jobs": "workspace:*",
     "@moonwitness/logger": "workspace:*",
+    "@moonwitness/orm-notification": "workspace:*",
     "@moonwitness/orm": "workspace:*",
     "@moonwitness/orm-base": "workspace:*",
     "@moonwitness/types": "workspace:*",

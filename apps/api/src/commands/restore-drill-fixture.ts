@@ -2,6 +2,7 @@ import { chmod, readFile, writeFile } from 'node:fs/promises';
 import knex, { type Knex } from 'knex';
 import { createAuthService, manifest as authManifest } from '@moonwitness/auth';
 import { jobsManifest } from '@moonwitness/jobs';
+import { manifest as notificationManifest } from '@moonwitness/orm-notification';
 import { installAddons } from '@moonwitness/orm';
 import {
   Company,
@@ -21,6 +22,9 @@ const tableNames = [
   'partner_addresses',
   'company_memberships',
   'group_memberships',
+  'notification_templates',
+  'notification_preferences',
+  'notifications',
 ] as const;
 const fixture = {
   businessName: 'Restore Drill Business',
@@ -64,7 +68,7 @@ async function countTables(db: Knex): Promise<RestoreExpectations['counts']> {
 }
 
 function bindFixtureModels(db: Knex): void {
-  for (const addon of [baseManifest, authManifest, jobsManifest]) {
+  for (const addon of [baseManifest, authManifest, jobsManifest, notificationManifest]) {
     for (const model of addon.models) model.knex(db);
   }
 }
@@ -98,7 +102,7 @@ async function recordExpectations(db: Knex): Promise<RestoreExpectations> {
 }
 
 async function seed(db: Knex, expectationsPath: string): Promise<void> {
-  await installAddons(db, [baseManifest, authManifest, jobsManifest]);
+  await installAddons(db, [baseManifest, authManifest, jobsManifest, notificationManifest]);
   await initializeSuperadminPassword('synthetic-restore-drill-admin-password');
 
   const company = await Company.query().findById(

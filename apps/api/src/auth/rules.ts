@@ -70,6 +70,14 @@ export async function getRecordRuleDomain(req: FastifyRequest, modelName: string
     return domains;
   }
 
+  if (modelName === 'notification.notification') {
+    return [...companyDomain, ['recipient_id', '=', context.userId]];
+  }
+
+  if (modelName === 'notification.preference') {
+    return [...companyDomain, ['user_id', '=', context.userId]];
+  }
+
   // 2. Default core security scopes
   if (modelName === 'base.partner') {
     return [

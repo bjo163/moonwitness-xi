@@ -5,11 +5,16 @@ import { createDatabase } from '../database/knex.js';
 import { installAddons } from '@moonwitness/orm';
 import { manifest as baseManifest } from '@moonwitness/orm-base';
 import { jobsManifest, runOutboxLoop } from '@moonwitness/jobs';
+import {
+  manifest as notificationAddon,
+  registerNotificationOutboxConsumer,
+} from '@moonwitness/orm-notification';
 import { readWorkerHealthPort, startWorkerHealthServer } from './worker-health.js';
 
 const db = createDatabase();
 const stop = new AbortController();
 let workerHealth: Awaited<ReturnType<typeof startWorkerHealthServer>> = null;
+let unregisterNotificationConsumer = () => {};
 const stopWorker = () => {
   workerHealth?.setReady(false);
   stop.abort();
@@ -18,7 +23,8 @@ process.once('SIGINT', stopWorker);
 process.once('SIGTERM', stopWorker);
 
 try {
-  await installAddons(db, [baseManifest, jobsManifest]);
+  await installAddons(db, [baseManifest, jobsManifest, notificationAddon]);
+  unregisterNotificationConsumer = registerNotificationOutboxConsumer();
   const consumerModule = process.env.OUTBOX_HANDLERS_MODULE;
   if (consumerModule) await import(pathToFileURL(path.resolve(consumerModule)).href);
   if (!stop.signal.aborted) {
@@ -34,6 +40,7 @@ try {
   }
   await runOutboxLoop(`moonwitness-outbox-${randomUUID()}`, stop.signal);
 } finally {
+  unregisterNotificationConsumer();
   await workerHealth?.close();
   await db.destroy();
 }

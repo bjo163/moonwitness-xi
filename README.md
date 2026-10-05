@@ -15,24 +15,25 @@ troubleshooting tersedia di [Developer guide](docs/guide/index.md).
 
 ## Generated workspace reference
 
-Monorepo version: `1.0.0-rc.1` · metadata fingerprint: `4559b649b4ce0dbc1a57c2a8716edd7db3e0be05d4f0e93f52ce97eea037cae8`.
+Monorepo version: `1.0.0-rc.1` · metadata fingerprint: `e890f4b6033df740c5a203db9b011b3fbedc60914eb66f375f39609425b47345`.
 
-| App/package                  | Kind    | Version      | Workspace scripts                                                                                            |
-| ---------------------------- | ------- | ------------ | ------------------------------------------------------------------------------------------------------------ |
-| `@moonwitness/api`           | App     | `1.0.0-rc.1` | `build`, `dev`, `jobs:outbox`, `jobs:scheduler`, `jobs:worker`, `reset:superadmin-password`, `start`, `test` |
-| `@moonwitness/board`         | App     | `1.0.0-rc.1` | `build`, `dev`, `lint`, `preview`, `typecheck`                                                               |
-| `@moonwitness/docs`          | App     | `1.0.0-rc.1` | `dev`, `portal:build`, `preview`, `test`, `typecheck`                                                        |
-| `@moonwitness/ui-catalog`    | App     | `1.0.0-rc.1` | `build`, `dev`, `preview`, `test`                                                                            |
-| `@moonwitness/assets`        | Package | `1.0.0-rc.1` | —                                                                                                            |
-| `@moonwitness/auth`          | Package | `1.0.0-rc.1` | `build`, `test`                                                                                              |
-| `@moonwitness/client`        | Package | `1.0.0-rc.1` | `build`, `test`                                                                                              |
-| `@moonwitness/eslint-config` | Package | `1.0.0-rc.1` | —                                                                                                            |
-| `@moonwitness/jobs`          | Package | `1.0.0-rc.1` | `build`, `test`                                                                                              |
-| `@moonwitness/logger`        | Package | `1.0.0-rc.1` | `build`, `test`                                                                                              |
-| `@moonwitness/orm`           | Package | `1.0.0-rc.1` | `build`, `test`                                                                                              |
-| `@moonwitness/orm-base`      | Package | `1.0.0-rc.1` | `build`, `test`                                                                                              |
-| `@moonwitness/types`         | Package | `1.0.0-rc.1` | `build`                                                                                                      |
-| `@moonwitness/ui`            | Package | `1.0.0-rc.1` | `build`, `test`                                                                                              |
+| App/package                     | Kind    | Version      | Workspace scripts                                                                                            |
+| ------------------------------- | ------- | ------------ | ------------------------------------------------------------------------------------------------------------ |
+| `@moonwitness/api`              | App     | `1.0.0-rc.1` | `build`, `dev`, `jobs:outbox`, `jobs:scheduler`, `jobs:worker`, `reset:superadmin-password`, `start`, `test` |
+| `@moonwitness/board`            | App     | `1.0.0-rc.1` | `build`, `dev`, `lint`, `preview`, `typecheck`                                                               |
+| `@moonwitness/docs`             | App     | `1.0.0-rc.1` | `dev`, `portal:build`, `preview`, `test`, `typecheck`                                                        |
+| `@moonwitness/ui-catalog`       | App     | `1.0.0-rc.1` | `build`, `dev`, `preview`, `test`                                                                            |
+| `@moonwitness/assets`           | Package | `1.0.0-rc.1` | —                                                                                                            |
+| `@moonwitness/auth`             | Package | `1.0.0-rc.1` | `build`, `test`                                                                                              |
+| `@moonwitness/client`           | Package | `1.0.0-rc.1` | `build`, `test`                                                                                              |
+| `@moonwitness/eslint-config`    | Package | `1.0.0-rc.1` | —                                                                                                            |
+| `@moonwitness/jobs`             | Package | `1.0.0-rc.1` | `build`, `test`                                                                                              |
+| `@moonwitness/logger`           | Package | `1.0.0-rc.1` | `build`, `test`                                                                                              |
+| `@moonwitness/orm`              | Package | `1.0.0-rc.1` | `build`, `test`                                                                                              |
+| `@moonwitness/orm-base`         | Package | `1.0.0-rc.1` | `build`, `test`                                                                                              |
+| `@moonwitness/orm-notification` | Package | `1.0.0-rc.1` | `build`, `test`                                                                                              |
+| `@moonwitness/types`            | Package | `1.0.0-rc.1` | `build`                                                                                                      |
+| `@moonwitness/ui`               | Package | `1.0.0-rc.1` | `build`, `test`                                                                                              |
 
 Root commands: `pnpm architecture:check`, `pnpm architecture:generate`, `pnpm assets:check:docs`, `pnpm assets:export:docs`, `pnpm assets:generate`, `pnpm assets:generate:illustrations`, `pnpm assets:render`, `pnpm assets:validate`, `pnpm audit:workspace`, `pnpm build`, `pnpm ci:affected`, `pnpm dependency:candidate`, `pnpm dependency:plan`, `pnpm dev`, `pnpm dev:board`, `pnpm docs:build`, `pnpm docs:change:classify`, `pnpm docs:check`, `pnpm docs:examples:check`, `pnpm docs:generate`, `pnpm docs:links`, `pnpm docs:links:external`, `pnpm docs:publication:check`, `pnpm format`, `pnpm format:check`, `pnpm jobs:outbox`, `pnpm jobs:scheduler`, `pnpm jobs:worker`, `pnpm lint`, `pnpm lint:fix`, `pnpm promotion:approval-check`, `pnpm promotion:risk`, `pnpm readme:check`, `pnpm readme:generate`, `pnpm release:check`, `pnpm release:classify`, `pnpm reset:superadmin-password`, `pnpm test`, `pnpm test:affected`, `pnpm test:architecture`, `pnpm test:artifact-safety`, `pnpm test:assets`, `pnpm test:ci-gate`, `pnpm test:coverage-policy`, `pnpm test:dependency-candidate`, `pnpm test:dependency-plan`, `pnpm test:docs-navigation`, `pnpm test:docs-portal`, `pnpm test:docs-publication`, `pnpm test:e2e`, `pnpm test:expected-ref`, `pnpm test:flaky-policy`, `pnpm test:integration`, `pnpm test:promotion-policy`, `pnpm test:release-classification`, `pnpm test:restore-drill`, `pnpm test:security-policy`, `pnpm test:ui`, `pnpm test:ui-budget`, `pnpm test:ui-catalog`, `pnpm test:unit`, `pnpm test:unit:ci`, `pnpm typecheck`, `pnpm ui:budget`, `pnpm ui:visual:update`, `pnpm verify`.
 

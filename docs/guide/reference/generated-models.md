@@ -1,6 +1,6 @@
 # Generated model and addon reference
 
-Source fingerprint: `4559b649b4ce0dbc1a57c2a8716edd7db3e0be05d4f0e93f52ce97eea037cae8`. Seed values and field defaults are intentionally omitted.
+Source fingerprint: `e890f4b6033df740c5a203db9b011b3fbedc60914eb66f375f39609425b47345`. Seed values and field defaults are intentionally omitted.
 
 ## Addon `auth`
 
@@ -283,3 +283,53 @@ Models: 4; declared views: 0; menu entries: 0; seed rows: 1.
 | ---------- | ----- | ----- | -------: | ---------- |
 
 - Seed coverage: `base.cron` has 1 declared seed row(s); seed values are not included.
+
+## Addon `notification`
+
+Version: `1.0.0`; dependencies: `base`, `jobs`.
+
+Models: 3; declared views: 3; menu entries: 3; seed rows: 8.
+
+| Model                       | Table                      | Field             | Kind      | Required | Optional | Default    | Relation                |
+| --------------------------- | -------------------------- | ----------------- | --------- | -------- | -------- | ---------- | ----------------------- |
+| `notification.notification` | `notifications`            | `body`            | text      | Yes      | No       | No         | —                       |
+| `notification.notification` | `notifications`            | `channel`         | enum      | Yes      | No       | No         | —                       |
+| `notification.notification` | `notifications`            | `company`         | belongsTo | Yes      | No       | No         | `base.company`          |
+| `notification.notification` | `notifications`            | `delivered_at`    | string    | No       | Yes      | No         | —                       |
+| `notification.notification` | `notifications`            | `delivery_status` | enum      | Yes      | No       | No         | —                       |
+| `notification.notification` | `notifications`            | `idempotency_key` | string    | Yes      | No       | No         | —                       |
+| `notification.notification` | `notifications`            | `read_at`         | string    | No       | Yes      | No         | —                       |
+| `notification.notification` | `notifications`            | `recipient`       | belongsTo | Yes      | No       | No         | `base.user`             |
+| `notification.notification` | `notifications`            | `resource_id`     | integer   | No       | Yes      | No         | —                       |
+| `notification.notification` | `notifications`            | `resource_model`  | string    | No       | Yes      | No         | —                       |
+| `notification.notification` | `notifications`            | `state`           | enum      | No       | Yes      | [redacted] | —                       |
+| `notification.notification` | `notifications`            | `template`        | belongsTo | Yes      | No       | No         | `notification.template` |
+| `notification.notification` | `notifications`            | `title`           | string    | Yes      | No       | No         | —                       |
+| `notification.preference`   | `notification_preferences` | `channel`         | enum      | Yes      | No       | No         | —                       |
+| `notification.preference`   | `notification_preferences` | `company`         | belongsTo | Yes      | No       | No         | `base.company`          |
+| `notification.preference`   | `notification_preferences` | `enabled`         | boolean   | No       | Yes      | [redacted] | —                       |
+| `notification.preference`   | `notification_preferences` | `user`            | belongsTo | Yes      | No       | No         | `base.user`             |
+| `notification.template`     | `notification_templates`   | `body`            | text      | Yes      | No       | No         | —                       |
+| `notification.template`     | `notification_templates`   | `channel`         | enum      | No       | Yes      | [redacted] | —                       |
+| `notification.template`     | `notification_templates`   | `code`            | string    | Yes      | No       | No         | —                       |
+| `notification.template`     | `notification_templates`   | `locale`          | string    | No       | Yes      | [redacted] | —                       |
+| `notification.template`     | `notification_templates`   | `title`           | string    | Yes      | No       | No         | —                       |
+
+### Menus and seed coverage
+
+| Menu model                  | Label                    | Group     | Sequence | Visibility       |
+| --------------------------- | ------------------------ | --------- | -------: | ---------------- |
+| `notification.notification` | Notifications            | Workspace |       15 | Standard         |
+| `notification.preference`   | Notification Preferences | Settings  |       80 | Standard         |
+| `notification.template`     | Notification Templates   | Technical |      470 | Development mode |
+
+- Seed coverage: `base.model_access` has 2 declared seed row(s); seed values are not included.
+- Seed coverage: `notification.preference` has 4 declared seed row(s); seed values are not included.
+- Seed coverage: `notification.template` has 2 declared seed row(s); seed values are not included.
+
+### Seeded model access rules
+
+| Group reference   | Model                       | Read | Create | Write | Delete |
+| ----------------- | --------------------------- | ---- | ------ | ----- | ------ |
+| `base.group_user` | `notification.notification` | Yes  | No     | No    | No     |
+| `base.group_user` | `notification.preference`   | Yes  | No     | No    | No     |
