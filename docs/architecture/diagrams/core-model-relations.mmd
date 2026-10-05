@@ -29,10 +29,14 @@ flowchart LR
   model27["notification.notification"]
   model28["notification.preference"]
   model29["notification.template"]
-  model30["workflow.approval"]
-  model31["workflow.definition"]
-  model32["workflow.event"]
-  model33["workflow.instance"]
+  model30["organization.department"]
+  model31["organization.membership"]
+  model32["organization.position"]
+  model33["organization.team"]
+  model34["workflow.approval"]
+  model35["workflow.definition"]
+  model36["workflow.event"]
+  model37["workflow.instance"]
   model0 -->|user N:1| model26
   model2 -->|assigned_to N:1| model26
   model5 -->|country N:1| model8
@@ -73,10 +77,23 @@ flowchart LR
   model27 -->|template N:1| model29
   model28 -->|company N:1| model6
   model28 -->|user N:1| model26
-  model30 -->|actor N:1| model26
-  model30 -->|instance N:1| model33
-  model32 -->|actor N:1| model26
-  model32 -->|instance N:1| model33
+  model30 -->|company N:1| model6
+  model30 -->|parent N:1| model30
+  model31 -->|company N:1| model6
+  model31 -->|department N:1| model30
+  model31 -->|manager N:1| model31
+  model31 -->|position N:1| model32
+  model31 -->|team N:1| model33
+  model31 -->|user N:1| model26
+  model32 -->|company N:1| model6
+  model32 -->|department N:1| model30
   model33 -->|company N:1| model6
-  model33 -->|definition N:1| model31
-  model33 -->|started_by N:1| model26
+  model33 -->|department N:1| model30
+  model33 -->|parent N:1| model33
+  model34 -->|actor N:1| model26
+  model34 -->|instance N:1| model37
+  model36 -->|actor N:1| model26
+  model36 -->|instance N:1| model37
+  model37 -->|company N:1| model6
+  model37 -->|definition N:1| model35
+  model37 -->|started_by N:1| model26

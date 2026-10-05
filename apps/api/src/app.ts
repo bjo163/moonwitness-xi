@@ -25,6 +25,7 @@ import { manifest as authAddon, createAuthService } from '@moonwitness/auth';
 import { jobsManifest } from '@moonwitness/jobs';
 import { manifest as notificationAddon } from '@moonwitness/orm-notification';
 import { manifest as workflowAddon } from '@moonwitness/orm-workflow';
+import { manifest as organizationAddon } from '@moonwitness/orm-organization';
 
 import { createLogger, type LogLevel } from '@moonwitness/logger';
 import observabilityPlugin from './plugins/observability.plugin.js';
@@ -69,7 +70,14 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
 
   const db = options.db ?? createDatabase();
   try {
-    await installAddons(db, [baseAddon, authAddon, jobsManifest, notificationAddon, workflowAddon]);
+    await installAddons(db, [
+      baseAddon,
+      authAddon,
+      jobsManifest,
+      notificationAddon,
+      organizationAddon,
+      workflowAddon,
+    ]);
     await initializeSuperadminPassword(superadminPassword);
   } catch (error) {
     if (!options.db) await db.destroy();

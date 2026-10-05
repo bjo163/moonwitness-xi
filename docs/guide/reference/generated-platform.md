@@ -1,6 +1,6 @@
 # Generated platform reference
 
-Source fingerprint: `e99207723c42a14cb65c608dc495db33349931d80b91957f73b9578b50acfff3`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
+Source fingerprint: `665d9de6f0554b86568b4c66fbbf98eab0f01eb804b3da3a274b7bff0e911568`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
 
 ## Workspace packages and apps
 
@@ -19,6 +19,7 @@ Source fingerprint: `e99207723c42a14cb65c608dc495db33349931d80b91957f73b9578b50a
 | `@moonwitness/orm`              | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                               |
 | `@moonwitness/orm-base`         | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                               |
 | `@moonwitness/orm-notification` | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                               |
+| `@moonwitness/orm-organization` | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                               |
 | `@moonwitness/orm-storage`      | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                               |
 | `@moonwitness/orm-workflow`     | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                               |
 | `@moonwitness/types`            | Package | 1.0.0-rc.1 | `build`                                                                                                                                                       |

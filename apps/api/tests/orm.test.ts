@@ -6,6 +6,8 @@ import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { BaseModel, Registry, Environment } from '@moonwitness/orm';
+import { Company } from '@moonwitness/orm-base';
+import { OrganizationDepartment } from '@moonwitness/orm-organization';
 import { buildApp } from '../src/app.js';
 import type { FastifyInstance, InjectOptions } from 'fastify';
 
@@ -192,6 +194,50 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
     expect(commaRelations.json<{ total: number }>().total).toBe(2);
     const privateField = await send({ method: 'GET', url: '/api/base.user?fields=password' });
     expect(privateField.statusCode).toBe(400);
+  });
+
+  it('serves seeded organization records and rejects a hierarchy cycle through the generic API', async () => {
+    const list = await send({
+      method: 'GET',
+      url: '/api/organization.department?order=name%20asc',
+    });
+    expect(list.statusCode, list.payload).toBe(200);
+    expect(list.json<{ data: { code: string }[] }>().data.map(({ code }) => code)).toEqual([
+      'operations',
+      'product',
+    ]);
+
+    const department = await OrganizationDepartment.query()
+      .findOne({ code: 'product' })
+      .throwIfNotFound();
+    const cycle = await send({
+      method: 'PATCH',
+      url: `/api/organization.department/${department.id}`,
+      payload: { parent_id: department.id },
+    });
+    expect(cycle.statusCode, cycle.payload).toBe(403);
+    expect((await OrganizationDepartment.query().findById(department.id))?.parent_id).toBeNull();
+
+    const foreignCompany = await Company.query().insertAndFetch({ name: 'Foreign Organization' });
+    const foreignDepartment = await OrganizationDepartment.query().insertAndFetch({
+      company_id: foreignCompany.id,
+      code: 'foreign',
+      name: 'Foreign Department',
+    });
+    const crossCompany = await send({
+      method: 'POST',
+      url: '/api/organization.team',
+      payload: {
+        company_id: department.company_id,
+        department_id: foreignDepartment.id,
+        code: 'cross_company',
+        name: 'Cross Company Team',
+      },
+    });
+    expect(crossCompany.statusCode, crossCompany.payload).toBe(403);
+    expect(await testDb('organization_teams').count({ count: '*' }).first()).toMatchObject({
+      count: 2,
+    });
   });
 
   it('bounds generic query cost and rejects unknown fields through mass assignment', async () => {

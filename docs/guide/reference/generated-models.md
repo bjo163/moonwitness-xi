@@ -1,6 +1,6 @@
 # Generated model and addon reference
 
-Source fingerprint: `e99207723c42a14cb65c608dc495db33349931d80b91957f73b9578b50acfff3`. Seed values and field defaults are intentionally omitted.
+Source fingerprint: `665d9de6f0554b86568b4c66fbbf98eab0f01eb804b3da3a274b7bff0e911568`. Seed values and field defaults are intentionally omitted.
 
 ## Addon `auth`
 
@@ -333,6 +333,63 @@ Models: 3; declared views: 3; menu entries: 3; seed rows: 8.
 | ----------------- | --------------------------- | ---- | ------ | ----- | ------ |
 | `base.group_user` | `notification.notification` | Yes  | No     | No    | No     |
 | `base.group_user` | `notification.preference`   | Yes  | No     | No    | No     |
+
+## Addon `organization`
+
+Version: `1.0.0`; dependencies: `base`.
+
+Models: 4; declared views: 4; menu entries: 4; seed rows: 12.
+
+| Model                     | Table                      | Field         | Kind      | Required | Optional | Default | Relation                  |
+| ------------------------- | -------------------------- | ------------- | --------- | -------- | -------- | ------- | ------------------------- |
+| `organization.department` | `organization_departments` | `code`        | string    | Yes      | No       | No      | —                         |
+| `organization.department` | `organization_departments` | `company`     | belongsTo | Yes      | No       | No      | `base.company`            |
+| `organization.department` | `organization_departments` | `description` | text      | No       | Yes      | No      | —                         |
+| `organization.department` | `organization_departments` | `name`        | string    | Yes      | No       | No      | —                         |
+| `organization.department` | `organization_departments` | `parent`      | belongsTo | No       | Yes      | No      | `organization.department` |
+| `organization.membership` | `organization_memberships` | `company`     | belongsTo | Yes      | No       | No      | `base.company`            |
+| `organization.membership` | `organization_memberships` | `department`  | belongsTo | Yes      | No       | No      | `organization.department` |
+| `organization.membership` | `organization_memberships` | `end_date`    | string    | No       | Yes      | No      | —                         |
+| `organization.membership` | `organization_memberships` | `manager`     | belongsTo | No       | Yes      | No      | `organization.membership` |
+| `organization.membership` | `organization_memberships` | `position`    | belongsTo | No       | Yes      | No      | `organization.position`   |
+| `organization.membership` | `organization_memberships` | `start_date`  | string    | Yes      | No       | No      | —                         |
+| `organization.membership` | `organization_memberships` | `team`        | belongsTo | No       | Yes      | No      | `organization.team`       |
+| `organization.membership` | `organization_memberships` | `user`        | belongsTo | Yes      | No       | No      | `base.user`               |
+| `organization.position`   | `organization_positions`   | `code`        | string    | Yes      | No       | No      | —                         |
+| `organization.position`   | `organization_positions`   | `company`     | belongsTo | Yes      | No       | No      | `base.company`            |
+| `organization.position`   | `organization_positions`   | `department`  | belongsTo | No       | Yes      | No      | `organization.department` |
+| `organization.position`   | `organization_positions`   | `description` | text      | No       | Yes      | No      | —                         |
+| `organization.position`   | `organization_positions`   | `name`        | string    | Yes      | No       | No      | —                         |
+| `organization.team`       | `organization_teams`       | `code`        | string    | Yes      | No       | No      | —                         |
+| `organization.team`       | `organization_teams`       | `company`     | belongsTo | Yes      | No       | No      | `base.company`            |
+| `organization.team`       | `organization_teams`       | `department`  | belongsTo | Yes      | No       | No      | `organization.department` |
+| `organization.team`       | `organization_teams`       | `description` | text      | No       | Yes      | No      | —                         |
+| `organization.team`       | `organization_teams`       | `name`        | string    | Yes      | No       | No      | —                         |
+| `organization.team`       | `organization_teams`       | `parent`      | belongsTo | No       | Yes      | No      | `organization.team`       |
+
+### Menus and seed coverage
+
+| Menu model                | Label                | Group        | Sequence | Visibility |
+| ------------------------- | -------------------- | ------------ | -------: | ---------- |
+| `organization.department` | Departments          | Organization |       35 | Standard   |
+| `organization.membership` | Organization Members | Organization |       38 | Standard   |
+| `organization.position`   | Positions            | Organization |       37 | Standard   |
+| `organization.team`       | Teams                | Organization |       36 | Standard   |
+
+- Seed coverage: `base.model_access` has 4 declared seed row(s); seed values are not included.
+- Seed coverage: `organization.department` has 2 declared seed row(s); seed values are not included.
+- Seed coverage: `organization.membership` has 2 declared seed row(s); seed values are not included.
+- Seed coverage: `organization.position` has 2 declared seed row(s); seed values are not included.
+- Seed coverage: `organization.team` has 2 declared seed row(s); seed values are not included.
+
+### Seeded model access rules
+
+| Group reference   | Model                     | Read | Create | Write | Delete |
+| ----------------- | ------------------------- | ---- | ------ | ----- | ------ |
+| `base.group_user` | `organization.department` | Yes  | No     | No    | No     |
+| `base.group_user` | `organization.membership` | Yes  | No     | No    | No     |
+| `base.group_user` | `organization.position`   | Yes  | No     | No    | No     |
+| `base.group_user` | `organization.team`       | Yes  | No     | No    | No     |
 
 ## Addon `orm-storage`
 

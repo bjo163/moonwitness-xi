@@ -72,6 +72,12 @@ const suites = [
     typecheck: true,
     coverage: ['src/manifest.ts', 'src/runtime.ts'],
   },
+  {
+    name: 'orm-organization',
+    packageName: '@moonwitness/orm-organization',
+    typecheck: true,
+    coverage: ['src/validation.ts'],
+  },
 ];
 
 for (const suite of suites) {

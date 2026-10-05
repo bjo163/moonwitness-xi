@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "addons": ["auth", "base", "jobs", "notification"],
   "generatedFrom": "core addon manifests and model field metadata; no seed values included",
-  "sourceSha256": "c162b4a461478aae24ca9ee9bfc4e09cf2edb9b491697f2b42ba36d26b9f2cb3",
+  "sourceSha256": "3dc20d7629b8662b5662c7af2ea3f695fbc702dce8fc7034f2b475683be61869",
   "models": [
     {
       "name": "auth.refresh_token",
@@ -123,6 +123,22 @@
     {
       "name": "notification.template",
       "table": "notification_templates"
+    },
+    {
+      "name": "organization.department",
+      "table": "organization_departments"
+    },
+    {
+      "name": "organization.membership",
+      "table": "organization_memberships"
+    },
+    {
+      "name": "organization.position",
+      "table": "organization_positions"
+    },
+    {
+      "name": "organization.team",
+      "table": "organization_teams"
     },
     {
       "name": "workflow.approval",
@@ -419,6 +435,97 @@
       "from": "notification.preference",
       "field": "user",
       "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "organization.department",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "organization.department",
+      "field": "parent",
+      "to": "organization.department",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "organization.membership",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "organization.membership",
+      "field": "department",
+      "to": "organization.department",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "organization.membership",
+      "field": "manager",
+      "to": "organization.membership",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "organization.membership",
+      "field": "position",
+      "to": "organization.position",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "organization.membership",
+      "field": "team",
+      "to": "organization.team",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "organization.membership",
+      "field": "user",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "organization.position",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "organization.position",
+      "field": "department",
+      "to": "organization.department",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "organization.team",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "organization.team",
+      "field": "department",
+      "to": "organization.department",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "organization.team",
+      "field": "parent",
+      "to": "organization.team",
       "cardinality": "N:1",
       "kind": "belongsTo"
     },

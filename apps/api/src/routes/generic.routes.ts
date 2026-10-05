@@ -12,6 +12,7 @@ import {
   type Domain,
 } from '@moonwitness/orm';
 import { assignDefaultCompanyMembership, assignDefaultUserGroup } from '@moonwitness/orm-base';
+import { isValidOrganizationMutation } from '@moonwitness/orm-organization';
 import type { JsonValue } from '@moonwitness/types';
 import type { Transaction } from 'objection';
 import { canAccess, canManageBaseUser, operationFor, rpcOperation } from '../auth/policy.js';
@@ -175,7 +176,10 @@ async function hasCompanyAccess(
 ): Promise<boolean> {
   type RelationModel = typeof BaseModel & {
     modelName: string;
-    fields: Record<string, { kind?: string; required?: boolean; target?: RelationModel }>;
+    fields: Record<
+      string,
+      { kind?: string; required?: boolean; target?: RelationModel | (() => RelationModel) }
+    >;
   };
   const companyId = req.auth?.companyId;
   const modelFields = (Registry.get(modelName) as RelationModel).fields ?? {};
@@ -206,16 +210,20 @@ async function hasCompanyAccess(
         ? values[fieldName]
         : property(current, `${fieldName}_id`);
     if (typeof relationId !== 'number' || !Number.isSafeInteger(relationId)) continue;
-    const target = await req.env.get(field.target.modelName).query(trx).findById(relationId);
+    const targetModel =
+      typeof field.target === 'function' && !('modelName' in field.target)
+        ? field.target()
+        : field.target;
+    const target = await req.env.get(targetModel.modelName).query(trx).findById(relationId);
     if (!target) return false;
-    const targetFields = field.target.fields ?? {};
+    const targetFields = targetModel.fields ?? {};
     if ('company' in targetFields || 'company_id' in targetFields) {
       const relatedCompany = property(target, 'company_id');
       if (relatedCompany !== undefined && relatedCompany !== null && relatedCompany !== companyId)
         return false;
     }
   }
-  return true;
+  return isValidOrganizationMutation(modelName, values, current?.toJSON(), trx);
 }
 
 function forbidden(reply: FastifyReply) {

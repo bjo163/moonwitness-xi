@@ -25,6 +25,11 @@
           "kind": "how-to",
           "path": "docs/guide/how-to/addon-development.md"
         },
+        {
+          "title": "Addon organisasi",
+          "kind": "how-to",
+          "path": "docs/guide/how-to/organization-addon.md"
+        },
         { "title": "Menjalankan Board", "kind": "how-to", "path": "docs/guide/how-to/board.md" },
         {
           "title": "Jobs dan outbox",
