@@ -11,8 +11,13 @@ const pages = `
       - run: pnpm install
     if [[ "$DISPATCH_REF" != "refs/heads/dev" ]]; then exit 1; fi
     if [[ "$DISPATCH_REF" != "refs/heads/main" ]]; then exit 1; fi
+    [[ "$SOURCE_REF" =~ ^v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$ ]]
+    select(.publishedAt != null and .isDraft == false and .isPrerelease == false)
     git merge-base --is-ancestor "$release_sha" refs/remotes/origin/main
     git checkout --detach "$RELEASE_TAG"
+    git merge-base --is-ancestor "$SOURCE_SHA" refs/remotes/origin/main
+    git cat-file -e "$SOURCE_SHA^{commit}"
+    git checkout --detach "$SOURCE_SHA"
 `;
 const visualReview = `
       - uses: actions/checkout@0123456789012345678901234567890123456789 # v4
@@ -87,6 +92,15 @@ test('rejects release-tag checkout before ancestry validation and missing dev gu
   const findings = policies({ pages: unsafePages, visualReview: unsafeVisual });
   assert.ok(findings.some((finding) => finding.includes('validate a release tag before')));
   assert.ok(findings.some((finding) => finding.includes('protected dev branch')));
+});
+
+test('rejects prerelease Pages publication and immutable-SHA recovery without main ancestry', () => {
+  const unsafePages = pages
+    .replace('isPrerelease == false', 'isPrerelease != true')
+    .replace('git merge-base --is-ancestor "$SOURCE_SHA" refs/remotes/origin/main', 'true');
+  const findings = policies({ pages: unsafePages });
+  assert.ok(findings.some((finding) => finding.includes('reject prerelease releases')));
+  assert.ok(findings.some((finding) => finding.includes('reachable from main')));
 });
 
 test('rejects untrusted release dispatch, stale preparation SHA, and missing follow-up dispatch', () => {

@@ -137,6 +137,8 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ## M6.08 — Publikasikan dokumentasi stable yang sesuai release; tentukan retensi versi dokumentasi dan URL latest.
 
+Dispatch publikasi Pages kini menolak prerelease/build-metadata tags dan memeriksa GitHub Release berstatus stable-published. Ini menutup pemilihan RC sebagai sumber docs stable, tetapi versioned path retention dan selector/latest mapping belum dibuat; milestone tetap partial.
+
 - **Prasyarat:** M7.02, M6.06
 - **Baca/periksa:** Release version contract; docs portal.
 - **Deliverable:** Docs version manifest.
@@ -190,6 +192,8 @@ Docs typo fix tidak membuat tag aplikasi dan hanya publish setelah full `ci-gate
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M6.10.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
 ## M6.11 — Pisahkan retry Pages dari release aplikasi; kegagalan docs tercatat dan tidak menghasilkan tag/version baru.
+
+Pages dapat di-dispatch ulang dengan full main commit SHA dari incident report. Workflow mengecek source sebagai commit lengkap, mewajibkan ancestry terhadap `main` dan `ci-gate` sukses pada exact SHA, lalu rebuild dari checkout detached SHA tersebut. Jalur ini hanya menjalankan Pages, tanpa tag/version/release atau image publication. Workflow contract tests pass lokal; deploy gagal lalu retry hosted masih acceptance pending.
 
 - **Prasyarat:** M6.07, M7.13
 - **Baca/periksa:** Pages workflow; release state manifest.

@@ -27,12 +27,12 @@ on:
   workflow_dispatch:
     inputs:
       source_ref:
-        description: Use dev for a preview; publication accepts main or a verified release tag
+        description: Use dev for a preview; publish main, an exact verified main SHA, or a published stable release tag
         required: true
         type: string
         default: dev
       publish:
-        description: Publish Pages (requires source_ref main or a release tag)
+        description: Publish Pages (requires main, an exact verified main SHA, or a stable release tag)
         required: true
         type: boolean
         default: false
@@ -134,8 +134,8 @@ jobs:
             echo "Documentation previews must be dispatched from the protected dev branch." >&2
             exit 1
           fi
-          if [[ "$PUBLISH" == "true" && "$SOURCE_REF" != "main" && ! "$SOURCE_REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
-            echo "Publication accepts only main or a semantic release tag; got $SOURCE_REF" >&2
+          if [[ "$PUBLISH" == "true" && "$SOURCE_REF" != "main" && ! "$SOURCE_REF" =~ ^[0-9a-f]{40}$ && ! "$SOURCE_REF" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Publication accepts only main, a full lowercase main SHA, or a stable semantic release tag; got $SOURCE_REF" >&2
             exit 1
           fi
           echo "publish=$PUBLISH" >> "$GITHUB_OUTPUT"
@@ -149,7 +149,7 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Verify and select a published release tag
+      - name: Verify and select a published stable release tag
         if: github.event_name == 'workflow_dispatch' && inputs.publish == true && startsWith(inputs.source_ref, 'v')
         env:
           GH_TOKEN: ${{ github.token }}
@@ -159,12 +159,24 @@ jobs:
           set -euo pipefail
           git fetch --force origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
           release_sha="$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"
-          gh release view "$RELEASE_TAG" --repo "$GH_REPO" --json tagName,publishedAt --jq 'select(.publishedAt != null) | .tagName' | grep -Fx "$RELEASE_TAG"
+          gh release view "$RELEASE_TAG" --repo "$GH_REPO" --json tagName,publishedAt,isDraft,isPrerelease --jq 'select(.publishedAt != null and .isDraft == false and .isPrerelease == false) | .tagName' | grep -Fx "$RELEASE_TAG"
           git fetch --no-tags origin main:refs/remotes/origin/main
           if ! git merge-base --is-ancestor "$release_sha" refs/remotes/origin/main; then
             echo "Release tag $RELEASE_TAG does not point to a commit reachable from trusted main." >&2
             exit 1
           fi
+      - name: Verify and select an immutable main source SHA for Pages recovery
+        if: github.event_name == 'workflow_dispatch' && inputs.publish == true && inputs.source_ref != 'main' && !startsWith(inputs.source_ref, 'v')
+        env:
+          SOURCE_SHA: ${{ inputs.source_ref }}
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          git cat-file -e "$SOURCE_SHA^{commit}"
+          git merge-base --is-ancestor "$SOURCE_SHA" refs/remotes/origin/main
+          git checkout --detach "$SOURCE_SHA"
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
           git checkout --detach "$RELEASE_TAG"
           if [[ "$(git rev-parse HEAD)" != "$release_sha" ]]; then
             echo "Release tag checkout does not match the validated tag SHA." >&2

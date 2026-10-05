@@ -65,6 +65,22 @@ export function inspectTrustedCheckoutPolicies({
   ) {
     findings.push('Pages must validate a release tag before checking out its source code.');
   }
+  if (!pages.includes('isPrerelease == false'))
+    findings.push('Pages must reject prerelease releases as stable documentation sources.');
+  if (!pages.includes('SOURCE_REF" =~ ^v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$'))
+    findings.push('Pages publication must accept only stable SemVer release tags.');
+  if (!pages.includes('git merge-base --is-ancestor "$SOURCE_SHA" refs/remotes/origin/main'))
+    findings.push('Pages SHA recovery must require the exact source to be reachable from main.');
+  if (!pages.includes('git cat-file -e "$SOURCE_SHA^{commit}"'))
+    findings.push('Pages SHA recovery must require a full commit object before checkout.');
+  if (!pages.includes('git checkout --detach "$SOURCE_SHA"'))
+    findings.push('Pages recovery must rebuild from the exact requested source SHA.');
+  if (
+    pages.indexOf('git merge-base --is-ancestor "$SOURCE_SHA" refs/remotes/origin/main') >
+    pages.indexOf('git checkout --detach "$SOURCE_SHA"')
+  ) {
+    findings.push('Pages must validate a recovery SHA before checking out its source code.');
+  }
 
   if (!visualReview.includes('DISPATCH_REF" != "refs/heads/dev"'))
     findings.push('Visual review dispatch must be restricted to the protected dev branch.');
