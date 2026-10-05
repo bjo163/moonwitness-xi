@@ -38,6 +38,8 @@ Validator menolak unpinned third-party action; fork execution tidak memperoleh p
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M8.02.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
+`pnpm automation:check:action-pins` memeriksa seluruh `.github/**/*.yml` dan `.yaml`, termasuk composite action lokal. Setiap external `uses:` harus memakai SHA lowercase 40 karakter dan komentar versi yang terbaca; local `./...` action dikecualikan. Test negatif berjalan di automation CI.
+
 ## M8.03 — Aktifkan code/dependency/secret scanning yang tersedia; scan container dan tetapkan severity policy serta exception beralasan dengan expiry.
 
 - **Prasyarat:** M0.04, M2.04

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "783711af41fef287df9b95a1e2d43162a46a48c0190727802589a70afea04819",
+  "generatedFromSha256": "2efceff235fe1704b01849c76054092e214673b6ecc1fd8032cc053e10432296",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -209,6 +209,7 @@
       "assets:validate": "node packages/assets/scripts/validate.mjs",
       "attachments:reconcile": "pnpm --filter @moonwitness/api attachments:reconcile",
       "audit:workspace": "node scripts/audit-workspace.mjs",
+      "automation:check:action-pins": "node scripts/check-action-pins.mjs",
       "build": "pnpm -r build",
       "ci:affected": "node scripts/select-affected.mjs",
       "dependency:candidate": "node scripts/dependency-candidate.mjs",
@@ -240,6 +241,7 @@
       "release:plan": "node scripts/release-plan.mjs",
       "reset:superadmin-password": "pnpm --filter @moonwitness/api reset:superadmin-password",
       "test": "pnpm test:unit",
+      "test:action-pins": "node --test scripts/check-action-pins.test.mjs",
       "test:affected": "node --test scripts/select-affected.test.mjs",
       "test:architecture": "node --test scripts/architecture/*.test.mjs",
       "test:artifact-safety": "node --test scripts/scan-test-reports.test.mjs",

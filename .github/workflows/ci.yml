@@ -27,7 +27,7 @@ jobs:
       approval-required: ${{ steps.risk.outputs.approval_required }}
       promotion-head: ${{ steps.risk.outputs.head_sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup-pnpm
@@ -71,7 +71,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
@@ -93,15 +93,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
           pnpm-version: '11'
       - name: Validate workflows and shell scripts
-        run: bash scripts/check-automation.sh
+        run: bash scripts/check-automation.sh && pnpm automation:check:action-pins
       - name: Test affected selection, release planning, and promotion policy
-        run: pnpm test:ci-gate && pnpm test:affected && pnpm test:release-classification && pnpm test:release-plan && pnpm test:render-changelog && pnpm test:workspace-version-policy && pnpm test:promotion-policy && pnpm test:flaky-policy && pnpm test:security-policy && pnpm test:dependency-plan && pnpm test:dependency-candidate && pnpm test:expected-ref && node scripts/check-flaky-policy.mjs
+        run: pnpm test:ci-gate && pnpm test:affected && pnpm test:release-classification && pnpm test:release-plan && pnpm test:render-changelog && pnpm test:workspace-version-policy && pnpm test:action-pins && pnpm test:promotion-policy && pnpm test:flaky-policy && pnpm test:security-policy && pnpm test:dependency-plan && pnpm test:dependency-candidate && pnpm test:expected-ref && node scripts/check-flaky-policy.mjs
       - name: Validate vulnerability exception baseline
         run: node scripts/check-vulnerability-policy.mjs
 
@@ -130,7 +130,7 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/moonwitness_test
       REQUIRE_POSTGRES_TESTS: 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
@@ -144,7 +144,7 @@ jobs:
         run: node scripts/scan-test-reports.mjs
       - name: Upload unit and integration test reports
         if: always() && steps.scan_reports.outcome == 'success'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: test-junit-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
@@ -182,7 +182,7 @@ jobs:
     env:
       POSTGRES_TEST_URL: postgresql://postgres:postgres@127.0.0.1:5432/moonwitness_e2e
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
@@ -199,7 +199,7 @@ jobs:
         run: node scripts/scan-test-reports.mjs
       - name: Upload browser JUnit report and screenshots only
         if: always() && steps.scan_browser_reports.outcome == 'success'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: board-playwright-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
@@ -220,7 +220,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
@@ -241,7 +241,7 @@ jobs:
         run: node scripts/scan-test-reports.mjs
       - name: Upload UI browser report and visual screenshots only
         if: always() && steps.scan_ui_reports.outcome == 'success'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ui-catalog-playwright-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
@@ -260,7 +260,7 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Validate production Compose configuration
         env:
           DATABASE_URL: postgresql://moonwitness:ci-password@postgres.example:5432/moonwitness
@@ -306,19 +306,19 @@ jobs:
           exit-code: '0'
       - name: Upload locked workspace scan SARIF
         if: always() && hashFiles('trivy-results.sarif') != ''
-        uses: github/codeql-action/upload-sarif@1190a975f95ce23525efb6a3fc21ea29567c1b52 # v3
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:
           sarif_file: trivy-results.sarif
           category: trivy-workspace-dependencies
       - name: Upload production API image scan SARIF
         if: always() && hashFiles('trivy-api-image.sarif') != ''
-        uses: github/codeql-action/upload-sarif@1190a975f95ce23525efb6a3fc21ea29567c1b52 # v3
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:
           sarif_file: trivy-api-image.sarif
           category: trivy-api-image
       - name: Upload production Board image scan SARIF
         if: always() && hashFiles('trivy-board-image.sarif') != ''
-        uses: github/codeql-action/upload-sarif@1190a975f95ce23525efb6a3fc21ea29567c1b52 # v3
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:
           sarif_file: trivy-board-image.sarif
           category: trivy-board-image
@@ -334,7 +334,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
