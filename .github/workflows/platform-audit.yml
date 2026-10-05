@@ -49,25 +49,7 @@ jobs:
             node scripts/platform-audit.mjs --output platform-audit-baseline.json
           fi
       - name: Write concise audit summary
-        run: |
-          node --input-type=module -e '
-            import { readFileSync } from "node:fs";
-            const report = JSON.parse(readFileSync("platform-audit-baseline.json", "utf8"));
-            const summary = [
-              "## Monthly platform audit",
-              "",
-              `- Source: \`${report.source.sha}\``,
-              `- Active artifacts: ${report.inventory.artifacts.count} (${report.inventory.artifacts.bytes} bytes); expiring within seven days: ${report.inventory.artifacts.expiringWithinSevenDays}.`,
-              `- Workflow runs inspected (90 days): ${report.inventory.workflowRuns.count}.`,
-              `- Registry inventory: ${report.inventory.packages.status}; Actions billing: ${report.inventory.billing.status}.`,
-              `- Cleanup: dry-run only; ${report.cleanupPlan.candidates.length} allowlisted candidates; no delete capability.`,
-              "",
-              ...report.limitations.map((item) => `- Limitation: ${item}`),
-              ""
-            ].join("\n");
-            process.stdout.write(summary);
-            await import("node:fs/promises").then(({ appendFile }) => appendFile(process.env.GITHUB_STEP_SUMMARY, summary));
-          '
+        run: node scripts/write-platform-audit-summary.mjs platform-audit-baseline.json
       - name: Upload audit baseline
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

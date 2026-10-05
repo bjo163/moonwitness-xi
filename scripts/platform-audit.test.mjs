@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildPlatformAudit, planArtifactCleanup } from './platform-audit.mjs';
+import { renderPlatformAuditSummary } from './write-platform-audit-summary.mjs';
 
 const generatedAt = '2026-10-05T00:00:00.000Z';
 
@@ -142,4 +143,22 @@ test('audit rejects invalid provenance and never presents missing values as zero
   assert.equal(report.inventory.billing.status, 'unknown');
   assert.equal(report.inventory.permissions.artifactAndLogRetentionDays, null);
   assert.equal(report.coverage.workflowRunHistoryMayBeTruncated, false);
+});
+
+test('summary reports unknown capabilities and never implies cleanup executed', () => {
+  const report = {
+    source: { sha: 'c'.repeat(40) },
+    inventory: {
+      artifacts: { count: 2, bytes: 512, expiringWithinSevenDays: 1 },
+      workflowRuns: { count: 3 },
+      packages: { status: 'unknown' },
+      billing: { status: 'unknown' },
+    },
+    cleanupPlan: { candidates: [] },
+    limitations: ['Billing API unavailable.'],
+  };
+  const summary = renderPlatformAuditSummary(report);
+  assert.match(summary, /Registry inventory: unknown; Actions billing: unknown/u);
+  assert.match(summary, /0 allowlisted candidates; no delete capability/u);
+  assert.match(summary, /Limitation: Billing API unavailable\./u);
 });
