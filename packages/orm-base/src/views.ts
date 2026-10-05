@@ -13,6 +13,7 @@ import { Activity } from './models/activity.js';
 import { Sequence } from './models/sequence.js';
 import { AccessGroup, GroupMembership, ModelAccess } from './models/access-group.js';
 import { CompanyMembership } from './models/company-membership.js';
+import { AuditLog } from './models/audit-log.js';
 
 /** Domains use API column names (`company_id`); view field lists use model field keys. */
 export const views = [
@@ -279,5 +280,19 @@ export const views = [
       sections: [{ title: 'Access', fields: ['user', 'company', 'is_default'] }],
     },
     search: {},
+  }),
+  defineView(AuditLog, {
+    title: 'Audit Log',
+    list: {
+      columns: ['create_date', 'model', 'record_id', 'operation', 'actor_id'],
+      order: 'id desc',
+    },
+    form: {
+      sections: [
+        { title: 'Event', fields: ['create_date', 'model', 'record_id', 'operation', 'actor_id'] },
+        { title: 'Changes', fields: ['changes'] },
+      ],
+    },
+    search: { fields: ['model', 'operation'] },
   }),
 ];

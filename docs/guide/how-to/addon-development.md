@@ -2,8 +2,8 @@
 
 **Pembaca:** pengembang package addon. **Prasyarat:** pahami TypeScript, `@moonwitness/orm`, dan
 [kontrak kompatibilitas](../../engineering/compatibility.md). **Verifikasi:** jalankan
-`pnpm --filter @moonwitness/orm test` dan `pnpm --filter @moonwitness/orm-base test`; hasilnya harus
-exit code 0.
+`pnpm --filter @moonwitness/orm test`, `pnpm --filter @moonwitness/orm-base test`, dan
+`pnpm test:addon-conformance`; hasilnya harus exit code 0.
 
 ## Deklarasikan model dan manifest
 
@@ -37,6 +37,18 @@ Jangan import file `src`/`dist` internal dari package lain; hanya root exports y
 3. Uji install bersih, install kedua, upgrade versi, preservasi edit dan rollback pada DB test.
 4. Tambahkan README addon yang menjelaskan audience, dependency, install, tests, dan perubahan versi.
 5. Perbarui model reference hasil generator ketika M6.02 tersedia.
+
+Suite `pnpm test:addon-conformance` menginstall semua manifest runtime dalam database sementara,
+memeriksa public exports, dependency closure, views/menu, external ID unik dan namespaced, lalu
+mengulang install untuk membuktikan idempotensi serta pelestarian edit. Addon provider-only boleh
+memiliki `models: []`; jangan menambah record demo palsu hanya agar lolos pemeriksaan. API negative
+authorization setiap package tetap diverifikasi lewat suite auth, jobs, notification, workflow,
+organization, dan ORM API, karena kontraknya berjalan di boundary API bukan di installer metadata.
+
+Schema perubahan versi ditangani lewat `upgrade["versi-lama"]` di manifest dengan Knex transaction
+dan backfill programatis. Suite ORM menguji hook versi tepat hanya berjalan sekali; addon tanpa
+perubahan schema tidak perlu hook kosong. Untuk kompatibilitas API dan prosedur upgrade, ikuti
+[compatibility policy](../../engineering/compatibility.md).
 
 Base manifest yang dapat dipakai sebagai contoh ada di `packages/orm-base/src/manifest.ts` dan
 `packages/orm-base/src/data.ts`.

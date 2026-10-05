@@ -1,6 +1,6 @@
 # Generated model and addon reference
 
-Source fingerprint: `9023ff5baf84b7181f4050f86af443ac411b82cb7fa71bdbbe356562f02dbb04`. Seed values and field defaults are intentionally omitted.
+Source fingerprint: `e6f30f6a526cd3e308139d9eebbb92a83b942f7ecffb13a842298d2087f9d3a2`. Seed values and field defaults are intentionally omitted.
 
 ## Addon `auth`
 
@@ -28,7 +28,7 @@ Models: 1; declared views: 0; menu entries: 0; seed rows: 0.
 
 Version: `1.0.0`; dependencies: none.
 
-Models: 22; declared views: 21; menu entries: 22; seed rows: 736.
+Models: 22; declared views: 22; menu entries: 22; seed rows: 736.
 
 | Model                        | Table                    | Field                  | Kind      | Required | Optional | Default    | Relation                |
 | ---------------------------- | ------------------------ | ---------------------- | --------- | -------- | -------- | ---------- | ----------------------- |

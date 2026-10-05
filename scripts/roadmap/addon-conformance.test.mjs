@@ -1,0 +1,163 @@
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+import { readFile } from 'node:fs/promises';
+import { after, describe, it } from 'node:test';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { installAddons } from '../../packages/orm/dist/index.js';
+import * as base from '../../packages/orm-base/dist/index.js';
+import * as auth from '../../packages/auth/dist/index.js';
+import * as jobs from '../../packages/jobs/dist/index.js';
+import * as notification from '../../packages/orm-notification/dist/index.js';
+import * as organization from '../../packages/orm-organization/dist/index.js';
+import * as storage from '../../packages/orm-storage/dist/index.js';
+import * as workflow from '../../packages/orm-workflow/dist/index.js';
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const requireFromApi = createRequire(path.join(root, 'apps/api/package.json'));
+const knex = requireFromApi('knex');
+
+const addonPackages = [
+  { directory: 'orm-base', module: base, manifest: base.manifest },
+  { directory: 'auth', module: auth, manifest: auth.manifest },
+  { directory: 'jobs', module: jobs, manifest: jobs.jobsManifest },
+  { directory: 'orm-notification', module: notification, manifest: notification.manifest },
+  { directory: 'orm-organization', module: organization, manifest: organization.manifest },
+  { directory: 'orm-storage', module: storage, manifest: storage.manifest },
+  { directory: 'orm-workflow', module: workflow, manifest: workflow.manifest },
+];
+const addonManifests = addonPackages.map(({ manifest }) => manifest);
+const modelName = (model) => model.modelName;
+
+describe('workspace addon conformance', () => {
+  it('exposes valid manifests, public models, dependencies, views, menus, and stable seed identities', async () => {
+    const addonsByName = new Map(addonManifests.map((addon) => [addon.name, addon]));
+    assert.equal(addonsByName.size, addonManifests.length, 'addon names must be unique');
+    const allModels = new Map();
+    const allSeedIds = new Set();
+
+    for (const addon of addonManifests) {
+      for (const model of addon.models) {
+        assert.ok(!allModels.has(modelName(model)), `duplicate model ${modelName(model)}`);
+        allModels.set(modelName(model), model);
+      }
+    }
+
+    for (const { directory, manifest: addon } of addonPackages) {
+      const packageJson = JSON.parse(
+        await readFile(path.join(root, 'packages', directory, 'package.json'), 'utf8')
+      );
+      assert.equal(
+        typeof packageJson.scripts?.build,
+        'string',
+        `${directory} needs a build script`
+      );
+      assert.equal(typeof packageJson.scripts?.test, 'string', `${directory} needs a test script`);
+      assert.deepEqual(
+        Object.keys(packageJson.exports ?? {}).sort(),
+        ['.'],
+        `${directory} must expose a deliberate root API only`
+      );
+      assert.match(addon.version, /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/u);
+      for (const dependency of addon.depends ?? []) {
+        assert.ok(addonsByName.has(dependency), `${addon.name} depends on missing ${dependency}`);
+      }
+      const addonModels = new Set(addon.models.map(modelName));
+      assert.equal(addonModels.size, addon.models.length, `${addon.name} repeats a model`);
+      for (const menu of addon.menus ?? []) {
+        assert.ok(addonModels.has(menu.model), `${addon.name} menu references an undeclared model`);
+        assert.ok(
+          (addon.views ?? []).some((view) => view.model === menu.model),
+          `${addon.name} menu model ${menu.model} has no view`
+        );
+        assert.ok(menu.group.trim(), `${addon.name} menu ${menu.model} has no group`);
+      }
+      for (const view of addon.views ?? []) {
+        assert.ok(addonModels.has(view.model), `${addon.name} view references an undeclared model`);
+      }
+      for (const record of addon.data ?? []) {
+        assert.ok(record.id.startsWith(`${addon.name}.`), `${record.id} is not namespaced`);
+        assert.ok(!allSeedIds.has(record.id), `duplicate external ID ${record.id}`);
+        assert.ok(
+          allModels.has(modelName(record.model)) || addonModels.has(modelName(record.model)),
+          `${record.id} references an unowned seed model`
+        );
+        allSeedIds.add(record.id);
+      }
+    }
+
+    for (const { directory, module, manifest: addon } of addonPackages) {
+      const exportedModels = new Set(
+        Object.values(module)
+          .filter((value) => typeof value === 'function' && typeof value.modelName === 'string')
+          .map(modelName)
+      );
+      for (const model of addon.models) {
+        assert.ok(
+          exportedModels.has(modelName(model)),
+          `${directory} does not export ${modelName(model)}`
+        );
+      }
+    }
+
+    // orm-storage is deliberately a provider-only package: it owns no ORM models or demo rows.
+    assert.deepEqual(storage.manifest.models, []);
+    assert.equal(storage.manifest.data, undefined);
+  });
+
+  it('installs the complete runtime addon set repeatedly without duplicating or overwriting seeds', async () => {
+    const db = knex({
+      client: 'better-sqlite3',
+      connection: { filename: ':memory:' },
+      useNullAsDefault: true,
+      pool: {
+        afterCreate(connection, done) {
+          connection.pragma('foreign_keys = ON');
+          done(null, connection);
+        },
+      },
+    });
+    after(async () => db.destroy());
+
+    await installAddons(db, [...addonManifests].reverse());
+    const seeded = await db('_orm_data').count({ count: '*' }).first();
+    const expectedSeedCount = addonManifests.reduce(
+      (total, addon) => total + (addon.data?.length ?? 0),
+      0
+    );
+    assert.equal(Number(seeded?.count), expectedSeedCount);
+    assert.equal(Number((await db('users').count({ count: '*' }).first())?.count), 2);
+    assert.equal(
+      Number((await db('organization_departments').count({ count: '*' }).first())?.count),
+      2
+    );
+    assert.equal(Number((await db('organization_teams').count({ count: '*' }).first())?.count), 2);
+    assert.equal(
+      Number((await db('organization_positions').count({ count: '*' }).first())?.count),
+      2
+    );
+    assert.equal(
+      Number((await db('organization_memberships').count({ count: '*' }).first())?.count),
+      2
+    );
+
+    const acme = await db('_orm_data').where({ id: 'base.partner_acme' }).first();
+    assert.ok(acme);
+    await db('partners').where({ id: acme.record_id }).update({ notes: 'Maintainer edit' });
+    await installAddons(db, addonManifests);
+
+    assert.equal(
+      Number((await db('_orm_data').count({ count: '*' }).first())?.count),
+      expectedSeedCount
+    );
+    assert.equal(Number((await db('users').count({ count: '*' }).first())?.count), 2);
+    assert.equal(
+      (await db('partners').where({ id: acme.record_id }).first('notes'))?.notes,
+      'Maintainer edit'
+    );
+    assert.equal(
+      Number((await db('_orm_addons').count({ count: '*' }).first())?.count),
+      addonManifests.length
+    );
+  });
+});

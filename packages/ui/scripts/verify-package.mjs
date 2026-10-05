@@ -35,6 +35,7 @@ try {
     [
       ...packageManagerPrefix,
       'add',
+      '--offline',
       '--ignore-workspace',
       '--save-exact',
       `file:${join(tempRoot, archiveName)}`,

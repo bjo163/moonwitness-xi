@@ -97,6 +97,35 @@ describe('programmatic addon installer', () => {
     expect(await connection.schema.hasTable('test_laters')).toBe(false);
   });
 
+  it('runs an explicit prior-version programmatic upgrade once and records the installed version', async () => {
+    const connection = database();
+    await installAddons(connection, [addon('1.0.0')]);
+    await Parent.query(connection).insert({ name: 'pre-upgrade' });
+    let upgradeCalls = 0;
+    const upgraded = defineAddon({
+      name: 'test',
+      version: '1.1.0',
+      models: [Parent],
+      upgrade: {
+        '1.0.0': async (transaction) => {
+          upgradeCalls += 1;
+          await transaction('test_parents').where({ name: 'pre-upgrade' }).update({
+            name: 'backfilled',
+          });
+        },
+      },
+    });
+
+    await installAddons(connection, [upgraded]);
+    await installAddons(connection, [upgraded]);
+
+    expect(upgradeCalls).toBe(1);
+    expect(await connection('test_parents').first('name')).toMatchObject({ name: 'backfilled' });
+    expect(await connection('_orm_addons').where({ name: 'test' }).first('version')).toMatchObject({
+      version: '1.1.0',
+    });
+  });
+
   it('rejects unsafe required field additions to populated tables', async () => {
     const connection = database();
     await installAddons(connection, [addon('1.0.0')]);
