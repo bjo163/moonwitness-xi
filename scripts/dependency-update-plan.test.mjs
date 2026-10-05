@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildDependencyPlan, classifyCompatibility } from './dependency-update-plan.mjs';
+import {
+  buildDependencyPlan,
+  classifyCompatibility,
+  selectUpdateCandidate,
+} from './dependency-update-plan.mjs';
 
 test('classifies patch, minor, major, same, and unknown versions without guessing', () => {
   assert.equal(classifyCompatibility('2.4.1', '2.4.2'), 'patch');
@@ -48,6 +52,7 @@ test('groups exact outdated runtime, development, and action candidates determin
       wanted: '1.2.0',
       latest: '2.0.0',
       compatibility: 'major',
+      wantedCompatibility: 'same',
       dependents: ['@moonwitness/api'],
       releaseNotes: 'https://github.com/acme/zeta',
     },
@@ -73,4 +78,41 @@ test('rejects non-GitHub repository URLs and missing dependency metadata safely'
   );
   assert.equal(plan.groups.runtime[0].releaseNotes, null);
   assert.deepEqual(plan.groups.runtime[0].dependents, []);
+});
+
+test('selects exactly one wanted non-major package and keeps major candidates report-only', () => {
+  const plan = buildDependencyPlan(
+    {
+      safe: { current: '2.1.0', wanted: '2.1.2', latest: '3.0.0', dependencyType: 'dependencies' },
+      major: {
+        current: '1.0.0',
+        wanted: '2.0.0',
+        latest: '2.0.0',
+        dependencyType: 'devDependencies',
+      },
+    },
+    'a'.repeat(40),
+    '2026-10-05T00:00:00.000Z'
+  );
+  assert.deepEqual(selectUpdateCandidate(plan, 'safe'), {
+    packageName: 'safe',
+    version: '2.1.2',
+    sourceSha: 'a'.repeat(40),
+    compatibility: 'patch',
+  });
+  assert.throws(() => selectUpdateCandidate(plan, 'major'), /report-only/);
+  assert.throws(() => selectUpdateCandidate(plan, 'missing'), /found 0/);
+  const prereleasePlan = buildDependencyPlan(
+    {
+      prerelease: {
+        current: '1.0.0',
+        wanted: '1.1.0-beta.1',
+        latest: '1.1.0-beta.1',
+        dependencyType: 'dependencies',
+      },
+    },
+    'b'.repeat(40),
+    '2026-10-05T00:00:00.000Z'
+  );
+  assert.throws(() => selectUpdateCandidate(prereleasePlan, 'prerelease'), /prerelease/);
 });

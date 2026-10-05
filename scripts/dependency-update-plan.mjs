@@ -59,6 +59,7 @@ export function buildDependencyPlan(outdated, sourceSha, generatedAt) {
       wanted: entry.wanted ?? null,
       latest,
       compatibility: classifyCompatibility(current, latest),
+      wantedCompatibility: classifyCompatibility(current, entry.wanted ?? latest),
       dependents: Array.isArray(entry.dependentPackages)
         ? entry.dependentPackages
             .map((dependent) => dependent.name)
@@ -72,6 +73,41 @@ export function buildDependencyPlan(outdated, sourceSha, generatedAt) {
     candidates.sort((left, right) => left.name.localeCompare(right.name));
   }
   return { sourceSha, generatedAt, mode: 'read-only-plan', groups };
+}
+
+export function selectUpdateCandidate(plan, packageName) {
+  if (
+    !plan ||
+    plan.mode !== 'read-only-plan' ||
+    !Array.isArray(plan.groups?.runtime) ||
+    !Array.isArray(plan.groups?.development) ||
+    !Array.isArray(plan.groups?.actions)
+  ) {
+    throw new Error('Invalid dependency candidate plan.');
+  }
+  const candidates = [...plan.groups.runtime, ...plan.groups.development];
+  const matches = candidates.filter((candidate) => candidate.name === packageName);
+  if (matches.length !== 1) {
+    throw new Error(
+      `Expected exactly one package candidate named ${packageName}; found ${matches.length}.`
+    );
+  }
+  const [candidate] = matches;
+  if (typeof candidate.wanted !== 'string' || candidate.wanted.includes('-')) {
+    throw new Error(`Candidate ${packageName} is a prerelease or has no exact wanted version.`);
+  }
+  if (!['patch', 'minor', 'major'].includes(candidate.wantedCompatibility)) {
+    throw new Error(`Candidate ${packageName} has unknown compatibility and cannot be applied.`);
+  }
+  if (candidate.wantedCompatibility === 'major') {
+    throw new Error(`Major candidate ${packageName} is report-only and cannot be auto-applied.`);
+  }
+  return {
+    packageName: candidate.name,
+    version: candidate.wanted,
+    sourceSha: plan.sourceSha,
+    compatibility: candidate.wantedCompatibility,
+  };
 }
 
 function renderSummary(plan) {
@@ -89,14 +125,15 @@ function renderSummary(plan) {
       continue;
     }
     lines.push(
-      '| Package/action | Current | Wanted | Latest | Compatibility | Dependents | Release notes |',
-      '| --- | --- | --- | --- | --- | --- | --- |'
+      '| Package/action | Current | Wanted | Wanted class | Latest | Latest class | Dependents | Release notes |',
+      '| --- | --- | --- | --- | --- | --- | --- | --- |'
     );
     for (const item of candidates) {
       const cells = [
         item.name,
         item.current,
         item.wanted ?? '—',
+        item.wantedCompatibility,
         item.latest,
         item.compatibility,
         item.dependents.join(', ') || '—',
@@ -107,7 +144,7 @@ function renderSummary(plan) {
     lines.push('');
   }
   lines.push(
-    'Plan generation did not update manifests, lockfiles, branches, issues, or pull requests.',
+    'Plan generation did not update manifests, lockfiles, branches, issues, or pull requests. Major and prerelease candidates are report-only.',
     ''
   );
   return lines.join('\n');
@@ -150,6 +187,16 @@ function main(args) {
   const sourceIndex = args.indexOf('--source-sha');
   const sourceSha = sourceIndex >= 0 ? args[sourceIndex + 1] : gitSourceSha();
   if (!sourceSha || sourceSha.startsWith('--')) throw new Error('--source-sha requires a value.');
+
+  const selectedIndex = args.indexOf('--select');
+  if (selectedIndex >= 0) {
+    const packageName = args[selectedIndex + 1];
+    if (!packageName || packageName.startsWith('--'))
+      throw new Error('--select requires a package name.');
+    const plan = buildDependencyPlan(loadOutdatedJson(), sourceSha, new Date().toISOString());
+    process.stdout.write(`${JSON.stringify(selectUpdateCandidate(plan, packageName))}\n`);
+    return;
+  }
 
   const plan = buildDependencyPlan(loadOutdatedJson(), sourceSha, new Date().toISOString());
   const serialized = `${JSON.stringify(plan, null, 2)}\n`;

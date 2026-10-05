@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "9adf4ecc47bb13c1645880f69a321e2198cbdf3df66bb6e6af3385c16bddfc3f",
+  "generatedFromSha256": "4559b649b4ce0dbc1a57c2a8716edd7db3e0be05d4f0e93f52ce97eea037cae8",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -178,6 +178,7 @@
       "audit:workspace": "node scripts/audit-workspace.mjs",
       "build": "pnpm -r build",
       "ci:affected": "node scripts/select-affected.mjs",
+      "dependency:candidate": "node scripts/dependency-candidate.mjs",
       "dependency:plan": "node scripts/dependency-update-plan.mjs",
       "dev": "pnpm --filter @moonwitness/api dev",
       "dev:board": "pnpm --filter @moonwitness/board dev",
@@ -210,6 +211,7 @@
       "test:assets": "pnpm assets:validate && node --test packages/assets/tests/*.test.mjs scripts/export-doc-assets.test.mjs && pnpm assets:check:docs",
       "test:ci-gate": "node --test scripts/ci-gate.test.mjs",
       "test:coverage-policy": "node --test scripts/check-coverage.test.mjs",
+      "test:dependency-candidate": "node --test scripts/dependency-candidate.test.mjs",
       "test:dependency-plan": "node --test scripts/dependency-update-plan.test.mjs",
       "test:docs-navigation": "node --test scripts/check-doc-navigation.test.mjs",
       "test:docs-portal": "pnpm docs:build && pnpm --filter @moonwitness/docs test",

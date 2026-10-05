@@ -101,7 +101,7 @@ jobs:
       - name: Validate workflows and shell scripts
         run: bash scripts/check-automation.sh
       - name: Test affected selection, release classification, and promotion policy
-        run: pnpm test:ci-gate && pnpm test:affected && pnpm test:release-classification && pnpm test:promotion-policy && pnpm test:flaky-policy && pnpm test:security-policy && pnpm test:dependency-plan && pnpm test:expected-ref && node scripts/check-flaky-policy.mjs
+        run: pnpm test:ci-gate && pnpm test:affected && pnpm test:release-classification && pnpm test:promotion-policy && pnpm test:flaky-policy && pnpm test:security-policy && pnpm test:dependency-plan && pnpm test:dependency-candidate && pnpm test:expected-ref && node scripts/check-flaky-policy.mjs
       - name: Validate vulnerability exception baseline
         run: node scripts/check-vulnerability-policy.mjs
 

@@ -67,6 +67,8 @@
     "test:security-policy": "node --test scripts/security-scan-policy.test.mjs scripts/check-trivy-sarif.test.mjs",
     "dependency:plan": "node scripts/dependency-update-plan.mjs",
     "test:dependency-plan": "node --test scripts/dependency-update-plan.test.mjs",
+    "dependency:candidate": "node scripts/dependency-candidate.mjs",
+    "test:dependency-candidate": "node --test scripts/dependency-candidate.test.mjs",
     "test:expected-ref": "node --test scripts/push-expected-ref.test.mjs"
   },
   "devDependencies": {
