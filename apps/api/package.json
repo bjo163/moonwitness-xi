@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "reset:superadmin-password": "tsx src/commands/reset-superadmin-password.ts",
+    "revoke:auth-sessions": "tsx src/commands/revoke-auth-sessions.ts",
     "attachments:reconcile": "tsx src/commands/attachments-reconcile.ts",
     "jobs:worker": "tsx src/commands/jobs-worker.ts",
     "jobs:scheduler": "tsx src/commands/jobs-scheduler.ts",

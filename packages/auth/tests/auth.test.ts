@@ -117,4 +117,19 @@ describe('auth service', () => {
     await expect(auth.refresh(a.refreshToken)).rejects.toBeInstanceOf(AuthError);
     await expect(auth.refresh(b.refreshToken)).rejects.toBeInstanceOf(AuthError);
   }, 20000);
+
+  it('revokes outstanding refresh sessions across all users', async () => {
+    const admin = await auth.login('superadmin', PASSWORD);
+    const user = await auth.register({
+      login: 'session-revocation-user',
+      password: 'session-revocation-password',
+      name: 'Session Revocation User',
+      email: 'session-revocation@example.com',
+    });
+    const revokedCount = await auth.revokeAllSessions();
+
+    expect(revokedCount).toBe(2);
+    await expect(auth.refresh(admin.refreshToken)).rejects.toBeInstanceOf(AuthError);
+    await expect(auth.refresh(user.refreshToken)).rejects.toBeInstanceOf(AuthError);
+  }, 20000);
 }, 20000);

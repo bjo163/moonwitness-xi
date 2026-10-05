@@ -199,7 +199,7 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 ### Langkah pelaksanaan
 
 1. Tulis vulnerability reporting channel yang benar-benar tersedia.
-2. Buat runbook revoke/rotate App/JWT/provider credentials serta incident containment.
+2. Buat runbook revoke/rotate App/JWT/provider credentials serta incident containment. Implementasi dan tabletop JWT dicatat di [evidence M8.11](evidence/M8.11.md); verifikasi private reporting dan pemilik operasional masih pending.
 3. Release correction memakai versi baru dan disclosure sesuai risiko, tidak memindahkan published tags.
 
 ### Verifikasi dan syarat selesai

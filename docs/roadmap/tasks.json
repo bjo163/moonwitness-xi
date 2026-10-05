@@ -981,9 +981,11 @@
     {
       "id": "M8.11",
       "title": "Definisikan security reporting, incident response, credential rotation, dan release correction procedure.",
+      "status": "in_progress",
       "milestone": "M8",
       "dependsOn": ["M4.05", "M8.04"],
       "output": "SECURITY.md dan incident runbooks",
+      "evidence": "docs/roadmap/evidence/M8.11.md",
       "detailFile": "docs/roadmap/08-security-maintenance.md"
     },
     {

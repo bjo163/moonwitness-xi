@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "d56ba2ebfb876b2b5447554d92b05bb30360c78249749423e3a734a90c7138c2",
+  "generatedFromSha256": "26a55945996059af851a24d8daf0149b196314d2844c7f16b1c5e84ba4f56cce",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -22,6 +22,7 @@
         "jobs:scheduler",
         "jobs:worker",
         "reset:superadmin-password",
+        "revoke:auth-sessions",
         "start",
         "test"
       ]
@@ -132,6 +133,7 @@
       "jobs:scheduler": "tsx src/commands/jobs-scheduler.ts",
       "jobs:worker": "tsx src/commands/jobs-worker.ts",
       "reset:superadmin-password": "tsx src/commands/reset-superadmin-password.ts",
+      "revoke:auth-sessions": "tsx src/commands/revoke-auth-sessions.ts",
       "start": "node dist/server.js",
       "test": "vitest run"
     },
@@ -244,6 +246,7 @@
       "release:classify": "node scripts/classify-release-commits.mjs",
       "release:plan": "node scripts/release-plan.mjs",
       "reset:superadmin-password": "pnpm --filter @moonwitness/api reset:superadmin-password",
+      "revoke:auth-sessions": "pnpm --filter @moonwitness/api revoke:auth-sessions",
       "roadmap:issues:plan": "node scripts/roadmap/sync-issues.mjs",
       "test": "pnpm test:unit",
       "test:action-pins": "node --test scripts/check-action-pins.test.mjs",

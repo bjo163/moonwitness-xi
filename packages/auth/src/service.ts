@@ -263,6 +263,13 @@ export function createAuthService(options: AuthServiceOptions = {}) {
         .patch({ revoked: true, rotated_at: null, rotation_lease_until: null })
         .where({ user_id: userId });
     },
+
+    /** Revokes every outstanding refresh session after a signing-secret incident. */
+    async revokeAllSessions(): Promise<number> {
+      return RefreshToken.query()
+        .patch({ revoked: true, rotated_at: null, rotation_lease_until: null })
+        .where({ revoked: false });
+    },
   };
 }
 
