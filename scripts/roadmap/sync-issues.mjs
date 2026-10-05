@@ -10,8 +10,8 @@ const beginMarker = '<!-- BEGIN MOONWITNESS MANAGED -->';
 const endMarker = '<!-- END MOONWITNESS MANAGED -->';
 
 /**
- * @typedef {{ number: number, title: string, body: string, state: 'open'|'closed', pull_request?: unknown }} RemoteIssue
- * @typedef {{ taskId: string, operation: 'create'|'update'|'noop'|'conflict', issueNumber?: number, reason?: string, title: string, body: string }} IssueOperation
+ * @typedef {{ number: number, title: string, body: string, state: 'open'|'closed', labels?: Array<{name: string}>, milestone?: {number: number, title: string}|null, assignees?: Array<{login: string}>, pull_request?: unknown }} RemoteIssue
+ * @typedef {{ taskId: string, operation: 'create'|'update'|'noop'|'conflict', issueNumber?: number, reason?: string, title: string, body: string, labels?: string[], assignees?: string[], milestoneTitle?: string }} IssueOperation
  */
 
 function sha256(value) {
@@ -52,14 +52,64 @@ function readManagedBlock(body) {
   return body.slice(start, after);
 }
 
-function generatedBlock(task, repositoryId, sourceSha) {
-  const dependencies = task.dependsOn.length ? task.dependsOn.join(', ') : 'None';
+function taskCardSection(markdown, taskId) {
+  const lines = markdown.split(/\r?\n/u);
+  const start = lines.findIndex((line) =>
+    new RegExp(`^##\\s+${taskId.replace('.', '\\.')}\\b`, 'u').test(line)
+  );
+  if (start < 0) throw new Error(`Roadmap card is missing the ${taskId} section.`);
+  const end = lines.findIndex((line, index) => index > start && /^##\s/u.test(line));
+  return lines.slice(start, end < 0 ? lines.length : end).join('\n');
+}
+
+function subsection(markdown, heading) {
+  const lines = markdown.split(/\r?\n/u);
+  const start = lines.findIndex((line) => line.trim() === `### ${heading}`);
+  if (start < 0) return '';
+  const end = lines.findIndex((line, index) => index > start && /^#{1,3}\s/u.test(line));
+  return lines
+    .slice(start + 1, end < 0 ? lines.length : end)
+    .join('\n')
+    .trim();
+}
+
+export function renderTaskCardDetails(markdown, taskId) {
+  const card = taskCardSection(markdown, taskId);
+  return {
+    steps: subsection(card, 'Langkah pelaksanaan'),
+    acceptance: subsection(card, 'Verifikasi dan syarat selesai'),
+  };
+}
+
+function generatedBlock(task, sourceSha, options) {
+  const dependencies = task.dependsOn.length
+    ? task.dependsOn
+        .map((dependencyId) => {
+          const issueNumber = options.issueNumbersByTask.get(dependencyId);
+          return issueNumber
+            ? options.repositoryUrl
+              ? `[${dependencyId}](${options.repositoryUrl}/issues/${issueNumber})`
+              : `#${issueNumber}`
+            : `\`${dependencyId}\` (issue not created yet)`;
+        })
+        .join(', ')
+    : 'None';
+  const cardUrl = options.repositoryUrl
+    ? `${options.repositoryUrl}/blob/${sourceSha}/${task.detailFile}`
+    : undefined;
+  const evidenceUrl =
+    task.evidence && options.repositoryUrl
+      ? `${options.repositoryUrl}/blob/${sourceSha}/${task.evidence}`
+      : undefined;
+  const details = options.cardDetailsByTask.get(task.id);
   return [
     beginMarker,
     `Task: ${task.id}`,
     `Milestone: ${task.milestone}`,
     `Source SHA: ${sourceSha}`,
-    `Card: ${task.detailFile}`,
+    `Card: ${cardUrl ? `[${task.detailFile}](${cardUrl})` : task.detailFile}`,
+    ...(evidenceUrl ? [`Evidence: [${task.evidence}](${evidenceUrl})`] : []),
+    ...(!evidenceUrl ? ['Evidence: not recorded yet'] : []),
     `Dependencies: ${dependencies}`,
     '',
     '## Scope',
@@ -67,16 +117,25 @@ function generatedBlock(task, repositoryId, sourceSha) {
     '',
     '## Deliverable',
     task.output,
+    ...(details?.steps ? ['', '## Implementation steps', details.steps] : []),
+    ...(details?.acceptance ? ['', '## Acceptance criteria', details.acceptance] : []),
     endMarker,
   ].join('\n');
 }
 
 /**
  * Pure deterministic planner. It never writes files or calls a remote API.
- * @param {{ tasks: Array<{id: string, title: string, milestone: string, dependsOn: string[], detailFile: string, output: string}>, issues: RemoteIssue[], repositoryId: string, sourceSha: string }} input
+ * @param {{ tasks: Array<{id: string, title: string, milestone: string, dependsOn: string[], detailFile: string, output: string, evidence?: string, labels?: string[], priority?: string, assignee?: string}>, issues: RemoteIssue[], repositoryId: string, sourceSha: string, repositoryUrl?: string, cardDetailsByTask?: Map<string, {steps: string, acceptance: string}> }} input
  * @returns {{ repositoryId: string, sourceSha: string, inputHash: string, operations: IssueOperation[] }}
  */
-export function planIssueSync({ tasks, issues, repositoryId, sourceSha }) {
+export function planIssueSync({
+  tasks,
+  issues,
+  repositoryId,
+  sourceSha,
+  repositoryUrl,
+  cardDetailsByTask = new Map(),
+}) {
   if (!/^[1-9][0-9]*$/u.test(repositoryId))
     throw new Error('repositoryId must be a numeric GitHub repository ID.');
   if (!/^[a-f0-9]{40}$/u.test(sourceSha))
@@ -97,9 +156,15 @@ export function planIssueSync({ tasks, issues, repositoryId, sourceSha }) {
     }
   }
 
+  const issueNumbersByTask = new Map(
+    [...byTask].flatMap(([taskId, matches]) =>
+      matches.length === 1 ? [[taskId, matches[0].number]] : []
+    )
+  );
+  const renderOptions = { repositoryUrl, cardDetailsByTask, issueNumbersByTask };
   const operations = tasks.map((task) => {
     const matches = byTask.get(task.id) ?? [];
-    const block = generatedBlock(task, repositoryId, sourceSha);
+    const block = generatedBlock(task, sourceSha, renderOptions);
     if (matches.length > 1)
       return {
         taskId: task.id,
@@ -110,8 +175,28 @@ export function planIssueSync({ tasks, issues, repositoryId, sourceSha }) {
       };
     const marker = `<!-- moonwitness-task: ${repositoryId}:${task.id} -->`;
     const title = `[${task.id}] ${task.title}`;
+    const managedLabels = [
+      'roadmap',
+      `milestone:${task.milestone.toLowerCase()}`,
+      ...(task.priority ? [`priority:${task.priority}`] : []),
+      ...(task.labels ?? []),
+    ];
+    const assignees = [
+      ...new Set([
+        ...(matches[0]?.assignees ?? []).map(({ login }) => login),
+        ...(task.assignee ? [task.assignee] : []),
+      ]),
+    ].sort();
     if (matches.length === 0)
-      return { taskId: task.id, operation: 'create', title, body: `${marker}\n${block}\n` };
+      return {
+        taskId: task.id,
+        operation: 'create',
+        title,
+        body: `${marker}\n${block}\n`,
+        labels: [...new Set(managedLabels)].sort(),
+        assignees,
+        milestoneTitle: task.milestone,
+      };
     const issue = matches[0];
     let body;
     let currentBlock;
@@ -128,15 +213,42 @@ export function planIssueSync({ tasks, issues, repositoryId, sourceSha }) {
         body: '',
       };
     }
-    if (issue.title === title && currentBlock === block)
+    const labelsByName = new Map(
+      (issue.labels ?? []).map(({ name }) => [name.toLowerCase(), name])
+    );
+    for (const label of managedLabels) {
+      if (!labelsByName.has(label.toLowerCase())) labelsByName.set(label.toLowerCase(), label);
+    }
+    const desiredLabels = [...labelsByName.values()].sort();
+    if (
+      issue.title === title &&
+      currentBlock === block &&
+      issue.milestone?.title === task.milestone &&
+      JSON.stringify((issue.labels ?? []).map(({ name }) => name).sort()) ===
+        JSON.stringify(desiredLabels) &&
+      JSON.stringify((issue.assignees ?? []).map(({ login }) => login).sort()) ===
+        JSON.stringify(assignees)
+    )
       return {
         taskId: task.id,
         operation: 'noop',
         issueNumber: issue.number,
         title,
         body: issue.body,
+        labels: desiredLabels,
+        assignees,
+        milestoneTitle: task.milestone,
       };
-    return { taskId: task.id, operation: 'update', issueNumber: issue.number, title, body };
+    return {
+      taskId: task.id,
+      operation: 'update',
+      issueNumber: issue.number,
+      title,
+      body,
+      labels: desiredLabels,
+      assignees,
+      milestoneTitle: task.milestone,
+    };
   });
   const inputHash = sha256(
     JSON.stringify({
@@ -144,11 +256,14 @@ export function planIssueSync({ tasks, issues, repositoryId, sourceSha }) {
       sourceSha,
       tasks,
       issues: issues
-        .map(({ number, title, body, state, pull_request }) => ({
+        .map(({ number, title, body, state, labels, milestone, assignees, pull_request }) => ({
           number,
           title,
           body,
           state,
+          labels: (labels ?? []).map(({ name }) => name).sort(),
+          milestone: milestone ? { number: milestone.number, title: milestone.title } : null,
+          assignees: (assignees ?? []).map(({ login }) => login).sort(),
           pull_request: Boolean(pull_request),
         }))
         .sort((a, b) => a.number - b.number),
@@ -175,6 +290,78 @@ export function createGitHubIssuesClient({ token, owner, repo, fetchImpl = globa
       throw new Error(`GitHub Issues API ${response.status}: ${await response.text()}`);
     return response.status === 204 ? null : response.json();
   }
+  async function listPages(url) {
+    const result = [];
+    for (let page = 1; ; page += 1) {
+      const batch = await request(`${url}?per_page=100&page=${page}`);
+      result.push(...batch);
+      if (batch.length < 100) return result;
+    }
+  }
+  async function listMilestones() {
+    const result = [];
+    for (let page = 1; ; page += 1) {
+      const batch = await request(
+        `${base.replace(/\/issues$/u, '/milestones')}?state=all&per_page=100&page=${page}`
+      );
+      result.push(...batch);
+      if (batch.length < 100) return result;
+    }
+  }
+  async function listLabels() {
+    return listPages(base.replace(/\/issues$/u, '/labels'));
+  }
+  async function validateAssignees(tasks) {
+    const logins = [...new Set(tasks.flatMap((task) => (task.assignee ? [task.assignee] : [])))];
+    for (const login of logins) {
+      const user = await request(`https://api.github.com/users/${encodeURIComponent(login)}`);
+      if (user.login.toLowerCase() !== login.toLowerCase())
+        throw new Error(`GitHub did not resolve the requested assignee ${login}.`);
+    }
+    return logins;
+  }
+  async function ensureMetadata(tasks) {
+    const milestones = await listMilestones();
+    const labels = await listLabels();
+    const milestoneNumbers = new Map(milestones.map(({ title, number }) => [title, number]));
+    const labelNames = new Set(labels.map(({ name }) => name.toLowerCase()));
+    const requiredMilestones = [...new Set(tasks.map(({ milestone }) => milestone))].sort();
+    const requiredLabels = [
+      ...new Set(
+        tasks.flatMap((task) => [
+          'roadmap',
+          `milestone:${task.milestone.toLowerCase()}`,
+          ...(task.priority ? [`priority:${task.priority}`] : []),
+          ...(task.labels ?? []),
+        ])
+      ),
+    ].sort();
+    for (const title of requiredMilestones) {
+      if (milestoneNumbers.has(title)) continue;
+      const created = await request(base.replace(/\/issues$/u, '/milestones'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          description: `MoonWitness roadmap milestone ${title}.`,
+          state: 'open',
+        }),
+      });
+      milestoneNumbers.set(created.title, created.number);
+    }
+    for (const name of requiredLabels) {
+      if (labelNames.has(name.toLowerCase())) continue;
+      const color =
+        name === 'roadmap' ? '1d76db' : name.startsWith('priority:') ? 'd93f0b' : 'c5def5';
+      const created = await request(base.replace(/\/issues$/u, '/labels'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, color, description: 'Managed by MoonWitness roadmap sync.' }),
+      });
+      labelNames.add(created.name.toLowerCase());
+    }
+    return milestoneNumbers;
+  }
   return {
     async listAll() {
       const result = [];
@@ -189,33 +376,70 @@ export function createGitHubIssuesClient({ token, owner, repo, fetchImpl = globa
       }
       return result;
     },
+    async listMetadata() {
+      return { milestones: await listMilestones(), labels: await listLabels() };
+    },
+    validateAssignees,
+    ensureMetadata,
     async create(operation) {
       return request(base, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: operation.title, body: operation.body }),
+        body: JSON.stringify({
+          title: operation.title,
+          body: operation.body,
+          ...(operation.labels ? { labels: operation.labels } : {}),
+          ...(operation.assignees?.length ? { assignees: operation.assignees } : {}),
+          ...(operation.milestoneNumber ? { milestone: operation.milestoneNumber } : {}),
+        }),
       });
     },
     async update(operation) {
       return request(`${base}/${operation.issueNumber}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: operation.title, body: operation.body }),
+        body: JSON.stringify({
+          title: operation.title,
+          body: operation.body,
+          ...(operation.labels ? { labels: operation.labels } : {}),
+          ...(operation.assignees?.length ? { assignees: operation.assignees } : {}),
+          ...(operation.milestoneNumber ? { milestone: operation.milestoneNumber } : {}),
+        }),
       });
     },
   };
 }
 
 /** Apply only when explicitly requested; reload and re-plan before serial writes. */
-export async function applyIssuePlan({ plan, client, tasks, repositoryId, sourceSha }) {
+export async function applyIssuePlan({
+  plan,
+  client,
+  tasks,
+  repositoryId,
+  sourceSha,
+  repositoryUrl,
+  cardDetailsByTask,
+}) {
   const freshIssues = await client.listAll();
-  const fresh = planIssueSync({ tasks, issues: freshIssues, repositoryId, sourceSha });
+  const fresh = planIssueSync({
+    tasks,
+    issues: freshIssues,
+    repositoryId,
+    sourceSha,
+    repositoryUrl,
+    cardDetailsByTask,
+  });
   if (fresh.inputHash !== plan.inputHash)
     throw new Error('Remote issues changed after planning; refresh the plan before applying.');
   const conflict = fresh.operations.find((operation) => operation.operation === 'conflict');
   if (conflict) throw new Error(`Cannot apply ${conflict.taskId}: ${conflict.reason}`);
+  const milestoneNumbers = client.ensureMetadata ? await client.ensureMetadata(tasks) : new Map();
+  const operations = fresh.operations.map((operation) => ({
+    ...operation,
+    milestoneNumber: milestoneNumbers.get(operation.milestoneTitle),
+  }));
   const results = [];
-  for (const operation of fresh.operations) {
+  for (const operation of operations) {
     if (operation.operation === 'create') {
       // On ambiguous create failure, re-read the stable marker before retrying.
       try {
@@ -226,6 +450,8 @@ export async function applyIssuePlan({ plan, client, tasks, repositoryId, source
           issues: await client.listAll(),
           repositoryId,
           sourceSha,
+          repositoryUrl,
+          cardDetailsByTask,
         });
         const found = retryPlan.operations[0];
         if (found.operation === 'update' || found.operation === 'noop')
@@ -267,7 +493,45 @@ async function main() {
   const token = process.env.GITHUB_TOKEN;
   const client = createGitHubIssuesClient({ token, owner, repo });
   const issues = await client.listAll();
-  const plan = planIssueSync({ tasks: index.tasks, issues, repositoryId, sourceSha });
+  const validAssignees = await client.validateAssignees(index.tasks);
+  const repositoryUrl = `https://github.com/${owner}/${repo}`;
+  const cardContents = new Map();
+  const cardDetailsByTask = new Map();
+  for (const task of index.tasks) {
+    let markdown = cardContents.get(task.detailFile);
+    if (markdown === undefined) {
+      markdown = await readFile(path.join(repositoryRoot, task.detailFile), 'utf8');
+      cardContents.set(task.detailFile, markdown);
+    }
+    cardDetailsByTask.set(task.id, renderTaskCardDetails(markdown, task.id));
+  }
+  const plan = planIssueSync({
+    tasks: index.tasks,
+    issues,
+    repositoryId,
+    sourceSha,
+    repositoryUrl,
+    cardDetailsByTask,
+  });
+  const metadata = await client.listMetadata();
+  plan.metadata = {
+    validAssignees,
+    milestonesToCreate: [...new Set(index.tasks.map(({ milestone }) => milestone))].filter(
+      (title) => !metadata.milestones.some((milestone) => milestone.title === title)
+    ),
+    labelsToCreate: [
+      ...new Set(
+        index.tasks.flatMap((task) => [
+          'roadmap',
+          `milestone:${task.milestone.toLowerCase()}`,
+          ...(task.priority ? [`priority:${task.priority}`] : []),
+          ...(task.labels ?? []),
+        ])
+      ),
+    ].filter(
+      (name) => !metadata.labels.some((label) => label.name.toLowerCase() === name.toLowerCase())
+    ),
+  };
   process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
   if (!apply) return;
   const results = await applyIssuePlan({
@@ -276,6 +540,8 @@ async function main() {
     tasks: index.tasks,
     repositoryId,
     sourceSha,
+    repositoryUrl,
+    cardDetailsByTask,
   });
   process.stdout.write(`Applied ${results.length} create/update operations.\n`);
 }

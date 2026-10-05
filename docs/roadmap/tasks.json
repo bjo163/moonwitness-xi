@@ -1162,7 +1162,8 @@
       "milestone": "M11",
       "dependsOn": ["M11.03"],
       "output": "Issue templates dan metadata renderer",
-      "detailFile": "docs/roadmap/11-issues-delivery.md"
+      "detailFile": "docs/roadmap/11-issues-delivery.md",
+      "evidence": "docs/roadmap/evidence/M11.04.md"
     },
     {
       "id": "M11.05",

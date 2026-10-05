@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { URLSearchParams } from 'node:url';
-import { applyIssuePlan, createGitHubIssuesClient, planIssueSync } from './sync-issues.mjs';
+import { URL, URLSearchParams } from 'node:url';
+import {
+  applyIssuePlan,
+  createGitHubIssuesClient,
+  planIssueSync,
+  renderTaskCardDetails,
+} from './sync-issues.mjs';
 
 const task = {
   id: 'M11.03',
@@ -26,6 +32,8 @@ test('plan defaults to create and repeated identical remote state becomes no-op'
     title: first.operations[0].title,
     body: first.operations[0].body,
     state: 'open',
+    labels: first.operations[0].labels.map((name) => ({ name })),
+    milestone: { number: 11, title: 'M11' },
   };
   assert.equal(plan([issue]).operations[0].operation, 'noop');
 });
@@ -53,16 +61,28 @@ test('unchanged managed content is a no-op even when maintainer notes are presen
     title: generated.title,
     body: originalBody,
     state: 'open',
+    labels: [...generated.labels.filter((name) => name !== 'roadmap'), 'Roadmap', 'support'].map(
+      (name) => ({ name })
+    ),
+    milestone: { number: 11, title: 'M11' },
   };
 
   const operation = plan([issue]).operations[0];
   assert.equal(operation.operation, 'noop');
   assert.equal(operation.body, originalBody);
+  assert.deepEqual(operation.labels, ['Roadmap', 'milestone:m11', 'support']);
 });
 
 test('closed issues are discovered, pull requests ignored and duplicate identity conflicts', () => {
   const base = plan().operations[0];
-  const issue = { number: 9, title: base.title, body: base.body, state: 'closed' };
+  const issue = {
+    number: 9,
+    title: base.title,
+    body: base.body,
+    state: 'closed',
+    labels: base.labels.map((name) => ({ name })),
+    milestone: { number: 11, title: 'M11' },
+  };
   assert.equal(plan([issue]).operations[0].operation, 'noop');
   assert.equal(
     plan([{ ...issue, pull_request: { url: 'https://example.invalid' } }]).operations[0].operation,
@@ -192,4 +212,167 @@ test('GitHub issue adapter follows open and closed pagination and serializes iss
   await client.create({ title: 'test', body: 'body' });
   assert.equal(calls[3].init.method, 'POST');
   assert.equal(calls[3].init.body.includes('test-token'), false);
+});
+
+test('task renderer extracts implementation and acceptance sections from its exact card', () => {
+  const card = [
+    '## M11.03 — Issue sync',
+    '',
+    '### Langkah pelaksanaan',
+    '1. Read all issues.',
+    '2. Preserve maintainer notes.',
+    '',
+    '### Verifikasi dan syarat selesai',
+    'Repeated apply creates no duplicates.',
+    '',
+    '## M11.04 — Next card',
+    '### Langkah pelaksanaan',
+    'This content belongs to another task.',
+  ].join('\n');
+
+  assert.deepEqual(renderTaskCardDetails(card, 'M11.03'), {
+    steps: '1. Read all issues.\n2. Preserve maintainer notes.',
+    acceptance: 'Repeated apply creates no duplicates.',
+  });
+  assert.throws(() => renderTaskCardDetails(card, 'M11.99'), /missing the M11\.99 section/u);
+});
+
+test('requested assignees are resolved as GitHub accounts and invalid names fail closed', async () => {
+  const requests = [];
+  const client = createGitHubIssuesClient({
+    token: 'test-token',
+    owner: 'owner',
+    repo: 'repo',
+    fetchImpl: async (url) => {
+      requests.push(String(url));
+      if (String(url).endsWith('/users/maintainer'))
+        return { ok: true, status: 200, json: async () => ({ login: 'maintainer' }) };
+      return { ok: false, status: 404, text: async () => 'Not Found' };
+    },
+  });
+
+  assert.deepEqual(await client.validateAssignees([{ ...task, assignee: 'maintainer' }]), [
+    'maintainer',
+  ]);
+  await assert.rejects(
+    client.validateAssignees([{ ...task, assignee: 'missing-user' }]),
+    /GitHub Issues API 404/u
+  );
+  assert.deepEqual(requests, [
+    'https://api.github.com/users/maintainer',
+    'https://api.github.com/users/missing-user',
+  ]);
+});
+
+test('all indexed tasks render implementation steps and acceptance from their roadmap cards', async () => {
+  const indexUrl = new URL('../../docs/roadmap/tasks.json', import.meta.url);
+  const index = JSON.parse(await readFile(indexUrl, 'utf8'));
+  const cards = new Map();
+  const cardDetailsByTask = new Map();
+  for (const task of index.tasks) {
+    let card = cards.get(task.detailFile);
+    if (card === undefined) {
+      card = await readFile(new URL(`../../${task.detailFile}`, import.meta.url), 'utf8');
+      cards.set(task.detailFile, card);
+    }
+    const details = renderTaskCardDetails(card, task.id);
+    assert.ok(details.steps, `${task.id} has implementation steps`);
+    assert.ok(details.acceptance, `${task.id} has acceptance criteria`);
+    cardDetailsByTask.set(task.id, details);
+  }
+  const generated = planIssueSync({
+    tasks: index.tasks,
+    issues: [],
+    repositoryId,
+    sourceSha,
+    repositoryUrl: 'https://github.com/owner/repo',
+    cardDetailsByTask,
+  });
+  assert.equal(generated.operations.length, index.tasks.length);
+  assert.ok(generated.operations.every((operation) => operation.operation === 'create'));
+  assert.ok(
+    generated.operations.every(
+      (operation) =>
+        operation.body.includes('## Implementation steps') &&
+        operation.body.includes('## Acceptance criteria') &&
+        operation.body.includes('Source SHA:')
+    )
+  );
+});
+
+test('issue descriptions link dependencies to existing issues and create labels/milestones idempotently', async () => {
+  const dependentTask = { ...task, id: 'M11.04', dependsOn: ['M11.03'] };
+  const issue = {
+    number: 31,
+    title: '[M11.03] Existing planner',
+    body: `<!-- moonwitness-task: ${repositoryId}:M11.03 -->`,
+    state: 'open',
+  };
+  const details = new Map([
+    ['M11.04', { steps: 'Render the task card.', acceptance: 'Dependencies are linked.' }],
+  ]);
+  const rendered = planIssueSync({
+    tasks: [dependentTask],
+    issues: [issue],
+    repositoryId,
+    sourceSha,
+    repositoryUrl: 'https://github.com/owner/repo',
+    cardDetailsByTask: details,
+  }).operations[0];
+  assert.match(rendered.body, /\[M11\.03\]\(https:\/\/github\.com\/owner\/repo\/issues\/31\)/u);
+  assert.match(rendered.body, /## Implementation steps\nRender the task card\./u);
+  assert.match(rendered.body, /## Acceptance criteria\nDependencies are linked\./u);
+  assert.deepEqual(rendered.labels, ['milestone:m11', 'roadmap']);
+
+  const calls = [];
+  const remoteMilestones = [];
+  const remoteLabels = [];
+  const fetchImpl = async (url, init = {}) => {
+    const target = String(url);
+    calls.push({ target, init });
+    if (target.endsWith('/milestones?state=all&per_page=100&page=1'))
+      return { ok: true, status: 200, json: async () => remoteMilestones };
+    if (target.endsWith('/labels?per_page=100&page=1'))
+      return { ok: true, status: 200, json: async () => remoteLabels };
+    if (init.method === 'POST' && target.endsWith('/milestones')) {
+      const milestone = { ...JSON.parse(init.body), number: 11 };
+      remoteMilestones.push(milestone);
+      return { ok: true, status: 201, json: async () => milestone };
+    }
+    if (init.method === 'POST' && target.endsWith('/labels')) {
+      const label = JSON.parse(init.body);
+      remoteLabels.push(label);
+      return { ok: true, status: 201, json: async () => label };
+    }
+    if (init.method === 'POST' && target.endsWith('/issues'))
+      return { ok: true, status: 201, json: async () => ({ number: 32 }) };
+    return { ok: false, status: 500, text: async () => 'unexpected request' };
+  };
+  const client = createGitHubIssuesClient({
+    token: 'test-token',
+    owner: 'owner',
+    repo: 'repo',
+    fetchImpl,
+  });
+  const milestoneNumbers = await client.ensureMetadata([dependentTask]);
+  await client.ensureMetadata([dependentTask]);
+  await client.create({ ...rendered, milestoneNumber: milestoneNumbers.get('M11') });
+  assert.equal(
+    calls.filter(({ target, init }) => target.endsWith('/milestones') && init.method === 'POST')
+      .length,
+    1
+  );
+  assert.equal(
+    calls.filter(({ target, init }) => target.endsWith('/labels') && init.method === 'POST').length,
+    2
+  );
+  const issueWrite = calls.find(
+    ({ target }) => target.endsWith('/issues') && !target.includes('?')
+  );
+  assert.deepEqual(JSON.parse(issueWrite.init.body), {
+    title: rendered.title,
+    body: rendered.body,
+    labels: ['milestone:m11', 'roadmap'],
+    milestone: 11,
+  });
 });

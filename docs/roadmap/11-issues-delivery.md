@@ -70,7 +70,7 @@ Simpan bukti aktual di `docs/roadmap/evidence/M11.03.md`. Jangan menandai aktiva
 ### Langkah pelaksanaan
 
 1. Render title [Mxx.yy], tujuan, source SHA/card link, langkah, acceptance, dependencies dan evidence link.
-2. Upsert milestone/managed labels yang diperlukan tanpa menghapus label manusia; resolve assignee hanya akun valid.
+2. Render label `roadmap`, `milestone:<id>`, priority dan label task; buat label/milestone yang belum ada hanya pada apply. Jangan mengubah definisi label atau menghapus label issue yang sudah ada. Resolve assignee melalui GitHub Users API dan gagalkan sync jika akun tidak valid.
 3. Gunakan parent/sub-issue/dependency API jika didukung; fallback references/link list jika tidak tanpa memblokir core sync.
 
 ### Verifikasi dan syarat selesai
