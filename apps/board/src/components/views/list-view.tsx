@@ -31,7 +31,8 @@ import { Skeleton } from '@moonwitness/ui/components/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Doodle, SpeedLines } from '@/components/manga/effects';
 import { cn } from '@/lib/utils';
-import { FieldCell, relationKey } from './fields';
+import { FieldCell } from './fields';
+import { relationKey } from './field-utils';
 import { ImportWizardDialog } from './import-wizard-dialog';
 import { QueryBuilderDialog, type FilterRule } from './query-builder-dialog';
 
@@ -333,7 +334,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
     }
 
     return stages;
-  }, [groupingField, data?.records]);
+  }, [groupingField, data]);
 
   const handleMoveStage = async (recordId: number, newStage: string) => {
     if (!groupingField) return;
@@ -1465,19 +1466,21 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
       />
 
       {/* Advanced Query Builder Dialog */}
-      <QueryBuilderDialog
-        open={queryBuilderOpen}
-        onOpenChange={setQueryBuilderOpen}
-        model={model}
-        views={views}
-        initialRules={advancedRules}
-        initialConjunction={advancedConjunction}
-        onApply={(rules, conj) => {
-          setAdvancedRules(rules);
-          setAdvancedConjunction(conj);
-          setPage(1);
-        }}
-      />
+      {queryBuilderOpen && (
+        <QueryBuilderDialog
+          open
+          onOpenChange={setQueryBuilderOpen}
+          model={model}
+          views={views}
+          initialRules={advancedRules}
+          initialConjunction={advancedConjunction}
+          onApply={(rules, conj) => {
+            setAdvancedRules(rules);
+            setAdvancedConjunction(conj);
+            setPage(1);
+          }}
+        />
+      )}
     </div>
   );
 }

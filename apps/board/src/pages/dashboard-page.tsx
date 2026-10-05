@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { client } from '@/lib/client';
 import { scopedQueryKey } from '@/lib/query-scope';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-auth-context';
 import { useModels } from '@/hooks/use-model';
 import { modelIcon, modelLabel } from '@/lib/models';
 import { DEVELOPMENT_MODE_EVENT, readDevelopmentMode } from '@/lib/navigation';

@@ -23,7 +23,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { client } from '@/lib/client';
 import { scopedQueryKey } from '@/lib/query-scope';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-auth-context';
 import { useModels } from '@/hooks/use-model';
 import { useTheme } from '@/hooks/use-theme';
 import { DashboardIcon, modelIcon, modelLabel } from '@/lib/models';

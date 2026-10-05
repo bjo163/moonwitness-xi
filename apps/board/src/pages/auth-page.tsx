@@ -3,7 +3,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { ApiError } from '@moonwitness/client';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-auth-context';
 import { Button } from '@moonwitness/ui/components/button';
 import { Input } from '@moonwitness/ui/components/input';
 import { Label } from '@/components/ui/label';

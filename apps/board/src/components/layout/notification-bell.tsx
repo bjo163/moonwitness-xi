@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell, Check, Inbox } from 'lucide-react';
 import { Button } from '@moonwitness/ui/components/button';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-auth-context';
 import { client } from '@/lib/client';
 import { scopedQueryKey } from '@/lib/query-scope';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';

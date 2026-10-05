@@ -7,7 +7,7 @@ import { Button } from '@moonwitness/ui/components/button';
 import { Input } from '@moonwitness/ui/components/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@moonwitness/ui/components/skeleton';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-auth-context';
 import { client } from '@/lib/client';
 
 interface PartnerProfile {

@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from '@moonwitness/ui/components/select';
 import { Skeleton } from '@moonwitness/ui/components/skeleton';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-auth-context';
 import { client } from '@/lib/client';
 import {
   DEFAULT_PREFERENCES,

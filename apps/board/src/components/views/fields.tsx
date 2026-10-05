@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Check, ChevronsUpDown, X } from 'lucide-react';
 import type { Domain, FieldMeta } from '@moonwitness/client';
+import { displayName, relationKey, type Row } from './field-utils';
 import { client } from '@/lib/client';
 import { scopedQueryKey } from '@/lib/query-scope';
 import { cn } from '@/lib/utils';
@@ -23,28 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@moonwitness/ui/components/select';
-
-type Row = Record<string, unknown>;
-
-/** Relation key Objection uses for a many2one column: `partner_id` → `partner`. */
-export const relationKey = (field: FieldMeta) => field.name.replace(/_id$/, '');
-
-/** Best human label for a related record. */
-export function displayName(record: Row | null | undefined): string {
-  if (!record) return '';
-  if (
-    record.name &&
-    record.code &&
-    typeof record.name === 'string' &&
-    typeof record.code === 'string'
-  ) {
-    return `${record.name} [${record.code}]`;
-  }
-  for (const key of ['name', 'display_name', 'login', 'code', 'email']) {
-    if (typeof record[key] === 'string' && record[key]) return record[key] as string;
-  }
-  return `#${String(record.id)}`;
-}
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 

@@ -5,7 +5,8 @@ import { useRecord, useRecordMutations } from '@/hooks/use-model';
 import { Button } from '@moonwitness/ui/components/button';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@moonwitness/ui/components/skeleton';
-import { FieldWidget, relationKey } from './fields';
+import { FieldWidget } from './fields';
+import { relationKey } from './field-utils';
 import { One2ManyWidget } from './one2many-widget';
 import { Chatter } from './chatter';
 import { TagsWidget } from './tags-widget';
@@ -83,7 +84,7 @@ export function FormView({ model, views, recordId, onBack, onSaved }: FormViewPr
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [dirty, formData]);
+  }, [dirty, formData, handleSave, handleBackSafe]);
 
   function handleChange(name: string, val: unknown) {
     setFormData((prev) => {

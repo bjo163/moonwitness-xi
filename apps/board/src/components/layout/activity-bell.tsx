@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell, Calendar, Check, CheckSquare, ExternalLink, Mail, Phone } from 'lucide-react';
 import { client } from '@/lib/client';
 import { scopedQueryKey } from '@/lib/query-scope';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-auth-context';
 import { Button } from '@moonwitness/ui/components/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
@@ -27,6 +27,15 @@ export function ActivityBell() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'overdue' | 'today' | 'upcoming'>('all');
+  const [todayStr, setTodayStr] = useState(() => new Date().toISOString().slice(0, 10));
+
+  useEffect(() => {
+    const timer = window.setInterval(
+      () => setTodayStr(new Date().toISOString().slice(0, 10)),
+      60_000
+    );
+    return () => window.clearInterval(timer);
+  }, []);
 
   // Fetch pending activities
   const { data: activities = [], isLoading } = useQuery<ActivityRecord[]>({
@@ -54,8 +63,6 @@ export function ActivityBell() {
       queryClient.invalidateQueries({ queryKey: ['activities'] });
     },
   });
-
-  const todayStr = new Date().toISOString().slice(0, 10);
 
   const overdue = activities.filter((a) => a.deadline && a.deadline < todayStr);
   const dueToday = activities.filter((a) => a.deadline === todayStr);

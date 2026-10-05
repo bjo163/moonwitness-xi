@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Filter, Plus, Trash2, Bookmark, Check, RotateCcw, Sparkles } from 'lucide-react';
 import type { ResolvedViews } from '@moonwitness/client';
 import { Button } from '@moonwitness/ui/components/button';
@@ -46,51 +46,31 @@ export function QueryBuilderDialog({
   initialConjunction = 'all',
   onApply,
 }: QueryBuilderDialogProps) {
-  const [conjunction, setConjunction] = useState<'all' | 'any'>(initialConjunction);
-  const [rules, setRules] = useState<FilterRule[]>(initialRules);
-  const [saveName, setSaveName] = useState('');
-  const [savedQueries, setSavedQueries] = useState<SavedQuery[]>([]);
-  const [showSaveInput, setShowSaveInput] = useState(false);
-
-  const storageKey = `moonwitness_saved_filters_${model}`;
-
-  // Filterable fields
   const filterableFields = views.fields.filter((f) => f.type !== 'one2many');
-
-  // Load saved queries from localStorage
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(storageKey);
-      if (stored) {
-        setSavedQueries(JSON.parse(stored));
-      }
-    } catch {
-      // ignore
-    }
-  }, [storageKey]);
-
-  // Sync initialRules when dialog opens
-  useEffect(() => {
-    if (open) {
-      if (initialRules.length > 0) {
-        setRules(initialRules);
-      } else {
-        // default 1 empty rule
-        const firstField = filterableFields[0]?.name || 'name';
-        setRules([
+  const storageKey = `moonwitness_saved_filters_${model}`;
+  const [conjunction, setConjunction] = useState<'all' | 'any'>(initialConjunction);
+  const [rules, setRules] = useState<FilterRule[]>(() =>
+    initialRules.length > 0
+      ? initialRules
+      : [
           {
             id: `rule_${Date.now()}`,
-            field: firstField,
+            field: filterableFields[0]?.name || 'name',
             operator: 'ilike',
             value: '',
           },
-        ]);
-      }
-      setConjunction(initialConjunction);
-      setShowSaveInput(false);
-      setSaveName('');
+        ]
+  );
+  const [saveName, setSaveName] = useState('');
+  const [savedQueries, setSavedQueries] = useState<SavedQuery[]>(() => {
+    try {
+      const stored = localStorage.getItem(storageKey);
+      return stored ? (JSON.parse(stored) as SavedQuery[]) : [];
+    } catch {
+      return [];
     }
-  }, [open]);
+  });
+  const [showSaveInput, setShowSaveInput] = useState(false);
 
   const handleAddRule = () => {
     const firstField = filterableFields[0]?.name || 'name';

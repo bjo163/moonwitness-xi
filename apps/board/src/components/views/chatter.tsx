@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@moonwitness/ui/components/toast';
 import {
@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { client } from '@/lib/client';
 import { scopedQueryKey } from '@/lib/query-scope';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-auth-context';
 import { Button } from '@moonwitness/ui/components/button';
 import { Input } from '@moonwitness/ui/components/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -109,14 +109,20 @@ export function Chatter({ model, recordId }: ChatterProps) {
   const [submitting, setSubmitting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // New activity form state
   const [newSummary, setNewSummary] = useState('');
   const [newType, setNewType] = useState<'todo' | 'call' | 'meeting' | 'email'>('todo');
-  const [newDeadline, setNewDeadline] = useState(
-    new Date(Date.now() + 86400000).toISOString().slice(0, 10)
+  const [newDeadline, setNewDeadline] = useState(() =>
+    new Date(now + 86400000).toISOString().slice(0, 10)
   );
   const [newNote, setNewNote] = useState('');
 
@@ -483,9 +489,7 @@ export function Chatter({ model, recordId }: ChatterProps) {
                 const Icon = TYPE_ICONS[act.activity_type] || CheckCircle2;
                 const isDone = act.state === 'done';
                 const isOverdue =
-                  !isDone &&
-                  act.deadline &&
-                  new Date(act.deadline) < new Date(Date.now() - 86400000);
+                  !isDone && act.deadline && new Date(act.deadline).getTime() < now - 86400000;
 
                 return (
                   <div
