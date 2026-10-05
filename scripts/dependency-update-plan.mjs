@@ -4,6 +4,44 @@ import { resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
+export const COMPATIBILITY_REVIEW_GATES = [
+  'pnpm lint',
+  'pnpm format:check',
+  'pnpm typecheck',
+  'pnpm test:unit',
+  'pnpm test:integration',
+  'pnpm test:e2e',
+  'pnpm test:ui-catalog',
+  'pnpm test:ui-budget',
+  'pnpm test:architecture',
+  'pnpm architecture:check',
+  'pnpm docs:check',
+  'pnpm test:docs-portal',
+];
+
+function majorImpactReport({ name, current, latest, dependents, releaseNotes }) {
+  return {
+    status: 'manual-review-required',
+    current,
+    target: latest,
+    releaseNotes,
+    workspaceDependents: dependents,
+    requiredTasks: [
+      'Review every upstream migration guide and breaking change between current and target versions.',
+      'Search the repository for imported APIs, package configuration, and runtime behavior affected by the major update.',
+      'Map each breaking change to workspace dependents and record the required source/data/API migration.',
+      'Document rollback constraints and assign an owner before applying the candidate.',
+      'Do not select the major candidate for automatic application; submit a manual, reviewed compatibility plan.',
+    ],
+    requiredGates: [...COMPATIBILITY_REVIEW_GATES],
+    securityScans: [
+      'Workspace dependencies: block CRITICAL findings.',
+      'Candidate API and Board images: block CRITICAL findings.',
+    ],
+    package: name,
+  };
+}
+
 function parseVersion(version) {
   const match = /^(?:v)?(\d+)\.(\d+)\.(\d+)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.exec(
     version ?? ''
@@ -53,7 +91,7 @@ export function buildDependencyPlan(outdated, sourceSha, generatedAt) {
     if (!group) continue;
     const current = entry.current ?? '';
     const latest = entry.latest ?? '';
-    groups[group].push({
+    const candidate = {
       name,
       current,
       wanted: entry.wanted ?? null,
@@ -67,7 +105,11 @@ export function buildDependencyPlan(outdated, sourceSha, generatedAt) {
             .sort()
         : [],
       releaseNotes: repositoryUrl(entry.latestManifest),
-    });
+    };
+    if (candidate.compatibility === 'major' || candidate.wantedCompatibility === 'major') {
+      candidate.majorImpact = majorImpactReport(candidate);
+    }
+    groups[group].push(candidate);
   }
   for (const candidates of Object.values(groups)) {
     candidates.sort((left, right) => left.name.localeCompare(right.name));
@@ -110,7 +152,7 @@ export function selectUpdateCandidate(plan, packageName) {
   };
 }
 
-function renderSummary(plan) {
+export function renderSummary(plan) {
   const lines = [
     '## Dependency update candidates (read-only)',
     '',
@@ -142,6 +184,23 @@ function renderSummary(plan) {
       lines.push(`| ${cells.join(' | ')} |`);
     }
     lines.push('');
+    for (const item of candidates) {
+      if (!item.majorImpact) continue;
+      lines.push(
+        `#### Major compatibility review: ${item.name}`,
+        '',
+        `- Current: \`${item.majorImpact.current}\`; target: \`${item.majorImpact.target}\`.`,
+        `- Direct workspace dependents: ${item.majorImpact.workspaceDependents.join(', ') || 'not reported; inventory them before planning'}.`,
+        `- Upstream release notes: ${item.majorImpact.releaseNotes ? `${item.majorImpact.releaseNotes}/releases` : 'not reported; locate and record authoritative notes before planning'}.`,
+        '- Status: manual review required; the candidate executor refuses major updates.',
+        '- Required migration and verification tasks:'
+      );
+      for (const task of item.majorImpact.requiredTasks) lines.push(`  - ${task}`);
+      lines.push('- Required full candidate gates:');
+      for (const gate of item.majorImpact.requiredGates) lines.push(`  - \`${gate}\``);
+      for (const scan of item.majorImpact.securityScans) lines.push(`  - ${scan}`);
+      lines.push('');
+    }
   }
   lines.push(
     'Plan generation did not update manifests, lockfiles, branches, issues, or pull requests. Major and prerelease candidates are report-only.',

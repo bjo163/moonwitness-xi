@@ -3,6 +3,7 @@ import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve, relative } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { COMPATIBILITY_REVIEW_GATES } from './dependency-update-plan.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const VERSION = /^(?:\^|~|>=)?v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)$/;
@@ -170,32 +171,27 @@ export async function runCandidate({
   sourceSha,
   expectedSourceSha,
   root = ROOT,
+  execute = command,
 }) {
-  const result = await applyCandidate({ packageName, version, sourceSha, expectedSourceSha, root });
-  command('pnpm', ['--dir', root, 'install', '--frozen-lockfile'], root);
-  command(
+  const result = await applyCandidate({
+    packageName,
+    version,
+    sourceSha,
+    expectedSourceSha,
+    root,
+    execute,
+  });
+  execute('pnpm', ['--dir', root, 'install', '--frozen-lockfile'], root);
+  execute(
     'pnpm',
     ['--dir', root, 'exec', 'playwright', 'install', '--with-deps', 'chromium'],
     root
   );
-  for (const script of [
-    'lint',
-    'format:check',
-    'typecheck',
-    'test:unit',
-    'test:integration',
-    'test:e2e',
-    'test:ui-catalog',
-    'test:ui-budget',
-    'test:architecture',
-    'architecture:check',
-    'docs:check',
-    'test:docs-portal',
-  ]) {
-    command('pnpm', ['--dir', root, script], root);
+  for (const gate of COMPATIBILITY_REVIEW_GATES) {
+    execute('pnpm', ['--dir', root, ...gate.split(' ').slice(1)], root);
   }
-  command('pnpm', ['--dir', root, '--filter', '@moonwitness/board', 'lint'], root);
-  command('bash', ['scripts/smoke-containers.sh'], root);
+  execute('pnpm', ['--dir', root, '--filter', '@moonwitness/board', 'lint'], root);
+  execute('bash', ['scripts/smoke-containers.sh'], root);
   return result;
 }
 

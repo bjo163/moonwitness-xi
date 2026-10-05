@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   buildDependencyPlan,
   classifyCompatibility,
+  renderSummary,
   selectUpdateCandidate,
 } from './dependency-update-plan.mjs';
 
@@ -45,7 +46,10 @@ test('groups exact outdated runtime, development, and action candidates determin
   );
 
   assert.deepEqual(Object.keys(plan.groups), ['runtime', 'development', 'actions']);
-  assert.deepEqual(plan.groups.runtime, [
+  assert.deepEqual(
+    Object.fromEntries(
+      Object.entries(plan.groups.runtime[0]).filter(([key]) => key !== 'majorImpact')
+    ),
     {
       name: 'zeta',
       current: '1.2.0',
@@ -55,10 +59,18 @@ test('groups exact outdated runtime, development, and action candidates determin
       wantedCompatibility: 'same',
       dependents: ['@moonwitness/api'],
       releaseNotes: 'https://github.com/acme/zeta',
-    },
-  ]);
+    }
+  );
   assert.equal(plan.groups.development[0].compatibility, 'minor');
   assert.equal(plan.groups.actions[0].compatibility, 'major');
+  assert.equal(plan.groups.runtime[0].majorImpact.status, 'manual-review-required');
+  assert.deepEqual(plan.groups.runtime[0].majorImpact.workspaceDependents, ['@moonwitness/api']);
+  assert.ok(
+    plan.groups.runtime[0].majorImpact.requiredTasks.some((task) => task.includes('migration'))
+  );
+  assert.ok(plan.groups.runtime[0].majorImpact.requiredGates.includes('pnpm test:e2e'));
+  assert.match(renderSummary(plan), /Major compatibility review: zeta/);
+  assert.match(renderSummary(plan), /candidate executor refuses major updates/);
   assert.equal(plan.sourceSha, 'abc123');
   assert.equal(plan.mode, 'read-only-plan');
 });

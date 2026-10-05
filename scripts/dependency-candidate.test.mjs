@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { applyCandidate } from './dependency-candidate.mjs';
+import { applyCandidate, runCandidate } from './dependency-candidate.mjs';
 
 function command(executable, args, cwd) {
   return execFileSync(executable, args, {
@@ -144,6 +144,46 @@ test('rejects a dirty candidate checkout before invoking the package manager', a
         execute: () => assert.fail('package manager must not run for a dirty candidate'),
       }),
       /must be clean/
+    );
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('a failing full-suite E2E gate stops the candidate before container smoke checks', async () => {
+  const fixture = workspace();
+  const executed = [];
+  try {
+    await assert.rejects(
+      runCandidate({
+        packageName: 'is-number',
+        version: '7.0.2',
+        sourceSha: fixture.sourceSha,
+        expectedSourceSha: fixture.sourceSha,
+        root: fixture.root,
+        execute: (executable, args, cwd) => {
+          executed.push(`${executable} ${args.join(' ')}`);
+          if (executable === 'pnpm' && args.includes('add')) {
+            const manifestPath = join(args[args.indexOf('--dir') + 1], 'package.json');
+            const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+            const section = Object.hasOwn(manifest.dependencies ?? {}, 'is-number')
+              ? 'dependencies'
+              : 'devDependencies';
+            manifest[section]['is-number'] = '7.0.2';
+            writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+            writeFileSync(join(cwd, 'pnpm-lock.yaml'), "lockfileVersion: '9.0'\n");
+          }
+          if (executable === 'pnpm' && args.includes('test:e2e')) {
+            throw new Error('simulated E2E regression');
+          }
+        },
+      }),
+      /simulated E2E regression/
+    );
+    assert.ok(executed.some((entry) => entry.endsWith(' test:e2e')));
+    assert.equal(
+      executed.some((entry) => entry.includes('smoke-containers.sh')),
+      false
     );
   } finally {
     rmSync(fixture.root, { recursive: true, force: true });
