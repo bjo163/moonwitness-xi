@@ -920,7 +920,8 @@
       "dependsOn": ["M0.04", "M2.04"],
       "output": "Security workflow dan policy",
       "detailFile": "docs/roadmap/08-security-maintenance.md",
-      "status": "in_progress"
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/M8.03.md"
     },
     {
       "id": "M8.04",

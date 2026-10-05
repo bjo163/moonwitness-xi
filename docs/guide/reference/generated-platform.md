@@ -1,6 +1,6 @@
 # Generated platform reference
 
-Source fingerprint: `26a55945996059af851a24d8daf0149b196314d2844c7f16b1c5e84ba4f56cce`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
+Source fingerprint: `a596e225524ba2574d378372f4cc34f047fd22dd52910d12a59495be585c5bcd`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
 
 ## Workspace packages and apps
 
@@ -79,6 +79,7 @@ Value categories are inferred from variable names and example syntax; requiredne
 - `pnpm automation:check:action-pins`
 - `pnpm automation:check:roadmap`
 - `pnpm automation:check:secrets`
+- `pnpm automation:check:workflow-trust`
 - `pnpm board:visual:update`
 - `pnpm build`
 - `pnpm ci:affected`
@@ -144,6 +145,7 @@ Value categories are inferred from variable names and example syntax; requiredne
 - `pnpm test:ui-catalog`
 - `pnpm test:unit`
 - `pnpm test:unit:ci`
+- `pnpm test:workflow-trust`
 - `pnpm test:workspace-version-policy`
 - `pnpm typecheck`
 - `pnpm ui:budget`

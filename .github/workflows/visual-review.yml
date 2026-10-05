@@ -2,18 +2,12 @@ name: Visual review
 
 on:
   workflow_dispatch:
-    inputs:
-      ref:
-        description: Branch or commit to render for visual review
-        required: true
-        default: dev
-        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: visual-review-${{ inputs.ref }}
+  group: visual-review-dev
   cancel-in-progress: true
 
 jobs:
@@ -39,9 +33,19 @@ jobs:
       CI: 'true'
       POSTGRES_TEST_URL: postgresql://postgres:postgres@127.0.0.1:5432/moonwitness_e2e
     steps:
+      - name: Require the protected development branch
+        env:
+          DISPATCH_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [[ "$DISPATCH_REF" != "refs/heads/dev" ]]; then
+            echo "Visual review must be dispatched from the protected dev branch." >&2
+            exit 1
+          fi
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ github.sha }}
+          persist-credentials: false
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'

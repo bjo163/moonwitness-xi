@@ -25,9 +25,10 @@ on:
   workflow_dispatch:
     inputs:
       source_ref:
-        description: Source branch, release tag, or commit SHA to build
+        description: Use dev for a preview; publication accepts main or a verified release tag
         required: true
         type: string
+        default: dev
       publish:
         description: Publish Pages (requires source_ref main or a release tag)
         required: true
@@ -53,7 +54,9 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
+          persist-credentials: false
       - name: Detect docs-related paths
         id: filter
         uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3.0.3
@@ -123,12 +126,26 @@ jobs:
             echo "Pages publication can only be dispatched from trusted main." >&2
             exit 1
           fi
+          if [[ "$PUBLISH" != "true" && "$DISPATCH_REF" != "refs/heads/dev" ]]; then
+            echo "Documentation previews must be dispatched from the protected dev branch." >&2
+            exit 1
+          fi
           if [[ "$PUBLISH" == "true" && "$SOURCE_REF" != "main" && ! "$SOURCE_REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
             echo "Publication accepts only main or a semantic release tag; got $SOURCE_REF" >&2
             exit 1
           fi
           echo "publish=$PUBLISH" >> "$GITHUB_OUTPUT"
-      - name: Reject release-tag publication until stable release contracts are ready
+          if [[ "$PUBLISH" == "true" ]]; then
+            echo "selected_ref=$SOURCE_REF" >> "$GITHUB_OUTPUT"
+          else
+            echo "selected_ref=dev" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify and select a published release tag
         if: github.event_name == 'workflow_dispatch' && inputs.publish == true && startsWith(inputs.source_ref, 'v')
         env:
           GH_TOKEN: ${{ github.token }}
@@ -144,53 +161,14 @@ jobs:
             echo "Release tag $RELEASE_TAG does not point to a commit reachable from trusted main." >&2
             exit 1
           fi
-      - name: Select event source
-        id: source
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          EVENT_REF: ${{ github.ref }}
-          EVENT_SHA: ${{ github.sha }}
-          INPUT_REF: ${{ inputs.source_ref }}
-          PUBLISH: ${{ inputs.publish }}
-          SOURCE_REF: ${{ inputs.source_ref }}
-        run: |
-          set -euo pipefail
-          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
-            if [[ "$PUBLISH" == "true" && "$SOURCE_REF" == v* ]]; then
-              if [[ "$EVENT_REF" != "refs/heads/main" ]]; then
-                echo "Release tag publication must be dispatched from main." >&2
-                exit 1
-              fi
-              echo "ref=refs/tags/$SOURCE_REF" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            if [[ "$PUBLISH" == "true" && "$SOURCE_REF" == "main" ]]; then
-              echo "ref=$EVENT_SHA" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            echo "ref=$INPUT_REF" >> "$GITHUB_OUTPUT"
-          else
-            echo "ref=$EVENT_SHA" >> "$GITHUB_OUTPUT"
+          git checkout --detach "$RELEASE_TAG"
+          if [[ "$(git rev-parse HEAD)" != "$release_sha" ]]; then
+            echo "Release tag checkout does not match the validated tag SHA." >&2
+            exit 1
           fi
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          ref: ${{ steps.source.outputs.ref }}
-          fetch-depth: 0
       - name: Record immutable source SHA
         id: source_sha
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-      - name: Require exact tag content for release-tag publication
-        if: github.event_name == 'workflow_dispatch' && inputs.publish == true && startsWith(inputs.source_ref, 'v')
-        env:
-          RELEASE_TAG: ${{ inputs.source_ref }}
-          SOURCE_SHA: ${{ steps.source_sha.outputs.sha }}
-        run: |
-          set -euo pipefail
-          release_sha="$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"
-          if [[ "$release_sha" != "$SOURCE_SHA" ]]; then
-            echo "Selected release tag resolves to $release_sha, but checkout is $SOURCE_SHA." >&2
-            exit 1
-          fi
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
@@ -252,7 +230,7 @@ jobs:
       - name: Write source metadata
         env:
           SOURCE_SHA: ${{ steps.source_sha.outputs.sha }}
-          SOURCE_REF: ${{ steps.source.outputs.ref }}
+          SOURCE_REF: ${{ steps.policy.outputs.selected_ref || github.ref_name }}
           RUN_ID: ${{ github.run_id }}
           DOCS_ONLY: ${{ needs.change-detection.outputs.docs_only }}
           RELEASE_CHANGE_KIND: ${{ needs.change-detection.outputs.release_change_kind }}
@@ -313,10 +291,24 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
-          SOURCE_REF: ${{ inputs.source_ref || github.ref_name }}
+          SOURCE_REF: ${{ inputs.source_ref }}
+          PUBLISH: ${{ inputs.publish }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_REF_NAME: ${{ github.ref_name }}
           SOURCE_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            if [[ "$PUBLISH" == "true" && ( "$SOURCE_REF" == "main" || "$SOURCE_REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ) ]]; then
+              :
+            elif [[ "$PUBLISH" != "true" ]]; then
+              SOURCE_REF=dev
+            else
+              SOURCE_REF=invalid
+            fi
+          else
+            SOURCE_REF="$EVENT_REF_NAME"
+          fi
           number="$(gh issue list --repo "$GH_REPO" --label docs-publication --state open --json number --jq '.[0].number // empty')"
           if [[ -z "$number" ]]; then
             gh label create docs-publication --repo "$GH_REPO" --color 1D76DB --description 'Documentation publication status' --force
