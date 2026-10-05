@@ -114,7 +114,18 @@ test('responsive protected screens fit and remain accessible in both themes', as
         if (visualBaselines.has(visualKey)) {
           if (view.name === 'list') {
             await page.getByPlaceholder('Search partners...').fill('Acme Studio');
-            await expect(page.getByRole('table').getByText('Acme Studio')).toBeVisible();
+            const partnerRow = page.getByRole('row').filter({ hasText: 'Acme Studio' });
+            await expect(partnerRow.getByText('Acme Studio')).toBeVisible();
+            const countryValue = partnerRow.getByText('United States [US]', { exact: true });
+            await expect(countryValue).toBeVisible();
+            const countryOverflowsCell = await countryValue.evaluate((element) => {
+              const cell = element.closest('td');
+              return !cell || cell.scrollWidth > cell.clientWidth;
+            });
+            expect(
+              countryOverflowsCell,
+              'country value must fit or wrap inside its table cell'
+            ).toBe(false);
           }
           await expect(page).toHaveScreenshot(`board-${view.name}-${size.name}-${theme}.png`, {
             animations: 'disabled',
