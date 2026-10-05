@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "1ef0c2768ba5e5cc5d1917ce81acec73fee0d8a1aacb63d86db1e17f16cf011d",
+  "generatedFromSha256": "6f4f21528faafc836daa9e41ee584f86917f881513dabca8be25af5a70b859f9",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -236,6 +236,7 @@
       "readme:generate": "pnpm docs:generate",
       "release:check": "node scripts/check-release.mjs",
       "release:classify": "node scripts/classify-release-commits.mjs",
+      "release:plan": "node scripts/release-plan.mjs",
       "reset:superadmin-password": "pnpm --filter @moonwitness/api reset:superadmin-password",
       "test": "pnpm test:unit",
       "test:affected": "node --test scripts/select-affected.test.mjs",
@@ -255,6 +256,7 @@
       "test:integration": "node scripts/run-postgres-tests.mjs",
       "test:promotion-policy": "node --test scripts/git-range.test.mjs scripts/promotion-risk.test.mjs scripts/promotion-approval.test.mjs",
       "test:release-classification": "node --test scripts/release-classification.test.mjs",
+      "test:release-plan": "node --test scripts/release-plan.test.mjs",
       "test:restore-drill": "node scripts/verify-application-restore.mjs",
       "test:security-policy": "node --test scripts/security-scan-policy.test.mjs scripts/check-trivy-sarif.test.mjs",
       "test:ui": "pnpm --filter @moonwitness/ui build && node --test packages/ui/tests/*.test.mjs && node packages/ui/scripts/verify-package.mjs",
@@ -262,6 +264,7 @@
       "test:ui-catalog": "pnpm --filter @moonwitness/ui-catalog build && pnpm --filter @moonwitness/ui-catalog test",
       "test:unit": "pnpm build && pnpm --filter @moonwitness/api exec vitest run --exclude tests/postgres.integration.test.ts --exclude tests/postgres.performance.integration.test.ts && pnpm --filter @moonwitness/auth test && pnpm --filter @moonwitness/client test && pnpm --filter @moonwitness/jobs test && pnpm --filter @moonwitness/logger test && pnpm --filter @moonwitness/orm test && pnpm --filter @moonwitness/orm-base test && pnpm --filter @moonwitness/orm-notification test && pnpm --filter @moonwitness/orm-storage test && pnpm --filter @moonwitness/orm-workflow test && pnpm test:assets && pnpm test:ui",
       "test:unit:ci": "node scripts/run-unit-tests.mjs",
+      "test:workspace-version-policy": "node --test scripts/workspace-version-policy.test.mjs",
       "typecheck": "pnpm build && pnpm --filter @moonwitness/board typecheck",
       "ui:budget": "node scripts/check-ui-catalog-budget.mjs",
       "ui:visual:update": "pnpm --filter @moonwitness/ui-catalog build && pnpm --filter @moonwitness/ui-catalog exec playwright test --update-snapshots",

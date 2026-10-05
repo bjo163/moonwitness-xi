@@ -1,6 +1,6 @@
 # Generated platform reference
 
-Source fingerprint: `1ef0c2768ba5e5cc5d1917ce81acec73fee0d8a1aacb63d86db1e17f16cf011d`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
+Source fingerprint: `6f4f21528faafc836daa9e41ee584f86917f881513dabca8be25af5a70b859f9`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
 
 ## Workspace packages and apps
 
@@ -103,6 +103,7 @@ Value categories are inferred from variable names and example syntax; requiredne
 - `pnpm readme:generate`
 - `pnpm release:check`
 - `pnpm release:classify`
+- `pnpm release:plan`
 - `pnpm reset:superadmin-password`
 - `pnpm test`
 - `pnpm test:affected`
@@ -122,6 +123,7 @@ Value categories are inferred from variable names and example syntax; requiredne
 - `pnpm test:integration`
 - `pnpm test:promotion-policy`
 - `pnpm test:release-classification`
+- `pnpm test:release-plan`
 - `pnpm test:restore-drill`
 - `pnpm test:security-policy`
 - `pnpm test:ui`
@@ -129,6 +131,7 @@ Value categories are inferred from variable names and example syntax; requiredne
 - `pnpm test:ui-catalog`
 - `pnpm test:unit`
 - `pnpm test:unit:ci`
+- `pnpm test:workspace-version-policy`
 - `pnpm typecheck`
 - `pnpm ui:budget`
 - `pnpm ui:visual:update`

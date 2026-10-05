@@ -74,6 +74,8 @@ Prepare ulang sebelum release tidak bump dua kali; no releasable change menghasi
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M7.04.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
+Planner read-only tersedia melalui `pnpm release:plan`; output JSON menyertakan tag/SHA baseline, head SHA, klasifikasi, next prerelease version, commit yang dihitung/diabaikan, serta status `no-release` atau `invalid`. Planner default tidak membuat tag dan selalu menghasilkan kandidat `-rc.1`; keputusan mengaktifkan stable tetap menunggu M7.03. Tag/SHA baseline dapat dipilih secara eksplisit untuk reproduksi.
+
 ## M7.05 — Siapkan version/changelog/docs pada dev tanpa release branch; persiapan berulang harus idempotent.
 
 - **Prasyarat:** M7.02, M7.04, M6.04, M7.08
