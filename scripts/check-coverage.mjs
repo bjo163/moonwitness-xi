@@ -34,7 +34,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const policyPath = path.join(root, 'docs/testing/coverage-thresholds.json');
   const policy = JSON.parse(await readFile(policyPath, 'utf8'));
   const summaries = new Map();
-  for (const directory of ['api', 'auth', 'jobs', 'orm', 'orm-base']) {
+  for (const directory of ['api', 'auth', 'jobs', 'orm', 'orm-base', 'orm-workflow']) {
     const file = path.join(root, 'test-results/coverage', directory, 'coverage-summary.json');
     const report = JSON.parse(await readFile(file, 'utf8'));
     for (const [absolutePath, value] of Object.entries(report)) {

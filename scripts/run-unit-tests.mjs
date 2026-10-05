@@ -35,6 +35,7 @@ const suites = [
     name: 'api',
     packageName: '@moonwitness/api',
     excludePostgres: true,
+    maxWorkers: 2,
     coverage: ['src/auth/policy.ts', 'src/auth/rules.ts'],
   },
   {
@@ -81,6 +82,7 @@ for (const suite of suites) {
     );
   }
   const args = ['--filter', suite.packageName, 'exec', 'vitest', 'run'];
+  if (suite.maxWorkers) args.push(`--maxWorkers=${suite.maxWorkers}`);
   if (suite.excludePostgres) {
     args.push(
       '--exclude',
