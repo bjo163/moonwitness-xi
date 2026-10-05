@@ -1,0 +1,77 @@
+name: Monthly platform audit
+
+on:
+  schedule:
+    - cron: '17 7 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: monthly-platform-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: inventory platform and retention
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Restore the preceding monthly baseline when available
+        id: previous
+        env:
+          GH_REPO: ${{ github.repository }}
+        run: |
+          previous_run="$(gh api "repos/$GH_REPO/actions/workflows/platform-audit.yml/runs?branch=main&status=completed&per_page=100" --jq '.workflow_runs | map(select(.conclusion == "success")) | .[0].id // empty')"
+          if [[ -z "$previous_run" ]]; then
+            echo 'No previous successful audit run is available.'
+            exit 0
+          fi
+          if ! gh run download "$previous_run" --repo "$GH_REPO" --name platform-audit-baseline --dir platform-audit-previous; then
+            echo 'Previous run had no retained baseline artifact; current report will start a new trend.'
+          fi
+      - name: Generate read-only platform audit
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          if [[ -f platform-audit-previous/platform-audit-baseline.json ]]; then
+            node scripts/platform-audit.mjs --output platform-audit-baseline.json --previous platform-audit-previous/platform-audit-baseline.json
+          else
+            node scripts/platform-audit.mjs --output platform-audit-baseline.json
+          fi
+      - name: Write concise audit summary
+        run: |
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const report = JSON.parse(readFileSync("platform-audit-baseline.json", "utf8"));
+            const summary = [
+              "## Monthly platform audit",
+              "",
+              `- Source: \`${report.source.sha}\``,
+              `- Active artifacts: ${report.inventory.artifacts.count} (${report.inventory.artifacts.bytes} bytes); expiring within seven days: ${report.inventory.artifacts.expiringWithinSevenDays}.`,
+              `- Workflow runs inspected (90 days): ${report.inventory.workflowRuns.count}.`,
+              `- Registry inventory: ${report.inventory.packages.status}; Actions billing: ${report.inventory.billing.status}.`,
+              `- Cleanup: dry-run only; ${report.cleanupPlan.candidates.length} allowlisted candidates; no delete capability.`,
+              "",
+              ...report.limitations.map((item) => `- Limitation: ${item}`),
+              ""
+            ].join("\n");
+            process.stdout.write(summary);
+            await import("node:fs/promises").then(({ appendFile }) => appendFile(process.env.GITHUB_STEP_SUMMARY, summary));
+          '
+      - name: Upload audit baseline
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: platform-audit-baseline
+          path: platform-audit-baseline.json
+          if-no-files-found: error
+          retention-days: 90

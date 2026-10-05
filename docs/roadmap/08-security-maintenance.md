@@ -186,7 +186,7 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 Dry-run cleanup tidak memilih immutable releases; permissions drift ditampilkan.
 
-Snapshot parsial 2026-10-05 ada di [evidence M8.10](evidence/M8.10.md). Jangan menandai milestone selesai sampai audit otomatis, baseline bulanan yang dapat dibandingkan, biaya/registry yang terukur atau terjelaskan, dan dry-run cleanup yang melindungi artifacts immutable tervalidasi.
+Snapshot parsial 2026-10-05 ada di [evidence M8.10](evidence/M8.10.md). Implementasi audit berjalan lewat [`pnpm platform:audit`](../operations/platform-audit.md) dan scheduled workflow; jangan menandai milestone selesai sampai satu run hosted, baseline bulanan yang dapat dibandingkan, biaya/registry yang terukur atau terjelaskan, dan dry-run cleanup yang melindungi artifacts immutable tervalidasi.
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M8.10.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
