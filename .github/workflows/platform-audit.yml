@@ -57,3 +57,65 @@ jobs:
           path: platform-audit-baseline.json
           if-no-files-found: error
           retention-days: 90
+
+  report-failure:
+    name: Report monthly platform audit failure
+    if: always() && needs.audit.result == 'failure' && github.ref == 'refs/heads/main'
+    needs: [audit]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    concurrency:
+      group: repository-write-coordinator
+      cancel-in-progress: false
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          node-version: '22'
+          pnpm-version: '11'
+      - name: Upsert the monthly platform audit incident
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          SOURCE_REF: ${{ github.ref_name }}
+          SOURCE_SHA: ${{ github.sha }}
+          INCIDENT_CATEGORY: platform-audit
+          INCIDENT_STATUS: failed
+        run: node scripts/maintenance-incident.mjs
+
+  resolve-failure:
+    name: Resolve recovered monthly platform audit incident
+    if: always() && needs.audit.result == 'success' && github.ref == 'refs/heads/main'
+    needs: [audit]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    concurrency:
+      group: repository-write-coordinator
+      cancel-in-progress: false
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          node-version: '22'
+          pnpm-version: '11'
+      - name: Resolve the incident after a complete successful audit
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          SOURCE_REF: ${{ github.ref_name }}
+          SOURCE_SHA: ${{ github.sha }}
+          INCIDENT_CATEGORY: platform-audit
+          INCIDENT_STATUS: recovered
+        run: node scripts/maintenance-incident.mjs

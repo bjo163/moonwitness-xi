@@ -1,6 +1,6 @@
 # Generated platform reference
 
-Source fingerprint: `b79672bf7f16177f9d7bc5e1e1e11d381fa5d97188c92467bff4ae69ea326116`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
+Source fingerprint: `9913dd3c04fc6aafd953932c162b100a321230f544761327f2628f9e6961e536`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
 
 ## Workspace packages and apps
 
@@ -134,6 +134,7 @@ Value categories are inferred from variable names and example syntax; requiredne
 - `pnpm test:expected-ref`
 - `pnpm test:flaky-policy`
 - `pnpm test:integration`
+- `pnpm test:maintenance-incidents`
 - `pnpm test:platform-audit`
 - `pnpm test:promotion-policy`
 - `pnpm test:release-classification`

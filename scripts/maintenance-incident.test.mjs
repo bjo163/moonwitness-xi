@@ -2,8 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   planDocumentationIncident,
+  planMaintenanceIncident,
   updateDocumentationIncident,
-} from './docs-publication-incident.mjs';
+} from './maintenance-incident.mjs';
 
 const repo = 'owner/repo';
 const sha = 'a'.repeat(40);
@@ -120,6 +121,45 @@ test('never selects or closes security reports, even when they are the only open
   assert.equal(failure.operation, 'create');
   assert.equal(security.state, 'open');
   assert.equal(security.body, 'Investigate credential exposure');
+});
+
+test('platform audit failures deduplicate independently and recovery closes only that category', () => {
+  const auditInput = (id, status = 'failed') => ({
+    category: 'platform-audit',
+    issues: [],
+    ...incidentInput(id, status),
+  });
+  const first = planMaintenanceIncident(auditInput(60));
+  assert.equal(first.operation, 'create');
+  assert.deepEqual(first.labels, ['platform-audit']);
+  assert.match(first.body, /monthly read-only GitHub platform inventory/u);
+
+  const auditIssue = {
+    number: 61,
+    title: first.title,
+    body: first.body,
+    state: 'open',
+    labels: [{ name: 'platform-audit' }, { name: 'triaged-by-human' }],
+  };
+  const repeated = planMaintenanceIncident({ ...auditInput(62), issues: [auditIssue] });
+  assert.equal(repeated.operation, 'update');
+  assert.deepEqual(repeated.labels, ['platform-audit', 'triaged-by-human']);
+  assert.match(repeated.body, /run #62/u);
+  assert.equal(
+    planMaintenanceIncident({
+      ...auditInput(63, 'recovered'),
+      issues: [{ ...auditIssue, ...repeated }],
+    }).state,
+    'closed'
+  );
+
+  const docsIssue = incident(64);
+  const docsRecovery = planMaintenanceIncident({
+    ...auditInput(65, 'recovered'),
+    issues: [docsIssue],
+  });
+  assert.equal(docsRecovery.operation, 'noop');
+  assert.equal(docsIssue.state, 'open');
 });
 
 test('duplicate docs incidents and malformed managed blocks fail closed', () => {

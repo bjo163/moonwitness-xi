@@ -169,7 +169,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 - [ ] M8.06 Uji kandidat update sebelum menulis ke dev; periksa SHA asal, serialisasi bot writes, dan jangan mencampur beberapa major upgrade. [Evidence](docs/roadmap/evidence/M8.06.md); executor/workflow satu package dengan disposable worktree, full candidate gates, expected-ref publication, dan race tests diimplementasikan; activation hosted menunggu M8.05/M7.08 serta promosi workflow ke `main`.
 - [ ] M8.07 Patch/minor tetap melewati suite penuh dan promosi; major update menghasilkan laporan kompatibilitas sebelum diterapkan.
 - [ ] M8.08 Scheduled regression: browser tambahan, schema upgrade, jobs recovery, application restore drill, dan security rescan.
-- [ ] M8.09 Reporter Pages kini upsert satu issue `docs-publication`, batasi 10 run link, pertahankan catatan maintainer, dan tutup hanya setelah deploy Pages trusted pulih; 8 tes terisolasi lulus pada `2478a4a`. Scheduled maintenance triage yang lebih luas dan uji lifecycle hosted menunggu promosi ke `main`; security issue tidak disentuh. [Evidence](docs/roadmap/evidence/M8.09.md).
+- [ ] M8.09 Reconciler incident bersama kini menangani Pages (`docs-publication`) dan audit bulanan (`platform-audit`) dengan issue terpisah, deduplikasi run, batas 10 riwayat, serta resolve hanya setelah publikasi/audit lengkap sukses; 9 tes insiden lulus lokal. Uji lifecycle hosted masih menunggu promosi ke `main`; security issue tidak disentuh. [Evidence](docs/roadmap/evidence/M8.09.md).
 - [ ] M8.10 Audit retensi artifacts/logs, registry growth, biaya Actions, permission drift, dan toolchain end-of-support.
 - [ ] M8.11 Definisikan security reporting, incident response, credential rotation, dan release correction procedure.
 
