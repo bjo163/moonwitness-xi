@@ -79,6 +79,17 @@ export function createReleasePlan({ tags, headSha, commits }) {
     source: { baselineTag: baseline.tag, baselineSha: null, headSha },
     status: classification.changeKind === 'invalid' ? 'invalid' : 'planned',
     changeKind: classification.changeKind,
+    commits: classification.commits.map(
+      ({ sha, subject, type, scope, description, isBreaking, changeKind }) => ({
+        sha,
+        subject,
+        type,
+        scope,
+        description,
+        isBreaking,
+        changeKind,
+      })
+    ),
     currentVersion: formatVersion(baseline.version),
     nextVersion: null,
     releasableCommitShas: classification.commits

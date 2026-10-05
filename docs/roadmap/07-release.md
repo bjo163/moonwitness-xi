@@ -112,6 +112,8 @@ Missing breaking guide memblokir promotion; generated section tidak duplikat.
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M7.06.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
+Renderer read-only menerima file output `release:plan` dan tanggal eksplisit: `pnpm release:changelog <plan.json> <YYYY-MM-DD>`. Hasil ditulis ke stdout agar release preparation dapat meninjau diff sebelum memasukkan ke `CHANGELOG.md`. Commit PR bertaut ke `/pull/<number>` hanya jika subject memakai akhiran Conventional `(#number)`; commit selalu ditautkan ke SHA. Breaking commit memerlukan trailer `UPGRADE:` yang berisi langkah konkret. Detail commit keamanan diringkas menjadi label umum; body commit selain trailer upgrade tidak disalin ke changelog.
+
 ## M7.07 — Jalankan CI lengkap pada commit hasil persiapan; verifikasi lagi main merge SHA sebelum publikasi.
 
 - **Prasyarat:** M2.05
