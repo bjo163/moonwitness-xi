@@ -17,7 +17,7 @@ test('accepts least-privilege full-history scanning with exact reviewed fixtures
 
 test('rejects workflow trust-boundary and allowlist regressions', () => {
   const invalidWorkflow = workflow.replace('pull_request:', 'pull_request_target:');
-  const invalidConfig = config.replace('Youknowm@3', 'any-password');
+  const invalidConfig = config.replace('duplicate-vote-0001', 'altered-fixture');
   assert.ok(
     validateGitleaksSetup(invalidWorkflow, config).some((issue) => /privileged PR/u.test(issue))
   );

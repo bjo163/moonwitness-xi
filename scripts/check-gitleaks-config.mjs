@@ -8,8 +8,6 @@ const workflowPath = path.join(root, '.github', 'workflows', 'gitleaks.yml');
 const configPath = path.join(root, '.gitleaks.toml');
 const actionReference = /gitleaks\/gitleaks-action@[0-9a-f]{40}\s+#\s*v\d+\.\d+\.\d+/;
 const allowedLines = [
-  /^JWT_SECRET=PcsOJSAhpYuu3r8sDvRyUTVav-xzq6_HlJV9lVlU5jg$/u,
-  /^SUPERADMIN_PASSWORD=Youknowm@3$/u,
   /^\s*"tokensSha256": "269a6e000da6fa288380cf36ec127df09cc86d6a38a1d4613a975b54d3664d5a"$/u,
   /^\s*idempotencyKey: 'duplicate-vote-0001',$/u,
   /^\s*idempotencyKey: 'reject-decision-0001',$/u,
@@ -34,12 +32,10 @@ export function validateGitleaksSetup(workflow, config) {
 
   const configuredLines = [...config.matchAll(/'''(.*?)'''/gs)].map((match) => match[1]);
   if (configuredLines.length !== allowedLines.length) {
-    problems.push('Allowlist must contain exactly the reviewed synthetic/local-only lines.');
+    problems.push('Allowlist must contain exactly the reviewed synthetic fixture lines.');
   } else {
     for (const [index, expression] of configuredLines.entries()) {
       const expected = [
-        '^JWT_SECRET=PcsOJSAhpYuu3r8sDvRyUTVav-xzq6_HlJV9lVlU5jg$',
-        '^SUPERADMIN_PASSWORD=Youknowm@3$',
         '^\\s*"tokensSha256": "269a6e000da6fa288380cf36ec127df09cc86d6a38a1d4613a975b54d3664d5a"$',
         "^\\s*idempotencyKey: 'duplicate-vote-0001',$",
         "^\\s*idempotencyKey: 'reject-decision-0001',$",
