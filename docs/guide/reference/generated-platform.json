@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "8902f50165d7defab118d3a513d280e4d9b61d7e24da8fc6d41c901fbe0fd534",
+  "generatedFromSha256": "44e277bc811ee0f37e9886c6bae1e6767b4feb068238cceadf4c459d29d2c5ac",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -242,6 +242,7 @@
       "release:classify": "node scripts/classify-release-commits.mjs",
       "release:plan": "node scripts/release-plan.mjs",
       "reset:superadmin-password": "pnpm --filter @moonwitness/api reset:superadmin-password",
+      "roadmap:issues:plan": "node scripts/roadmap/sync-issues.mjs",
       "test": "pnpm test:unit",
       "test:action-pins": "node --test scripts/check-action-pins.test.mjs",
       "test:affected": "node --test scripts/select-affected.test.mjs",
@@ -264,7 +265,7 @@
       "test:release-plan": "node --test scripts/release-plan.test.mjs",
       "test:render-changelog": "node --test scripts/render-changelog.test.mjs",
       "test:restore-drill": "node scripts/verify-application-restore.mjs",
-      "test:roadmap": "node --test scripts/roadmap/validate-roadmap.test.mjs",
+      "test:roadmap": "node --test scripts/roadmap/validate-roadmap.test.mjs scripts/roadmap/sync-issues.test.mjs",
       "test:secrets": "node --test scripts/check-gitleaks-config.test.mjs",
       "test:security-policy": "node --test scripts/security-scan-policy.test.mjs scripts/check-trivy-sarif.test.mjs",
       "test:ui": "pnpm --filter @moonwitness/ui build && node --test packages/ui/tests/*.test.mjs && node packages/ui/scripts/verify-package.mjs",
