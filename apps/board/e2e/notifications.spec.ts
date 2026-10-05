@@ -70,7 +70,10 @@ test('notification inbox displays a delivered message, marks it read, and expose
   await expect(page.getByRole('heading', { name: 'Notifications' }).last()).toBeVisible();
   await expect(page.getByText(title)).toBeVisible();
   await page.getByRole('button', { name: 'Mark read' }).click();
-  await expect(page.getByRole('button', { name: 'Notifications' })).toBeVisible();
+  await expect(page.locator('#notification-inbox-btn')).toHaveAttribute(
+    'aria-label',
+    'Notifications'
+  );
 
   const read = await page.request.get(`/api/notification.notification/${createdRecord.data.id}`, {
     headers,
