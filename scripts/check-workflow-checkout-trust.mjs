@@ -39,7 +39,7 @@ export function inspectTrustedCheckoutPolicies({ pages, visualReview }) {
         findings.push(
           `${name} checkout ${index + 1} must not persist the workflow token in git config.`
         );
-      if (/\$\{\{\s*inputs\./u.test(checkout))
+      if (checkout.includes('${{ inputs.') || checkout.includes('${{inputs.'))
         findings.push(
           `${name} checkout ${index + 1} must not interpolate workflow-dispatch input.`
         );
@@ -61,7 +61,7 @@ export function inspectTrustedCheckoutPolicies({ pages, visualReview }) {
 
   if (!visualReview.includes('DISPATCH_REF" != "refs/heads/dev"'))
     findings.push('Visual review dispatch must be restricted to the protected dev branch.');
-  if (/^\s{4}inputs:/mu.test(visualReview))
+  if (visualReview.split(/\r?\n/u).some((line) => line.startsWith('    inputs:')))
     findings.push('Visual review must not accept an arbitrary ref input.');
 
   return findings;

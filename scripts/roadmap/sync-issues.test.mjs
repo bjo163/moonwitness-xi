@@ -156,6 +156,139 @@ test('apply rejects any duplicate conflict before the first remote mutation', as
   assert.deepEqual(calls, []);
 });
 
+test('update re-reads the issue and preserves concurrent maintainer notes and metadata', async () => {
+  const generated = plan().operations[0];
+  const original = {
+    number: 31,
+    title: '[M11.03] old title',
+    body: `${generated.body}\n\nMaintainer note: original`,
+    state: 'open',
+    labels: [{ name: 'roadmap' }],
+    assignees: [{ login: 'planner' }],
+    milestone: { number: 11, title: 'M11' },
+  };
+  const latest = {
+    ...original,
+    body: `${original.body}\n\nConcurrent note: preserve me`,
+    labels: [...original.labels, { name: 'maintainer-label' }],
+    assignees: [...original.assignees, { login: 'reviewer' }],
+  };
+  let patched;
+  const client = {
+    listAll: async () => [original],
+    getIssue: async () => latest,
+    update: async (operation) => {
+      patched = operation;
+      return { number: operation.issueNumber };
+    },
+  };
+  const changedTask = { ...task, title: 'Build safer planner' };
+  const changedPlan = planIssueSync({
+    tasks: [changedTask],
+    issues: [original],
+    repositoryId,
+    sourceSha,
+  });
+  await applyIssuePlan({
+    plan: changedPlan,
+    client,
+    tasks: [changedTask],
+    repositoryId,
+    sourceSha,
+  });
+  assert.match(patched.body, /Concurrent note: preserve me/u);
+  assert.deepEqual(patched.labels, ['maintainer-label', 'milestone:m11', 'roadmap']);
+  assert.deepEqual(patched.assignees, ['planner', 'reviewer']);
+});
+
+test('update refuses concurrent edits to managed content without patching', async () => {
+  const generated = plan().operations[0];
+  const original = {
+    number: 32,
+    title: '[M11.03] old title',
+    body: generated.body,
+    state: 'open',
+    milestone: { number: 11, title: 'M11' },
+  };
+  const changedTask = { ...task, title: 'Build safer planner' };
+  const changedPlan = planIssueSync({
+    tasks: [changedTask],
+    issues: [original],
+    repositoryId,
+    sourceSha,
+  });
+  let patched = false;
+  const client = {
+    listAll: async () => [original],
+    getIssue: async () => ({
+      ...original,
+      body: original.body.replace('Build planner', 'Changed manually'),
+    }),
+    update: async () => {
+      patched = true;
+    },
+  };
+  await assert.rejects(
+    applyIssuePlan({
+      plan: changedPlan,
+      client,
+      tasks: [changedTask],
+      repositoryId,
+      sourceSha,
+    }),
+    /changed in a managed field/u
+  );
+  assert.equal(patched, false);
+});
+
+test('update is skipped when the remote issue already reached the desired state', async () => {
+  const generated = plan().operations[0];
+  const original = {
+    number: 33,
+    title: generated.title,
+    body: generated.body,
+    state: 'open',
+    labels: [{ name: 'roadmap' }, { name: 'milestone:m11' }],
+    assignees: [],
+    milestone: { number: 11, title: 'M11' },
+  };
+  const changedTask = { ...task, title: 'Build safer planner' };
+  const changedPlan = planIssueSync({
+    tasks: [changedTask],
+    issues: [original],
+    repositoryId,
+    sourceSha,
+  });
+  const desired = planIssueSync({
+    tasks: [changedTask],
+    issues: [],
+    repositoryId,
+    sourceSha,
+  }).operations[0];
+  let patched = false;
+  const client = {
+    listAll: async () => [original],
+    getIssue: async () => ({
+      ...original,
+      title: desired.title,
+      body: desired.body,
+      labels: desired.labels.map((name) => ({ name })),
+    }),
+    update: async () => {
+      patched = true;
+    },
+  };
+  const result = await applyIssuePlan({
+    plan: changedPlan,
+    client,
+    tasks: [changedTask],
+    repositoryId,
+    sourceSha,
+  });
+  assert.deepEqual(result, [{ taskId: task.id, issueNumber: 33, unchanged: true }]);
+  assert.equal(patched, false);
+});
+
 test('ambiguous create failure re-reads marker and recovers without creating a duplicate', async () => {
   const expected = plan().operations[0];
   let calls = 0;
@@ -212,6 +345,8 @@ test('GitHub issue adapter follows open and closed pagination and serializes iss
   await client.create({ title: 'test', body: 'body' });
   assert.equal(calls[3].init.method, 'POST');
   assert.equal(calls[3].init.body.includes('test-token'), false);
+  await client.getIssue(42);
+  assert.equal(calls[4].url.endsWith('/issues/42'), true);
 });
 
 test('task renderer extracts implementation and acceptance sections from its exact card', () => {

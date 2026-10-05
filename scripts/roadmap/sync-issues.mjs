@@ -11,7 +11,7 @@ const endMarker = '<!-- END MOONWITNESS MANAGED -->';
 
 /**
  * @typedef {{ number: number, title: string, body: string, state: 'open'|'closed', labels?: Array<{name: string}>, milestone?: {number: number, title: string}|null, assignees?: Array<{login: string}>, pull_request?: unknown }} RemoteIssue
- * @typedef {{ taskId: string, operation: 'create'|'update'|'noop'|'conflict', issueNumber?: number, reason?: string, title: string, body: string, labels?: string[], assignees?: string[], milestoneTitle?: string }} IssueOperation
+ * @typedef {{ taskId: string, operation: 'create'|'update'|'noop'|'conflict', issueNumber?: number, reason?: string, title: string, body: string, labels?: string[], assignees?: string[], milestoneTitle?: string, expectedTitle?: string, expectedManagedBlock?: string, expectedMilestoneTitle?: string }} IssueOperation
  */
 
 function sha256(value) {
@@ -248,6 +248,9 @@ export function planIssueSync({
       labels: desiredLabels,
       assignees,
       milestoneTitle: task.milestone,
+      expectedTitle: issue.title,
+      expectedManagedBlock: currentBlock,
+      expectedMilestoneTitle: issue.milestone?.title,
     };
   });
   const inputHash = sha256(
@@ -376,6 +379,9 @@ export function createGitHubIssuesClient({ token, owner, repo, fetchImpl = globa
       }
       return result;
     },
+    async getIssue(issueNumber) {
+      return request(`${base}/${issueNumber}`);
+    },
     async listMetadata() {
       return { milestones: await listMilestones(), labels: await listLabels() };
     },
@@ -462,8 +468,65 @@ export async function applyIssuePlan({
           });
         else throw error;
       }
-    } else if (operation.operation === 'update')
-      results.push({ taskId: operation.taskId, issue: await client.update(operation) });
+    } else if (operation.operation === 'update') {
+      if (!client.getIssue)
+        throw new Error('Issue client must support getIssue for safe concurrent updates.');
+      const latest = await client.getIssue(operation.issueNumber);
+      let latestBlock;
+      try {
+        latestBlock = readManagedBlock(latest.body);
+      } catch (error) {
+        throw new Error(`Cannot update #${operation.issueNumber}: ${error.message}`, {
+          cause: error,
+        });
+      }
+      const desiredBlock = readManagedBlock(operation.body);
+      if (
+        (latest.title !== operation.expectedTitle && latest.title !== operation.title) ||
+        (latestBlock !== operation.expectedManagedBlock && latestBlock !== desiredBlock) ||
+        (latest.milestone?.title !== operation.expectedMilestoneTitle &&
+          latest.milestone?.title !== operation.milestoneTitle)
+      )
+        throw new Error(
+          `Issue #${operation.issueNumber} changed in a managed field after planning; refresh the plan and review the conflict.`
+        );
+      const currentLabels = new Set((latest.labels ?? []).map(({ name }) => name.toLowerCase()));
+      const currentAssignees = new Set(
+        (latest.assignees ?? []).map(({ login }) => login.toLowerCase())
+      );
+      const metadataAlreadyCurrent =
+        latest.milestone?.title === operation.milestoneTitle &&
+        (operation.labels ?? []).every((label) => currentLabels.has(label.toLowerCase())) &&
+        (operation.assignees ?? []).every((login) => currentAssignees.has(login.toLowerCase()));
+      if (
+        latestBlock === desiredBlock &&
+        latest.title === operation.title &&
+        metadataAlreadyCurrent
+      ) {
+        results.push({
+          taskId: operation.taskId,
+          issueNumber: operation.issueNumber,
+          unchanged: true,
+        });
+        continue;
+      }
+      const mergedLabels = new Map(
+        (latest.labels ?? []).map(({ name }) => [name.toLowerCase(), name])
+      );
+      for (const label of operation.labels ?? [])
+        if (!mergedLabels.has(label.toLowerCase())) mergedLabels.set(label.toLowerCase(), label);
+      const mergedAssignees = new Set([
+        ...(latest.assignees ?? []).map(({ login }) => login),
+        ...(operation.assignees ?? []),
+      ]);
+      const reconciled = {
+        ...operation,
+        body: replaceManagedBlock(latest.body, desiredBlock),
+        labels: [...mergedLabels.values()].sort(),
+        assignees: [...mergedAssignees].sort(),
+      };
+      results.push({ taskId: operation.taskId, issue: await client.update(reconciled) });
+    }
   }
   return results;
 }
