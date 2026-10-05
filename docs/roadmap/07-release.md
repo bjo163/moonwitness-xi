@@ -250,6 +250,8 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ## M7.14 — Uji race, partial publish, upload gagal, token expired, tidak ada perubahan releasable, dan kegagalan sinkronisasi branch.
 
+Local fault-injection covers ambiguous GHCR push recovery, auth/network fail-closed behavior, immutable image conflicts, no-release plans, and an actual stale expected-ref race against temporary bare Git remotes. Checksums, source tag SHA and existing-release reconciliation have workflow contract assertions. Hosted credential expiry and registry mutation remain pending.
+
 - **Prasyarat:** M7.13, M7.08
 - **Baca/periksa:** Planner/publisher tests; fake GitHub/registry adapters.
 - **Deliverable:** Release fault-injection suite.

@@ -129,6 +129,40 @@ test('registry and transport failures are not mistaken for a missing tag', async
   assert.equal((await publishReleaseImage(input, wrappedMissing)).action, 'pushed');
 });
 
+test('ambiguous image push recovers on retry by reading the completed remote tag', async () => {
+  const docker = fakeDocker({ pullError: 'manifest unknown' });
+  const publish = docker.push;
+  docker.push = async (reference) => {
+    docker.calls.push(['push', reference]);
+    docker.remote = imageRecord({
+      id: imageId,
+      repoDigests: [`${image}@${digest}`],
+    });
+    throw new Error('connection closed after registry accepted the manifest');
+  };
+  await assert.rejects(publishReleaseImage(input, docker), /connection closed/u);
+  assert.deepEqual(
+    docker.calls.map(([operation]) => operation),
+    ['inspect', 'pull', 'tag', 'push']
+  );
+  const candidate = imageRecord();
+  docker.inspect = async (reference) => {
+    docker.calls.push(['inspect', reference]);
+    return reference === input.sourceImage ? candidate : docker.remote;
+  };
+
+  docker.pull = async (reference) => {
+    docker.calls.push(['pull', reference]);
+  };
+  docker.push = publish;
+  const result = await publishReleaseImage(input, docker);
+  assert.deepEqual(result, { action: 'reused', image: `${image}:v1.2.3`, digest });
+  assert.equal(
+    docker.calls.slice(4).some(([operation]) => operation === 'push' || operation === 'tag'),
+    false
+  );
+});
+
 test('invalid candidate provenance, mismatched versions, and ambiguous digests fail closed', async () => {
   const docker = fakeDocker({
     pullError: 'manifest unknown',

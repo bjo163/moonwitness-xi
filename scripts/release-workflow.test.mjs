@@ -14,6 +14,10 @@ const imagePublisher = await readFile(
   new globalThis.URL('./publish-release-image.mjs', import.meta.url),
   'utf8'
 );
+const releasePlanner = await readFile(
+  new globalThis.URL('./release-plan.mjs', import.meta.url),
+  'utf8'
+);
 const jobsStart = workflow.indexOf('jobs:');
 const verifyStart = workflow.indexOf('  verify:', jobsStart);
 const publishStart = workflow.indexOf('  publish:', jobsStart);
@@ -116,4 +120,14 @@ test('publish revalidates the source tag after verification before any image wri
   assert.ok(tagGuard >= 0 && tagGuard < firstRegistryWrite);
   assert.match(imagePublisher, /refusing to overwrite it/u);
   assert.match(imagePublisher, /manifest unknown/iu);
+});
+
+test('release fault recovery preserves no-op plans and explicitly models hostile failures', () => {
+  assert.match(releasePlanner, /classification\.changeKind === 'none'/u);
+  assert.match(releasePlanner, /result\.status = 'no-release'/u);
+  assert.match(imagePublisher, /manifest unknown/iu);
+  assert.match(imagePublisher, /if \(!missingImageManifest\(error\)\) throw error/u);
+  assert.match(publish, /remote_tag_sha/u);
+  assert.match(publish, /gh release view "\$TAG"/u);
+  assert.match(publish, /sha256sum --check release-artifacts\.sha256/u);
 });
