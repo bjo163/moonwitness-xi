@@ -41,7 +41,7 @@ function isDomainScalar(value: unknown): value is string | number | boolean | nu
 }
 
 /** Validates untrusted REST/RPC input before it reaches query construction. */
-export function validateDomain(input: unknown): Domain {
+export function validateDomain(input: unknown, allowedFields?: ReadonlySet<string>): Domain {
   if (!Array.isArray(input) || input.length > MAX_DOMAIN_TERMS) {
     throw new Error(`Invalid domain: expected an array with at most ${MAX_DOMAIN_TERMS} terms`);
   }
@@ -61,6 +61,9 @@ export function validateDomain(input: unknown): Domain {
       !/^[A-Za-z_][A-Za-z0-9_.]*$/u.test(field)
     ) {
       throw new Error(`Invalid domain: term ${index} has an invalid field`);
+    }
+    if (allowedFields && !allowedFields.has(field)) {
+      throw new Error(`Invalid domain: field '${field}' is not queryable`);
     }
 
     let operator: DomainOperator = '=';

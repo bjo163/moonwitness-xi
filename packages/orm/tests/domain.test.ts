@@ -14,6 +14,12 @@ describe('Domain Parser', () => {
       'does not accept a list'
     );
     expect(() => validateDomain([['bad field', '=', 'value']])).toThrow('invalid field');
+    expect(() =>
+      validateDomain([['missing_column', '=', 'value']], new Set(['id', 'name']))
+    ).toThrow("field 'missing_column' is not queryable");
+    expect(() =>
+      validateDomain([['missing_column', '=', 'value']], new Set(['id', 'name']))
+    ).toThrow("field 'missing_column' is not queryable");
     expect(() => validateDomain([['name', '=', 'x'.repeat(4097)]])).toThrow('value is too long');
     const deepDomain = [...Array<string>(33).fill('!'), ['active', '=', true]];
     expect(() => parseDomainToAST(validateDomain(deepDomain))).toThrow(

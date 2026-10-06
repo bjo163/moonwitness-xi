@@ -919,7 +919,10 @@ export const genericRoutes: FastifyPluginAsync<GenericRoutesOptions> = async (fa
       let domain: Domain = [];
       if (req.query.domain) {
         try {
-          domain = validateDomain(JSON.parse(req.query.domain) as unknown);
+          domain = validateDomain(
+            JSON.parse(req.query.domain) as unknown,
+            new Set(Object.keys(Model.jsonSchema.properties ?? {}))
+          );
         } catch {
           return reply
             .status(400)
@@ -1403,7 +1406,7 @@ export const genericRoutes: FastifyPluginAsync<GenericRoutesOptions> = async (fa
     const kwargs = asJsonObject(rawKwargs) ?? {};
     if (required === 'read' && (method === 'search_read' || method === 'search')) {
       try {
-        validateDomain(args[0] ?? []);
+        validateDomain(args[0] ?? [], new Set(Object.keys(Model.jsonSchema.properties ?? {})));
       } catch {
         return reply.send(rpcError(-32602, 'Invalid search domain'));
       }
