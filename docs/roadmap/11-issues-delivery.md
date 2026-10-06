@@ -265,6 +265,8 @@ Semua event idempotent; no premature close/version; expected one issue/task dan 
 
 Regression fixtures yang sudah berjalan menguji initial plan/no-op, update dengan catatan manusia yang berubah serentak, perubahan managed content yang menolak PATCH, stale input plan, duplicate marker, write permission dicabut sebelum metadata/update, create timeout yang pulih hanya setelah marker ditemukan, serta kegagalan create tanpa blind retry. Lifecycle fixtures menolak snapshot basi/salah SHA, required checks pada SHA lain atau gagal, dependency belum selesai, dan manual close tanpa evidence. Ini menyelesaikan fault tests lokal untuk issue projection saja; simulasi out-of-order hosted events, auth nyata, CI→PR→merge→release satu siklus dan task pilot tetap bergantung pada M11.07/M11.08/M11.11/M7.14 dan aktivasi GitHub.
 
+M11.05 follow-up: reconciliation tidak lagi memangkas whitespace pada prefix/suffix body di luar managed markers. Test membandingkan isi di kedua sisi byte-for-byte setelah update; issue legacy yang sudah memiliki identity marker tetapi belum memiliki generated block tetap mempertahankan diskusinya persis ketika block ditambahkan.
+
 Simpan bukti aktual di `docs/roadmap/evidence/M11.14.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.
 
 ## M11.15 — Sediakan runbook audit/recovery dan pemeriksaan drift issue/roadmap.

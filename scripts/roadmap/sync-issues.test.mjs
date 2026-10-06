@@ -115,6 +115,30 @@ test('managed issue update preserves maintainer notes outside the generated bloc
   assert.match(operation.title, /Build robust planner/u);
 });
 
+test('managed block replacement preserves every byte outside its markers', () => {
+  const changedTask = { ...task, title: 'Build exact-preservation planner' };
+  const expectedBlock = plan([], [changedTask]).operations[0].body;
+  const prefix = ' \n\nHuman heading\n\n';
+  const suffix = '\n\nMaintainer note\nKeep trailing spaces too. \n\n';
+  const previousBlock = plan().operations[0].body;
+  const existingBody = `${prefix}${previousBlock}${suffix}`;
+  const issue = { number: 81, title: '[M11.03] old title', body: existingBody, state: 'open' };
+  const operation = plan([issue], [changedTask]).operations[0];
+
+  assert.equal(operation.operation, 'update');
+  assert.equal(operation.body, `${prefix}${expectedBlock}${suffix}`);
+
+  const legacyIssue = {
+    ...issue,
+    number: 82,
+    body: `<!-- moonwitness-task: ${repositoryId}:${task.id} -->\n${prefix}Legacy discussion \n\n`,
+  };
+  const legacyOperation = plan([legacyIssue], [changedTask]).operations[0];
+  assert.equal(legacyOperation.operation, 'update');
+  const managedBlock = expectedBlock.slice(expectedBlock.indexOf('\n') + 1);
+  assert.equal(legacyOperation.body, `${managedBlock.trimEnd()}\n\n${legacyIssue.body}`);
+});
+
 test('unchanged managed content is a no-op even when maintainer notes are present', () => {
   const generated = plan().operations[0];
   const originalBody = `${generated.body}\n\n## Maintainer notes\nKeep this exact text.\n`;

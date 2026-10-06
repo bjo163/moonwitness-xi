@@ -23,17 +23,12 @@ function sha256(value) {
 
 function replaceManagedBlock(body, block) {
   const currentBlock = readManagedBlock(body);
-  if (currentBlock === undefined) {
-    const notes = body.trim();
-    return [block, notes].filter(Boolean).join('\n\n');
-  }
+  if (currentBlock === undefined) return body.length > 0 ? `${block}\n\n${body}` : block;
   const start = body.indexOf(beginMarker);
   const end = body.indexOf(endMarker, start) + endMarker.length;
-  const blockStart = start;
-  const blockEnd = end;
-  if (blockStart < 0 || blockEnd <= blockStart)
+  if (start < 0 || end <= start)
     throw new Error('Issue body has malformed managed-block boundaries.');
-  return `${body.slice(0, blockStart)}${block}${body.slice(blockEnd)}`.trim();
+  return `${body.slice(0, start)}${block}${body.slice(end)}`;
 }
 
 function readManagedBlock(body) {
