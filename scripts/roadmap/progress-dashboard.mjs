@@ -98,6 +98,7 @@ export function renderRoadmapProgressMarkdown(report) {
     '# Roadmap progress',
     '',
     `- Source SHA: \`${report.sourceSha}\``,
+    `- Source tree: ${report.sourceDirty ? 'dirty' : 'clean'}`,
     `- Generated at: ${report.generatedAt}`,
     `- Delivery evidence: ${report.deliveryEvidence}`,
     `- Total tasks: ${report.totals.taskCount} (todo ${work.todo}, running ${work.running}, blocked ${work.blocked}, complete ${work.complete})`,

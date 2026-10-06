@@ -63,6 +63,7 @@ test('Markdown report is compact, source-bound and states the completion/deliver
   });
   const markdown = renderRoadmapProgressMarkdown(report);
   assert.ok(markdown.includes(`Source SHA: \`${sha}\``));
+  assert.match(markdown, /Source tree: clean/u);
   assert.match(markdown, /\| M1 \| 2 \|/u);
   assert.match(markdown, /not counted as verified, merged, or released/u);
 });
@@ -89,4 +90,5 @@ test('labels a dirty checkout so a base commit SHA is never presented as the exa
     sourceDirty: true,
   });
   assert.equal(report.sourceDirty, true);
+  assert.match(renderRoadmapProgressMarkdown(report), /Source tree: dirty/u);
 });
