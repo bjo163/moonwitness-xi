@@ -141,6 +141,7 @@ function generatedBlock(task, sourceSha, options) {
       ? `${options.repositoryUrl}/blob/${sourceSha}/${task.evidence}`
       : undefined;
   const details = options.cardDetailsByTask.get(task.id);
+  const lifecycle = options.lifecycleByTask?.get(task.id);
   return [
     beginMarker,
     `Task: ${task.id}`,
@@ -150,6 +151,22 @@ function generatedBlock(task, sourceSha, options) {
     ...(evidenceUrl ? [`Evidence: [${task.evidence}](${evidenceUrl})`] : []),
     ...(!evidenceUrl ? ['Evidence: not recorded yet'] : []),
     `Dependencies: ${dependencies}`,
+    ...(lifecycle
+      ? [
+          `Work status: ${lifecycle.workStatus}`,
+          `Delivery stage: ${lifecycle.deliveryStage}`,
+          ...(lifecycle.blockers.length
+            ? [`Lifecycle blockers: ${lifecycle.blockers.join('; ')}`]
+            : []),
+          ...(lifecycle.verifiedOnDevSha
+            ? [`Verified dev SHA: ${lifecycle.verifiedOnDevSha}`]
+            : []),
+          ...(lifecycle.releaseVersion ? [`Release version: ${lifecycle.releaseVersion}`] : []),
+          ...(lifecycle.needsTriage
+            ? ['Issue state: closed manually; maintainer triage required.']
+            : []),
+        ]
+      : []),
     '',
     '## Scope',
     task.title,
@@ -164,7 +181,7 @@ function generatedBlock(task, sourceSha, options) {
 
 /**
  * Pure deterministic planner. It never writes files or calls a remote API.
- * @param {{ tasks: Array<{id: string, title: string, milestone: string, dependsOn: string[], detailFile: string, output: string, evidence?: string, labels?: string[], priority?: string, assignee?: string}>, issues: RemoteIssue[], repositoryId: string, sourceSha: string, repositoryUrl?: string, cardDetailsByTask?: Map<string, {steps: string, acceptance: string}> }} input
+ * @param {{ tasks: Array<{id: string, title: string, milestone: string, dependsOn: string[], detailFile: string, output: string, evidence?: string, labels?: string[], priority?: string, assignee?: string}>, issues: RemoteIssue[], repositoryId: string, sourceSha: string, repositoryUrl?: string, cardDetailsByTask?: Map<string, {steps: string, acceptance: string}>, lifecycleByTask?: Map<string, {workStatus: string, deliveryStage: string, blockers: string[], verifiedOnDevSha?: string, releaseVersion?: string, needsTriage: boolean}> }} input
  * @returns {{ repositoryId: string, sourceSha: string, inputHash: string, operations: IssueOperation[] }}
  */
 export function planIssueSync({
@@ -174,6 +191,7 @@ export function planIssueSync({
   sourceSha,
   repositoryUrl,
   cardDetailsByTask = new Map(),
+  lifecycleByTask,
 }) {
   if (!/^[1-9][0-9]*$/u.test(repositoryId))
     throw new Error('repositoryId must be a numeric GitHub repository ID.');
@@ -200,7 +218,7 @@ export function planIssueSync({
       matches.length === 1 ? [[taskId, matches[0].number]] : []
     )
   );
-  const renderOptions = { repositoryUrl, cardDetailsByTask, issueNumbersByTask };
+  const renderOptions = { repositoryUrl, cardDetailsByTask, issueNumbersByTask, lifecycleByTask };
   const operations = tasks.map((task) => {
     const matches = byTask.get(task.id) ?? [];
     const block = generatedBlock(task, sourceSha, renderOptions);
@@ -303,6 +321,9 @@ export function planIssueSync({
     JSON.stringify({
       repositoryId,
       sourceSha,
+      lifecycle: lifecycleByTask
+        ? [...lifecycleByTask.entries()].sort(([a], [b]) => a.localeCompare(b))
+        : null,
       tasks,
       issues: issues
         .map(({ number, title, body, state, labels, milestone, assignees, pull_request }) => ({

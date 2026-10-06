@@ -729,3 +729,35 @@ test('issue descriptions link dependencies to existing issues and create labels/
     milestone: 11,
   });
 });
+
+test('planner projects lifecycle evidence deterministically and flags manual close without closing it', () => {
+  const lifecycle = {
+    workStatus: 'complete',
+    deliveryStage: 'verified-dev',
+    blockers: [],
+    verifiedOnDevSha: 'b'.repeat(40),
+    needsTriage: false,
+  };
+  const input = {
+    tasks: [task],
+    issues: [],
+    repositoryId,
+    sourceSha,
+    lifecycleByTask: new Map([[task.id, lifecycle]]),
+  };
+  const first = planIssueSync(input);
+  assert.match(first.operations[0].body, /Work status: complete/u);
+  assert.match(first.operations[0].body, /Delivery stage: verified-dev/u);
+  assert.match(first.operations[0].body, new RegExp(`Verified dev SHA: ${'b'.repeat(40)}`, 'u'));
+  assert.equal(planIssueSync(input).inputHash, first.inputHash);
+  const changed = planIssueSync({
+    ...input,
+    lifecycleByTask: new Map([[task.id, { ...lifecycle, needsTriage: true }]]),
+  });
+  assert.notEqual(changed.inputHash, first.inputHash);
+  assert.match(
+    changed.operations[0].body,
+    /Issue state: closed manually; maintainer triage required\./u
+  );
+  assert.equal(changed.operations[0].operation, 'create');
+});

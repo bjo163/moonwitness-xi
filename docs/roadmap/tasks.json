@@ -1204,7 +1204,8 @@
       "milestone": "M11",
       "dependsOn": ["M11.01", "M11.06", "M2.10"],
       "output": "Issue lifecycle reconciler dan transition tests",
-      "detailFile": "docs/roadmap/11-issues-delivery.md"
+      "detailFile": "docs/roadmap/11-issues-delivery.md",
+      "evidence": "docs/roadmap/evidence/M11.07.md"
     },
     {
       "id": "M11.08",

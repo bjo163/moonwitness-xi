@@ -81,6 +81,8 @@ Implementation status dan delivery stage adalah dua dimensi. Task audit read-onl
 
 Manual close tanpa evidence menimbulkan `needs-triage` dan report. Jangan membuat perang reopen/close otomatis; perubahan source/status hanya diterima setelah maintainer dan evidence direkonsiliasi. Event tidak tepercaya tidak boleh memicu commit, shell command, release, atau arbitrary URL fetch.
 
+Evaluator lokal di `scripts/roadmap/lifecycle.mjs` hanya memproyeksikan fakta terstruktur yang diberikan pemanggil: source ancestry, required check runs pada SHA dev saat ini, ancestry main, dan manifest release. Ia tidak mengambil fakta remote atau menjalankan reconciler GitHub; sampai adapter tervalidasi dan pilot M11.14, output ini bukan bukti aktivasi remote.
+
 ## Commit/push yang wajib pada setiap unit selesai
 
 1. Selesaikan satu perubahan logis beserta acceptance relevan.
