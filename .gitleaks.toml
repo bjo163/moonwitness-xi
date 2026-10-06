@@ -1,5 +1,8 @@
 title = "MoonWitness secret scanning"
 
+[extend]
+useDefault = true
+
 [allowlist]
 description = "Exact synthetic test fixtures confirmed during baseline scan"
 regexTarget = "line"

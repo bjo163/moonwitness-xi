@@ -27,6 +27,9 @@ export function validateGitleaksSetup(workflow, config) {
     );
   }
   if (!/fetch-depth:\s*0/.test(workflow)) problems.push('Gitleaks must scan full Git history.');
+  if (!/\[extend\][\s\S]*?\buseDefault\s*=\s*true\b/u.test(config)) {
+    problems.push('Custom Gitleaks config must extend the built-in secret detection rules.');
+  }
   if (!/regexTarget\s*=\s*"line"/.test(config))
     problems.push('Allowlist must match exact lines, not whole files or commits.');
 

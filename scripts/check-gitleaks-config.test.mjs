@@ -24,4 +24,9 @@ test('rejects workflow trust-boundary and allowlist regressions', () => {
   assert.ok(
     validateGitleaksSetup(workflow, invalidConfig).some((issue) => /reviewed fixture/u.test(issue))
   );
+  assert.ok(
+    validateGitleaksSetup(workflow, config.replace('useDefault = true', 'useDefault = false')).some(
+      (issue) => /built-in secret detection rules/u.test(issue)
+    )
+  );
 });
