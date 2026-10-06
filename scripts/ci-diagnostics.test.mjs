@@ -51,7 +51,19 @@ test('unit runner executes each workspace package suite only once', () => {
 });
 
 test('documentation portal failures annotate sanitized JUnit test names', () => {
-  assert.match(pagesWorkflow, /name: Build and test documentation portal\s+id: docs_portal_tests/u);
+  assert.match(
+    pagesWorkflow,
+    /name: Check documentation source and references\s+run: pnpm docs:check/u
+  );
+  assert.match(
+    pagesWorkflow,
+    /name: Build documentation content bundle\s+run: node scripts\/docs\/build-guide\.mjs/u
+  );
+  assert.match(
+    pagesWorkflow,
+    /name: Build documentation portal site\s+run: pnpm --filter @moonwitness\/docs portal:build/u
+  );
+  assert.match(pagesWorkflow, /name: Test documentation portal\s+id: docs_portal_tests/u);
   assert.match(
     pagesWorkflow,
     /name: Annotate failed documentation portal testcases\s+if: always\(\) && steps\.docs_portal_tests\.outcome == 'failure'\s+continue-on-error: true\s+run: node scripts\/summarize-junit-failures\.mjs test-results\/junit/u

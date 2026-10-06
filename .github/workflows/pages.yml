@@ -237,9 +237,15 @@ jobs:
           } >> "$GITHUB_ENV"
       - name: Install Chromium for portal browser tests
         run: pnpm exec playwright install --with-deps chromium
-      - name: Build and test documentation portal
+      - name: Check documentation source and references
+        run: pnpm docs:check
+      - name: Build documentation content bundle
+        run: node scripts/docs/build-guide.mjs
+      - name: Build documentation portal site
+        run: pnpm --filter @moonwitness/docs portal:build
+      - name: Test documentation portal
         id: docs_portal_tests
-        run: pnpm test:docs-portal
+        run: pnpm --filter @moonwitness/docs test
       - name: Annotate failed documentation portal testcases
         if: always() && steps.docs_portal_tests.outcome == 'failure'
         continue-on-error: true
