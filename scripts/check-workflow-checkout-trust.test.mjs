@@ -60,12 +60,20 @@ const promote = `
       - name: Skip stale promotion events
           current_sha="$(git ls-remote origin refs/heads/dev | cut -f1)"
           if [[ "$current_sha" != "$EXPECTED_SHA" ]]; then exit 0; fi
+          git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main refs/heads/dev:refs/remotes/origin/dev
+      - name: Create or find the promotion pull request
+          number="$(gh pr list --base main --head dev --state open --json number --jq '.[0].number // empty')"
+          if [ -z "$number" ]; then
+            gh pr create --base main --head dev
       - name: Disable auto-merge and mark sensitive promotion
         if: steps.risk.outputs.approval_required == 'true'
           gh pr edit "$PR_NUMBER" --repo "$GH_REPO" --add-label approval-required
           gh pr merge "$PR_NUMBER" --repo "$GH_REPO" --disable-auto
       - name: Enable merge for compatible, low-risk promotion
         if: steps.risk.outputs.approval_required != 'true'
+          gh pr view "$PR_NUMBER" --repo "$GH_REPO" --json labels --jq '[.labels[].name]'
+          if jq -e 'index("approval-required") != null' <<< "$labels" >/dev/null; then
+          gh pr edit "$PR_NUMBER" --repo "$GH_REPO" --remove-label approval-required
           gh pr merge "$PR_NUMBER" --repo "$GH_REPO" --auto --merge --match-head-commit "$EXPECTED_SHA"
 `;
 const versionedPages = `${pages}
@@ -210,6 +218,18 @@ test('promotion ignores a stale push after dev moves beyond its event SHA', () =
   assert.ok(policies({ promote: unsafe }).some((finding) => finding.includes('current dev head')));
 });
 
+test('promotion rejects a stale event before fetching its comparison refs', () => {
+  const unsafe = promote.replace(
+    'if [[ "$current_sha" != "$EXPECTED_SHA" ]]; then exit 0; fi\n          git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main refs/heads/dev:refs/remotes/origin/dev',
+    'git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main refs/heads/dev:refs/remotes/origin/dev\n          if [[ "$current_sha" != "$EXPECTED_SHA" ]]; then exit 0; fi'
+  );
+  assert.ok(
+    policies({ promote: unsafe }).some((finding) =>
+      finding.includes('before fetching promotion refs')
+    )
+  );
+});
+
 test('promotion checks fail when sensitive and low-risk commands are moved between steps', () => {
   const unsafe = promote
     .replace('gh pr merge "$PR_NUMBER" --repo "$GH_REPO" --disable-auto', 'true')
@@ -219,5 +239,36 @@ test('promotion checks fail when sensitive and low-risk commands are moved betwe
     );
   assert.ok(
     policies({ promote: unsafe }).some((finding) => finding.includes('disable auto-merge'))
+  );
+});
+
+test('promotion finds the existing PR before creating and only creates when absent', () => {
+  const unsafe = promote.replace('if [ -z "$number" ]; then', 'if true; then');
+  assert.ok(
+    policies({ promote: unsafe }).some((finding) => finding.includes('create one only when absent'))
+  );
+});
+
+test('low-risk promotion clears a stale approval label before requesting auto-merge', () => {
+  const unsafe = promote.replace(
+    'gh pr edit "$PR_NUMBER" --repo "$GH_REPO" --remove-label approval-required',
+    'true'
+  );
+  assert.ok(
+    policies({ promote: unsafe }).some((finding) =>
+      finding.includes('clear a stale approval-required label')
+    )
+  );
+});
+
+test('low-risk promotion only removes the approval label when it is present', () => {
+  const unsafe = promote.replace(
+    'if jq -e \'index("approval-required") != null\' <<< "$labels" >/dev/null; then',
+    'if true; then'
+  );
+  assert.ok(
+    policies({ promote: unsafe }).some((finding) =>
+      finding.includes('clear a stale approval-required label')
+    )
   );
 });

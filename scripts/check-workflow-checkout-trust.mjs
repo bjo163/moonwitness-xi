@@ -209,12 +209,40 @@ export function inspectTrustedCheckoutPolicies({
 
   if (promote) {
     const staleGuard = namedWorkflowStep(promote, 'Skip stale promotion events');
+    const pullRequest = namedWorkflowStep(promote, 'Create or find the promotion pull request');
     const sensitive = namedWorkflowStep(promote, 'Disable auto-merge and mark sensitive promotion');
     const lowRisk = namedWorkflowStep(promote, 'Enable merge for compatible, low-risk promotion');
     if (!staleGuard?.includes('current_sha="$(git ls-remote origin refs/heads/dev | cut -f1)"'))
       findings.push('Promotion must ignore stale dev push events before opening or updating a PR.');
     if (!staleGuard?.includes('if [[ "$current_sha" != "$EXPECTED_SHA" ]]'))
       findings.push('Promotion must compare the event SHA with the current dev head.');
+    if (
+      staleGuard &&
+      staleGuard.indexOf('git fetch --no-tags origin') >= 0 &&
+      staleGuard.indexOf('if [[ "$current_sha" != "$EXPECTED_SHA" ]]') >
+        staleGuard.indexOf('git fetch --no-tags origin')
+    ) {
+      findings.push('Promotion must reject stale dev events before fetching promotion refs.');
+    }
+    if (
+      !pullRequest?.includes(
+        `number="$(gh pr list --base main --head dev --state open --json number --jq '.[0].number // empty')"`
+      ) ||
+      !pullRequest.includes('if [ -z "$number" ]; then') ||
+      !pullRequest.includes('--base main') ||
+      !pullRequest.includes('--head dev') ||
+      pullRequest.indexOf('gh pr create') < pullRequest.indexOf('if [ -z "$number" ]; then')
+    ) {
+      findings.push(
+        'Promotion must find the existing dev-to-main PR and create one only when absent.'
+      );
+    }
+    if (
+      promote.indexOf('name: Skip stale promotion events') >
+      promote.indexOf('name: Create or find the promotion pull request')
+    ) {
+      findings.push('Promotion must reject a stale dev event before reconciling its pull request.');
+    }
     if (
       !sensitive?.includes("if: steps.risk.outputs.approval_required == 'true'") ||
       !sensitive.includes('gh pr edit "$PR_NUMBER" --repo "$GH_REPO" --add-label approval-required')
@@ -237,6 +265,21 @@ export function inspectTrustedCheckoutPolicies({
       )
     ) {
       findings.push('Automatic promotion must be bound to the exact classified dev SHA.');
+    }
+    if (
+      !lowRisk?.includes('gh pr view "$PR_NUMBER" --repo "$GH_REPO" --json labels') ||
+      !lowRisk?.includes(
+        'if jq -e \'index("approval-required") != null\' <<< "$labels" >/dev/null; then'
+      ) ||
+      !lowRisk?.includes(
+        'gh pr edit "$PR_NUMBER" --repo "$GH_REPO" --remove-label approval-required'
+      ) ||
+      lowRisk.indexOf('--remove-label approval-required') >
+        lowRisk.indexOf('gh pr merge "$PR_NUMBER" --repo "$GH_REPO" --auto')
+    ) {
+      findings.push(
+        'Low-risk promotion must clear a stale approval-required label before auto-merge.'
+      );
     }
   }
 
