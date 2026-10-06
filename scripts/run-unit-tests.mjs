@@ -29,6 +29,8 @@ function run(args, label) {
 }
 
 run(['build'], 'Build');
+run(['run', 'test:board-budget'], 'Board bundle budget contract');
+run(['run', 'board:budget'], 'Board production bundle budget');
 run(['exec', 'node', '--test', 'scripts/roadmap/addon-conformance.test.mjs'], 'Addon conformance');
 run(['run', 'test:versioned-docs'], 'Versioned documentation');
 

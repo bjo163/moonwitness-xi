@@ -39,7 +39,12 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
 CMD ["node", "dist/server.js"]
 
 FROM build AS board-build
-RUN pnpm --filter @moonwitness/board build && mkdir -p /deploy/board && cp -r apps/board/dist /deploy/board/dist
+RUN pnpm --filter @moonwitness/board build \
+    && pnpm board:budget \
+    && rm -f apps/board/dist/.vite/manifest.json \
+    && rmdir apps/board/dist/.vite \
+    && mkdir -p /deploy/board \
+    && cp -r apps/board/dist /deploy/board/dist
 
 FROM nginx:1.30.5-alpine AS board-runtime
 RUN apk upgrade --no-cache

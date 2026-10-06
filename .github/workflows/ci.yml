@@ -83,6 +83,8 @@ jobs:
       - run: pnpm lint
       - run: pnpm format:check
       - run: pnpm typecheck
+      - name: Check route-aware Board bundle budgets
+        run: pnpm board:budget
       - run: pnpm test:architecture
       - run: pnpm architecture:check
       - run: pnpm assets:check:docs

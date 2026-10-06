@@ -16,6 +16,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), tailwindcss()],
+    build: { manifest: true },
     resolve: { alias: { '@': path.resolve(import.meta.dirname, './src') } },
     server: { port: 5173, proxy },
     preview: { port: 4173, proxy },
