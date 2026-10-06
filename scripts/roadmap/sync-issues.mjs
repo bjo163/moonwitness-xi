@@ -5,6 +5,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { projectLifecycleSnapshot } from './lifecycle-snapshot.mjs';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const beginMarker = '<!-- BEGIN MOONWITNESS MANAGED -->';
@@ -661,10 +662,20 @@ export async function applyIssuePlan({
 async function main() {
   const apply = process.argv.includes('--apply');
   const quiet = process.argv.includes('--quiet');
+  const lifecycleSnapshotIndex = process.argv.indexOf('--lifecycle-snapshot');
+  const lifecycleSnapshotPath =
+    lifecycleSnapshotIndex >= 0 ? process.argv[lifecycleSnapshotIndex + 1] : undefined;
+  if (
+    lifecycleSnapshotIndex >= 0 &&
+    (!lifecycleSnapshotPath || lifecycleSnapshotPath.startsWith('--'))
+  )
+    throw new Error('--lifecycle-snapshot requires a repository-relative JSON file path.');
+  if (apply && lifecycleSnapshotPath)
+    throw new Error('--lifecycle-snapshot is read-only and cannot be combined with --apply.');
   if (process.argv.includes('--help')) {
     process.stdout.write(
-      'Usage: node scripts/roadmap/sync-issues.mjs [--quiet] [--output <path>] [--task-ids <id,id>] [--apply]\n' +
-        `Apply requires an explicit selection of at most ${maximumApplyBatchSize} roadmap tasks.\n`
+      'Usage: node scripts/roadmap/sync-issues.mjs [--quiet] [--output <path>] [--task-ids <id,id>] [--lifecycle-snapshot <path>] [--apply]\n' +
+        `Apply requires an explicit selection of at most ${maximumApplyBatchSize} roadmap tasks; lifecycle snapshots are read-only.\n`
     );
     return;
   }
@@ -679,6 +690,15 @@ async function main() {
     !resolvedOutput.startsWith(`${repositoryRoot}${path.sep}`)
   )
     throw new Error('--output must stay inside the repository.');
+  const resolvedLifecycleSnapshot = lifecycleSnapshotPath
+    ? path.resolve(repositoryRoot, lifecycleSnapshotPath)
+    : undefined;
+  if (
+    resolvedLifecycleSnapshot &&
+    resolvedLifecycleSnapshot !== repositoryRoot &&
+    !resolvedLifecycleSnapshot.startsWith(`${repositoryRoot}${path.sep}`)
+  )
+    throw new Error('--lifecycle-snapshot must stay inside the repository.');
   const owner = process.env.GITHUB_REPOSITORY?.split('/')[0];
   const repo = process.env.GITHUB_REPOSITORY?.split('/')[1];
   const repositoryId = process.env.GITHUB_REPOSITORY_ID;
@@ -719,6 +739,15 @@ async function main() {
     }
     cardDetailsByTask.set(task.id, renderTaskCardDetails(markdown, task.id));
   }
+  const lifecycleByTask = resolvedLifecycleSnapshot
+    ? projectLifecycleSnapshot({
+        snapshot: JSON.parse(await readFile(resolvedLifecycleSnapshot, 'utf8')),
+        tasks: index.tasks,
+        issues,
+        repositoryId,
+        sourceSha,
+      })
+    : undefined;
   const plan = planIssueSync({
     tasks,
     issues,
@@ -726,6 +755,7 @@ async function main() {
     sourceSha,
     repositoryUrl,
     cardDetailsByTask,
+    lifecycleByTask,
   });
   const metadata = await client.listMetadata();
   plan.metadata = {

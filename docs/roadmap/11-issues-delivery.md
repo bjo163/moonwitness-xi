@@ -131,7 +131,7 @@ Simpan bukti aktual di `docs/roadmap/evidence/M11.06.md`. Jangan menandai aktiva
 
 Task code verified di dev tidak diklaim released; task aktivasi remote tidak closed sebelum remote evidence.
 
-Evaluator lokal memisahkan work status dari delivery stage, menolak status complete tanpa evidence SHA, mensyaratkan ancestry dev dan seluruh required checks sukses pada head SHA dev terbaru, serta membedakan ancestry main dari manifest release yang memuat source. Test negatif mencakup check lama/pending/gagal, dependency belum selesai, SHA malformed, dan manual close tanpa acceptance. Modul menerima fakta terstruktur saja; pengambilan metadata GitHub, adapter reconciler, dan pilot remote tetap terbuka sehingga M11.07 berstatus parsial.
+Evaluator lokal memisahkan work status dari delivery stage, menolak status complete tanpa evidence SHA, mensyaratkan ancestry dev dan seluruh required checks sukses pada head SHA dev terbaru, serta membedakan ancestry main dari manifest release yang memuat source. Importer snapshot memvalidasi repository ID, exact plan SHA, freshness lima menit, coverage task index, dependency, dan status issue tanpa melakukan write; `--lifecycle-snapshot` ditolak bersama `--apply`. Test negatif mencakup snapshot stale/future/wrong-repo/wrong-SHA, record hilang/duplikat/tidak dikenal, check lama/pending/gagal, dependency belum selesai, SHA malformed, dan manual close tanpa acceptance. Collector fakta GitHub, reconciler terjadwal, dan pilot remote tetap terbuka sehingga M11.07 berstatus parsial.
 
 Simpan bukti aktual di `docs/roadmap/evidence/M11.07.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.
 

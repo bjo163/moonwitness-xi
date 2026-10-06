@@ -81,7 +81,7 @@ Implementation status dan delivery stage adalah dua dimensi. Task audit read-onl
 
 Manual close tanpa evidence menimbulkan `needs-triage` dan report. Jangan membuat perang reopen/close otomatis; perubahan source/status hanya diterima setelah maintainer dan evidence direkonsiliasi. Event tidak tepercaya tidak boleh memicu commit, shell command, release, atau arbitrary URL fetch.
 
-Evaluator lokal di `scripts/roadmap/lifecycle.mjs` hanya memproyeksikan fakta terstruktur yang diberikan pemanggil: source ancestry, required check runs pada SHA dev saat ini, ancestry main, dan manifest release. Ia tidak mengambil fakta remote atau menjalankan reconciler GitHub; sampai adapter tervalidasi dan pilot M11.14, output ini bukan bukti aktivasi remote.
+Evaluator lokal di `scripts/roadmap/lifecycle.mjs` hanya memproyeksikan fakta terstruktur yang diberikan pemanggil: source ancestry, required check runs pada SHA dev saat ini, ancestry main, dan manifest release. Importer `scripts/roadmap/lifecycle-snapshot.mjs` menolak repo/SHA yang berbeda, snapshot lebih tua dari lima menit, task hilang/duplikat/tidak dikenal, dan dependency yang belum terbukti lengkap. Jalankan planner read-only dengan `--lifecycle-snapshot <path>`; flag ini tidak dapat digabung dengan `--apply`. Snapshot harus mencakup semua task index agar dependency dapat diverifikasi. Saat ini repo belum memiliki collector yang membangun snapshot dari GitHub/branch-protection/release API. Sampai collector tervalidasi dan pilot M11.14, output ini bukan bukti aktivasi remote.
 
 ## Commit/push yang wajib pada setiap unit selesai
 
