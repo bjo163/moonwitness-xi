@@ -42,6 +42,16 @@ test('native SQLite dependency build installs its compiler toolchain only in the
   );
 });
 
+test('runtime image applies current Debian security updates and removes apt indexes', () => {
+  const runtimeStage = dockerfile.slice(
+    dockerfile.indexOf('\nFROM node:22-bookworm-slim AS runtime'),
+    dockerfile.indexOf('\nFROM build AS board-build')
+  );
+
+  assert.match(runtimeStage, /apt-get update[\s\S]*apt-get upgrade --yes/u);
+  assert.match(runtimeStage, /rm -rf \/var\/lib\/apt\/lists\/\*/u);
+});
+
 test('production image uses legacy deployment for the non-injected workspace layout', () => {
   assert.match(dockerfile, /pnpm --filter @moonwitness\/api deploy --prod --legacy \/deploy\/api/u);
 });
