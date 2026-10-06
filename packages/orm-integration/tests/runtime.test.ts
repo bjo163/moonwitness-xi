@@ -1,16 +1,16 @@
 import { spawnSync } from 'node:child_process';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { request as httpsRequest, createServer } from 'node:https';
-import { createHash, X509Certificate } from 'node:crypto';
+import { createServer } from 'node:https';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { checkServerIdentity, type SecureContextOptions } from 'node:tls';
+import type { SecureContextOptions } from 'node:tls';
 import knex, { type Knex } from 'knex';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { installAddons } from '@moonwitness/orm';
 import { Company, manifest as baseManifest } from '@moonwitness/orm-base';
 import { dispatchOneOutboxEvent, jobsManifest, OutboxEvent } from '@moonwitness/jobs';
 import { manifest as integrationManifest } from '../src/manifest.js';
+import { sendSignedRequest } from '../src/transport.js';
 import {
   enqueueWebhookEvent,
   registerWebhookOutboxConsumer,
@@ -36,7 +36,6 @@ const hasPowerShellCertificates =
 async function createReceiverCertificate(directory: string): Promise<{
   ca: Buffer;
   keyOrPfx: SecureContextOptions;
-  fingerprint: string;
 }> {
   const certificatePath = join(directory, 'receiver-cert.pem');
   if (hasOpenSsl) {
@@ -116,7 +115,6 @@ async function createReceiverCertificate(directory: string): Promise<{
     const ca = await readFile(caCertificatePath);
     return {
       ca,
-      fingerprint: createHash('sha256').update(new X509Certificate(certificate).raw).digest('hex'),
       keyOrPfx: { key: await readFile(keyPath), cert: certificate, ca },
     };
   }
@@ -167,10 +165,8 @@ async function createReceiverCertificate(directory: string): Promise<{
     const certificate = Buffer.from(
       `-----BEGIN CERTIFICATE-----\n${base64}\n-----END CERTIFICATE-----\n`
     );
-    const parsedCertificate = new X509Certificate(certificate);
     return {
       ca: certificate,
-      fingerprint: createHash('sha256').update(parsedCertificate.raw).digest('hex'),
       keyOrPfx: { pfx: await readFile(pfxPath), passphrase },
     };
   }
@@ -325,7 +321,7 @@ describe('webhook outbox delivery', () => {
     'delivers a signed retry through a real local HTTPS receiver',
     async () => {
       const directory = await mkdtemp(join(tmpdir(), 'moonwitness-webhook-'));
-      const { ca, fingerprint, keyOrPfx } = await createReceiverCertificate(directory);
+      const { ca, keyOrPfx } = await createReceiverCertificate(directory);
       const secret = 'local-https-receiver-test-secret-32chars';
       const received: {
         body: string;
@@ -336,6 +332,13 @@ describe('webhook outbox delivery', () => {
         status: number;
       }[] = [];
       const server = createServer(keyOrPfx, (incoming, outgoing) => {
+        if (incoming.url === '/slow') {
+          outgoing.writeHead(200);
+          outgoing.write('first byte');
+          const heartbeat = setInterval(() => outgoing.write('next byte'), 25);
+          outgoing.on('close', () => clearInterval(heartbeat));
+          return;
+        }
         const chunks: Buffer[] = [];
         incoming.on('data', (chunk: Buffer) => chunks.push(chunk));
         incoming.on('end', () => {
@@ -380,52 +383,14 @@ describe('webhook outbox delivery', () => {
         );
         const eventId = await enqueue(companyId);
         const unregister = registerWebhookOutboxConsumer(async () => secret, {
-          // SSRF validation still sees a public address. The explicit test transport below
-          // routes the TLS connection to this local fixture without changing production code.
+          // The runtime validates a public DNS answer first. This test-only adapter then
+          // routes the production sender's pinned connection to the local TLS fixture.
           resolveAddresses: async () => [{ address: '8.8.8.8', family: 4 }],
           send: (delivery) =>
-            new Promise<number>((resolve, reject) => {
-              const request = httpsRequest(
-                {
-                  protocol: 'https:',
-                  hostname: '127.0.0.1',
-                  servername: delivery.url.hostname,
-                  port,
-                  path: `${delivery.url.pathname}${delivery.url.search}`,
-                  method: 'POST',
-                  ca,
-                  checkServerIdentity: (hostname, peer) => {
-                    const identityError = checkServerIdentity(hostname, peer);
-                    if (identityError) return identityError;
-                    if (hostname !== delivery.url.hostname)
-                      return new Error('TLS hostname mismatch');
-                    const actual = peer.raw
-                      ? createHash('sha256').update(peer.raw).digest('hex')
-                      : '';
-                    return actual === fingerprint
-                      ? undefined
-                      : new Error('TLS certificate mismatch');
-                  },
-                  headers: {
-                    host: delivery.url.hostname,
-                    'content-type': 'application/json',
-                    'content-length': Buffer.byteLength(delivery.body),
-                    'x-mw-event-id': String(delivery.eventId),
-                    'x-mw-event-type': delivery.eventType,
-                    'x-mw-signature': `sha256=${delivery.signature}`,
-                    'idempotency-key': delivery.idempotencyKey,
-                  },
-                  signal: delivery.signal,
-                },
-                (response) => {
-                  response.resume();
-                  response.once('end', () => resolve(response.statusCode ?? 0));
-                  response.once('error', reject);
-                }
-              );
-              request.once('error', reject);
-              request.end(delivery.body);
-            }),
+            sendSignedRequest(
+              { ...delivery, targetAddress: '127.0.0.1' },
+              { port, ca, ...(delivery.url.pathname === '/slow' ? { timeoutMs: 200 } : {}) }
+            ),
         });
 
         try {
@@ -463,6 +428,20 @@ describe('webhook outbox delivery', () => {
               response_status: 204,
             }
           );
+
+          const timeoutRequest: WebhookDeliveryRequest = {
+            url: new URL('https://receiver.example/slow'),
+            targetAddress: '127.0.0.1',
+            body: '{}',
+            eventId: 9001,
+            eventType: 'base.partner.updated',
+            signature: '0'.repeat(64),
+            idempotencyKey: 'moonwitness:9001',
+            signal: new AbortController().signal,
+          };
+          await expect(
+            sendSignedRequest(timeoutRequest, { port, ca, timeoutMs: 200 })
+          ).rejects.toThrow('WEBHOOK_TIMEOUT');
         } finally {
           unregister();
         }
