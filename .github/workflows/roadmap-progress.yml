@@ -34,11 +34,12 @@ jobs:
           pnpm-version: '11.17.0'
       - name: Install frozen workspace dependencies
         run: pnpm install --frozen-lockfile --no-runtime
-      - name: Generate Markdown and JSON progress reports
-        run: |
-          mkdir -p dist/roadmap-progress
-          pnpm roadmap:progress -- --output dist/roadmap-progress/roadmap-progress.md
-          pnpm roadmap:progress -- --format json --output dist/roadmap-progress/roadmap-progress.json
+      - name: Prepare progress report directory
+        run: mkdir -p dist/roadmap-progress
+      - name: Generate Markdown progress report
+        run: pnpm roadmap:progress -- --output dist/roadmap-progress/roadmap-progress.md
+      - name: Generate JSON progress report
+        run: pnpm roadmap:progress -- --format json --output dist/roadmap-progress/roadmap-progress.json
       - name: Upload read-only roadmap progress artifact
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:

@@ -24,8 +24,14 @@ test('progress report workflow reads dev and publishes only short-lived Markdown
   assert.match(workflow, /mkdir -p dist\/roadmap-progress/u);
   assert.match(workflow, /permissions:\n\x20{2}contents: read\n/u);
   assert.doesNotMatch(workflow, /^\s+(?:issues|pull-requests|contents):\s+write\s*$/mu);
-  assert.match(workflow, /--output dist\/roadmap-progress\/roadmap-progress\.md/u);
-  assert.match(workflow, /--format json --output dist\/roadmap-progress\/roadmap-progress\.json/u);
+  assert.match(
+    workflow,
+    /name: Generate Markdown progress report\n\s+run: pnpm roadmap:progress -- --output dist\/roadmap-progress\/roadmap-progress\.md/u
+  );
+  assert.match(
+    workflow,
+    /name: Generate JSON progress report\n\s+run: pnpm roadmap:progress -- --format json --output dist\/roadmap-progress\/roadmap-progress\.json/u
+  );
   assert.match(workflow, /if-no-files-found: error/u);
   assert.match(workflow, /retention-days: 7/u);
 });
