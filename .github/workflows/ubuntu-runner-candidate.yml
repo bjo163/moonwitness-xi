@@ -26,6 +26,9 @@ jobs:
       matrix:
         runner: [ubuntu-24.04, ubuntu-26.04]
     steps:
+      - name: Record runner image before dependency installation
+        run: |
+          printf 'Runner image: %s\n' "$ImageOS $ImageVersion"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup-pnpm
         with:
@@ -33,9 +36,8 @@ jobs:
           pnpm-version: '11.17.0'
       - name: Install frozen workspace dependencies
         run: pnpm install --frozen-lockfile --no-runtime
-      - name: Record runner and toolchain versions
+      - name: Record toolchain versions
         run: |
-          printf 'Runner image: %s\n' "$ImageOS $ImageVersion"
           node --version
           pnpm --version
       - run: pnpm lint
@@ -75,6 +77,9 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/moonwitness_test
       REQUIRE_POSTGRES_TESTS: 'true'
     steps:
+      - name: Record runner image before dependency installation
+        run: |
+          printf 'Runner image: %s\n' "$ImageOS $ImageVersion"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup-pnpm
         with:
@@ -82,9 +87,8 @@ jobs:
           pnpm-version: '11.17.0'
       - name: Install frozen workspace dependencies
         run: pnpm install --frozen-lockfile --no-runtime
-      - name: Record runner and database versions
+      - name: Record database and toolchain versions
         run: |
-          printf 'Runner image: %s\n' "$ImageOS $ImageVersion"
           node --version
           pnpm --version
           psql "$POSTGRES_TEST_URL" -Atc 'SHOW server_version'

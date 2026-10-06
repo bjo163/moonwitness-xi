@@ -36,6 +36,10 @@ export function validateUbuntuRunnerCandidate(source) {
     findings.push('Candidate workflow must support manual reruns.');
   if (!source.includes('permissions:\n  contents: read'))
     findings.push('Candidate workflow must retain read-only repository permissions.');
+  if (
+    (source.match(/name: Record runner image before dependency installation/gu) ?? []).length !== 2
+  )
+    findings.push('Both runner lanes must record the image before dependency installation.');
   if (source.includes('runs-on: ubuntu-latest'))
     findings.push('Candidate workflow must use explicit versioned runner labels.');
   return findings;

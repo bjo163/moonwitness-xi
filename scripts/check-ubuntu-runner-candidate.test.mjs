@@ -30,6 +30,7 @@ jobs:
         runner: [ubuntu-latest, ubuntu-26.04]
     runs-on: ubuntu-latest
     steps:
+      - run: printf 'Runner image: %s\\n' "$ImageOS $ImageVersion"
       - run: pnpm install --frozen-lockfile --no-runtime
       - run: pnpm typecheck
       - run: pnpm test:unit
