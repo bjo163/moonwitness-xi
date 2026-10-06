@@ -45,13 +45,13 @@ test('the verified and scanned API and Board images are smoke-tested and handed 
   assert.match(smokeScript, /SMOKE_USE_PREBUILT_IMAGES:-false/u);
   assert.match(smokeScript, /up --detach --no-build --wait --wait-timeout 180 api board/u);
   for (const phase of [
-    'compose-up',
-    'api-root',
-    'api-banner',
-    'api-readiness',
-    'board-root',
-    'api-stop',
-    'graceful-shutdown',
+    'compose_up',
+    'api_root',
+    'api_banner',
+    'api_readiness',
+    'board_root',
+    'api_stop',
+    'graceful_shutdown',
   ]) {
     assert.ok(smokeScript.includes(`phase=${phase}`), `container smoke should name ${phase}`);
   }
@@ -59,10 +59,7 @@ test('the verified and scanned API and Board images are smoke-tested and handed 
     smokeScript,
     /::error title=Container smoke failed::Phase %s failed; inspect the authorized runner log for details\./u
   );
-  assert.match(
-    smokeScript,
-    /# ShellCheck cannot follow the EXIT trap callback into this cleanup function\.\s+# shellcheck disable=SC2317\s+cleanup\(\)/u
-  );
+  assert.doesNotMatch(smokeScript, /shellcheck disable/u);
   assert.match(smokeScript, /trap cleanup EXIT/u);
   assert.match(verify, /docker save --output release-images\.tar/u);
   assert.match(verify, /docker image inspect moonwitness-api:production --format '\{\{\.Id\}\}'/u);
