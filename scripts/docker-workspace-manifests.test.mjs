@@ -41,3 +41,7 @@ test('native SQLite dependency build installs its compiler toolchain only in the
     /apt-get install/u
   );
 });
+
+test('production image uses legacy deployment for the non-injected workspace layout', () => {
+  assert.match(dockerfile, /pnpm --filter @moonwitness\/api deploy --prod --legacy \/deploy\/api/u);
+});

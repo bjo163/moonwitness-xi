@@ -31,7 +31,7 @@ RUN --mount=type=cache,id=moonwitness-pnpm-store,target=/root/.local/share/pnpm/
     pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm build
-RUN pnpm --filter @moonwitness/api deploy --prod /deploy/api
+RUN pnpm --filter @moonwitness/api deploy --prod --legacy /deploy/api
 
 FROM node:22-bookworm-slim AS runtime
 ENV NODE_ENV=production \
