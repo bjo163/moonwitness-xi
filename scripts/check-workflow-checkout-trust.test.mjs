@@ -56,6 +56,15 @@ permissions:
       - run: pnpm release:dry-run -- --output report.json
       - uses: actions/upload-artifact@0123456789012345678901234567890123456789
 `;
+const promote = `
+          current_sha="$(git ls-remote origin refs/heads/dev | cut -f1)"
+          if [[ "$current_sha" != "$EXPECTED_SHA" ]]; then exit 0; fi
+        if: steps.risk.outputs.approval_required == 'true'
+          gh pr edit "$PR_NUMBER" --repo "$GH_REPO" --add-label approval-required
+          gh pr merge "$PR_NUMBER" --repo "$GH_REPO" --disable-auto
+        if: steps.risk.outputs.approval_required != 'true'
+          gh pr merge "$PR_NUMBER" --repo "$GH_REPO" --auto --merge --match-head-commit "$EXPECTED_SHA"
+`;
 const versionedPages = `${pages}
   - name: Upload stable documentation archive
   store-versioned-docs:
@@ -75,6 +84,7 @@ function policies(overrides = {}) {
     releasePrepare,
     dependencyCandidate,
     releasePlan,
+    promote,
     ...overrides,
   });
 }
@@ -178,4 +188,21 @@ test('rejects write-capable or non-reviewable release dry-run workflows', () => 
   assert.ok(findings.some((finding) => finding.includes('remain read-only')));
   assert.ok(findings.some((finding) => finding.includes('reviewable plan artifact')));
   assert.ok(findings.some((finding) => finding.includes('must not publish')));
+});
+
+test('promotion disables auto-merge for sensitive changes and binds low-risk merge to exact head', () => {
+  const unsafe = promote
+    .replace('gh pr merge "$PR_NUMBER" --repo "$GH_REPO" --disable-auto', 'true')
+    .replace('--match-head-commit "$EXPECTED_SHA"', '');
+  const findings = policies({ promote: unsafe });
+  assert.ok(findings.some((finding) => finding.includes('disable auto-merge')));
+  assert.ok(findings.some((finding) => finding.includes('exact classified dev SHA')));
+});
+
+test('promotion ignores a stale push after dev moves beyond its event SHA', () => {
+  const unsafe = promote.replace(
+    'if [[ "$current_sha" != "$EXPECTED_SHA" ]]; then exit 0; fi',
+    'true'
+  );
+  assert.ok(policies({ promote: unsafe }).some((finding) => finding.includes('current dev head')));
 });

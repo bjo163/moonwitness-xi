@@ -26,6 +26,7 @@ export function inspectTrustedCheckoutPolicies({
   releasePrepare,
   dependencyCandidate,
   releasePlan,
+  promote,
 }) {
   const findings = [];
   for (const [name, source] of [
@@ -186,11 +187,39 @@ export function inspectTrustedCheckoutPolicies({
       findings.push('Pages must apply the five-stable-release snapshot retention plan.');
   }
 
+  if (promote) {
+    if (!promote.includes('current_sha="$(git ls-remote origin refs/heads/dev | cut -f1)"'))
+      findings.push('Promotion must ignore stale dev push events before opening or updating a PR.');
+    if (!promote.includes('if [[ "$current_sha" != "$EXPECTED_SHA" ]]'))
+      findings.push('Promotion must compare the event SHA with the current dev head.');
+    if (
+      !promote.includes("if: steps.risk.outputs.approval_required == 'true'") ||
+      !promote.includes('gh pr edit "$PR_NUMBER" --repo "$GH_REPO" --add-label approval-required')
+    ) {
+      findings.push('Sensitive promotion must be labeled for CODEOWNER approval.');
+    }
+    if (
+      !promote.includes('gh pr merge "$PR_NUMBER" --repo "$GH_REPO" --disable-auto') ||
+      !promote.includes("if: steps.risk.outputs.approval_required != 'true'")
+    ) {
+      findings.push(
+        'Sensitive promotion must disable auto-merge; only low-risk promotion may enable it.'
+      );
+    }
+    if (
+      !promote.includes(
+        'gh pr merge "$PR_NUMBER" --repo "$GH_REPO" --auto --merge --match-head-commit "$EXPECTED_SHA"'
+      )
+    ) {
+      findings.push('Automatic promotion must be bound to the exact classified dev SHA.');
+    }
+  }
+
   return findings;
 }
 
 async function main() {
-  const [pages, visualReview, release, releasePrepare, dependencyCandidate, releasePlan] =
+  const [pages, visualReview, release, releasePrepare, dependencyCandidate, releasePlan, promote] =
     await Promise.all([
       readFile(path.join(repositoryRoot, '.github/workflows/pages.yml'), 'utf8'),
       readFile(path.join(repositoryRoot, '.github/workflows/visual-review.yml'), 'utf8'),
@@ -198,6 +227,7 @@ async function main() {
       readFile(path.join(repositoryRoot, '.github/workflows/release-prepare.yml'), 'utf8'),
       readFile(path.join(repositoryRoot, '.github/workflows/dependency-candidate.yml'), 'utf8'),
       readFile(path.join(repositoryRoot, '.github/workflows/release-plan.yml'), 'utf8'),
+      readFile(path.join(repositoryRoot, '.github/workflows/promote.yml'), 'utf8'),
     ]);
   const findings = inspectTrustedCheckoutPolicies({
     pages,
@@ -206,6 +236,7 @@ async function main() {
     releasePrepare,
     dependencyCandidate,
     releasePlan,
+    promote,
   });
   if (findings.length) {
     for (const finding of findings) process.stderr.write(`${finding}\n`);
