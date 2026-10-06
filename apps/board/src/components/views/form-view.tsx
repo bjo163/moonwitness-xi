@@ -3,7 +3,7 @@ import { Archive, ArrowLeft, Check, Loader2, Save, Trash2, Zap } from 'lucide-re
 import { evalDomain, type FieldMeta, type ResolvedViews } from '@moonwitness/client';
 import { useRecord, useRecordMutations } from '@/hooks/use-model';
 import { Button } from '@moonwitness/ui/components/button';
-import { Label } from '@/components/ui/label';
+import { Label } from '@moonwitness/ui/components/label';
 import { Skeleton } from '@moonwitness/ui/components/skeleton';
 import { FieldWidget } from './fields';
 import { relationKey } from './field-utils';

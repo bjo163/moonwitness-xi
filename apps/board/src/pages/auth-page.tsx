@@ -6,7 +6,7 @@ import { ApiError } from '@moonwitness/client';
 import { useAuth } from '@/hooks/use-auth-context';
 import { Button } from '@moonwitness/ui/components/button';
 import { Input } from '@moonwitness/ui/components/input';
-import { Label } from '@/components/ui/label';
+import { Label } from '@moonwitness/ui/components/label';
 import { Doodle, InkUnderline, SpeechBubble, SpeedLines } from '@/components/manga/effects';
 import { Logo } from '@/components/manga/logo';
 

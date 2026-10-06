@@ -5,7 +5,7 @@ import { toast } from '@moonwitness/ui/components/toast';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 import { Button } from '@moonwitness/ui/components/button';
 import { Input } from '@moonwitness/ui/components/input';
-import { Label } from '@/components/ui/label';
+import { Label } from '@moonwitness/ui/components/label';
 import { Skeleton } from '@moonwitness/ui/components/skeleton';
 import { useAuth } from '@/hooks/use-auth-context';
 import { client } from '@/lib/client';

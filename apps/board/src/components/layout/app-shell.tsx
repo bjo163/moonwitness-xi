@@ -38,7 +38,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from '@/components/ui/command';
+} from '@moonwitness/ui/components/command';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,7 +52,7 @@ import { Doodle } from '@/components/manga/effects';
 import { ShortcutsDialog } from '@/components/manga/shortcuts-dialog';
 import { ActivityBell } from './activity-bell';
 import { NotificationBell } from './notification-bell';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger } from '@moonwitness/ui/components/sheet';
 
 function NavItem({
   to,
@@ -276,6 +276,16 @@ export function AppShell() {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      const target = event.target;
+      const isEditableTarget =
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          target instanceof HTMLSelectElement);
+
+      if (isEditableTarget) return;
+
       if (event.key.toLowerCase() === 'k' && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
         setPaletteOpen((open) => !open);

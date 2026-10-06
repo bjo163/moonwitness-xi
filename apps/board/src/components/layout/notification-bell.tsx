@@ -6,7 +6,7 @@ import { Button } from '@moonwitness/ui/components/button';
 import { useAuth } from '@/hooks/use-auth-context';
 import { client } from '@/lib/client';
 import { scopedQueryKey } from '@/lib/query-scope';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@moonwitness/ui/components/popover';
 
 interface InboxNotification {
   id: number;

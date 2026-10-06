@@ -24,6 +24,27 @@ const visualBaselines = new Set([
   'settings/desktop-1440/dark',
 ]);
 
+test('command shortcut stays inactive while typing in an editable control', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/login');
+  await page.getByLabel('Login').fill('superadmin');
+  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await expect(page).toHaveURL(/\/$/u);
+
+  const search = page.getByRole('button', { name: /Search records, models, commands/u });
+  await search.click();
+  const commandSearch = page.getByPlaceholder(
+    'Search models or records (e.g. Acme, Alice, base.partner)…'
+  );
+  await expect(commandSearch).toBeFocused();
+  await page.keyboard.press('Control+k');
+  await expect(page.getByRole('dialog', { name: 'Command Palette' })).toBeVisible();
+  await expect(commandSearch).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'Command Palette' })).toBeHidden();
+});
+
 async function expectNoHorizontalOverflow(page: Page, label: string) {
   const dimensions = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,

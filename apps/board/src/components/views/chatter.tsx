@@ -27,8 +27,8 @@ import { scopedQueryKey } from '@/lib/query-scope';
 import { useAuth } from '@/hooks/use-auth-context';
 import { Button } from '@moonwitness/ui/components/button';
 import { Input } from '@moonwitness/ui/components/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+import { Textarea } from '@moonwitness/ui/components/textarea';
+import { Label } from '@moonwitness/ui/components/label';
 import { Doodle } from '@/components/manga/effects';
 import { cn } from '@/lib/utils';
 

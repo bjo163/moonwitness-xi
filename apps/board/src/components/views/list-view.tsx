@@ -28,7 +28,7 @@ import { useRecordMutations, useRecords } from '@/hooks/use-model';
 import { Button } from '@moonwitness/ui/components/button';
 import { Input } from '@moonwitness/ui/components/input';
 import { Skeleton } from '@moonwitness/ui/components/skeleton';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@moonwitness/ui/components/popover';
 import { Doodle, SpeedLines } from '@/components/manga/effects';
 import { cn } from '@/lib/utils';
 import { FieldCell } from './fields';

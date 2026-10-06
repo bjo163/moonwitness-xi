@@ -5,7 +5,7 @@ import { client } from '@/lib/client';
 import { scopedQueryKey } from '@/lib/query-scope';
 import { Button } from '@moonwitness/ui/components/button';
 import { Input } from '@moonwitness/ui/components/input';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@moonwitness/ui/components/popover';
 
 interface TagItem {
   id: number;

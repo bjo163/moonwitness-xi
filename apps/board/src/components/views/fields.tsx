@@ -7,8 +7,8 @@ import { client } from '@/lib/client';
 import { scopedQueryKey } from '@/lib/query-scope';
 import { cn } from '@/lib/utils';
 import { Input } from '@moonwitness/ui/components/input';
-import { Switch } from '@/components/ui/switch';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Switch } from '@moonwitness/ui/components/switch';
+import { Popover, PopoverContent, PopoverTrigger } from '@moonwitness/ui/components/popover';
 import {
   Command,
   CommandEmpty,
@@ -16,7 +16,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from '@/components/ui/command';
+} from '@moonwitness/ui/components/command';
 import {
   Select,
   SelectContent,

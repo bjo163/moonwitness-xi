@@ -41,6 +41,7 @@ try {
       `file:${join(tempRoot, archiveName)}`,
       'react@19',
       'radix-ui@1.6.7',
+      'cmdk@1.1.1',
     ],
     { cwd: consumerRoot, windowsHide: true }
   );
@@ -48,14 +49,29 @@ try {
   const source = `
 import assert from 'node:assert/strict';
 import { Button } from '@moonwitness/ui/components/button';
+import { Command, CommandInput } from '@moonwitness/ui/components/command';
 import { Field } from '@moonwitness/ui/components/field';
+import { Label } from '@moonwitness/ui/components/label';
 import { Pagination } from '@moonwitness/ui/components/pagination';
+import { Popover, PopoverContent } from '@moonwitness/ui/components/popover';
+import { Sheet, SheetContent } from '@moonwitness/ui/components/sheet';
+import { Switch } from '@moonwitness/ui/components/switch';
 import { Table } from '@moonwitness/ui/components/table';
+import { Textarea } from '@moonwitness/ui/components/textarea';
 import { UserIcon } from '@moonwitness/ui/icons/user';
 assert.equal(typeof Button, 'function');
+assert.equal(typeof Command, 'function');
+assert.equal(typeof CommandInput, 'function');
 assert.equal(typeof Field, 'function');
+assert.equal(typeof Label, 'function');
 assert.equal(typeof Pagination, 'function');
+assert.equal(typeof Popover, 'function');
+assert.equal(typeof PopoverContent, 'function');
+assert.equal(typeof Sheet, 'function');
+assert.equal(typeof SheetContent, 'function');
+assert.equal(typeof Switch, 'function');
 assert.equal(typeof Table, 'function');
+assert.equal(typeof Textarea, 'function');
 assert.equal(typeof UserIcon, 'function');
 let internalPathWasRejected = false;
 try { await import('@moonwitness/ui/dist/components/button.js'); }

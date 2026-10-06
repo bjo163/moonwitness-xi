@@ -6,7 +6,7 @@ import { toast } from '@moonwitness/ui/components/toast';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 import { NotificationPreferences } from '@/components/settings/notification-preferences';
 import { Button } from '@moonwitness/ui/components/button';
-import { Label } from '@/components/ui/label';
+import { Label } from '@moonwitness/ui/components/label';
 import { Input } from '@moonwitness/ui/components/input';
 import {
   Select,

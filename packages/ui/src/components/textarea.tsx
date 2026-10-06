@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '../lib/cn.js';
 
 /** Ink-bordered textarea; focus lifts it with a lime-backed hard shadow. */
 function Textarea({ className, ...props }: React.ComponentProps<'textarea'>) {
