@@ -50,7 +50,7 @@ test('unit runner executes each workspace package suite only once', () => {
   assert.equal(new Set(packageNames).size, packageNames.length, 'package suites must be unique');
 });
 
-test('documentation portal failures annotate sanitized JUnit test names', () => {
+test('documentation builds are isolated and portal failures annotate sanitized JUnit names', () => {
   const documentedPackages = [
     ['@moonwitness/types', 'types'],
     ['@moonwitness/orm', 'ORM'],
@@ -69,7 +69,7 @@ test('documentation portal failures annotate sanitized JUnit test names', () => 
     assert.match(
       pagesWorkflow,
       new RegExp(
-        `name: Build documentation package ${label}\\s+run: pnpm --filter ${packageName} build`,
+        `name: Build documentation package ${label}\\s+run: node scripts/ci/build-workspace-package\\.mjs ${packageName}`,
         'u'
       )
     );

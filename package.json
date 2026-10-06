@@ -33,7 +33,7 @@
     "test:e2e": "node scripts/run-e2e.mjs",
     "test:e2e:visual": "pnpm --filter @moonwitness/board exec playwright test e2e/visual-audit.spec.ts --config playwright.visual.config.ts",
     "test:e2e:visual:matrix": "node scripts/run-visual-matrix.mjs",
-    "test:e2e:diagnostics": "node --test scripts/e2e-preflight-report.test.mjs scripts/summarize-playwright-failures.test.mjs scripts/summarize-junit-failures.test.mjs scripts/ci-diagnostics.test.mjs",
+    "test:e2e:diagnostics": "node --test scripts/e2e-preflight-report.test.mjs scripts/summarize-playwright-failures.test.mjs scripts/summarize-junit-failures.test.mjs scripts/ci-diagnostics.test.mjs scripts/ci/build-workspace-package.test.mjs",
     "board:visual:update": "pnpm test:e2e --grep 'responsive screen audit|responsive protected screens' --update-snapshots",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

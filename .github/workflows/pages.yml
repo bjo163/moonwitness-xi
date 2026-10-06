@@ -238,27 +238,27 @@ jobs:
       - name: Install Chromium for portal browser tests
         run: pnpm exec playwright install --with-deps chromium
       - name: Build documentation package types
-        run: pnpm --filter @moonwitness/types build
+        run: node scripts/ci/build-workspace-package.mjs @moonwitness/types
       - name: Build documentation package ORM
-        run: pnpm --filter @moonwitness/orm build
+        run: node scripts/ci/build-workspace-package.mjs @moonwitness/orm
       - name: Build documentation package base addon
-        run: pnpm --filter @moonwitness/orm-base build
+        run: node scripts/ci/build-workspace-package.mjs @moonwitness/orm-base
       - name: Build documentation package auth
-        run: pnpm --filter @moonwitness/auth build
+        run: node scripts/ci/build-workspace-package.mjs @moonwitness/auth
       - name: Build documentation package jobs
-        run: pnpm --filter @moonwitness/jobs build
+        run: node scripts/ci/build-workspace-package.mjs @moonwitness/jobs
       - name: Build documentation package integration
-        run: pnpm --filter @moonwitness/orm-integration build
+        run: node scripts/ci/build-workspace-package.mjs @moonwitness/orm-integration
       - name: Build documentation package notifications
-        run: pnpm --filter @moonwitness/orm-notification build
+        run: node scripts/ci/build-workspace-package.mjs @moonwitness/orm-notification
       - name: Build documentation package organization
-        run: pnpm --filter @moonwitness/orm-organization build
+        run: node scripts/ci/build-workspace-package.mjs @moonwitness/orm-organization
       - name: Build documentation package requests
-        run: pnpm --filter @moonwitness/orm-request build
+        run: node scripts/ci/build-workspace-package.mjs @moonwitness/orm-request
       - name: Build documentation package storage
-        run: pnpm --filter @moonwitness/orm-storage build
+        run: node scripts/ci/build-workspace-package.mjs @moonwitness/orm-storage
       - name: Build documentation package workflow
-        run: pnpm --filter @moonwitness/orm-workflow build
+        run: node scripts/ci/build-workspace-package.mjs @moonwitness/orm-workflow
       - name: Test documentation generators
         run: node --test scripts/docs/generate-reference.test.mjs scripts/docs/update-readme.test.mjs scripts/docs/build-guide.test.mjs
       - name: Verify generated documentation reference
