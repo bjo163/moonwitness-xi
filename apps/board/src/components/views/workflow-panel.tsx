@@ -81,6 +81,7 @@ export function WorkflowPanel({ model, recordId }: { model: string; recordId: nu
     enabled: instance !== undefined,
   });
   const definitions = definitionsQuery.data?.data ?? [];
+  const startableDefinition = definitions.find((candidate) => candidate.canStart);
   const definition = definitions.find(
     (candidate) => candidate.code === (instance?.definition_code ?? definitions[0]?.code)
   );
@@ -107,7 +108,6 @@ export function WorkflowPanel({ model, recordId }: { model: string; recordId: nu
   };
   const startMutation = useMutation({
     mutationFn: () => {
-      const startableDefinition = definitions.find((candidate) => candidate.canStart);
       if (!startableDefinition) throw new Error('No approval workflow is available to start.');
       return client.request('/workflows/instances', {
         method: 'POST',
@@ -177,14 +177,7 @@ export function WorkflowPanel({ model, recordId }: { model: string; recordId: nu
           </span>
         )}
       </div>
-      {(!instance || instance.status !== 'active') &&
-      definitions.some((candidate) => candidate.canStart) ? (
-        <Button onClick={() => startMutation.mutate()} disabled={startMutation.isPending}>
-          {startMutation.isPending
-            ? 'Starting…'
-            : `Start ${definitions.find((candidate) => candidate.canStart)?.name ?? 'workflow'}`}
-        </Button>
-      ) : instance?.status === 'active' ? (
+      {instance ? (
         <>
           <p className="text-sm">
             Current state: <strong>{instance.current_state}</strong> · Revision {instance.revision}
@@ -207,7 +200,7 @@ export function WorkflowPanel({ model, recordId }: { model: string; recordId: nu
               {errorMessage(detailQuery.error)}
             </p>
           ) : null}
-          {allowedTransitions.length > 0 && (
+          {instance.status === 'active' && allowedTransitions.length > 0 && (
             <div className="space-y-3">
               <label className="grid gap-1 text-sm font-semibold">
                 Review comment
@@ -234,8 +227,11 @@ export function WorkflowPanel({ model, recordId }: { model: string; recordId: nu
             </div>
           )}
         </>
-      ) : (
-        <p className="text-sm text-ink-soft">No approval workflow is available for this record.</p>
+      ) : null}
+      {(!instance || instance.status !== 'active') && startableDefinition && (
+        <Button onClick={() => startMutation.mutate()} disabled={startMutation.isPending}>
+          {startMutation.isPending ? 'Starting…' : `Start ${startableDefinition.name}`}
+        </Button>
       )}
       {actionError && (
         <p role="alert" className="text-sm font-semibold text-pink-700">
