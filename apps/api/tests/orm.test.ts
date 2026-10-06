@@ -173,7 +173,7 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
       method: 'GET',
       url: '/api/base.partner?domain=%5B%5B%22name%22%2C%22%3D%22%2C%22Acme%20Studio%22%5D%5D&with=[addresses.country,category_links.category]',
     });
-    expect(partner.statusCode).toBe(200);
+    expect(partner.statusCode, partner.payload).toBe(200);
     expect(
       partner.json<{
         data: {
@@ -241,6 +241,38 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
   });
 
   it('bounds generic query cost and rejects unknown fields through mass assignment', async () => {
+    const malformedDomains: unknown[][] = [
+      [['name', 'contains', 'value']],
+      [['name', '=', { nested: 'value' }]],
+      [['name', '=', ['not', 'a', 'scalar']]],
+      [['bad field', '=', 'value']],
+      [...Array<string>(33).fill('!'), ['active', '=', true]],
+    ];
+    for (const domain of malformedDomains) {
+      const response = await send({
+        method: 'GET',
+        url: `/api/base.partner?domain=${encodeURIComponent(JSON.stringify(domain))}`,
+      });
+      expect(response.statusCode, response.payload).toBe(400);
+    }
+
+    const malformedRpcDomain = await send({
+      method: 'POST',
+      url: '/jsonrpc',
+      payload: {
+        jsonrpc: '2.0',
+        method: 'call',
+        params: {
+          service: 'object',
+          method: 'execute_kw',
+          args: ['base.partner', 'search_read', [[['name', 'contains', 'value']]], {}],
+        },
+        id: 3,
+      },
+    });
+    expect(malformedRpcDomain.statusCode).toBe(200);
+    expect(malformedRpcDomain.json<{ error: { code: number } }>().error.code).toBe(-32602);
+
     const tooManyTerms = await send({
       method: 'GET',
       url: `/api/base.partner?domain=${encodeURIComponent(JSON.stringify(Array.from({ length: 101 }, (_, index) => ['id', '=', index])))}`,
@@ -631,7 +663,7 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
       method: 'GET',
       url: `/api/test.item?domain=${encodeURIComponent(JSON.stringify([['id', '=', itemId]]))}`,
     });
-    expect(resSearch.statusCode).toBe(200);
+    expect(resSearch.statusCode, resSearch.payload).toBe(200);
     const searchBody = JSON.parse(resSearch.payload);
     expect(searchBody.data.length).toBe(1);
     expect(searchBody.data[0].name).toBe('REST API Item');
@@ -686,7 +718,7 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
     expect(rpcRes.statusCode).toBe(200);
     const rpcBody = JSON.parse(rpcRes.payload);
     expect(rpcBody.id).toBe(42);
-    expect(Array.isArray(rpcBody.result)).toBe(true);
+    expect(Array.isArray(rpcBody.result), rpcRes.payload).toBe(true);
     expect(rpcBody.result.length).toBeGreaterThan(0);
   });
 });

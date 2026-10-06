@@ -1,8 +1,29 @@
 import { describe, it, expect } from 'vitest';
-import { parseDomainToAST, normalizeLeaf } from '../src/domain.js';
+import { parseDomainToAST, normalizeLeaf, validateDomain } from '../src/domain.js';
 import type { Domain } from '../src/types.js';
 
 describe('Domain Parser', () => {
+  it('rejects malformed leaves, unsafe values, unknown operators, and over-deep expressions', () => {
+    expect(() => validateDomain([['name', 'between', ['A', 'Z']]])).toThrow(
+      "operator 'between' is not supported"
+    );
+    expect(() => validateDomain([['name', '=', { nested: 'value' }]])).toThrow(
+      'must use a scalar or a bounded scalar list'
+    );
+    expect(() => validateDomain([['name', '=', ['not', 'an', 'equality']]])).toThrow(
+      'does not accept a list'
+    );
+    expect(() => validateDomain([['bad field', '=', 'value']])).toThrow('invalid field');
+    expect(() => validateDomain([['name', '=', 'x'.repeat(4097)]])).toThrow('value is too long');
+    const deepDomain = [...Array<string>(33).fill('!'), ['active', '=', true]];
+    expect(() => parseDomainToAST(validateDomain(deepDomain))).toThrow(
+      'expression nesting exceeds 32'
+    );
+    expect(() => validateDomain(Array.from({ length: 101 }, () => ['id', '=', 1]))).toThrow(
+      'at most 100 terms'
+    );
+  });
+
   it('should normalize leaf pairs and triplets', () => {
     expect(normalizeLeaf(['name', 'Alice'])).toEqual({
       field: 'name',

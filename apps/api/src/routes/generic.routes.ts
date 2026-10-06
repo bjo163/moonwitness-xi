@@ -7,6 +7,7 @@ import {
   Registry,
   applyDomain,
   describeFields,
+  validateDomain,
   resolveViews,
   getModelMenuInfo,
   type Domain,
@@ -918,10 +919,7 @@ export const genericRoutes: FastifyPluginAsync<GenericRoutesOptions> = async (fa
       let domain: Domain = [];
       if (req.query.domain) {
         try {
-          const parsed: unknown = JSON.parse(req.query.domain);
-          if (!Array.isArray(parsed) || parsed.length > 100)
-            throw new Error('Domain must be an array with at most 100 terms');
-          domain = parsed as Domain;
+          domain = validateDomain(JSON.parse(req.query.domain) as unknown);
         } catch {
           return reply
             .status(400)
@@ -1403,6 +1401,13 @@ export const genericRoutes: FastifyPluginAsync<GenericRoutesOptions> = async (fa
     }
     const args = Array.isArray(rawArgs) && rawArgs.every(isJsonValue) ? rawArgs : [];
     const kwargs = asJsonObject(rawKwargs) ?? {};
+    if (required === 'read' && (method === 'search_read' || method === 'search')) {
+      try {
+        validateDomain(args[0] ?? []);
+      } catch {
+        return reply.send(rpcError(-32602, 'Invalid search domain'));
+      }
+    }
     const requestedGraph = typeof kwargs.with === 'string' ? kwargs.with : undefined;
     if (required === 'read' && !queryGraphIsBounded(requestedGraph))
       return reply.send(rpcError(-32602, 'Relation graph exceeds maximum depth'));
