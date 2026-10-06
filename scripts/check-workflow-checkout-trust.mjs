@@ -19,6 +19,26 @@ function checkoutSteps(source) {
   });
 }
 
+function namedWorkflowStep(source, expectedName) {
+  const lines = source.split(/\r?\n/u);
+  const matches = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const match = /^(?<indent>\s*)- name: (?<name>.+?)\s*$/u.exec(line);
+    if (match?.groups?.name !== expectedName) continue;
+    const indent = match.groups.indent.length;
+    let end = index + 1;
+    while (end < lines.length) {
+      const candidate = lines[end];
+      const candidateIndent = candidate.length - candidate.trimStart().length;
+      if (candidateIndent === indent && candidate.startsWith(`${' '.repeat(indent)}- `)) break;
+      end += 1;
+    }
+    matches.push(lines.slice(index, end).join('\n'));
+  }
+  return matches.length === 1 ? matches[0] : null;
+}
+
 export function inspectTrustedCheckoutPolicies({
   pages,
   visualReview,
@@ -188,26 +208,31 @@ export function inspectTrustedCheckoutPolicies({
   }
 
   if (promote) {
-    if (!promote.includes('current_sha="$(git ls-remote origin refs/heads/dev | cut -f1)"'))
+    const staleGuard = namedWorkflowStep(promote, 'Skip stale promotion events');
+    const sensitive = namedWorkflowStep(promote, 'Disable auto-merge and mark sensitive promotion');
+    const lowRisk = namedWorkflowStep(promote, 'Enable merge for compatible, low-risk promotion');
+    if (!staleGuard?.includes('current_sha="$(git ls-remote origin refs/heads/dev | cut -f1)"'))
       findings.push('Promotion must ignore stale dev push events before opening or updating a PR.');
-    if (!promote.includes('if [[ "$current_sha" != "$EXPECTED_SHA" ]]'))
+    if (!staleGuard?.includes('if [[ "$current_sha" != "$EXPECTED_SHA" ]]'))
       findings.push('Promotion must compare the event SHA with the current dev head.');
     if (
-      !promote.includes("if: steps.risk.outputs.approval_required == 'true'") ||
-      !promote.includes('gh pr edit "$PR_NUMBER" --repo "$GH_REPO" --add-label approval-required')
+      !sensitive?.includes("if: steps.risk.outputs.approval_required == 'true'") ||
+      !sensitive.includes('gh pr edit "$PR_NUMBER" --repo "$GH_REPO" --add-label approval-required')
     ) {
       findings.push('Sensitive promotion must be labeled for CODEOWNER approval.');
     }
     if (
-      !promote.includes('gh pr merge "$PR_NUMBER" --repo "$GH_REPO" --disable-auto') ||
-      !promote.includes("if: steps.risk.outputs.approval_required != 'true'")
+      !sensitive?.includes('gh pr merge "$PR_NUMBER" --repo "$GH_REPO" --disable-auto') ||
+      !sensitive?.includes("if: steps.risk.outputs.approval_required == 'true'") ||
+      sensitive?.includes('--auto') ||
+      !lowRisk?.includes("if: steps.risk.outputs.approval_required != 'true'")
     ) {
       findings.push(
         'Sensitive promotion must disable auto-merge; only low-risk promotion may enable it.'
       );
     }
     if (
-      !promote.includes(
+      !lowRisk?.includes(
         'gh pr merge "$PR_NUMBER" --repo "$GH_REPO" --auto --merge --match-head-commit "$EXPECTED_SHA"'
       )
     ) {

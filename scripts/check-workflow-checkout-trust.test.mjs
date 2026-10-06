@@ -57,11 +57,14 @@ permissions:
       - uses: actions/upload-artifact@0123456789012345678901234567890123456789
 `;
 const promote = `
+      - name: Skip stale promotion events
           current_sha="$(git ls-remote origin refs/heads/dev | cut -f1)"
           if [[ "$current_sha" != "$EXPECTED_SHA" ]]; then exit 0; fi
+      - name: Disable auto-merge and mark sensitive promotion
         if: steps.risk.outputs.approval_required == 'true'
           gh pr edit "$PR_NUMBER" --repo "$GH_REPO" --add-label approval-required
           gh pr merge "$PR_NUMBER" --repo "$GH_REPO" --disable-auto
+      - name: Enable merge for compatible, low-risk promotion
         if: steps.risk.outputs.approval_required != 'true'
           gh pr merge "$PR_NUMBER" --repo "$GH_REPO" --auto --merge --match-head-commit "$EXPECTED_SHA"
 `;
@@ -205,4 +208,16 @@ test('promotion ignores a stale push after dev moves beyond its event SHA', () =
     'true'
   );
   assert.ok(policies({ promote: unsafe }).some((finding) => finding.includes('current dev head')));
+});
+
+test('promotion checks fail when sensitive and low-risk commands are moved between steps', () => {
+  const unsafe = promote
+    .replace('gh pr merge "$PR_NUMBER" --repo "$GH_REPO" --disable-auto', 'true')
+    .replace(
+      'gh pr merge "$PR_NUMBER" --repo "$GH_REPO" --auto --merge --match-head-commit "$EXPECTED_SHA"',
+      'gh pr merge "$PR_NUMBER" --repo "$GH_REPO" --disable-auto'
+    );
+  assert.ok(
+    policies({ promote: unsafe }).some((finding) => finding.includes('disable auto-merge'))
+  );
 });
