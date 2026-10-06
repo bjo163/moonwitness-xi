@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bell, Calendar, Check, CheckSquare, ExternalLink, Mail, Phone } from 'lucide-react';
+import {
+  Calendar,
+  CalendarClock,
+  Check,
+  CheckSquare,
+  ExternalLink,
+  Mail,
+  Phone,
+} from 'lucide-react';
 import { client } from '@/lib/client';
 import { scopedQueryKey } from '@/lib/query-scope';
 import { useAuth } from '@/hooks/use-auth-context';
@@ -103,10 +111,10 @@ export function ActivityBell() {
           variant="outline"
           size="icon"
           className="relative"
-          aria-label="Activity Notifications"
-          title="Activity Notifications"
+          aria-label="Pending activities"
+          title="Pending activities"
         >
-          <Bell className="size-4" />
+          <CalendarClock className="size-4" />
           {overdue.length > 0 ? (
             <span className="absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center border-2 border-ink bg-pink text-[10px] font-bold text-on-pink shadow-[1px_1px_0_0_var(--ink)] animate-pulse">
               {overdue.length}

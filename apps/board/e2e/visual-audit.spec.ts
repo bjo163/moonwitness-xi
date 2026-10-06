@@ -138,6 +138,29 @@ test('responsive protected screens fit and remain accessible in both themes', as
           fullPage: true,
         });
         if (view.name === 'dashboard' && size.name === 'mobile-375') {
+          await expect(page.getByRole('button', { name: /^Switch company/u })).toBeVisible();
+          await expect(page.getByRole('button', { name: 'Pending activities' })).toBeVisible();
+          await expect(page.getByRole('button', { name: /^Notifications/u })).toBeVisible();
+          await expect(page.getByRole('button', { name: /^User menu for/u })).toBeVisible();
+          await expect(page.getByRole('button', { name: 'Toggle theme' })).toBeHidden();
+          const originalThemeIsDark = await page
+            .locator('html')
+            .evaluate((element) => element.classList.contains('dark'));
+          await page.getByRole('button', { name: /^User menu for/u }).click();
+          await expect(page.getByRole('menuitem', { name: 'Toggle theme' })).toBeVisible();
+          await page.getByRole('menuitem', { name: 'Toggle theme' }).click();
+          await expect
+            .poll(() =>
+              page.locator('html').evaluate((element) => element.classList.contains('dark'))
+            )
+            .toBe(!originalThemeIsDark);
+          await page.getByRole('button', { name: /^User menu for/u }).click();
+          await page.getByRole('menuitem', { name: 'Toggle theme' }).click();
+          await expect
+            .poll(() =>
+              page.locator('html').evaluate((element) => element.classList.contains('dark'))
+            )
+            .toBe(originalThemeIsDark);
           await expect(page.getByRole('button', { name: 'Open model navigation' })).toBeVisible();
           await page.getByRole('button', { name: 'Open model navigation' }).focus();
           await expect(page.getByRole('button', { name: 'Open model navigation' })).toBeFocused();

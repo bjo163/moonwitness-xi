@@ -388,6 +388,8 @@ export function AppShell() {
                     variant="outline"
                     size="sm"
                     className="gap-1.5 border-2 border-ink px-2 font-mono text-xs shadow-ink-sm sm:gap-2 sm:px-3"
+                    aria-label={`Switch company. Current scope: ${currentCompany?.name ?? 'Global Scope'}`}
+                    title={`Company scope: ${currentCompany?.name ?? 'Global Scope'}`}
                   >
                     <Building2 className="size-3.5 text-lime-600 dark:text-lime" />
                     <span className="hidden sm:inline">Tenant:</span>
@@ -451,6 +453,7 @@ export function AppShell() {
               id="toggle-theme"
               variant="outline"
               size="icon"
+              className="hidden sm:inline-flex"
               onClick={toggle}
               aria-label="Toggle theme"
             >
@@ -464,6 +467,8 @@ export function AppShell() {
                   id="user-menu"
                   variant="outline"
                   className="gap-1.5 px-2 normal-case sm:gap-2 sm:px-3"
+                  aria-label={`User menu for ${user?.login ?? 'current user'}`}
+                  title={`User menu for ${user?.login ?? 'current user'}`}
                 >
                   <span className="grid size-6 place-items-center border-2 border-ink bg-lime font-display text-xs text-on-accent">
                     {user?.login.slice(0, 1).toUpperCase()}
@@ -488,6 +493,10 @@ export function AppShell() {
                   <NavLink to="/settings" className="flex cursor-pointer items-center gap-2">
                     <MoonWitnessSettingsIcon className="size-4" /> Settings
                   </NavLink>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="sm:hidden" onSelect={toggle}>
+                  {theme === 'dark' ? <Sun /> : <Moon />}
+                  Toggle theme
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem id="logout" onSelect={() => void logout()}>

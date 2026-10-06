@@ -205,7 +205,7 @@ test('switching companies never renders a record from the previous query scope',
 
   await page.goto('/m/base.partner');
   await expect(page.getByRole('table').getByText('Company A Scoped Record')).toBeVisible();
-  await page.getByRole('button', { name: /Tenant:/u }).click();
+  await page.getByRole('button', { name: /^Switch company/u }).click();
   await page.getByRole('menuitem', { name: companyName }).click();
   await expect(page.getByRole('table').getByText('Company B Scoped Record')).toBeVisible();
   await expect(page.getByRole('table').getByText('Company A Scoped Record')).toHaveCount(0);
