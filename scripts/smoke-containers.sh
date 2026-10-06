@@ -40,9 +40,11 @@ api_info="$(curl --fail --silent --show-error --retry 20 --retry-connrefused --r
 phase=api_banner
 grep -q 'MoonWitness Enterprise ORM API' <<< "$api_info"
 phase=api_readiness
-curl --fail --silent --show-error http://127.0.0.1:3000/readyz | grep -q '"status":"healthy"'
+readiness_info="$(curl --fail --silent --show-error http://127.0.0.1:3000/readyz)"
+grep -q '"status":"healthy"' <<< "$readiness_info"
 phase=board_root
-curl --fail --silent --show-error http://127.0.0.1:4174/ | grep -q 'MoonWitness'
+board_info="$(curl --fail --silent --show-error http://127.0.0.1:4174/)"
+grep -q 'MoonWitness' <<< "$board_info"
 
 phase=api_stop
 "${compose[@]}" stop --timeout 45 api
