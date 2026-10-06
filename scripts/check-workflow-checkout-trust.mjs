@@ -210,12 +210,17 @@ export function inspectTrustedCheckoutPolicies({
   if (promote) {
     const staleGuard = namedWorkflowStep(promote, 'Skip stale promotion events');
     const pullRequest = namedWorkflowStep(promote, 'Create or find the promotion pull request');
+    const riskStep = namedWorkflowStep(promote, 'Classify risk from commits and changed paths');
+    const report = namedWorkflowStep(promote, 'Refresh exact-SHA promotion report');
+    const ensureLabel = namedWorkflowStep(promote, 'Ensure approval-required label exists');
     const sensitive = namedWorkflowStep(promote, 'Disable auto-merge and mark sensitive promotion');
     const lowRisk = namedWorkflowStep(promote, 'Enable merge for compatible, low-risk promotion');
     if (!staleGuard?.includes('current_sha="$(git ls-remote origin refs/heads/dev | cut -f1)"'))
       findings.push('Promotion must ignore stale dev push events before opening or updating a PR.');
     if (!staleGuard?.includes('if [[ "$current_sha" != "$EXPECTED_SHA" ]]'))
       findings.push('Promotion must compare the event SHA with the current dev head.');
+    if (!staleGuard?.includes('echo \'stale=true\' >> "$GITHUB_OUTPUT"'))
+      findings.push('Promotion must expose stale-event state so later steps can be skipped.');
     if (
       staleGuard &&
       staleGuard.indexOf('git fetch --no-tags origin') >= 0 &&
@@ -238,22 +243,44 @@ export function inspectTrustedCheckoutPolicies({
       );
     }
     if (
+      !promote.includes('checks: read') ||
+      !report?.includes('commits/$EXPECTED_SHA/check-runs?per_page=100') ||
+      !report?.includes('promotion-current-body.md') ||
+      !report?.includes('node scripts/render-promotion-report.mjs') ||
+      !report?.includes('gh pr edit "$PR_NUMBER" --repo "$GH_REPO" --body-file "$report_file"')
+    ) {
+      findings.push(
+        'Promotion must render an exact-SHA report with read-only check results and preserve/update the managed PR body safely.'
+      );
+    }
+    for (const [name, step] of [
+      ['PR lookup/create', pullRequest],
+      ['risk classification', riskStep],
+      ['promotion report', report],
+      ['approval label', ensureLabel],
+      ['sensitive approval', sensitive],
+      ['low-risk merge', lowRisk],
+    ]) {
+      if (!step?.includes("if: steps.stale.outputs.stale != 'true'"))
+        findings.push(`Promotion ${name} must not run for a stale dev push event.`);
+    }
+    if (
       promote.indexOf('name: Skip stale promotion events') >
       promote.indexOf('name: Create or find the promotion pull request')
     ) {
       findings.push('Promotion must reject a stale dev event before reconciling its pull request.');
     }
     if (
-      !sensitive?.includes("if: steps.risk.outputs.approval_required == 'true'") ||
+      !sensitive?.includes("steps.risk.outputs.approval_required == 'true'") ||
       !sensitive.includes('gh pr edit "$PR_NUMBER" --repo "$GH_REPO" --add-label approval-required')
     ) {
       findings.push('Sensitive promotion must be labeled for CODEOWNER approval.');
     }
     if (
       !sensitive?.includes('gh pr merge "$PR_NUMBER" --repo "$GH_REPO" --disable-auto') ||
-      !sensitive?.includes("if: steps.risk.outputs.approval_required == 'true'") ||
+      !sensitive?.includes("steps.risk.outputs.approval_required == 'true'") ||
       sensitive?.includes('--auto') ||
-      !lowRisk?.includes("if: steps.risk.outputs.approval_required != 'true'")
+      !lowRisk?.includes("steps.risk.outputs.approval_required != 'true'")
     ) {
       findings.push(
         'Sensitive promotion must disable auto-merge; only low-risk promotion may enable it.'

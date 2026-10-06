@@ -84,6 +84,7 @@
     "test:release-image-publish": "node --test scripts/publish-release-image.test.mjs",
     "promotion:risk": "node scripts/check-promotion-risk.mjs",
     "promotion:approval-check": "node scripts/check-promotion-approval.mjs",
+    "test:promotion-report": "node --test scripts/render-promotion-report.test.mjs",
     "test:ci-gate": "node --test scripts/ci-gate.test.mjs",
     "test:artifact-safety": "node --test scripts/scan-test-reports.test.mjs",
     "test:coverage-policy": "node --test scripts/check-coverage.test.mjs",

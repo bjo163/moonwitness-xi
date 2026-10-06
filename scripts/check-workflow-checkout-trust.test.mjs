@@ -57,20 +57,33 @@ permissions:
       - uses: actions/upload-artifact@0123456789012345678901234567890123456789
 `;
 const promote = `
+    checks: read
       - name: Skip stale promotion events
+        id: stale
           current_sha="$(git ls-remote origin refs/heads/dev | cut -f1)"
-          if [[ "$current_sha" != "$EXPECTED_SHA" ]]; then exit 0; fi
+          if [[ "$current_sha" != "$EXPECTED_SHA" ]]; then echo 'stale=true' >> "$GITHUB_OUTPUT"; exit 0; fi
           git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main refs/heads/dev:refs/remotes/origin/dev
       - name: Create or find the promotion pull request
+        if: steps.stale.outputs.stale != 'true'
           number="$(gh pr list --base main --head dev --state open --json number --jq '.[0].number // empty')"
           if [ -z "$number" ]; then
             gh pr create --base main --head dev
+      - name: Refresh exact-SHA promotion report
+        if: steps.stale.outputs.stale != 'true'
+          gh api "repos/$GH_REPO/commits/$EXPECTED_SHA/check-runs?per_page=100" > checks.json
+          gh pr view "$PR_NUMBER" --json body > promotion-current-body.md
+          node scripts/render-promotion-report.mjs base head risk.json checks.json release.json promotion-current-body.md report.md
+          gh pr edit "$PR_NUMBER" --repo "$GH_REPO" --body-file "$report_file"
+      - name: Classify risk from commits and changed paths
+        if: steps.stale.outputs.stale != 'true'
+      - name: Ensure approval-required label exists
+        if: steps.stale.outputs.stale != 'true' && steps.risk.outputs.approval_required == 'true'
       - name: Disable auto-merge and mark sensitive promotion
-        if: steps.risk.outputs.approval_required == 'true'
+        if: steps.stale.outputs.stale != 'true' && steps.risk.outputs.approval_required == 'true'
           gh pr edit "$PR_NUMBER" --repo "$GH_REPO" --add-label approval-required
           gh pr merge "$PR_NUMBER" --repo "$GH_REPO" --disable-auto
       - name: Enable merge for compatible, low-risk promotion
-        if: steps.risk.outputs.approval_required != 'true'
+        if: steps.stale.outputs.stale != 'true' && steps.risk.outputs.approval_required != 'true'
           gh pr view "$PR_NUMBER" --repo "$GH_REPO" --json labels --jq '[.labels[].name]'
           if jq -e 'index("approval-required") != null' <<< "$labels" >/dev/null; then
           gh pr edit "$PR_NUMBER" --repo "$GH_REPO" --remove-label approval-required
@@ -102,6 +115,17 @@ function policies(overrides = {}) {
 
 test('accepts immutable event-SHA checkout and trusted dispatch restrictions', () => {
   assert.deepEqual(policies(), []);
+});
+
+test('rejects promotion reports without exact SHA checks or preservation of the existing PR body', () => {
+  const unsafe = promote
+    .replace('checks: read', 'contents: read')
+    .replace('commits/$EXPECTED_SHA/check-runs?per_page=100', 'commits/dev/check-runs?per_page=100')
+    .replace('promotion-current-body.md', 'discarded-body.md');
+  const findings = policies({ promote: unsafe });
+  assert.ok(
+    findings.some((finding) => finding.includes('exact-SHA report with read-only check results'))
+  );
 });
 
 test('requires immutable versioned docs assets and successful five-release composition', () => {
@@ -212,7 +236,7 @@ test('promotion disables auto-merge for sensitive changes and binds low-risk mer
 
 test('promotion ignores a stale push after dev moves beyond its event SHA', () => {
   const unsafe = promote.replace(
-    'if [[ "$current_sha" != "$EXPECTED_SHA" ]]; then exit 0; fi',
+    'if [[ "$current_sha" != "$EXPECTED_SHA" ]]; then echo \'stale=true\' >> "$GITHUB_OUTPUT"; exit 0; fi',
     'true'
   );
   assert.ok(policies({ promote: unsafe }).some((finding) => finding.includes('current dev head')));
@@ -220,7 +244,7 @@ test('promotion ignores a stale push after dev moves beyond its event SHA', () =
 
 test('promotion rejects a stale event before fetching its comparison refs', () => {
   const unsafe = promote.replace(
-    'if [[ "$current_sha" != "$EXPECTED_SHA" ]]; then exit 0; fi\n          git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main refs/heads/dev:refs/remotes/origin/dev',
+    'if [[ "$current_sha" != "$EXPECTED_SHA" ]]; then echo \'stale=true\' >> "$GITHUB_OUTPUT"; exit 0; fi\n          git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main refs/heads/dev:refs/remotes/origin/dev',
     'git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main refs/heads/dev:refs/remotes/origin/dev\n          if [[ "$current_sha" != "$EXPECTED_SHA" ]]; then exit 0; fi'
   );
   assert.ok(
@@ -228,6 +252,12 @@ test('promotion rejects a stale event before fetching its comparison refs', () =
       finding.includes('before fetching promotion refs')
     )
   );
+});
+
+test('promotion exposes stale-event state and skips every later write-capable step', () => {
+  const unsafe = promote.replace('echo \'stale=true\' >> "$GITHUB_OUTPUT"; ', '');
+  const findings = policies({ promote: unsafe });
+  assert.ok(findings.some((finding) => finding.includes('expose stale-event state')));
 });
 
 test('promotion checks fail when sensitive and low-risk commands are moved between steps', () => {
