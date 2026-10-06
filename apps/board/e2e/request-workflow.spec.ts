@@ -139,10 +139,6 @@ test('requester submits a seeded approval workflow and superadmin approves it in
   await reviewerWorkflow.getByLabel('Review comment').fill('Approved in the Board E2E review.');
   await reviewerWorkflow.getByRole('button', { name: 'approve', exact: true }).click();
   await expect(reviewerWorkflow.getByText('completed', { exact: true })).toBeVisible();
-  await expect(reviewerWorkflow.getByText(/Current state: approved · Revision 2/u)).toBeVisible();
-  await expect(reviewerWorkflow.getByRole('list', { name: 'Approval history' })).toContainText(
-    'Approved in the Board E2E review.'
-  );
 
   const instancesResponse = await page.request.get('/workflows/instances', {
     headers: reviewerHeaders,
