@@ -76,9 +76,6 @@ async function main() {
   const eventSha = process.env.GITHUB_SHA;
   if (!repository || !repositoryId || !eventSha)
     throw new Error('GITHUB_REPOSITORY, GITHUB_REPOSITORY_ID and GITHUB_SHA are required.');
-  if (!process.env.GH_TOKEN && !process.env.GITHUB_TOKEN)
-    throw new Error('GH_TOKEN is required to read GitHub lifecycle facts.');
-
   execFileSync(
     process.execPath,
     [path.join(repositoryRoot, 'scripts/roadmap/validate-roadmap.mjs')],

@@ -48,8 +48,6 @@ export function evaluateTaskLifecycle(input) {
 
   let workStatus = input.status === 'todo' ? 'planned' : input.status;
   if (blockers.length && input.status !== 'complete') workStatus = 'blocked';
-  if (blockers.length && input.status === 'complete')
-    throw new Error('A complete task cannot have incomplete hard dependencies.');
 
   const sourceSha = input.sourceSha;
   let deliveryStage = 'planned';
@@ -138,6 +136,7 @@ export function evaluateTaskLifecycle(input) {
   const shouldClose =
     issueState === 'open' &&
     workStatus === 'complete' &&
+    blockers.length === 0 &&
     ['verified-dev', 'in-main', 'released'].includes(deliveryStage);
 
   return {

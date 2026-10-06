@@ -55,7 +55,7 @@ test('unfinished declared hard dependencies block work and are listed explicitly
   assert.equal(result.shouldClose, false);
 });
 
-test('complete status cannot be claimed without acceptance evidence and source SHA', () => {
+test('completion needs acceptance evidence; incomplete dependencies prevent issue close', () => {
   assert.throws(
     () =>
       evaluateTaskLifecycle({ taskId: 'M11.07', status: 'complete', acceptanceVerified: false }),
@@ -65,15 +65,14 @@ test('complete status cannot be claimed without acceptance evidence and source S
     () => evaluateTaskLifecycle({ taskId: 'M11.07', status: 'complete', acceptanceVerified: true }),
     /full source SHA/u
   );
-  assert.throws(
-    () =>
-      evaluateTaskLifecycle({
-        ...completed,
-        incompleteDependencyIds: ['M11.06'],
-        dependencyIds: ['M11.06'],
-      }),
-    /incomplete hard dependencies/u
-  );
+  const dependencyBlocked = evaluateTaskLifecycle({
+    ...completed,
+    incompleteDependencyIds: ['M11.06'],
+    dependencyIds: ['M11.06'],
+  });
+  assert.equal(dependencyBlocked.workStatus, 'complete');
+  assert.equal(dependencyBlocked.shouldClose, false);
+  assert.deepEqual(dependencyBlocked.blockers, ['Dependency M11.06 is not complete.']);
   const evidenceOnly = evaluateTaskLifecycle({
     taskId: 'M11.07',
     status: 'complete',
