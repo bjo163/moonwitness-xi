@@ -305,7 +305,7 @@ test('record chatter persists activity and attachment metadata with owner and pe
   await page.getByRole('button', { name: 'Delete attachment' }).click();
   await expect(page.getByText(attachmentName, { exact: true })).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Activities' }).click();
+  await page.getByRole('button', { name: 'Activities', exact: true }).click();
   await page.getByRole('button', { name: 'Delete activity' }).click();
   await expect(page.getByText(activitySummary, { exact: true })).toHaveCount(0);
 });
