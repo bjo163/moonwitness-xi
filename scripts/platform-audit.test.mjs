@@ -59,6 +59,8 @@ test('audit summarizes paginated inventory and compares a prior baseline', () =>
   assert.equal(report.trends.workflowRunCountDelta, -2);
   assert.equal(report.runtimeSupport.node.status, 'supported-on-audit-date');
   assert.match(report.limitations.join(' '), /Registry inventory unknown/u);
+  assert.match(report.limitations.join(' '), /read:packages/u);
+  assert.match(report.limitations.join(' '), /billing administrator/u);
   assert.equal(report.cleanupPlan.deletionSupported, false);
 });
 
@@ -192,6 +194,8 @@ test('audit rejects invalid provenance and never presents missing values as zero
   });
   assert.equal(report.inventory.packages.status, 'unknown');
   assert.equal(report.inventory.billing.status, 'unknown');
+  assert.match(report.limitations.join(' '), /read:packages/u);
+  assert.match(report.limitations.join(' '), /billing administrator/u);
   assert.equal(report.inventory.permissions.artifactAndLogRetentionDays, null);
   assert.equal(report.coverage.workflowRunHistoryMayBeTruncated, false);
 });

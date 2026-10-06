@@ -214,8 +214,16 @@ export function buildPlatformAudit(input) {
     },
     cleanupPlan: cleanup,
     limitations: [
-      ...(packages?.status === 'unknown' ? [`Registry inventory unknown: ${packages.reason}`] : []),
-      ...(billing?.status === 'unknown' ? [`Actions billing unknown: ${billing.reason}`] : []),
+      ...(packages?.status === 'unknown'
+        ? [
+            `Registry inventory unknown: ${packages.reason} Owner: repository administrator; follow-up: grant read:packages to the audit identity or record the access restriction and registry owner.`,
+          ]
+        : []),
+      ...(billing?.status === 'unknown'
+        ? [
+            `Actions billing unknown: ${billing.reason} Owner: organization/repository billing administrator; follow-up: review billing through the account UI or grant an authorized billing read capability.`,
+          ]
+        : []),
       ...(workflowRuns.length >= 1000
         ? ['Workflow run inventory reached the GitHub API result limit.']
         : []),
