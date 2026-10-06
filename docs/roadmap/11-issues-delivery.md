@@ -243,6 +243,8 @@ Simpan bukti aktual di `docs/roadmap/evidence/M11.12.md`. Jangan menandai aktiva
 
 Status-only push tidak bump; retry prepare tidak bump lagi; satu code change menghasilkan satu stable version per promotion batch.
 
+Regression integration fixture pada `scripts/release-loop.test.mjs` merangkai classifier/planner dan preparer: satu feature commit menghasilkan satu RC candidate; docs/status commits dan `chore(release)` preparation commit tidak mengubah candidate; rerun pada manifests/CHANGELOG hasil prepare menjadi `already-prepared` tanpa file write. Workflow issue plan hanya memiliki read permission untuk repo content dan issue apply mengubah Issues saja; tidak ada issue mapping/status commit kembali ke Git. Hosted release preparation masih menunggu workflow default-branch/auth gate M7.05 sehingga M11.13 tetap parsial.
+
 Simpan bukti aktual di `docs/roadmap/evidence/M11.13.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.
 
 ## M11.14 — Uji seluruh siklus roadmap → issue → commit → CI → PR → merge → release → status.

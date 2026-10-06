@@ -79,7 +79,7 @@
     "test:release-verify-attestations": "node --test scripts/verify-release-attestations.test.mjs",
     "test:release-prepare": "node --test scripts/prepare-release.test.mjs",
     "test:release-prepare-workflow": "node --test scripts/release-prepare-workflow.test.mjs",
-    "test:release-workflow": "node --test scripts/release-workflow.test.mjs",
+    "test:release-workflow": "node --test scripts/release-workflow.test.mjs scripts/release-loop.test.mjs",
     "test:release-latest-policy": "node --test scripts/release-latest-policy.test.mjs",
     "test:release-image-publish": "node --test scripts/publish-release-image.test.mjs",
     "promotion:risk": "node scripts/check-promotion-risk.mjs",
