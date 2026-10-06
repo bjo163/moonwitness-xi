@@ -15,6 +15,13 @@ test('Ubuntu candidate workflow compares supported and candidate images across c
   assert.deepEqual(validateUbuntuRunnerCandidate(source), []);
 });
 
+test('actionlint compatibility exception is limited to the published Ubuntu 26.04 label', async () => {
+  const source = await readFile(path.join(repositoryRoot, '.github/actionlint.yaml'), 'utf8');
+  assert.match(source, /\.github\/workflows\/ubuntu-runner-candidate\.yml:/u);
+  assert.match(source, /label "ubuntu-26\\\.04" is unknown/u);
+  assert.doesNotMatch(source, /ubuntu-runner-candidate\.yml:[\s\S]*?ignore:[\s\S]*?ubuntu-24/u);
+});
+
 test('Ubuntu candidate policy rejects unsafe runner and permission changes', () => {
   const source = `
 on:
