@@ -94,7 +94,12 @@ test('responsive protected screens fit and remain accessible in both themes', as
         (await page.locator('html').evaluate((element) => element.classList.contains('dark'))) !==
         (theme === 'dark')
       ) {
-        await page.getByRole('button', { name: 'Toggle theme' }).click();
+        if (size.name === 'mobile-375') {
+          await page.getByRole('button', { name: /^User menu for/u }).click();
+          await page.getByRole('menuitem', { name: 'Toggle theme' }).click();
+        } else {
+          await page.getByRole('button', { name: 'Toggle theme' }).click();
+        }
       }
 
       for (const view of views) {
@@ -115,8 +120,12 @@ test('responsive protected screens fit and remain accessible in both themes', as
           if (view.name === 'list') {
             await page.getByPlaceholder('Search partners...').fill('Acme Studio');
             const partnerRow = page.getByRole('row').filter({ hasText: 'Acme Studio' });
-            await expect(partnerRow.getByText('Acme Studio')).toBeVisible();
-            const countryValue = partnerRow.getByText('United States [US]', { exact: true });
+            await expect(
+              partnerRow.getByText('Acme Studio', { exact: true }).first()
+            ).toBeVisible();
+            const countryValue = partnerRow
+              .getByText('United States [US]', { exact: true })
+              .first();
             await expect(countryValue).toBeVisible();
             const countryOverflowsCell = await countryValue.evaluate((element) => {
               const cell = element.closest('td');
