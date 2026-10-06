@@ -210,9 +210,9 @@ jobs:
           test -n "$ARTIFACT_DIGEST"
           {
             echo '### Verified release image artifact'
-            echo "- Source SHA: `$SOURCE_SHA`"
-            echo "- Artifact ID: `$ARTIFACT_ID`"
-            echo "- Artifact digest: `$ARTIFACT_DIGEST`"
+            echo "- Source SHA: $SOURCE_SHA"
+            echo "- Artifact ID: $ARTIFACT_ID"
+            echo "- Artifact digest: $ARTIFACT_DIGEST"
           } >> "$GITHUB_STEP_SUMMARY"
 
   attest-artifact:
@@ -311,10 +311,12 @@ jobs:
           advance="$(jq -r '.advance' <<< "$plan")"
           reason="$(jq -r '.reason' <<< "$plan")"
           latest="$(jq -r '.latest // ""' <<< "$plan")"
-          echo "advance=$advance" >> "$GITHUB_OUTPUT"
-          echo "reason=$reason" >> "$GITHUB_OUTPUT"
-          echo "latest=$latest" >> "$GITHUB_OUTPUT"
-          echo "- Stable latest promotion: `$advance` (`$reason`; current stable release: `${latest:-none}`)." >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "advance=$advance"
+            echo "reason=$reason"
+            echo "latest=$latest"
+          } >> "$GITHUB_OUTPUT"
+          echo "- Stable latest promotion: $advance ($reason; current stable release: ${latest:-none})." >> "$GITHUB_STEP_SUMMARY"
       - name: Publish the verified API image to GitHub Container Registry
         id: publish_api
         env:
@@ -330,7 +332,7 @@ jobs:
           digest="$(jq -r '.digest' <<< "$result")"
           test -n "$digest"
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
-          echo "- API image publication: `$action`, `$digest`." >> "$GITHUB_STEP_SUMMARY"
+          echo "- API image publication: $action, $digest." >> "$GITHUB_STEP_SUMMARY"
       - name: Publish the verified Board image to GitHub Container Registry
         id: publish_board
         env:
@@ -346,7 +348,7 @@ jobs:
           digest="$(jq -r '.digest' <<< "$result")"
           test -n "$digest"
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
-          echo "- Board image publication: `$action`, `$digest`." >> "$GITHUB_STEP_SUMMARY"
+          echo "- Board image publication: $action, $digest." >> "$GITHUB_STEP_SUMMARY"
       - name: Resolve canonical OCI image names
         id: image_names
         env:
@@ -468,7 +470,7 @@ jobs:
           latest_digest="$(docker push "$image:latest" 2>&1 | tee /dev/stderr | grep -oE 'digest: sha256:[a-f0-9]{64}' | awk '{print $2}' | tail -n 1)"
           test -n "$latest_digest"
           test "$latest_digest" = "$VERSION_DIGEST"
-          echo "- API stable latest advanced to `$TAG` at `$latest_digest`." >> "$GITHUB_STEP_SUMMARY"
+          echo "- API stable latest advanced to $TAG at $latest_digest." >> "$GITHUB_STEP_SUMMARY"
       - name: Advance stable Board latest after release completion
         if: steps.latest_policy.outputs.advance == 'true'
         env:
@@ -482,4 +484,4 @@ jobs:
           latest_digest="$(docker push "$image:latest" 2>&1 | tee /dev/stderr | grep -oE 'digest: sha256:[a-f0-9]{64}' | awk '{print $2}' | tail -n 1)"
           test -n "$latest_digest"
           test "$latest_digest" = "$VERSION_DIGEST"
-          echo "- Board stable latest advanced to `$TAG` at `$latest_digest`." >> "$GITHUB_STEP_SUMMARY"
+          echo "- Board stable latest advanced to $TAG at $latest_digest." >> "$GITHUB_STEP_SUMMARY"
