@@ -37,3 +37,14 @@ test('unit runner records a safe phase name when it fails before writing a suite
   assert.match(unitRunner, /renderUnitRunnerFailureReport\(label, 1\)/u);
   assert.throws(() => renderUnitRunnerFailureReport('Build', 0), /non-zero exit code/u);
 });
+
+test('unit runner executes each workspace package suite only once', () => {
+  const suiteBlock = unitRunner.match(/const suites = \[([\s\S]*?)\n\];/u)?.[1];
+  assert.ok(suiteBlock, 'unit runner suite list should be present');
+
+  const packageNames = [...suiteBlock.matchAll(/packageName: '([^']+)'/gu)].map(
+    (match) => match[1]
+  );
+  assert.ok(packageNames.length > 0, 'unit runner should define workspace package suites');
+  assert.equal(new Set(packageNames).size, packageNames.length, 'package suites must be unique');
+});

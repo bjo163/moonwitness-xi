@@ -86,7 +86,6 @@ const suites = [
     coverage: ['src/manifest.ts', 'src/runtime.ts'],
   },
   { name: 'orm-request', packageName: '@moonwitness/orm-request', typecheck: true },
-  { name: 'orm-request', packageName: '@moonwitness/orm-request', typecheck: true },
   {
     name: 'orm-storage',
     packageName: '@moonwitness/orm-storage',
