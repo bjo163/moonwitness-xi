@@ -99,6 +99,17 @@ describe('workflow API authorization and lifecycle', () => {
     expect(
       definitions.json().data.map((definition: { code: string }) => definition.code)
     ).toContain('request.purchase_approval');
+    expect(definitions.json().data).toContainEqual(
+      expect.objectContaining({ code: 'request.purchase_approval', canStart: true })
+    );
+    const reviewerDefinitions = await request(
+      adminToken,
+      'GET',
+      '/workflows/definitions?resource_model=request.purchase'
+    );
+    expect(reviewerDefinitions.json().data).toContainEqual(
+      expect.objectContaining({ code: 'request.purchase_approval', canStart: false })
+    );
     const createdRequest = await request(userToken, 'POST', '/api/request.purchase', {
       title: 'Workflow API example',
       description: 'Demonstrate the request addon using generic model CRUD.',
@@ -139,6 +150,7 @@ describe('workflow API authorization and lifecycle', () => {
         definition_code: 'request.purchase_approval',
       },
     ]);
+    expect((await request(userToken, 'GET', '/workflows/instances?limit=10')).statusCode).toBe(400);
     expect(
       (await request(userToken, 'GET', `/workflows/instances/${instanceId}`)).json().data.events
     ).toHaveLength(1);
@@ -247,5 +259,77 @@ describe('workflow API authorization and lifecycle', () => {
       idempotency_key: 'api-workflow-start-0001',
     });
     expect(collision.statusCode).toBe(400);
+  });
+
+  it('hides workflow list, history, and decisions when the resource is outside the active company', async () => {
+    const otherCompany = await Company.query().insertAndFetch({ name: 'Other Workflow Company' });
+    const otherPartner = await Partner.query().insert({
+      name: 'Other company requester',
+      company_id: otherCompany.id,
+    });
+    const otherUser = await User.query().insertAndFetch({
+      login: 'other-company-requester',
+      password: USER_PASSWORD,
+      partner_id: otherPartner.id,
+      role: 'user',
+    });
+    await assignDefaultUserGroup(otherUser.id);
+    await CompanyMembership.query().insert({
+      user_id: otherUser.id,
+      company_id: otherCompany.id,
+      is_default: true,
+    });
+    const otherLogin = await app.inject({
+      method: 'POST',
+      url: '/auth/login',
+      payload: { login: otherUser.login, password: USER_PASSWORD },
+    });
+    const otherToken = otherLogin.json<LoginResponse>().data.access_token;
+    const currency = await Currency.query().findOne({ code: 'USD' }).throwIfNotFound();
+    const created = await request(otherToken, 'POST', '/api/request.purchase', {
+      title: 'Private company workflow',
+      description: 'This record belongs to another company.',
+      amount_minor: 12000,
+      currency_id: currency.id,
+      company_id: otherCompany.id,
+    });
+    expect(created.statusCode).toBe(201);
+    const otherResourceId = created.json().data.id as number;
+    const started = await request(otherToken, 'POST', '/workflows/instances', {
+      code: 'request.purchase_approval',
+      resource_model: 'request.purchase',
+      resource_id: otherResourceId,
+      idempotency_key: 'other-company-flow-start-01',
+    });
+    expect(started.statusCode).toBe(201);
+    const otherInstanceId = started.json().data.id as number;
+
+    expect(
+      (
+        await request(
+          userToken,
+          'GET',
+          `/workflows/instances?resource_model=request.purchase&resource_id=${otherResourceId}`
+        )
+      ).statusCode
+    ).toBe(404);
+    expect(
+      (await request(userToken, 'GET', `/workflows/instances/${otherInstanceId}`)).statusCode
+    ).toBe(404);
+    expect(
+      (
+        await request(userToken, 'POST', `/workflows/instances/${otherInstanceId}/actions`, {
+          action: 'submit',
+          expected_revision: 0,
+          idempotency_key: 'cross-company-action-01',
+        })
+      ).statusCode
+    ).toBe(404);
+    expect(
+      (await request(adminToken, 'GET', `/workflows/instances/${otherInstanceId}`)).statusCode
+    ).toBe(404);
+    expect(
+      (await request(otherToken, 'GET', `/workflows/instances/${otherInstanceId}`)).json().data
+    ).toMatchObject({ current_state: 'draft', revision: 0 });
   });
 });

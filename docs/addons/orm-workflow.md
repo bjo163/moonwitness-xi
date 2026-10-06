@@ -10,6 +10,6 @@ A definition is JSON validated when used and copied into each instance as an imm
 
 ## Runtime API
 
-Authenticated clients use `POST /workflows/instances` to start a definition on an authorized resource, `POST /workflows/instances/:id/actions` to transition it, and `GET /workflows/instances/:id` to read event/approval history. The routes check active company, model access, row rules, revision, role, and requester/reviewer separation. Generic CRUD/RPC for workflow internals is denied.
+Authenticated clients use `GET /workflows/definitions?resource_model=...` to discover definitions for roles that can start or transition them; each result includes `canStart` so reviewers cannot mistake participation for start permission. `POST /workflows/instances` starts a definition on an authorized resource, `GET /workflows/instances` requires a resource model/ID pair, `POST /workflows/instances/:id/actions` transitions it, and `GET /workflows/instances/:id` reads event/approval history. List, detail, start and action routes verify active-company scope, model read access and row rules for the associated resource. Revision, workflow role, and requester/reviewer separation are checked by the engine. Generic CRUD/RPC for workflow internals is denied.
 
 The workflow engine depends on `base`, `jobs`, and `notification`. API and worker processes install the declared dependencies before running expiry jobs or delivering outbox notifications. Schema/seed and expiry scheduling are programmatic; no SQL migration files are used.

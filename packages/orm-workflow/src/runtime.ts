@@ -29,6 +29,7 @@ export interface AvailableWorkflowDefinition {
   readonly name: string;
   readonly version: number;
   readonly startState: string;
+  readonly canStart: boolean;
   readonly transitions: readonly WorkflowTransitionDefinition[];
 }
 
@@ -245,13 +246,15 @@ export async function listAvailableWorkflowDefinitions(
     if (latest.has(definition.code)) continue;
     latest.add(definition.code);
     const config = parseConfig(definition.config);
-    if (!config.resourceModels.includes(resourceModel) || !config.startRoles.includes(role))
-      continue;
+    const canStart = config.startRoles.includes(role);
+    const canTransition = config.transitions.some((transition) => transition.roles.includes(role));
+    if (!config.resourceModels.includes(resourceModel) || (!canStart && !canTransition)) continue;
     available.push({
       code: definition.code,
       name: definition.name,
       version: definition.version,
       startState: config.startState,
+      canStart,
       transitions: config.transitions,
     });
   }

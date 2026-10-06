@@ -1,4 +1,4 @@
-import type { FastifyPluginAsync } from 'fastify';
+import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import { Registry, applyDomain } from '@moonwitness/orm';
 import {
   listAvailableWorkflowDefinitions,
@@ -79,6 +79,10 @@ function parseTransition(value: unknown): TransitionBody | null {
   };
 }
 
+function isWorkflowRole(role: string): role is WorkflowRole {
+  return role === 'system' || role === 'superadmin' || role === 'user';
+}
+
 function workflowFailure(error: unknown): { status: number; message: string } | null {
   if (!(error instanceof WorkflowError)) return null;
   const status =
@@ -92,6 +96,27 @@ function workflowFailure(error: unknown): { status: number; message: string } | 
           ? 409
           : 400;
   return { status, message: error.message };
+}
+
+async function canReadResource(
+  req: FastifyRequest,
+  resourceModel: string,
+  resourceId: number
+): Promise<boolean> {
+  const auth = req.auth;
+  if (!auth?.companyId) return false;
+  if (
+    !Registry.has(resourceModel) ||
+    !canAccess(auth.role, resourceModel, 'read', auth.groupPermissions)
+  )
+    return false;
+  const Model = req.env.get(resourceModel) as { fields?: Record<string, unknown> };
+  const fields = Model.fields;
+  const hasCompany = fields && ('company' in fields || 'company_id' in fields);
+  const query = req.env.get(resourceModel).query().where({ id: resourceId, active: true });
+  if (hasCompany) query.where({ company_id: auth.companyId });
+  const resource = await applyDomain(query, await getRecordRuleDomain(req, resourceModel)).first();
+  return resource !== undefined;
 }
 
 export const workflowRoutes: FastifyPluginAsync = async (fastify) => {
@@ -109,11 +134,10 @@ export const workflowRoutes: FastifyPluginAsync = async (fastify) => {
       !canAccess(req.auth.role, resourceModel, 'read', req.auth.groupPermissions)
     )
       return reply.code(404).send({ success: false, error: 'Resource not found' });
-    const data = await listAvailableWorkflowDefinitions(
-      fastify.db,
-      resourceModel,
-      req.auth.role as WorkflowRole
-    );
+    const role = req.auth.role;
+    if (!isWorkflowRole(role))
+      return reply.code(403).send({ success: false, error: 'Unsupported workflow role' });
+    const data = await listAvailableWorkflowDefinitions(fastify.db, resourceModel, role);
     return { success: true, data };
   });
 
@@ -132,22 +156,17 @@ export const workflowRoutes: FastifyPluginAsync = async (fastify) => {
       return reply
         .code(400)
         .send({ success: false, error: 'resource_model and resource_id are required together' });
-    let resourceId: number | undefined;
-    if (resourceModel !== undefined && resourceIdValue !== undefined) {
-      resourceId = Number(resourceIdValue);
-      if (
-        !Number.isSafeInteger(resourceId) ||
-        resourceId < 1 ||
-        !Registry.has(resourceModel) ||
-        !canAccess(req.auth.role, resourceModel, 'read', req.auth.groupPermissions)
-      )
-        return reply.code(404).send({ success: false, error: 'Resource not found' });
-      const resource = await applyDomain(
-        req.env.get(resourceModel).query().where({ id: resourceId, active: true }),
-        await getRecordRuleDomain(req, resourceModel)
-      ).first();
-      if (!resource) return reply.code(404).send({ success: false, error: 'Resource not found' });
-    }
+    if (resourceModel === undefined || resourceIdValue === undefined)
+      return reply
+        .code(400)
+        .send({ success: false, error: 'resource_model and resource_id are required' });
+    const resourceId = Number(resourceIdValue);
+    if (
+      !Number.isSafeInteger(resourceId) ||
+      resourceId < 1 ||
+      !(await canReadResource(req, resourceModel, resourceId))
+    )
+      return reply.code(404).send({ success: false, error: 'Resource not found' });
     const data = await fastify
       .db('workflow_instances')
       .leftJoin(
@@ -156,12 +175,9 @@ export const workflowRoutes: FastifyPluginAsync = async (fastify) => {
         'workflow_instances.definition_id'
       )
       .where({ 'workflow_instances.company_id': req.auth.companyId })
-      .modify((query) => {
-        if (resourceModel !== undefined && resourceId !== undefined)
-          query.where({
-            'workflow_instances.resource_model': resourceModel,
-            'workflow_instances.resource_id': resourceId,
-          });
+      .where({
+        'workflow_instances.resource_model': resourceModel,
+        'workflow_instances.resource_id': resourceId,
       })
       .orderBy('workflow_instances.create_date', 'desc')
       .limit(limit)
@@ -191,18 +207,8 @@ export const workflowRoutes: FastifyPluginAsync = async (fastify) => {
     const body = parseStart(req.body);
     if (!body)
       return reply.code(400).send({ success: false, error: 'Invalid workflow start request' });
-    if (
-      !Registry.has(body.resource_model) ||
-      !canAccess(req.auth.role, body.resource_model, 'read', req.auth.groupPermissions)
-    )
+    if (!(await canReadResource(req, body.resource_model, body.resource_id)))
       return reply.code(404).send({ success: false, error: 'Resource not found' });
-    const resourceModel = req.env.get(body.resource_model);
-    const domain = await getRecordRuleDomain(req, body.resource_model);
-    const resource = await applyDomain(
-      resourceModel.query().where({ id: body.resource_id, active: true }),
-      domain
-    ).first();
-    if (!resource) return reply.code(404).send({ success: false, error: 'Resource not found' });
     try {
       const data = await startWorkflow(fastify.db, {
         code: body.code,
@@ -248,6 +254,8 @@ export const workflowRoutes: FastifyPluginAsync = async (fastify) => {
         'create_date'
       );
     if (!data) return reply.code(404).send({ success: false, error: 'Workflow not found' });
+    if (!(await canReadResource(req, data.resource_model, data.resource_id)))
+      return reply.code(404).send({ success: false, error: 'Workflow not found' });
     const [events, approvals] = await Promise.all([
       fastify
         .db('workflow_events')
@@ -283,6 +291,12 @@ export const workflowRoutes: FastifyPluginAsync = async (fastify) => {
       const body = parseTransition(req.body);
       if (!Number.isSafeInteger(id) || id < 1 || !body)
         return reply.code(400).send({ success: false, error: 'Invalid workflow action request' });
+      const instance = await fastify
+        .db('workflow_instances')
+        .where({ id, company_id: req.auth.companyId })
+        .first('resource_model', 'resource_id');
+      if (!instance || !(await canReadResource(req, instance.resource_model, instance.resource_id)))
+        return reply.code(404).send({ success: false, error: 'Workflow not found' });
       try {
         const data = await transitionWorkflow(fastify.db, {
           instanceId: id,

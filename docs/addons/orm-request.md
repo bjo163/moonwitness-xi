@@ -8,12 +8,12 @@ The `request.purchase` model stores a title, business reason, amount in the curr
 
 ## Example approval
 
-The manifest seeds two draft request examples and a `request.purchase_approval` workflow definition. Users can start the workflow on a request through the authenticated generic workflow API. The definition supports submit, approve, and reject; approval is limited to superadmin/system roles and forbids the requester from approving their own request. Workflow events and approvals stay in the reusable workflow addon.
+The manifest seeds two draft request examples and a `request.purchase_approval` workflow definition. Users can start the workflow on a request through the authenticated generic workflow API. The definition supports submit, approve, and reject; approval is limited to superadmin/system roles and forbids the requester from approving their own request. Superadmin can review and decide but cannot initiate the seeded purchase flow; workflow discovery distinguishes `canStart` from transition eligibility. Workflow events and approvals stay in the reusable workflow addon.
 
 Three in-app notification templates cover submitted/approved/rejected states. The workflow definition opts into starter notifications for each successful transition; workflow events, state changes, and outbox events commit atomically, then delivery uses the shared consumer and recipient preferences. The addon does not send email or fabricate notification/history rows during installation.
 
 ## Install and verify
 
-The API installs this addon with the runtime addon set. Its manifest depends on `base`, `notification`, and `workflow`; addon dependency sorting determines install order. The Board uses the generated model view and menu metadata. The generic API exposes ordinary model CRUD and `/api/workflows/instances` for approval actions/history; no special request endpoint is required.
+The API installs this addon with the runtime addon set. Its manifest depends on `base`, `jobs`, `notification`, and `workflow`; addon dependency sorting determines install order. The Board uses the generated model view and menu metadata. The generic API exposes ordinary model CRUD and `/workflows/instances` for approval actions/history; no special request endpoint is required.
 
 Run `pnpm --filter @moonwitness/orm-request test` for the isolated addon contract, or `pnpm test:addon-conformance` for workspace-wide manifest, seed, and reinstall checks. The sample rows are safe demonstration data and can be edited without being overwritten on restart.

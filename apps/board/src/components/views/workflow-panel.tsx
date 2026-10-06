@@ -16,6 +16,7 @@ interface WorkflowDefinition {
   code: string;
   name: string;
   version: number;
+  canStart: boolean;
   transitions: readonly WorkflowTransition[];
 }
 
@@ -106,11 +107,12 @@ export function WorkflowPanel({ model, recordId }: { model: string; recordId: nu
   };
   const startMutation = useMutation({
     mutationFn: () => {
-      if (!definitions[0]) throw new Error('No approval workflow is available.');
+      const startableDefinition = definitions.find((candidate) => candidate.canStart);
+      if (!startableDefinition) throw new Error('No approval workflow is available to start.');
       return client.request('/workflows/instances', {
         method: 'POST',
         body: {
-          code: definitions[0].code,
+          code: startableDefinition.code,
           resource_model: model,
           resource_id: recordId,
           idempotency_key: crypto.randomUUID(),
@@ -158,7 +160,7 @@ export function WorkflowPanel({ model, recordId }: { model: string; recordId: nu
     );
   }
 
-  if (definitions.length === 0 && !instance) return null;
+  if (!instance && !definitions.some((candidate) => candidate.canStart)) return null;
 
   return (
     <section aria-labelledby="workflow-panel-title" className="ink-panel space-y-4 p-5">
@@ -175,9 +177,12 @@ export function WorkflowPanel({ model, recordId }: { model: string; recordId: nu
           </span>
         )}
       </div>
-      {(!instance || instance.status !== 'active') && definitions[0] ? (
+      {(!instance || instance.status !== 'active') &&
+      definitions.some((candidate) => candidate.canStart) ? (
         <Button onClick={() => startMutation.mutate()} disabled={startMutation.isPending}>
-          {startMutation.isPending ? 'Starting…' : `Start ${definitions[0].name}`}
+          {startMutation.isPending
+            ? 'Starting…'
+            : `Start ${definitions.find((candidate) => candidate.canStart)?.name ?? 'workflow'}`}
         </Button>
       ) : instance?.status === 'active' ? (
         <>

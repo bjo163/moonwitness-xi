@@ -7,7 +7,7 @@ import { views } from './views.js';
 
 const purchaseApproval = {
   startState: 'draft',
-  startRoles: ['user', 'superadmin', 'system'],
+  startRoles: ['user', 'system'],
   timeoutMinutes: 10080,
   resourceModels: [PurchaseRequest.modelName],
   transitions: [

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { manifest } from '../src/manifest.js';
 import {
   expireDueWorkflows,
+  listAvailableWorkflowDefinitions,
   startWorkflow,
   transitionWorkflow,
   WorkflowError,
@@ -68,6 +69,22 @@ describe('workflow addon', () => {
     expect(await database('workflow_definitions').count({ count: '*' }).first()).toMatchObject({
       count: 1,
     });
+  });
+
+  it('exposes reviewer workflows while distinguishing definitions the reviewer cannot start', async () => {
+    const database = await setup();
+    const definition = await database('workflow_definitions')
+      .where({ code: 'sample.request_approval' })
+      .first();
+    if (!definition) throw new Error('Example workflow definition is missing');
+    const config = JSON.parse(String(definition.config)) as Record<string, unknown>;
+    await database('workflow_definitions')
+      .where({ id: definition.id })
+      .update({ config: JSON.stringify({ ...config, startRoles: ['system'] }) });
+
+    await expect(
+      listAvailableWorkflowDefinitions(database, 'base.partner', 'user')
+    ).resolves.toMatchObject([{ code: 'sample.request_approval', canStart: false }]);
   });
 
   it('enforces submitter separation, optimistic revision, approval quorum, snapshots, and idempotent retries', async () => {
