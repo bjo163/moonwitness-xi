@@ -9,6 +9,8 @@ export JWT_SECRET='ci-only-secret-that-is-at-least-32-characters-long'
 export SUPERADMIN_PASSWORD='ci-smoke-superadmin-password'
 export API_PORT=3000
 
+# ShellCheck cannot follow the EXIT trap callback into this cleanup function.
+# shellcheck disable=SC2317
 cleanup() {
   local exit_code=$?
   if (( exit_code != 0 )); then

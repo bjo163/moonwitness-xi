@@ -59,6 +59,10 @@ test('the verified and scanned API and Board images are smoke-tested and handed 
     smokeScript,
     /::error title=Container smoke failed::Phase %s failed; inspect the authorized runner log for details\./u
   );
+  assert.match(
+    smokeScript,
+    /# ShellCheck cannot follow the EXIT trap callback into this cleanup function\.\s+# shellcheck disable=SC2317\s+cleanup\(\)/u
+  );
   assert.match(smokeScript, /trap cleanup EXIT/u);
   assert.match(verify, /docker save --output release-images\.tar/u);
   assert.match(verify, /docker image inspect moonwitness-api:production --format '\{\{\.Id\}\}'/u);
