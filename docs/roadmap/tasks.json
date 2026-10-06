@@ -1055,7 +1055,9 @@
       "milestone": "M9",
       "dependsOn": ["M0.05", "M9.06"],
       "output": "Post-extraction architecture review",
-      "detailFile": "docs/roadmap/09-addons.md"
+      "detailFile": "docs/roadmap/09-addons.md",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/M9.08.md"
     },
     {
       "id": "M10.01",

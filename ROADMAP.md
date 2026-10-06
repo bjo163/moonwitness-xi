@@ -184,7 +184,7 @@ Gate: audit fitur existing sebelum membuat package. Jalankan berurutan berdasark
 - [x] M9.05 Evaluasi `orm-organization`: departments, teams, positions, memberships dan manager berdasarkan kebutuhan produk.
 - [ ] M9.06 Berjalan: `orm-request` membuktikan addon bisnis generik dengan dua seed request, manifest/views/akses, API CRUD, alur submit/approve/reject, notifikasi outbox, history, dan panel Board reusable; tes package/API serta build Board lulus. Acceptance visual browser dan hosted check exact-SHA belum dibuktikan. [Evidence](docs/roadmap/evidence/M9.06.md).
 - [x] M9.07 Untuk tiap addon: manifest/dependencies, minimal public API, access isolation, views/menu, required/demo seeds, docs, upgrade path, tests, dan compatibility policy. Suite workspace memeriksa seluruh manifest runtime, install/reinstall dan seed preservation; API negative authorization lulus untuk model addon; installer upgrade hook teruji. [Evidence](docs/roadmap/evidence/M9.07.md).
-- [ ] M9.08 Audit ukuran base/API/Board setelah ekstraksi; package baru harus mengurangi coupling atau menghasilkan reuse yang terbukti.
+- [ ] M9.08 Partial: audit graph terbaru menunjukkan 20 package, 41 addon models, 66 relations, nol runtime/workspace cycles; Board route budget pass dan `orm-request` punya konsumen nyata. Baseline lama dengan toolchain/runner sama belum tersedia untuk membuktikan pengurangan ukuran; hosted Linux exact-SHA masih pending. [Evidence](docs/roadmap/evidence/M9.08.md).
 
 ## M10 — Acceptance dan pembuktian satu siklus nyata
 
