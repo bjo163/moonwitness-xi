@@ -208,7 +208,7 @@ test('container smoke reports the failing phase and preserves failures through c
     return;
   }
 
-  const bash = 'bash';
+  const bash = '/usr/bin/bash';
   const scriptPath = new globalThis.URL('./smoke-containers.sh', import.meta.url).pathname;
 
   const temp = await mkdtemp(join(tmpdir(), 'moonwitness-smoke-test-'));
@@ -218,8 +218,8 @@ test('container smoke reports the failing phase and preserves failures through c
   const logPath = join(temp, 'docker.log');
   const dockerPath = join(bin, 'docker');
   const curlPath = join(bin, 'curl');
-  const dockerMock = `#!/usr/bin/env bash\nprintf '%s\\n' "$*" >> "$SMOKE_TEST_DOCKER_LOG"\ncase " $* " in\n  *" up "*) [[ "\${SMOKE_TEST_FAIL_UP:-}" != true ]] || exit 42 ;;\n  *" down "*) [[ "\${SMOKE_TEST_FAIL_DOWN:-}" != true ]] || exit 55 ;;\n  *" logs "*) printf 'Graceful shutdown complete\\n' ;;\nesac\n`;
-  const curlMock = `#!/usr/bin/env bash\nurl="\${@: -1}"\n[[ "$url" != "\${SMOKE_TEST_FAIL_URL:-}" ]] || exit 22\ncase "$url" in\n  http://127.0.0.1:3000/) printf 'MoonWitness Enterprise ORM API\\n' ;;\n  http://127.0.0.1:3000/readyz) printf '{"status":"healthy"}\\n' ;;\n  http://127.0.0.1:4174/) printf 'MoonWitness Board\\n' ;;\nesac\n`;
+  const dockerMock = `#!/usr/bin/bash\nprintf '%s\\n' "$*" >> "$SMOKE_TEST_DOCKER_LOG"\ncase " $* " in\n  *" up "*) [[ "\${SMOKE_TEST_FAIL_UP:-}" != true ]] || exit 42 ;;\n  *" down "*) [[ "\${SMOKE_TEST_FAIL_DOWN:-}" != true ]] || exit 55 ;;\n  *" logs "*) printf 'Graceful shutdown complete\\n' ;;\nesac\n`;
+  const curlMock = `#!/usr/bin/bash\nurl="\${@: -1}"\n[[ "$url" != "\${SMOKE_TEST_FAIL_URL:-}" ]] || exit 22\ncase "$url" in\n  http://127.0.0.1:3000/) printf 'MoonWitness Enterprise ORM API\\n' ;;\n  http://127.0.0.1:3000/readyz) printf '{"status":"healthy"}\\n' ;;\n  http://127.0.0.1:4174/) printf 'MoonWitness Board\\n' ;;\nesac\n`;
   await writeFile(dockerPath, dockerMock);
   await writeFile(curlPath, curlMock);
   await chmod(dockerPath, 0o755);
@@ -237,26 +237,32 @@ test('container smoke reports the failing phase and preserves failures through c
         ...extraEnv,
       },
     });
-    return { ...result, dockerLog: await readFile(logPath, 'utf8') };
+    return {
+      ...result,
+      dockerLog: await readFile(logPath, 'utf8'),
+      failureOutput: [result.error?.message, result.stderr, result.stdout]
+        .filter(Boolean)
+        .join('\n'),
+    };
   };
 
   await t.test('compose-up failure stays nonzero after successful down', async () => {
     const result = await runSmoke({ SMOKE_TEST_FAIL_UP: 'true' });
-    assert.equal(result.status, 42, result.stderr);
-    assert.match(result.stderr, /Phase compose_up failed/u);
+    assert.equal(result.status, 42, result.failureOutput);
+    assert.match(result.failureOutput, /Phase compose_up failed/u);
     assert.match(result.dockerLog, /down --volumes --remove-orphans/u);
   });
 
   await t.test('health-check failure reports its phase and runs cleanup', async () => {
     const result = await runSmoke({ SMOKE_TEST_FAIL_URL: 'http://127.0.0.1:4174/' });
-    assert.equal(result.status, 22, result.stderr);
-    assert.match(result.stderr, /Phase board_root failed/u);
+    assert.equal(result.status, 22, result.failureOutput);
+    assert.match(result.failureOutput, /Phase board_root failed/u);
     assert.match(result.dockerLog, /down --volumes --remove-orphans/u);
   });
 
   await t.test('cleanup failure is surfaced after an otherwise successful smoke', async () => {
     const result = await runSmoke({ SMOKE_TEST_FAIL_DOWN: 'true' });
-    assert.equal(result.status, 55, result.stderr);
-    assert.match(result.stderr, /Phase cleanup failed/u);
+    assert.equal(result.status, 55, result.failureOutput);
+    assert.match(result.failureOutput, /Phase cleanup failed/u);
   });
 });
