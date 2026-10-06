@@ -4,6 +4,8 @@ import { createAuthService, manifest as authManifest } from '@moonwitness/auth';
 import { jobsManifest } from '@moonwitness/jobs';
 import { manifest as notificationManifest } from '@moonwitness/orm-notification';
 import { installAddons } from '@moonwitness/orm';
+import { config } from '../config/env.js';
+import { validateJwtSecret } from '../plugins/auth.plugin.js';
 import {
   Company,
   Partner,
@@ -33,6 +35,8 @@ const fixture = {
   login: 'restore-drill-user',
   email: 'restore-drill-user@example.test',
 } as const;
+const createFixtureAuthService = () =>
+  createAuthService({ refreshTokenSecret: validateJwtSecret(config.auth?.jwtSecret) });
 
 interface RestoreExpectations {
   counts: Record<(typeof tableNames)[number], string>;
@@ -129,7 +133,7 @@ async function seed(db: Knex, expectationsPath: string): Promise<void> {
     postal_code: '00010',
     is_primary: true,
   });
-  const session = await createAuthService().register({
+  const session = await createFixtureAuthService().register({
     login: fixture.login,
     password: requiredEnvironment('RESTORE_DRILL_PASSWORD'),
     name: 'Restore Drill User',
@@ -181,7 +185,7 @@ async function verify(db: Knex, expectationsPath: string): Promise<void> {
     'Synthetic user company membership was not restored'
   );
 
-  const session = await createAuthService().login(
+  const session = await createFixtureAuthService().login(
     fixture.login,
     requiredEnvironment('RESTORE_DRILL_PASSWORD')
   );

@@ -2,6 +2,8 @@ import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { createAuthService, RefreshToken } from '@moonwitness/auth';
 import { createDatabase } from '../database/knex.js';
+import { config } from '../config/env.js';
+import { validateJwtSecret } from '../plugins/auth.plugin.js';
 
 export interface RevokeAuthSessionsOptions {
   readonly apply: boolean;
@@ -112,7 +114,9 @@ async function main(args: readonly string[]): Promise<void> {
 
   const db = createDatabase();
   try {
-    const service = createAuthService();
+    const service = createAuthService({
+      refreshTokenSecret: validateJwtSecret(config.auth?.jwtSecret),
+    });
     if (!options.apply) {
       const outstandingCount = await RefreshToken.query().where({ revoked: false }).resultSize();
       process.stdout.write(

@@ -215,7 +215,10 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   // Install the handler before route plugins inherit their error handling scope.
   await app.register(healthRoutes, { metricsToken: options.metricsToken ?? config.metricsToken });
   await app.register(authRoutes, {
-    authService: createAuthService({ refreshTtlSeconds: authConfig.refreshTtlSeconds }),
+    authService: createAuthService({
+      refreshTtlSeconds: authConfig.refreshTtlSeconds,
+      refreshTokenSecret: jwtSecret,
+    }),
     accessTtlSeconds: authConfig.accessTtlSeconds,
     loginRateMax: options.loginRateMax ?? authConfig.loginRateMax,
   });

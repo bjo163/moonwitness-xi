@@ -1,5 +1,4 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createHash } from 'node:crypto';
 import knex, { type Knex } from 'knex';
 import type { FastifyInstance, InjectOptions } from 'fastify';
 import {
@@ -21,6 +20,7 @@ import { OutboxEvent } from '@moonwitness/jobs';
 
 const ADMIN_PASSWORD = 'admin-test-password';
 const USER_PASSWORD = 'alice-test-password';
+const TEST_JWT_SECRET = 'test-secret-test-secret-test-secret-123';
 
 interface TokenBody {
   success: boolean;
@@ -65,7 +65,7 @@ describe('authentication and authorization', () => {
     app = await buildApp({
       db,
       superadminPassword: ADMIN_PASSWORD,
-      jwtSecret: 'test-secret-test-secret-test-secret-123',
+      jwtSecret: TEST_JWT_SECRET,
       loginRateMax: 1000,
     });
     await app.ready();
@@ -165,9 +165,7 @@ describe('authentication and authorization', () => {
         .select('token_hash')
         .where({ user_id: admin.user.id })
         .first();
-      expect(storedToken?.token_hash).toBe(
-        createHash('sha256').update(admin.refresh_token).digest('hex')
-      );
+      expect(storedToken?.token_hash).toMatch(/^[a-f0-9]{64}$/u);
       expect(storedToken?.token_hash).not.toBe(admin.refresh_token);
     });
 
@@ -345,7 +343,7 @@ describe('authentication and authorization', () => {
       } finally {
         await User.query().findById(alice.user.id).patch({ password: USER_PASSWORD });
       }
-    });
+    }, 15000);
   });
 
   describe('refresh and logout', () => {

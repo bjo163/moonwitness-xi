@@ -33,6 +33,8 @@ import { buildApp } from '../src/app.js';
 import { verifyDefaultBaseAccounts } from '../src/startup-checks.js';
 import { createPostgresKnexConfig } from '../src/config/knexfile.js';
 
+const POSTGRES_TEST_REFRESH_SECRET = 'postgres-integration-refresh-secret-32chars';
+
 const connectionString = process.env.POSTGRES_TEST_URL;
 if (process.env.REQUIRE_POSTGRES_TESTS === 'true' && !connectionString) {
   throw new Error('POSTGRES_TEST_URL is required when REQUIRE_POSTGRES_TESTS=true');
@@ -198,14 +200,22 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     ).rejects.toThrow();
 
     await initializeSuperadminPassword('postgres-integration-password');
-    const session = await createAuthService().login('superadmin', 'postgres-integration-password');
+    const session = await createAuthService({
+      refreshTokenSecret: POSTGRES_TEST_REFRESH_SECRET,
+    }).login('superadmin', 'postgres-integration-password');
     const parallelRotations = await Promise.all(
-      Array.from({ length: 6 }, () => createAuthService().refresh(session.refreshToken))
+      Array.from({ length: 6 }, () =>
+        createAuthService({ refreshTokenSecret: POSTGRES_TEST_REFRESH_SECRET }).refresh(
+          session.refreshToken
+        )
+      )
     );
     expect(parallelRotations).toHaveLength(6);
     expect(new Set(parallelRotations.map(({ refreshToken }) => refreshToken)).size).toBe(6);
     await expect(
-      createAuthService().refresh(parallelRotations[0]!.refreshToken)
+      createAuthService({ refreshTokenSecret: POSTGRES_TEST_REFRESH_SECRET }).refresh(
+        parallelRotations[0]!.refreshToken
+      )
     ).resolves.toMatchObject({
       userId: session.userId,
     });

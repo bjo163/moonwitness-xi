@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import type { FastifyPluginAsync } from 'fastify';
 import { AuthError, ConflictError, type AuthService, type AuthSession } from '@moonwitness/auth';
 
@@ -127,7 +126,7 @@ export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (fastify,
     },
     async (req, reply) => {
       try {
-        const tokenKey = createHash('sha256').update(req.body.refresh_token).digest('hex');
+        const tokenKey = authService.fingerprintRefreshToken(req.body.refresh_token);
         let entry = refreshInFlight.get(tokenKey);
         if (!entry) {
           const promise = authService.refresh(req.body.refresh_token, {

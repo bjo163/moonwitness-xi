@@ -8,7 +8,10 @@ const PASSWORD = 'correct-horse-battery';
 
 describe('auth service', () => {
   let db: Knex;
-  const auth = createAuthService({ refreshTtlSeconds: 60 });
+  const auth = createAuthService({
+    refreshTtlSeconds: 60,
+    refreshTokenSecret: 'test-refresh-token-secret-which-is-long-enough',
+  });
 
   beforeEach(async () => {
     db = knex({
@@ -23,7 +26,7 @@ describe('auth service', () => {
     await db.destroy();
   });
 
-  it('logs in with valid credentials and stores only a hash of the refresh token', async () => {
+  it('stores keyed refresh-token fingerprints and rejects a different server key', async () => {
     const session = await auth.login('superadmin', PASSWORD, { userAgent: 'vitest' });
     expect(session).toMatchObject({ login: 'superadmin', role: 'superadmin' });
     const rows = await RefreshToken.query();
@@ -31,6 +34,11 @@ describe('auth service', () => {
     expect(rows[0].token_hash).not.toBe(session.refreshToken);
     expect(rows[0].token_hash).toMatch(/^[a-f0-9]{64}$/);
     expect(rows[0].user_agent).toBe('vitest');
+    await expect(
+      createAuthService({
+        refreshTokenSecret: 'different-refresh-token-secret-long-enough',
+      }).refresh(session.refreshToken)
+    ).rejects.toBeInstanceOf(AuthError);
   }, 20000);
 
   it('registers a new user with partner and prevents duplicate logins', async () => {

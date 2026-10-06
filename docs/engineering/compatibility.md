@@ -36,7 +36,12 @@ Consumers must not import package internals such as `@moonwitness/orm/dist/...` 
 3. Deploy compatible API/Board/client packages together when a change affects their shared contract. Keep old clients working during the deprecation window; additive fields should not become required in an existing response.
 4. Addon authors must provide an explicit version-to-version programmatic upgrade hook for data transformations. Preserve existing records, user edits, and seed external IDs. Hooks run transactionally; do not assume there is a down migration. If a forward hook fails, verify rollback on a disposable database and correct the addon before retrying.
 5. For session-contract changes, document whether access tokens, refresh tokens, stored SDK state, or active sessions are invalidated. If invalidation is unavoidable, require users to sign in again and state that consequence before rollout; never silently reinterpret an old token.
-6. After upgrade, verify addon versions, seed references, login/refresh/logout, client model reads/writes, and application-specific integrity checks. Retain the pre-upgrade backup until those checks pass.
+
+The refresh-token index now uses a keyed HMAC derived from `JWT_SECRET`. The first release
+of this format intentionally invalidates refresh tokens issued before the upgrade because
+their database fingerprints were unkeyed SHA-256 values. Plan a one-time sign-in for all
+users during rollout; future fingerprint format changes must use an explicit versioned
+key transition rather than silently changing the digest. 6. After upgrade, verify addon versions, seed references, login/refresh/logout, client model reads/writes, and application-specific integrity checks. Retain the pre-upgrade backup until those checks pass.
 
 ## Contract verification
 
