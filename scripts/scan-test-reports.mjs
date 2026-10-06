@@ -19,8 +19,12 @@ export function assertReportsAreSanitized(contents) {
 
 export function assertRequiredTestReports(files) {
   const basenames = files.map((file) => path.basename(file));
-  if (basenames.includes('board-e2e.xml') && !basenames.includes('board-e2e-retries.json')) {
-    throw new Error('Playwright JUnit exists but its retry-diagnostics report is missing.');
+  for (const suite of ['board-e2e', 'ui-catalog']) {
+    if (basenames.includes(`${suite}.xml`) && !basenames.includes(`${suite}-retries.json`)) {
+      throw new Error(
+        `Playwright ${suite} JUnit exists but its retry-diagnostics report is missing.`
+      );
+    }
   }
   if (
     basenames.includes('postgres.xml') &&

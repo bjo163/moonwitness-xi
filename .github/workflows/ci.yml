@@ -293,6 +293,7 @@ jobs:
           name: ui-catalog-playwright-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             test-results/junit/ui-catalog.xml
+            test-results/junit/ui-catalog-retries.json
             test-results/ui-catalog/**/*.png
           if-no-files-found: ignore
           retention-days: 7

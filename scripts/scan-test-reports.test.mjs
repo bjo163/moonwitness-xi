@@ -29,6 +29,10 @@ test('rejects credentials, cookies, and connection-string passwords', () => {
 test('requires retry diagnostics whenever a Playwright JUnit report exists', () => {
   assert.throws(() => assertRequiredTestReports(['board-e2e.xml']), /retry-diagnostics/u);
   assert.doesNotThrow(() => assertRequiredTestReports(['board-e2e.xml', 'board-e2e-retries.json']));
+  assert.throws(() => assertRequiredTestReports(['ui-catalog.xml']), /retry-diagnostics/u);
+  assert.doesNotThrow(() =>
+    assertRequiredTestReports(['ui-catalog.xml', 'ui-catalog-retries.json'])
+  );
   assert.doesNotThrow(() => assertRequiredTestReports(['api.xml']));
 });
 
