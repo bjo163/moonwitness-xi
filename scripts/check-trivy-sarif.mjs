@@ -7,6 +7,21 @@ function fail(message) {
   process.exitCode = 1;
 }
 
+function annotateCriticalFindings(findings) {
+  const ids = [
+    ...new Set(
+      findings.map((finding) =>
+        /^[A-Za-z0-9._:-]{1,80}$/u.test(finding.id) ? finding.id : 'unrecognized-id'
+      )
+    ),
+  ];
+  const visibleIds = ids.slice(0, 10);
+  const remaining = ids.length - visibleIds.length;
+  const summary = visibleIds.length > 0 ? visibleIds.join(', ') : 'no finding IDs available';
+  const suffix = remaining > 0 ? `, and ${remaining} more` : '';
+  process.stdout.write(`::error title=Trivy CRITICAL findings::${summary}${suffix}\n`);
+}
+
 const files = process.argv.slice(2);
 let outcomes;
 try {
@@ -34,10 +49,9 @@ try {
   }
   const result = evaluateScanResult({ exitCode: 0, findings });
   if (!result.passed) {
+    annotateCriticalFindings(result.blockingFindings);
     fail(
-      `Blocked by ${result.blockingFindings.length} CRITICAL vulnerability finding(s): ${result.blockingFindings
-        .map((finding) => finding.id)
-        .join(', ')}`
+      `Blocked by ${result.blockingFindings.length} CRITICAL vulnerability finding(s); see the workflow annotation for safe finding IDs.`
     );
   } else {
     process.stdout.write(
@@ -45,5 +59,7 @@ try {
     );
   }
 } catch (error) {
-  fail(`Trivy SARIF validation failed: ${error.message}`);
+  fail(
+    'Trivy SARIF validation failed; inspect the scanner artifact in the authorized workflow context.'
+  );
 }

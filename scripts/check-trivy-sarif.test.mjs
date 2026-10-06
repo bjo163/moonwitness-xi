@@ -52,6 +52,15 @@ test('SARIF gate blocks CRITICAL findings', () => {
   const result = runGate([report('CRITICAL')]);
   equal(result.status, 1);
   equal(result.stderr.includes('1 CRITICAL vulnerability'), true);
+  equal(result.stdout.includes('::error title=Trivy CRITICAL findings::fixture'), true);
+  equal(result.stdout.includes('scan-0.sarif'), false);
+});
+
+test('SARIF annotations sanitize untrusted finding IDs', () => {
+  const result = runGate([report('CRITICAL', 'CVE-TEST\n::notice title=forged::')]);
+  equal(result.status, 1);
+  equal(result.stdout.includes('::error title=Trivy CRITICAL findings::unrecognized-id'), true);
+  equal(result.stdout.includes('forged'), false);
 });
 
 test('SARIF gate blocks scanner errors even when a report is otherwise clean', () => {
@@ -63,5 +72,6 @@ test('SARIF gate blocks scanner errors even when a report is otherwise clean', (
 test('SARIF gate fails closed for malformed scanner output', () => {
   const result = runGate([{ runs: [] }]);
   equal(result.status, 1);
-  equal(result.stderr.includes('SARIF must contain at least one run'), true);
+  equal(result.stderr.includes('Trivy SARIF validation failed'), true);
+  equal(result.stderr.includes('SARIF must contain at least one run'), false);
 });

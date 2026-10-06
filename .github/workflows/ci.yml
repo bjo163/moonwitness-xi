@@ -206,7 +206,12 @@ jobs:
       - name: Install Chromium and operating-system dependencies
         run: pnpm exec playwright install --with-deps chromium
       - name: Run Board browser tests
+        id: board_e2e
         run: pnpm test:e2e
+      - name: Annotate failed Board testcase names
+        if: always() && steps.board_e2e.outcome == 'failure'
+        continue-on-error: true
+        run: node scripts/summarize-playwright-failures.mjs test-results/junit/board-e2e.xml
       - name: Test documentation portal routing, search, and responsive navigation
         run: pnpm test:docs-portal
       - name: Scan browser reports for secrets before artifact upload
