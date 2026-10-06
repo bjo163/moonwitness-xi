@@ -33,7 +33,7 @@ jobs:
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
-          pnpm-version: '11'
+          pnpm-version: '11.17.0'
       - name: Select affected CI projects (promotion is always full)
         id: affected
         env:
@@ -75,7 +75,7 @@ jobs:
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
-          pnpm-version: '11'
+          pnpm-version: '11.17.0'
       - run: pnpm lint
       - run: pnpm format:check
       - run: pnpm typecheck
@@ -97,7 +97,7 @@ jobs:
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
-          pnpm-version: '11'
+          pnpm-version: '11.17.0'
       - name: Lint workflows with actionlint
         run: bash scripts/check-automation.sh actionlint
       - name: Check shell syntax
@@ -152,7 +152,7 @@ jobs:
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
-          pnpm-version: '11'
+          pnpm-version: '11.17.0'
       - name: Run unit tests and write JUnit reports
         run: pnpm test:unit:ci
       - run: pnpm test:integration
@@ -204,7 +204,7 @@ jobs:
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
-          pnpm-version: '11'
+          pnpm-version: '11.17.0'
       - name: Install Chromium and operating-system dependencies
         run: pnpm exec playwright install --with-deps chromium
       - name: Run Board browser tests
@@ -247,7 +247,7 @@ jobs:
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
-          pnpm-version: '11'
+          pnpm-version: '11.17.0'
       - name: Install Chromium and operating-system dependencies
         run: pnpm exec playwright install --with-deps chromium
       - name: Test shared UI package public exports and component contracts
@@ -361,7 +361,7 @@ jobs:
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
-          pnpm-version: '11'
+          pnpm-version: '11.17.0'
       - name: Test CI gate decisions
         run: pnpm test:ci-gate && pnpm test:artifact-safety
       - name: Write CI job summary

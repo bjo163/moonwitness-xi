@@ -42,7 +42,7 @@ jobs:
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
-          pnpm-version: '11'
+          pnpm-version: '11.17.0'
       - name: Verify checkout and prepare release files
         env:
           EXPECTED_SOURCE_SHA: ${{ inputs.expected_dev_sha }}

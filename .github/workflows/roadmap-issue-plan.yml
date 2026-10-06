@@ -52,7 +52,7 @@ jobs:
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
-          pnpm-version: '11'
+          pnpm-version: '11.17.0'
       - name: Plan exact source SHA without issue writes
         run: |
           args=(--quiet)
@@ -88,7 +88,7 @@ jobs:
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
-          pnpm-version: '11'
+          pnpm-version: '11.17.0'
       - name: Apply selected tasks with fresh-state and retry guards
         run: |
           if [[ -z "$TASK_IDS" ]]; then

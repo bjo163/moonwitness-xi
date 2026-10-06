@@ -6,9 +6,9 @@ inputs:
     required: false
     default: '22'
   pnpm-version:
-    description: pnpm major used by repository workflows
+    description: Exact pnpm version pinned by the workspace
     required: false
-    default: '11'
+    default: '11.17.0'
 runs:
   using: composite
   steps:

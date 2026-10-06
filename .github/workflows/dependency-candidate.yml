@@ -54,7 +54,7 @@ jobs:
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
-          pnpm-version: '11'
+          pnpm-version: '11.17.0'
       - name: Record current dev source SHA
         id: source
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
@@ -80,7 +80,7 @@ jobs:
           set -euo pipefail
           cd "$RUNNER_TEMP/candidate"
           corepack enable
-          corepack prepare pnpm@11 --activate
+          corepack prepare pnpm@11.17.0 --activate
           node scripts/dependency-candidate.mjs --package "$PACKAGE" --version "$VERSION" --source-sha "$SOURCE_SHA" --expected-source-sha "$SOURCE_SHA" --root "$RUNNER_TEMP/candidate"
       - name: Validate patch/minor promotion risk
         run: node scripts/check-promotion-risk.mjs "${{ steps.source.outputs.sha }}" HEAD --summary

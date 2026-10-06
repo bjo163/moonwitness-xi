@@ -49,7 +49,7 @@ jobs:
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
-          pnpm-version: '11'
+          pnpm-version: '11.17.0'
       - name: Install Chromium and operating-system dependencies
         run: pnpm exec playwright install --with-deps chromium
       - name: Render approved comparison candidates

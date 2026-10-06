@@ -1,6 +1,40 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { findUnpinnedActions, pnpmSetupOrderValid } from './check-action-pins.mjs';
+import {
+  findPnpmVersionDrift,
+  findUnpinnedActions,
+  pnpmSetupOrderValid,
+} from './check-action-pins.mjs';
+
+test('requires one exact pnpm version across workflow setup and the workspace manifest', () => {
+  assert.deepEqual(
+    findPnpmVersionDrift(
+      [
+        {
+          path: '.github/actions/setup-pnpm/action.yml',
+          content: "default: '11.17.0'",
+        },
+        {
+          path: '.github/workflows/ci.yml',
+          content: "pnpm-version: '11.17.0'",
+        },
+        {
+          path: '.github/workflows/candidate.yml',
+          content: 'corepack prepare pnpm@11.17.0 --activate',
+        },
+      ],
+      'pnpm@11.17.0'
+    ),
+    []
+  );
+  assert.equal(
+    findPnpmVersionDrift(
+      [{ path: '.github/workflows/ci.yml', content: "pnpm-version: '11'" }],
+      'pnpm@11.17.0'
+    )[0]?.reason,
+    'must match the root packageManager pnpm@11.17.0'
+  );
+});
 
 test('installs pnpm 11 with a Node runtime and required frozen lockfile', () => {
   assert.equal(

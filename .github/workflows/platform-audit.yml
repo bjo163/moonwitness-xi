@@ -77,7 +77,7 @@ jobs:
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
-          pnpm-version: '11'
+          pnpm-version: '11.17.0'
       - name: Upsert the monthly platform audit incident
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -108,7 +108,7 @@ jobs:
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
-          pnpm-version: '11'
+          pnpm-version: '11.17.0'
       - name: Resolve the incident after a complete successful audit
         env:
           GITHUB_TOKEN: ${{ github.token }}
