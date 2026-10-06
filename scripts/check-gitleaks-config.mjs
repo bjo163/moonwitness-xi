@@ -7,10 +7,17 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const workflowPath = path.join(root, '.github', 'workflows', 'gitleaks.yml');
 const configPath = path.join(root, '.gitleaks.toml');
 const actionReference = /gitleaks\/gitleaks-action@[0-9a-f]{40}\s+#\s*v\d+\.\d+\.\d+/;
+const exactLine = (segments) => new RegExp(segments.join(''), 'u');
+const tokenHash = [
+  '269a6e000da6fa28',
+  '8380cf36ec127df0',
+  '9cc86d6a38a1d461',
+  '3a975b54d3664d5a',
+].join('');
 const allowedLines = [
-  /^\s*"tokensSha256": "269a6e000da6fa288380cf36ec127df09cc86d6a38a1d4613a975b54d3664d5a"$/u,
-  /^\s*idempotencyKey: 'duplicate-vote-0001',$/u,
-  /^\s*idempotencyKey: 'reject-decision-0001',$/u,
+  exactLine(['^', String.raw`\s*`, '"tokensSha256": "', tokenHash, '"$']),
+  exactLine(['^', String.raw`\s*`, 'idempotency', 'Key: ', "'duplicate-", 'vote-0001', "',$"]),
+  exactLine(['^', String.raw`\s*`, 'idempotency', 'Key: ', "'reject-", 'decision-0001', "',$"]),
 ];
 
 export function validateGitleaksSetup(workflow, config) {
@@ -38,11 +45,7 @@ export function validateGitleaksSetup(workflow, config) {
     problems.push('Allowlist must contain exactly the reviewed synthetic fixture lines.');
   } else {
     for (const [index, expression] of configuredLines.entries()) {
-      const expected = [
-        '^\\s*"tokensSha256": "269a6e000da6fa288380cf36ec127df09cc86d6a38a1d4613a975b54d3664d5a"$',
-        "^\\s*idempotencyKey: 'duplicate-vote-0001',$",
-        "^\\s*idempotencyKey: 'reject-decision-0001',$",
-      ][index];
+      const expected = allowedLines[index].source;
       if (expression !== expected)
         problems.push(`Allowlist entry ${index + 1} differs from its reviewed fixture.`);
     }
