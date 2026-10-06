@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { planMaintainerIssueIntake } from './issue-intake.mjs';
-import { normalizeGitHubIssueComment } from './github-issue-intake.mjs';
+import {
+  normalizeGitHubIssueComment,
+  planAuthorizedGitHubIssueComment,
+} from './github-issue-intake.mjs';
 
 const baseEvent = {
   repositoryId: '123456789',
@@ -22,7 +25,7 @@ const input = {
 
 const webhookPayload = {
   action: 'created',
-  repository: { id: 123456789 },
+  repository: { id: 123456789, full_name: 'owner/repo' },
   issue: {
     number: 42,
     body: '<!-- moonwitness-task: 123456789:M11.08 -->\nManaged roadmap task.',
@@ -157,6 +160,153 @@ test('normalizer rejects duplicate identity markers and malformed command argume
   assert.deepEqual(
     normalizeGitHubIssueComment({ payload: webhookPayload, expectedRepositoryId: '../main' }),
     { disposition: 'rejected', reason: 'invalid-expected-repository-id' }
+  );
+});
+
+test('authorized adapter checks current write permission and emits only an inert proposal', async () => {
+  const requests = [];
+  const result = await planAuthorizedGitHubIssueComment({
+    payload: webhookPayload,
+    expectedRepositoryId: '123456789',
+    owner: 'owner',
+    repo: 'repo',
+    token: 'test-secret',
+    fetchImpl: async (url, options) => {
+      requests.push({ url, options });
+      return { status: 200, ok: true, json: async () => ({ permission: 'write' }) };
+    },
+  });
+  assert.equal(result.disposition, 'proposal');
+  assert.equal(result.deliveryId, 'issue_comment_7001');
+  assert.equal(result.proposal.actor, 'trusted-maintainer');
+  assert.equal(requests.length, 1);
+  assert.equal(
+    requests[0].url,
+    'https://api.github.com/repos/owner/repo/collaborators/trusted-maintainer/permission'
+  );
+  assert.equal(requests[0].options.method, 'GET');
+  assert.equal(requests[0].options.body, undefined);
+  assert.equal(requests[0].options.headers.Authorization, 'Bearer test-secret');
+  assert.equal(requests[0].options.headers.Accept, 'application/vnd.github+json');
+  assert.equal(requests[0].options.headers['X-GitHub-Api-Version'], '2022-11-28');
+});
+
+test('authorized adapter fails closed for missing collaborator or insufficient permission', async () => {
+  const invoke = (response) =>
+    planAuthorizedGitHubIssueComment({
+      payload: webhookPayload,
+      expectedRepositoryId: '123456789',
+      owner: 'owner',
+      repo: 'repo',
+      token: 'test-secret',
+      fetchImpl: async () => response,
+    });
+  assert.deepEqual(await invoke({ status: 404, ok: false }), {
+    disposition: 'ignored',
+    reason: 'actor-not-repository-collaborator',
+  });
+  assert.deepEqual(
+    await invoke({ status: 200, ok: true, json: async () => ({ permission: 'read' }) }),
+    {
+      disposition: 'ignored',
+      reason: 'actor-lacks-maintainer-permission',
+    }
+  );
+  const admin = await invoke({
+    status: 200,
+    ok: true,
+    json: async () => ({ permission: 'admin' }),
+  });
+  assert.equal(admin.disposition, 'proposal');
+});
+
+test('authorized adapter does not query untrusted, unmanaged or non-command events', async () => {
+  let requestCount = 0;
+  const fetchImpl = async () => {
+    requestCount += 1;
+    return { status: 200, ok: true, json: async () => ({ permission: 'write' }) };
+  };
+  for (const payload of [
+    { ...webhookPayload, action: 'edited' },
+    {
+      ...webhookPayload,
+      comment: { ...webhookPayload.comment, user: { login: 'sync[bot]', type: 'Bot' } },
+    },
+    {
+      ...webhookPayload,
+      comment: { ...webhookPayload.comment, body: 'ordinary discussion' },
+    },
+  ]) {
+    const result = await planAuthorizedGitHubIssueComment({
+      payload,
+      expectedRepositoryId: '123456789',
+      owner: 'owner',
+      repo: 'repo',
+      token: 'test-secret',
+      fetchImpl,
+    });
+    assert.notEqual(result.disposition, 'proposal');
+  }
+  assert.equal(requestCount, 0);
+});
+
+test('authorized adapter rejects wrong repository name and safely reports verification failures', async () => {
+  let requestCount = 0;
+  const wrongRepository = await planAuthorizedGitHubIssueComment({
+    payload: { ...webhookPayload, repository: { id: 123456789, full_name: 'fork/repo' } },
+    expectedRepositoryId: '123456789',
+    owner: 'owner',
+    repo: 'repo',
+    token: 'secret-value',
+    fetchImpl: async () => {
+      requestCount += 1;
+    },
+  });
+  assert.deepEqual(wrongRepository, { disposition: 'ignored', reason: 'repository-name-mismatch' });
+  assert.equal(requestCount, 0);
+
+  await assert.rejects(
+    planAuthorizedGitHubIssueComment({
+      payload: webhookPayload,
+      expectedRepositoryId: '123456789',
+      owner: 'owner',
+      repo: 'repo',
+      token: 'secret-value',
+      fetchImpl: async () => ({ status: 403, ok: false }),
+    }),
+    (error) =>
+      error.message === 'GitHub actor permission could not be verified (HTTP 403).' &&
+      !error.message.includes('secret-value')
+  );
+  await assert.rejects(
+    planAuthorizedGitHubIssueComment({
+      payload: webhookPayload,
+      expectedRepositoryId: '123456789',
+      owner: 'owner',
+      repo: 'repo',
+      token: 'secret-value',
+      fetchImpl: async () => ({
+        status: 200,
+        ok: true,
+        json: async () => {
+          throw new Error('secret-value');
+        },
+      }),
+    }),
+    (error) =>
+      error.message === 'GitHub actor permission response was invalid.' &&
+      !error.message.includes('secret-value')
+  );
+  await assert.rejects(
+    planAuthorizedGitHubIssueComment({
+      payload: webhookPayload,
+      expectedRepositoryId: '123456789',
+      owner: 'owner',
+      repo: 'repo',
+      token: 'secret-value',
+      fetchImpl: async () => ({ status: 200, ok: true, json: async () => null }),
+    }),
+    /permission response was invalid/u
   );
 });
 

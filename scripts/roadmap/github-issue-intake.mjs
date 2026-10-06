@@ -1,3 +1,5 @@
+import { planMaintainerIssueIntake } from './issue-intake.mjs';
+
 const taskIdPattern = /^M(?:0|[1-9][0-9]*)\.[0-9]{2}$/u;
 const markerPattern =
   /^<!-- moonwitness-task: ([1-9][0-9]*):(M(?:0|[1-9][0-9]*)\.[0-9]{2}) -->$/gmu;
@@ -17,10 +19,14 @@ function positiveSafeInteger(value) {
  * webhook delivery; this adapter performs shape/identity checks only and has
  * no network or mutation capability.
  *
- * @param {{payload: unknown, expectedRepositoryId: string}} input
+ * @param {{payload: unknown, expectedRepositoryId: string, expectedRepositoryName?: string}} input
  * @returns {{disposition: 'event', event: Record<string, unknown>} | {disposition: 'ignored'|'rejected', reason: string}}
  */
-export function normalizeGitHubIssueComment({ payload, expectedRepositoryId }) {
+export function normalizeGitHubIssueComment({
+  payload,
+  expectedRepositoryId,
+  expectedRepositoryName,
+}) {
   if (typeof expectedRepositoryId !== 'string' || !/^[1-9][0-9]*$/u.test(expectedRepositoryId))
     return { disposition: 'rejected', reason: 'invalid-expected-repository-id' };
   const root = record(payload);
@@ -35,6 +41,12 @@ export function normalizeGitHubIssueComment({ payload, expectedRepositoryId }) {
   const repositoryId = repository?.id;
   if (!positiveSafeInteger(repositoryId) || String(repositoryId) !== expectedRepositoryId)
     return { disposition: 'ignored', reason: 'repository-mismatch' };
+  if (
+    expectedRepositoryName !== undefined &&
+    (typeof repository?.full_name !== 'string' ||
+      repository.full_name.toLowerCase() !== expectedRepositoryName.toLowerCase())
+  )
+    return { disposition: 'ignored', reason: 'repository-name-mismatch' };
   if (!positiveSafeInteger(issue?.number) || !positiveSafeInteger(comment?.id))
     return { disposition: 'rejected', reason: 'invalid-github-identity' };
   if (record(issue?.pull_request)) return { disposition: 'ignored', reason: 'pull-request' };
@@ -74,4 +86,79 @@ export function normalizeGitHubIssueComment({ payload, expectedRepositoryId }) {
       ...(action === 'scope' ? { proposal: rationale } : {}),
     },
   };
+}
+
+/**
+ * Normalize an issue-comment payload, verify the actor's current repository
+ * permission using GitHub's read-only collaborator API, then create an inert
+ * proposal. Any permission lookup failure other than a definitive 404 fails
+ * closed by throwing; no event text is included in the error.
+ *
+ * @param {{payload: unknown, expectedRepositoryId: string, owner: string, repo: string, token: string, fetchImpl?: typeof fetch}} input
+ */
+export async function planAuthorizedGitHubIssueComment({
+  payload,
+  expectedRepositoryId,
+  owner,
+  repo,
+  token,
+  fetchImpl = globalThis.fetch,
+}) {
+  if (
+    typeof owner !== 'string' ||
+    typeof repo !== 'string' ||
+    !/^[A-Za-z0-9_.-]+$/u.test(owner) ||
+    !/^[A-Za-z0-9_.-]+$/u.test(repo)
+  )
+    throw new Error('GitHub repository owner/name is invalid.');
+  if (typeof token !== 'string' || token.length === 0)
+    throw new Error('GitHub token is required to verify current actor permission.');
+
+  const normalized = normalizeGitHubIssueComment({
+    payload,
+    expectedRepositoryId,
+    expectedRepositoryName: `${owner}/${repo}`,
+  });
+  if (normalized.disposition !== 'event') return normalized;
+
+  const permissionUrl =
+    `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}` +
+    `/collaborators/${encodeURIComponent(normalized.event.actor)}/permission`;
+  const response = await fetchImpl(permissionUrl, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/vnd.github+json',
+      Authorization: `Bearer ${token}`,
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  });
+  if (response.status === 404)
+    return { disposition: 'ignored', reason: 'actor-not-repository-collaborator' };
+  if (!response.ok)
+    throw new Error(`GitHub actor permission could not be verified (HTTP ${response.status}).`);
+
+  let permissionPayload;
+  try {
+    permissionPayload = record(await response.json());
+  } catch {
+    throw new Error('GitHub actor permission response was invalid.');
+  }
+  if (!permissionPayload || typeof permissionPayload.permission !== 'string')
+    throw new Error('GitHub actor permission response was invalid.');
+  const permission = permissionPayload?.permission;
+  if (permission !== 'admin' && permission !== 'write')
+    return { disposition: 'ignored', reason: 'actor-lacks-maintainer-permission' };
+
+  const result = planMaintainerIssueIntake({
+    event: normalized.event,
+    expectedRepositoryId,
+    maintainerLogins: new Set([normalized.event.actor]),
+  });
+  return result.disposition === 'proposal'
+    ? {
+        disposition: 'proposal',
+        deliveryId: normalized.event.deliveryId,
+        proposal: result.proposal,
+      }
+    : result;
 }

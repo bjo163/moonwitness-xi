@@ -151,7 +151,7 @@ Simpan bukti aktual di `docs/roadmap/evidence/M11.07.md`. Jangan menandai aktiva
 
 User tanpa write tidak dapat memicu push/publish; status update tidak menyebabkan infinite issue↔git loop.
 
-Intake planner lokal pada `scripts/roadmap/issue-intake.mjs` hanya menghasilkan proposal untuk actor yang sudah diverifikasi caller. Adapter `scripts/roadmap/github-issue-intake.mjs` memvalidasi raw `issue_comment.created` payload, numeric repository ID, satu exact managed-task marker, comment/issue numeric identities, bot/PR exclusion, dan grammar `/mw status|scope|close|reopen -- <text>`. Idempotency key `issue_comment_<comment-id>` stabil saat GitHub mengirim ulang comment yang sama. Teks issue tetap inert; adapter tidak memiliki Git/API write, shell, ref selection, atau URL fetch. Tests mencakup actor spoof, bot echo, unmanaged/duplicate marker, wrong repository, non-command, malformed command, redelivery stability, serta close/reopen triage.
+Intake planner lokal pada `scripts/roadmap/issue-intake.mjs` hanya menghasilkan proposal. Adapter `scripts/roadmap/github-issue-intake.mjs` memvalidasi raw `issue_comment.created` payload, numeric repository ID dan repository full name, satu exact managed-task marker, comment/issue numeric identities, bot/PR exclusion, serta grammar `/mw status|scope|close|reopen -- <text>`. Sebelum proposal, adapter memeriksa permission aktor saat ini lewat GitHub collaborator-permission API; hanya `write`/`admin` diterima dan kegagalan lookup menolak event. Workflow `.github/workflows/roadmap-issue-intake.yml` berjalan untuk comment baru dengan checkout pada `github.sha`, tanpa credential persistence, dan hanya `contents:read` + `issues:read`. `run-issue-intake.mjs` melaporkan metadata proposal ke Actions summary tanpa comment/rationale/body dan tanpa mutasi.
 
 Sintaks yang dikenali (bukan berarti dieksekusi):
 
@@ -162,7 +162,7 @@ Sintaks yang dikenali (bukan berarti dieksekusi):
 /mw reopen -- Bukti perlu diperiksa ulang.
 ```
 
-Belum ada workflow yang memanggil adapter. Sebelum aktivasi, runner harus memverifikasi current collaborator permission dari GitHub, memakai payload event tepercaya/runner platform, mengikat proposal summary ke run SHA, dan menentukan penyimpanan delivery ID untuk consumer yang melakukan write. Comment ID memberi kunci redelivery deterministik tetapi belum menjadi durable deduplication store. Tidak ada issue event yang bisa menulis source atau mengubah issue.
+Workflow ini baru ada di source `dev`; GitHub memuat workflow event dari default branch sehingga aktivasi hosted menunggu promosi ke `main` dan bukti run. Comment ID memberi kunci redelivery deterministik, tetapi Actions concurrency hanya menghindari overlap dan bukan durable deduplication store. Tidak ada issue event yang dapat menulis source atau mengubah issue.
 
 Simpan bukti aktual di `docs/roadmap/evidence/M11.08.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.
 
