@@ -19,6 +19,54 @@ const allowedLines = [
   exactLine(['^', String.raw`\s*`, 'idempotency', 'Key: ', "'duplicate-", 'vote-0001', "',$"]),
   exactLine(['^', String.raw`\s*`, 'idempotency', 'Key: ', "'reject-", 'decision-0001', "',$"]),
 ];
+const exactHistoricalLine = (segments) =>
+  new RegExp(`^\\s*${segments.join('').replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}$`, 'u').source;
+const historicalFalsePositiveLines = [
+  exactHistoricalLine(['/^', String.raw`\s*`, '"tokensSha256": "', tokenHash, '"$/u,']),
+  exactHistoricalLine([
+    '/^',
+    String.raw`\s*`,
+    'idempotency',
+    'Key: ',
+    "'duplicate-",
+    'vote-0001',
+    "',$/u,",
+  ]),
+  exactHistoricalLine([
+    '/^',
+    String.raw`\s*`,
+    'idempotency',
+    'Key: ',
+    "'reject-",
+    'decision-0001',
+    "',$/u,",
+  ]),
+  exactHistoricalLine(["'^", String.raw`\\s*`, '"tokensSha256": "', tokenHash, '"$', "',"]),
+  exactHistoricalLine([
+    '"^',
+    String.raw`\\s*`,
+    'idempotency',
+    'Key: ',
+    "'duplicate-",
+    'vote-0001',
+    '\',$"',
+    ',',
+  ]),
+  exactHistoricalLine([
+    '"^',
+    String.raw`\\s*`,
+    'idempotency',
+    'Key: ',
+    "'reject-",
+    'decision-0001',
+    '\',$"',
+    ',',
+  ]),
+];
+export const expectedAllowlistExpressions = [
+  ...allowedLines.map(({ source }) => source),
+  ...historicalFalsePositiveLines,
+];
 
 export function validateGitleaksSetup(workflow, config) {
   const problems = [];
@@ -41,11 +89,13 @@ export function validateGitleaksSetup(workflow, config) {
     problems.push('Allowlist must match exact lines, not whole files or commits.');
 
   const configuredLines = [...config.matchAll(/'''(.*?)'''/gs)].map((match) => match[1]);
-  if (configuredLines.length !== allowedLines.length) {
-    problems.push('Allowlist must contain exactly the reviewed synthetic fixture lines.');
+  if (configuredLines.length !== expectedAllowlistExpressions.length) {
+    problems.push(
+      'Allowlist must contain exactly the reviewed synthetic fixture and historical false-positive lines.'
+    );
   } else {
     for (const [index, expression] of configuredLines.entries()) {
-      const expected = allowedLines[index].source;
+      const expected = expectedAllowlistExpressions[index];
       if (expression !== expected)
         problems.push(`Allowlist entry ${index + 1} differs from its reviewed fixture.`);
     }
