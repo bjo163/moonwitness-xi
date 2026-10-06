@@ -5,6 +5,10 @@ import { spawnSync } from 'node:child_process';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { renderUnitRunnerFailureReport } from './unit-runner-report.mjs';
+import {
+  findFailedWorkspacePackage,
+  summarizeWorkspaceBuildDiagnostics,
+} from './ci/workspace-build-diagnostics.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const reportDirectory = path.join(root, 'test-results', 'junit');
@@ -21,8 +25,11 @@ await mkdir(reportDirectory, { recursive: true });
 function run(args, label) {
   const result = spawnSync(process.execPath, [packageManagerCli, ...args], {
     cwd: root,
-    stdio: 'inherit',
+    encoding: 'utf8',
+    maxBuffer: 10 * 1024 * 1024,
   });
+  const output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
+  process.stdout.write(output);
   if (result.error) {
     writeFileSync(
       path.join(reportDirectory, 'unit-runner.xml'),
@@ -38,6 +45,21 @@ function run(args, label) {
       renderUnitRunnerFailureReport(label, result.status ?? 1),
       'utf8'
     );
+    if (label === 'Build') {
+      const diagnostics = summarizeWorkspaceBuildDiagnostics(output);
+      for (const diagnostic of diagnostics) {
+        process.stdout.write(
+          `::error file=${diagnostic.path},line=${diagnostic.line},col=${diagnostic.column},title=Workspace build ${diagnostic.code}::See compiler details in the runner log.\n`
+        );
+      }
+      if (diagnostics.length === 0) {
+        const packageName = findFailedWorkspacePackage(output);
+        const subject = packageName ? ` for ${packageName}` : '';
+        process.stdout.write(
+          `::error title=Workspace build failed::Recursive build${subject} exited ${result.status ?? 1}; see the runner log.\n`
+        );
+      }
+    }
     process.stderr.write(`${label} failed with exit code ${result.status ?? 1}\n`);
     process.exit(result.status ?? 1);
   }

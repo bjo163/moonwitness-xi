@@ -38,6 +38,10 @@ test('unit runner records a safe phase name when it fails before writing a suite
   assert.doesNotMatch(report, /compiler output|password|token/u);
   assert.match(unitRunner, /renderUnitRunnerFailureReport\(label, result\.status \?\? 1\)/u);
   assert.match(unitRunner, /renderUnitRunnerFailureReport\(label, 1\)/u);
+  assert.match(unitRunner, /summarizeWorkspaceBuildDiagnostics\(output\)/u);
+  assert.match(unitRunner, /title=Workspace build \$\{diagnostic\.code\}/u);
+  assert.match(unitRunner, /See compiler details in the runner log\./u);
+  assert.doesNotMatch(unitRunner, /::error[^\n]*\$\{diagnostic\.message\}/u);
   assert.throws(() => renderUnitRunnerFailureReport('Build', 0), /non-zero exit code/u);
 });
 
