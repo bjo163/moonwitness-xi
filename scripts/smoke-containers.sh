@@ -11,12 +11,20 @@ export API_PORT=3000
 
 cleanup() {
   local exit_code=$?
+  local cleanup_status=0
   if (( exit_code != 0 )); then
     printf '::error title=Container smoke failed::Phase %s failed; inspect the authorized runner log for details.\n' "$phase"
   fi
   trap - EXIT
   phase=cleanup
-  "${compose[@]}" down --volumes --remove-orphans
+  "${compose[@]}" down --volumes --remove-orphans || cleanup_status=$?
+  if (( cleanup_status != 0 )); then
+    printf '::error title=Container smoke failed::Phase cleanup failed; inspect the authorized runner log for details.\n'
+    if (( exit_code == 0 )); then
+      exit_code=$cleanup_status
+    fi
+  fi
+  exit "$exit_code"
 }
 trap cleanup EXIT
 
