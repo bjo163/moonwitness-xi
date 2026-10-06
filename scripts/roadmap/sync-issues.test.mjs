@@ -191,6 +191,50 @@ test('apply refuses stale plans and performs serial writes only for explicit ope
   );
 });
 
+test('apply stops before metadata or issue writes when permission is revoked after planning', async () => {
+  const generated = plan().operations[0];
+  const currentIssue = {
+    number: 41,
+    title: generated.title,
+    body: generated.body,
+    state: 'open',
+    labels: generated.labels.map((name) => ({ name })),
+    milestone: { number: 11, title: 'M11' },
+  };
+  const changedTask = { ...task, title: 'Build safer planner' };
+  const changedPlan = planIssueSync({
+    tasks: [changedTask],
+    issues: [currentIssue],
+    repositoryId,
+    sourceSha,
+  });
+  let writes = 0;
+  const client = {
+    listAll: async () => [currentIssue],
+    assertWritable: () => {
+      throw new Error('Resource not accessible by integration');
+    },
+    ensureMetadata: async () => {
+      writes += 1;
+      return new Map();
+    },
+    update: async () => {
+      writes += 1;
+    },
+  };
+  await assert.rejects(
+    applyIssuePlan({
+      plan: changedPlan,
+      client,
+      tasks: [changedTask],
+      repositoryId,
+      sourceSha,
+    }),
+    /Resource not accessible/u
+  );
+  assert.equal(writes, 0);
+});
+
 test('apply no-op succeeds without write permission or metadata mutations', async () => {
   const generated = plan().operations[0];
   const remoteIssue = {
@@ -428,6 +472,26 @@ test('ambiguous create failure re-reads marker and recovers without creating a d
     sourceSha,
   });
   assert.deepEqual(result, [{ taskId: 'M11.03', issueNumber: 44, recovered: true }]);
+});
+
+test('transient create failure without a committed marker fails without a blind retry', async () => {
+  const calls = [];
+  const client = {
+    listAll: async () => {
+      calls.push('read');
+      return [];
+    },
+    create: async () => {
+      calls.push('create');
+      throw new Error('API 503: temporary outage');
+    },
+    update: async () => assert.fail('create recovery must not become an update'),
+  };
+  await assert.rejects(
+    applyIssuePlan({ plan: plan(), client, tasks: [task], repositoryId, sourceSha }),
+    /API 503: temporary outage/u
+  );
+  assert.deepEqual(calls, ['read', 'create', 'read']);
 });
 
 test('GitHub issue adapter follows open and closed pagination and serializes issue writes', async () => {
