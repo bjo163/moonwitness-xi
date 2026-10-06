@@ -64,6 +64,39 @@ test('promotion report binds tasks, checks, version and risk to exact source SHA
   assert.match(report, /Approval required/u);
 });
 
+test('large promotion ranges keep every task ID while bounding linked detail', () => {
+  const tasks = Array.from({ length: 148 }, (_, index) => {
+    const id = `M${Math.floor(index / 99)}.${String((index % 99) + 1).padStart(2, '0')}`;
+    return {
+      id,
+      title: `${id} ${'A detailed roadmap task title '.repeat(12)}`,
+      detailFile: `docs/roadmap/${id.toLowerCase()}.md`,
+      status: 'open',
+    };
+  });
+  const report = renderPromotionReport(
+    input({
+      commits: tasks.map((task) => `feat: complete ${task.id}`),
+      changedFiles: [],
+      tasks,
+    })
+  );
+
+  assert.ok(report.length < 20_000, `expected compact report, got ${report.length} characters`);
+  assert.match(report, /Affected task IDs \(148\)/u);
+  assert.match(report, /M0\.01/u);
+  assert.match(report, /M1\.49/u);
+  assert.equal((report.match(/\]\(https:\/\/github\.com\/owner\/repo\/blob\//gu) ?? []).length, 32);
+  assert.match(report, /118 more task details omitted/u);
+  assert.match(
+    report,
+    new RegExp(
+      `Full task list at this SHA\\]\\(https://github\\.com/owner/repo/blob/${headSha}/ROADMAP\\.md\\)`,
+      'u'
+    )
+  );
+});
+
 test('report marks unavailable release baseline and missing check runs without inventing success', () => {
   const report = renderPromotionReport(input({ checks: [], releasePlan: undefined }));
   assert.match(report, /no stable release baseline is configured/u);

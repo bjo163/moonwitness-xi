@@ -8,6 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const beginMarker = '<!-- BEGIN MOONWITNESS PROMOTION REPORT -->';
 const endMarker = '<!-- END MOONWITNESS PROMOTION REPORT -->';
 const taskPattern = /\bM(?:0|[1-9][0-9]*)\.[0-9]{2}\b/gu;
+const maximumTaskDetailRows = 30;
 
 function escapeTableCell(value) {
   return String(value)
@@ -40,6 +41,13 @@ function safeCheckLink(value, repository) {
 
 function shortSha(value) {
   return value.slice(0, 12);
+}
+
+function truncate(value, maximumLength) {
+  const characters = [...String(value)];
+  return characters.length <= maximumLength
+    ? String(value)
+    : `${characters.slice(0, maximumLength - 1).join('')}…`;
 }
 
 function extractTaskIds(text) {
@@ -103,13 +111,20 @@ export function renderPromotionReport({
           `| ${escapeTableCell(check.name)} | ${escapeTableCell(check.status)} / ${escapeTableCell(check.conclusion ?? 'pending')} | ${safeCheckLink(check.detailsUrl, repository)} |`
       )
     : ['| No checks reported | pending / pending | Check status for this exact SHA |'];
+  const taskIdSummary = relevantTasks.length
+    ? `Affected task IDs (${relevantTasks.length}): ${relevantTasks.map((id) => `\`${id}\``).join(', ')}`
+    : 'No roadmap Task IDs detected in commit subjects or changed paths.';
   const taskRows = relevantTasks.length
-    ? relevantTasks.map((id) => {
+    ? relevantTasks.slice(0, maximumTaskDetailRows).map((id) => {
         const task = tasksById.get(id);
         const card = `https://github.com/${repository}/blob/${headSha}/${task.detailFile}`;
-        return `| [${id}](${card}) | ${escapeTableCell(task.title)} | ${escapeTableCell(task.status ?? 'source status unavailable')} |`;
+        return `| [${id}](${card}) | ${escapeTableCell(truncate(task.title, 90))} | ${escapeTableCell(task.status ?? 'source status unavailable')} |`;
       })
     : ['| No roadmap Task IDs detected in commit subjects or changed paths | — | — |'];
+  if (relevantTasks.length > maximumTaskDetailRows)
+    taskRows.push(
+      `| ${relevantTasks.length - maximumTaskDetailRows} more task details omitted | [Full task list at this SHA](https://github.com/${repository}/blob/${headSha}/ROADMAP.md) | See source roadmap |`
+    );
   const commitRows = commits.length
     ? commits
         .slice(0, 20)
@@ -136,9 +151,11 @@ export function renderPromotionReport({
     '## Automated promotion report',
     '',
     `Source: \`${shortSha(headSha)}\` → \`main\` (base \`${shortSha(baseSha)}\`). This report is bound to the exact ` +
-      `[source commit](https://github.com/${repository}/commit/${headSha}).`,
+      `[source commit](https://github.com/${repository}/commit/${headSha}) and [full roadmap](https://github.com/${repository}/blob/${headSha}/ROADMAP.md).`,
     '',
     '### Roadmap tasks',
+    '',
+    taskIdSummary,
     '',
     '| Task | Scope | Source status |',
     '| --- | --- | --- |',
