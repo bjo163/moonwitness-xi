@@ -62,6 +62,8 @@
     "automation:check:workflow-trust": "node scripts/check-workflow-checkout-trust.mjs",
     "platform:audit": "node scripts/platform-audit.mjs",
     "test:platform-audit": "node --test scripts/platform-audit.test.mjs",
+    "automation:check:ubuntu-runner-candidate": "node scripts/check-ubuntu-runner-candidate.mjs",
+    "test:ubuntu-runner-candidate": "node --test scripts/check-ubuntu-runner-candidate.test.mjs",
     "test:addon-conformance": "node --test scripts/roadmap/addon-conformance.test.mjs",
     "release:classify": "node scripts/classify-release-commits.mjs",
     "release:plan": "node scripts/release-plan.mjs",
