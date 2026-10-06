@@ -35,10 +35,11 @@ flowchart LR
   model33["organization.membership"]
   model34["organization.position"]
   model35["organization.team"]
-  model36["workflow.approval"]
-  model37["workflow.definition"]
-  model38["workflow.event"]
-  model39["workflow.instance"]
+  model36["request.purchase"]
+  model37["workflow.approval"]
+  model38["workflow.definition"]
+  model39["workflow.event"]
+  model40["workflow.instance"]
   model0 -->|user N:1| model26
   model2 -->|assigned_to N:1| model26
   model5 -->|country N:1| model8
@@ -95,10 +96,13 @@ flowchart LR
   model35 -->|company N:1| model6
   model35 -->|department N:1| model32
   model35 -->|parent N:1| model35
-  model36 -->|actor N:1| model26
-  model36 -->|instance N:1| model39
-  model38 -->|actor N:1| model26
-  model38 -->|instance N:1| model39
-  model39 -->|company N:1| model6
-  model39 -->|definition N:1| model37
-  model39 -->|started_by N:1| model26
+  model36 -->|company N:1| model6
+  model36 -->|currency N:1| model11
+  model36 -->|vendor N:1| model18
+  model37 -->|actor N:1| model26
+  model37 -->|instance N:1| model40
+  model39 -->|actor N:1| model26
+  model39 -->|instance N:1| model40
+  model40 -->|company N:1| model6
+  model40 -->|definition N:1| model38
+  model40 -->|started_by N:1| model26

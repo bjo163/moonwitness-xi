@@ -10,6 +10,7 @@ import {
   manifest as workflowAddon,
   registerWorkflowExpiryHandler,
 } from '@moonwitness/orm-workflow';
+import { manifest as notificationAddon } from '@moonwitness/orm-notification';
 
 const db = createDatabase();
 const stop = new AbortController();
@@ -22,7 +23,7 @@ process.once('SIGINT', stopWorker);
 process.once('SIGTERM', stopWorker);
 
 try {
-  await installAddons(db, [baseManifest, jobsManifest, workflowAddon]);
+  await installAddons(db, [baseManifest, jobsManifest, notificationAddon, workflowAddon]);
   const handlerModule = process.env.JOB_HANDLERS_MODULE;
   if (handlerModule) await import(pathToFileURL(path.resolve(handlerModule)).href);
   if (!stop.signal.aborted) {

@@ -37,6 +37,7 @@
     "@moonwitness/logger": "workspace:*",
     "@moonwitness/orm-notification": "workspace:*",
     "@moonwitness/orm-organization": "workspace:*",
+    "@moonwitness/orm-request": "workspace:*",
     "@moonwitness/orm-storage": "workspace:*",
     "@moonwitness/orm-workflow": "workspace:*",
     "@moonwitness/orm": "workspace:*",

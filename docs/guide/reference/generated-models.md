@@ -1,6 +1,6 @@
 # Generated model and addon reference
 
-Source fingerprint: `d35eed0b452adc02e81847a9c90e9afee56e17ff3ce5a3593e1a2c9c43f594c1`. Seed values and field defaults are intentionally omitted.
+Source fingerprint: `8652e2467bf89511d7fdbb6b4fb2773608f72eefbd1a0281d0acafe73b89f08a`. Seed values and field defaults are intentionally omitted.
 
 ## Addon `auth`
 
@@ -446,9 +446,41 @@ Models: 0; declared views: 0; menu entries: 0; seed rows: 0.
 | Menu model | Label | Group | Sequence | Visibility |
 | ---------- | ----- | ----- | -------: | ---------- |
 
+## Addon `request`
+
+Version: `1.0.0`; dependencies: `base`, `jobs`, `notification`, `workflow`.
+
+Models: 1; declared views: 1; menu entries: 1; seed rows: 7.
+
+| Model              | Table               | Field          | Kind      | Required | Optional | Default | Relation        |
+| ------------------ | ------------------- | -------------- | --------- | -------- | -------- | ------- | --------------- |
+| `request.purchase` | `purchase_requests` | `amount_minor` | integer   | Yes      | No       | No      | —               |
+| `request.purchase` | `purchase_requests` | `company`      | belongsTo | Yes      | No       | No      | `base.company`  |
+| `request.purchase` | `purchase_requests` | `currency`     | belongsTo | Yes      | No       | No      | `base.currency` |
+| `request.purchase` | `purchase_requests` | `description`  | text      | Yes      | No       | No      | —               |
+| `request.purchase` | `purchase_requests` | `title`        | string    | Yes      | No       | No      | —               |
+| `request.purchase` | `purchase_requests` | `vendor`       | belongsTo | No       | Yes      | No      | `base.partner`  |
+
+### Menus and seed coverage
+
+| Menu model         | Label             | Group     | Sequence | Visibility |
+| ------------------ | ----------------- | --------- | -------: | ---------- |
+| `request.purchase` | Purchase Requests | Workspace |       24 | Standard   |
+
+- Seed coverage: `base.model_access` has 1 declared seed row(s); seed values are not included.
+- Seed coverage: `notification.template` has 3 declared seed row(s); seed values are not included.
+- Seed coverage: `request.purchase` has 2 declared seed row(s); seed values are not included.
+- Seed coverage: `workflow.definition` has 1 declared seed row(s); seed values are not included.
+
+### Seeded model access rules
+
+| Group reference   | Model              | Read | Create | Write | Delete |
+| ----------------- | ------------------ | ---- | ------ | ----- | ------ |
+| `base.group_user` | `request.purchase` | Yes  | Yes    | Yes   | No     |
+
 ## Addon `workflow`
 
-Version: `1.0.0`; dependencies: `base`, `jobs`.
+Version: `1.0.0`; dependencies: `base`, `jobs`, `notification`.
 
 Models: 4; declared views: 4; menu entries: 4; seed rows: 6.
 

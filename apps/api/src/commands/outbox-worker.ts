@@ -14,6 +14,7 @@ import {
   manifest as integrationAddon,
   registerWebhookOutboxConsumer,
 } from '@moonwitness/orm-integration';
+import { manifest as requestAddon } from '@moonwitness/orm-request';
 
 const db = createDatabase();
 const stop = new AbortController();
@@ -28,7 +29,13 @@ process.once('SIGINT', stopWorker);
 process.once('SIGTERM', stopWorker);
 
 try {
-  await installAddons(db, [baseManifest, jobsManifest, notificationAddon, integrationAddon]);
+  await installAddons(db, [
+    baseManifest,
+    jobsManifest,
+    notificationAddon,
+    integrationAddon,
+    requestAddon,
+  ]);
   unregisterNotificationConsumer = registerNotificationOutboxConsumer();
   unregisterWebhookConsumer = registerWebhookOutboxConsumer(async (secretRef, companyId) => {
     if (!secretRef.startsWith(`MW_WEBHOOK_SECRET_C${companyId}_`)) return null;

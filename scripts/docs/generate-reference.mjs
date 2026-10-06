@@ -255,6 +255,7 @@ export async function collectReferenceMetadata() {
   const notificationPath = path.join(root, 'packages/orm-notification/dist/manifest.js');
   const storagePath = path.join(root, 'packages/orm-storage/dist/index.js');
   const workflowPath = path.join(root, 'packages/orm-workflow/dist/manifest.js');
+  const requestPath = path.join(root, 'packages/orm-request/dist/manifest.js');
   const organizationPath = path.join(root, 'packages/orm-organization/dist/manifest.js');
   const integrationPath = path.join(root, 'packages/orm-integration/dist/manifest.js');
   const [
@@ -264,6 +265,7 @@ export async function collectReferenceMetadata() {
     { manifest: notification },
     { storageManifest },
     { manifest: workflow },
+    { manifest: request },
     { manifest: organization },
     { manifest: integration },
   ] = await Promise.all([
@@ -273,6 +275,7 @@ export async function collectReferenceMetadata() {
     import(pathToFileURL(notificationPath).href),
     import(pathToFileURL(storagePath).href),
     import(pathToFileURL(workflowPath).href),
+    import(pathToFileURL(requestPath).href),
     import(pathToFileURL(organizationPath).href),
     import(pathToFileURL(integrationPath).href),
   ]);
@@ -284,6 +287,7 @@ export async function collectReferenceMetadata() {
     ...(await filesUnder('packages/orm-notification/src', '.ts')),
     ...(await filesUnder('packages/orm-storage/src', '.ts')),
     ...(await filesUnder('packages/orm-workflow/src', '.ts')),
+    ...(await filesUnder('packages/orm-request/src', '.ts')),
     ...(await filesUnder('packages/orm-organization/src', '.ts')),
     ...(await filesUnder('packages/orm-integration/src', '.ts')),
   ];
@@ -294,6 +298,7 @@ export async function collectReferenceMetadata() {
     notification,
     storageManifest,
     workflow,
+    request,
     organization,
     integration,
   ]
@@ -383,6 +388,7 @@ export async function collectReferenceMetadata() {
     ...(await filesUnder('packages/orm-notification/src', '.ts')),
     ...(await filesUnder('packages/orm-storage/src', '.ts')),
     ...(await filesUnder('packages/orm-workflow/src', '.ts')),
+    ...(await filesUnder('packages/orm-request/src', '.ts')),
     ...(await filesUnder('packages/orm-organization/src', '.ts')),
     ...(await filesUnder('packages/orm-integration/src', '.ts')),
   ].sort(compare);

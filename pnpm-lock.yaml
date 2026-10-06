@@ -68,12 +68,18 @@ importers:
       '@moonwitness/orm-base':
         specifier: workspace:*
         version: link:../../packages/orm-base
+      '@moonwitness/orm-integration':
+        specifier: workspace:*
+        version: link:../../packages/orm-integration
       '@moonwitness/orm-notification':
         specifier: workspace:*
         version: link:../../packages/orm-notification
       '@moonwitness/orm-organization':
         specifier: workspace:*
         version: link:../../packages/orm-organization
+      '@moonwitness/orm-request':
+        specifier: workspace:*
+        version: link:../../packages/orm-request
       '@moonwitness/orm-storage':
         specifier: workspace:*
         version: link:../../packages/orm-storage
@@ -551,6 +557,46 @@ importers:
         specifier: 5.0.3
         version: 5.0.3(@types/node@26.6.4)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
+  packages/orm-request:
+    dependencies:
+      '@moonwitness/jobs':
+        specifier: workspace:*
+        version: link:../jobs
+      '@moonwitness/orm':
+        specifier: workspace:*
+        version: link:../orm
+      '@moonwitness/orm-base':
+        specifier: workspace:*
+        version: link:../orm-base
+      '@moonwitness/orm-notification':
+        specifier: workspace:*
+        version: link:../orm-notification
+      '@moonwitness/orm-workflow':
+        specifier: workspace:*
+        version: link:../orm-workflow
+    devDependencies:
+      '@types/better-sqlite3':
+        specifier: ^9.6.0
+        version: 9.6.0
+      '@vitest/coverage-v8':
+        specifier: 5.0.3
+        version: 5.0.3(vitest@5.0.3)
+      better-sqlite3:
+        specifier: ^13.0.3
+        version: 13.0.3
+      knex:
+        specifier: ^3.3.0
+        version: 3.3.0(better-sqlite3@13.0.3)(pg@8.23.1)
+      objection:
+        specifier: ^3.1.5
+        version: 3.1.5(knex@3.3.0(better-sqlite3@13.0.3)(pg@8.23.1))
+      typescript:
+        specifier: ~5.7.3
+        version: 5.7.3
+      vitest:
+        specifier: 5.0.3
+        version: 5.0.3(@types/node@26.6.4)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+
   packages/orm-storage:
     dependencies:
       '@moonwitness/orm':
@@ -581,6 +627,9 @@ importers:
       '@moonwitness/orm-base':
         specifier: workspace:*
         version: link:../orm-base
+      '@moonwitness/orm-notification':
+        specifier: workspace:*
+        version: link:../orm-notification
     devDependencies:
       '@types/better-sqlite3':
         specifier: ^9.6.0

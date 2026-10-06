@@ -3,6 +3,7 @@ export { WorkflowApproval, WorkflowDefinition, WorkflowEvent, WorkflowInstance }
 export {
   createWorkflowIdempotencyKey,
   expireDueWorkflows,
+  listAvailableWorkflowDefinitions,
   registerWorkflowExpiryHandler,
   startWorkflow,
   transitionWorkflow,
@@ -14,4 +15,5 @@ export type {
   WorkflowDefinitionConfig,
   WorkflowRole,
   WorkflowTransitionDefinition,
+  AvailableWorkflowDefinition,
 } from './runtime.js';

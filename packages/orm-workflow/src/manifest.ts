@@ -36,7 +36,7 @@ const requestApprovalExample = {
 export const manifest = defineAddon({
   name: 'workflow',
   version: '1.0.0',
-  depends: ['base', 'jobs'],
+  depends: ['base', 'jobs', 'notification'],
   models: [WorkflowDefinition, WorkflowInstance, WorkflowEvent, WorkflowApproval],
   data: [
     seed(WorkflowDefinition, 'workflow.definition_sample_request_v1', {

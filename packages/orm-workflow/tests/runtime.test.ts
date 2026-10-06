@@ -12,6 +12,7 @@ import { WorkflowEvent, WorkflowInstance } from '../src/models.js';
 import { installAddons } from '@moonwitness/orm';
 import { manifest as baseManifest } from '@moonwitness/orm-base';
 import { jobsManifest } from '@moonwitness/jobs';
+import { manifest as notificationManifest } from '@moonwitness/orm-notification';
 
 let db: Knex | undefined;
 
@@ -22,7 +23,7 @@ async function setup(): Promise<Knex> {
     useNullAsDefault: true,
   });
   Model.knex(db);
-  await installAddons(db, [baseManifest, jobsManifest, manifest]);
+  await installAddons(db, [baseManifest, jobsManifest, notificationManifest, manifest]);
   return db;
 }
 
@@ -63,7 +64,7 @@ describe('workflow addon', () => {
     expect(
       await database('_orm_addons').where({ name: 'workflow', version: '1.0.0' }).first()
     ).toBeDefined();
-    await installAddons(database, [baseManifest, jobsManifest, manifest]);
+    await installAddons(database, [baseManifest, jobsManifest, notificationManifest, manifest]);
     expect(await database('workflow_definitions').count({ count: '*' }).first()).toMatchObject({
       count: 1,
     });

@@ -1,7 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import knex, { type Knex } from 'knex';
 import type { FastifyInstance } from 'fastify';
-import { Company, CompanyMembership, Partner, User } from '@moonwitness/orm-base';
+import {
+  assignDefaultUserGroup,
+  Company,
+  CompanyMembership,
+  Currency,
+  Partner,
+  User,
+} from '@moonwitness/orm-base';
 import { buildApp } from '../src/app.js';
 
 const ADMIN_PASSWORD = 'workflow-admin-password';
@@ -16,7 +23,7 @@ describe('workflow API authorization and lifecycle', () => {
   let adminToken: string;
   let userToken: string;
   let companyId: number;
-  let resourceId: number;
+  let resourceId = 0;
   let instanceId: number;
 
   const request = (token: string, method: string, url: string, payload?: unknown) =>
@@ -47,13 +54,13 @@ describe('workflow API authorization and lifecycle', () => {
       name: 'Workflow requester',
       company_id: companyId,
     });
-    resourceId = partner.id;
     const user = await User.query().insertAndFetch({
       login: 'workflow-user',
       password: USER_PASSWORD,
       partner_id: partner.id,
       role: 'user',
     });
+    await assignDefaultUserGroup(user.id);
     await CompanyMembership.query().insert({
       user_id: user.id,
       company_id: companyId,
@@ -79,9 +86,32 @@ describe('workflow API authorization and lifecycle', () => {
 
   it('requires auth, starts/list/details a company scoped workflow, and hides generic mutation routes', async () => {
     expect((await app.inject({ method: 'GET', url: '/workflows/instances' })).statusCode).toBe(401);
+    const currency = await Currency.query().findOne({ code: 'USD' }).throwIfNotFound();
+    const requestView = await request(userToken, 'GET', '/api/request.purchase/views');
+    expect(requestView.statusCode).toBe(200);
+    expect(requestView.json().list.columns).toContain('amount_minor');
+    const definitions = await request(
+      userToken,
+      'GET',
+      '/workflows/definitions?resource_model=request.purchase'
+    );
+    expect(definitions.statusCode).toBe(200);
+    expect(
+      definitions.json().data.map((definition: { code: string }) => definition.code)
+    ).toContain('request.purchase_approval');
+    const createdRequest = await request(userToken, 'POST', '/api/request.purchase', {
+      title: 'Workflow API example',
+      description: 'Demonstrate the request addon using generic model CRUD.',
+      amount_minor: 75000,
+      currency_id: currency.id,
+      company_id: companyId,
+    });
+    expect(createdRequest.statusCode).toBe(201);
+    expect(createdRequest.json().data.create_uid).toBeGreaterThan(0);
+    resourceId = createdRequest.json().data.id as number;
     const start = await request(userToken, 'POST', '/workflows/instances', {
-      code: 'sample.request_approval',
-      resource_model: 'base.partner',
+      code: 'request.purchase_approval',
+      resource_model: 'request.purchase',
       resource_id: resourceId,
       idempotency_key: 'api-workflow-start-0001',
     });
@@ -90,16 +120,25 @@ describe('workflow API authorization and lifecycle', () => {
     expect(
       (
         await request(userToken, 'POST', '/workflows/instances', {
-          code: 'sample.request_approval',
-          resource_model: 'base.partner',
+          code: 'request.purchase_approval',
+          resource_model: 'request.purchase',
           resource_id: resourceId,
           idempotency_key: 'api-workflow-start-0001',
         })
       ).statusCode
     ).toBe(201);
-    expect(
-      (await request(userToken, 'GET', '/workflows/instances?limit=10')).json().data
-    ).toHaveLength(1);
+    const scopedInstances = await request(
+      userToken,
+      'GET',
+      `/workflows/instances?limit=10&resource_model=request.purchase&resource_id=${resourceId}`
+    );
+    expect(scopedInstances.json().data).toMatchObject([
+      {
+        resource_model: 'request.purchase',
+        resource_id: resourceId,
+        definition_code: 'request.purchase_approval',
+      },
+    ]);
     expect(
       (await request(userToken, 'GET', `/workflows/instances/${instanceId}`)).json().data.events
     ).toHaveLength(1);
@@ -150,18 +189,60 @@ describe('workflow API authorization and lifecycle', () => {
     ).toHaveLength(3);
   });
 
+  it('supports rejecting a request through the same generic workflow API', async () => {
+    const currency = await Currency.query().findOne({ code: 'USD' }).throwIfNotFound();
+    const created = await request(userToken, 'POST', '/api/request.purchase', {
+      title: 'Workflow rejection example',
+      description: 'Exercise the rejected terminal state.',
+      amount_minor: 10000,
+      currency_id: currency.id,
+      company_id: companyId,
+    });
+    expect(created.statusCode).toBe(201);
+    const requestId = created.json().data.id as number;
+    const started = await request(userToken, 'POST', '/workflows/instances', {
+      code: 'request.purchase_approval',
+      resource_model: 'request.purchase',
+      resource_id: requestId,
+      idempotency_key: 'api-request-reject-start-01',
+    });
+    expect(started.statusCode).toBe(201);
+    const rejectedId = started.json().data.id as number;
+    await request(userToken, 'POST', `/workflows/instances/${rejectedId}/actions`, {
+      action: 'submit',
+      expected_revision: 0,
+      idempotency_key: 'api-request-reject-submit-01',
+    });
+    const rejected = await request(
+      adminToken,
+      'POST',
+      `/workflows/instances/${rejectedId}/actions`,
+      {
+        action: 'reject',
+        expected_revision: 1,
+        idempotency_key: 'api-request-reject-decision-01',
+        comment: 'Not approved this cycle.',
+      }
+    );
+    expect(rejected.statusCode).toBe(200);
+    expect(rejected.json().data).toMatchObject({ currentState: 'rejected', status: 'rejected' });
+    expect(
+      (await request(userToken, 'GET', `/workflows/instances/${rejectedId}`)).json().data.events
+    ).toHaveLength(3);
+  });
+
   it('rejects unexpected fields and prevents idempotency keys from crossing actors', async () => {
     const invalid = await request(userToken, 'POST', '/workflows/instances', {
-      code: 'sample.request_approval',
-      resource_model: 'base.partner',
+      code: 'request.purchase_approval',
+      resource_model: 'request.purchase',
       resource_id: resourceId,
       idempotency_key: 'api-workflow-start-0002',
       company_id: companyId,
     });
     expect(invalid.statusCode).toBe(400);
     const collision = await request(adminToken, 'POST', '/workflows/instances', {
-      code: 'sample.request_approval',
-      resource_model: 'base.partner',
+      code: 'request.purchase_approval',
+      resource_model: 'request.purchase',
       resource_id: resourceId,
       idempotency_key: 'api-workflow-start-0001',
     });

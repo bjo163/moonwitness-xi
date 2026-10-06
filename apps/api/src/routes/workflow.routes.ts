@@ -1,6 +1,12 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { Registry, applyDomain } from '@moonwitness/orm';
-import { startWorkflow, transitionWorkflow, WorkflowError } from '@moonwitness/orm-workflow';
+import {
+  listAvailableWorkflowDefinitions,
+  startWorkflow,
+  transitionWorkflow,
+  WorkflowError,
+  type WorkflowRole,
+} from '@moonwitness/orm-workflow';
 import { canAccess } from '../auth/policy.js';
 import { getRecordRuleDomain } from '../auth/rules.js';
 
@@ -89,7 +95,31 @@ function workflowFailure(error: unknown): { status: number; message: string } | 
 }
 
 export const workflowRoutes: FastifyPluginAsync = async (fastify) => {
-  fastify.get<{ Querystring: { limit?: string } }>('/workflows/instances', async (req, reply) => {
+  fastify.get<{
+    Querystring: { limit?: string; resource_model?: string; resource_id?: string };
+  }>('/workflows/definitions', async (req, reply) => {
+    if (!req.auth)
+      return reply.code(401).send({ success: false, error: 'Authentication required' });
+    if (!req.auth.companyId)
+      return reply.code(403).send({ success: false, error: 'Active company is required' });
+    const resourceModel = req.query.resource_model;
+    if (
+      !resourceModel ||
+      !Registry.has(resourceModel) ||
+      !canAccess(req.auth.role, resourceModel, 'read', req.auth.groupPermissions)
+    )
+      return reply.code(404).send({ success: false, error: 'Resource not found' });
+    const data = await listAvailableWorkflowDefinitions(
+      fastify.db,
+      resourceModel,
+      req.auth.role as WorkflowRole
+    );
+    return { success: true, data };
+  });
+
+  fastify.get<{
+    Querystring: { limit?: string; resource_model?: string; resource_id?: string };
+  }>('/workflows/instances', async (req, reply) => {
     if (!req.auth)
       return reply.code(401).send({ success: false, error: 'Authentication required' });
     if (!req.auth.companyId)
@@ -97,24 +127,58 @@ export const workflowRoutes: FastifyPluginAsync = async (fastify) => {
     const limit = Number(req.query.limit ?? 50);
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
       return reply.code(400).send({ success: false, error: 'limit must be between 1 and 100' });
+    const { resource_model: resourceModel, resource_id: resourceIdValue } = req.query;
+    if ((resourceModel === undefined) !== (resourceIdValue === undefined))
+      return reply
+        .code(400)
+        .send({ success: false, error: 'resource_model and resource_id are required together' });
+    let resourceId: number | undefined;
+    if (resourceModel !== undefined && resourceIdValue !== undefined) {
+      resourceId = Number(resourceIdValue);
+      if (
+        !Number.isSafeInteger(resourceId) ||
+        resourceId < 1 ||
+        !Registry.has(resourceModel) ||
+        !canAccess(req.auth.role, resourceModel, 'read', req.auth.groupPermissions)
+      )
+        return reply.code(404).send({ success: false, error: 'Resource not found' });
+      const resource = await applyDomain(
+        req.env.get(resourceModel).query().where({ id: resourceId, active: true }),
+        await getRecordRuleDomain(req, resourceModel)
+      ).first();
+      if (!resource) return reply.code(404).send({ success: false, error: 'Resource not found' });
+    }
     const data = await fastify
       .db('workflow_instances')
-      .where({ company_id: req.auth.companyId })
-      .orderBy('create_date', 'desc')
+      .leftJoin(
+        'workflow_definitions',
+        'workflow_definitions.id',
+        'workflow_instances.definition_id'
+      )
+      .where({ 'workflow_instances.company_id': req.auth.companyId })
+      .modify((query) => {
+        if (resourceModel !== undefined && resourceId !== undefined)
+          query.where({
+            'workflow_instances.resource_model': resourceModel,
+            'workflow_instances.resource_id': resourceId,
+          });
+      })
+      .orderBy('workflow_instances.create_date', 'desc')
       .limit(limit)
       .select(
-        'id',
-        'definition_id',
-        'definition_version',
-        'resource_model',
-        'resource_id',
-        'started_by_id',
-        'current_state',
-        'status',
-        'revision',
-        'due_at',
-        'completed_at',
-        'create_date'
+        'workflow_instances.id',
+        'workflow_definitions.code as definition_code',
+        'workflow_instances.definition_id',
+        'workflow_instances.definition_version',
+        'workflow_instances.resource_model',
+        'workflow_instances.resource_id',
+        'workflow_instances.started_by_id',
+        'workflow_instances.current_state',
+        'workflow_instances.status',
+        'workflow_instances.revision',
+        'workflow_instances.due_at',
+        'workflow_instances.completed_at',
+        'workflow_instances.create_date'
       );
     return { success: true, data };
   });

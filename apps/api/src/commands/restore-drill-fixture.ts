@@ -3,6 +3,8 @@ import knex, { type Knex } from 'knex';
 import { createAuthService, manifest as authManifest } from '@moonwitness/auth';
 import { jobsManifest } from '@moonwitness/jobs';
 import { manifest as notificationManifest } from '@moonwitness/orm-notification';
+import { manifest as workflowManifest } from '@moonwitness/orm-workflow';
+import { manifest as requestManifest, PurchaseRequest } from '@moonwitness/orm-request';
 import { installAddons } from '@moonwitness/orm';
 import { config } from '../config/env.js';
 import { validateJwtSecret } from '../plugins/auth.plugin.js';
@@ -27,6 +29,11 @@ const tableNames = [
   'notification_templates',
   'notification_preferences',
   'notifications',
+  'purchase_requests',
+  'workflow_definitions',
+  'workflow_instances',
+  'workflow_events',
+  'workflow_approvals',
 ] as const;
 const fixture = {
   businessName: 'Restore Drill Business',
@@ -48,6 +55,7 @@ interface RestoreExpectations {
     superadmin: number;
     system: number;
     user: number;
+    request: number;
   };
 }
 
@@ -75,6 +83,9 @@ function bindFixtureModels(db: Knex): void {
   for (const addon of [baseManifest, authManifest, jobsManifest, notificationManifest]) {
     for (const model of addon.models) model.knex(db);
   }
+  for (const addon of [workflowManifest, requestManifest]) {
+    for (const model of addon.models) model.knex(db);
+  }
 }
 
 async function recordId(db: Knex, externalId: string, model: string): Promise<number> {
@@ -90,6 +101,9 @@ async function recordExpectations(db: Knex): Promise<RestoreExpectations> {
   const address = await PartnerAddress.query()
     .findOne({ label: fixture.addressLabel })
     .throwIfNotFound();
+  const request = await PurchaseRequest.query()
+    .findOne({ title: 'Laptop replacement' })
+    .throwIfNotFound();
 
   return {
     counts: await countTables(db),
@@ -101,12 +115,20 @@ async function recordExpectations(db: Knex): Promise<RestoreExpectations> {
       superadmin: await recordId(db, 'base.user_superadmin', 'base.user'),
       system: await recordId(db, 'base.user_system', 'base.user'),
       user: user.id,
+      request: request.id,
     },
   };
 }
 
 async function seed(db: Knex, expectationsPath: string): Promise<void> {
-  await installAddons(db, [baseManifest, authManifest, jobsManifest, notificationManifest]);
+  await installAddons(db, [
+    baseManifest,
+    authManifest,
+    jobsManifest,
+    notificationManifest,
+    workflowManifest,
+    requestManifest,
+  ]);
   await initializeSuperadminPassword('synthetic-restore-drill-admin-password');
 
   const company = await Company.query().findById(

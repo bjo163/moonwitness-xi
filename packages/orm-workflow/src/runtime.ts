@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { registerJobHandler } from '@moonwitness/jobs';
+import { enqueueNotification } from '@moonwitness/orm-notification';
 import { WorkflowApproval, WorkflowDefinition, WorkflowEvent, WorkflowInstance } from './models.js';
 
 export type WorkflowRole = 'system' | 'superadmin' | 'user';
@@ -11,6 +12,8 @@ export interface WorkflowTransitionDefinition {
   readonly roles: readonly WorkflowRole[];
   readonly requiredApprovals?: number;
   readonly requireDifferentActor?: boolean;
+  /** Optional in-app notification sent to the workflow starter in the action transaction. */
+  readonly notifyStarter?: string;
 }
 
 export interface WorkflowDefinitionConfig {
@@ -18,6 +21,14 @@ export interface WorkflowDefinitionConfig {
   readonly startRoles: readonly WorkflowRole[];
   readonly timeoutMinutes: number;
   readonly resourceModels: readonly string[];
+  readonly transitions: readonly WorkflowTransitionDefinition[];
+}
+
+export interface AvailableWorkflowDefinition {
+  readonly code: string;
+  readonly name: string;
+  readonly version: number;
+  readonly startState: string;
   readonly transitions: readonly WorkflowTransitionDefinition[];
 }
 
@@ -120,7 +131,11 @@ function parseConfig(raw: string): WorkflowDefinitionConfig {
         (!Number.isSafeInteger(item.requiredApprovals) ||
           Number(item.requiredApprovals) < 1 ||
           Number(item.requiredApprovals) > 100)) ||
-      (item.requireDifferentActor !== undefined && typeof item.requireDifferentActor !== 'boolean')
+      (item.requireDifferentActor !== undefined &&
+        typeof item.requireDifferentActor !== 'boolean') ||
+      (item.notifyStarter !== undefined &&
+        (typeof item.notifyStarter !== 'string' ||
+          !/^[a-z][a-z0-9_.-]{2,127}$/u.test(item.notifyStarter)))
     )
       throw new WorkflowError('INVALID_DEFINITION', 'Workflow transition has an invalid shape');
     if (actions.has(item.action))
@@ -139,6 +154,7 @@ function parseConfig(raw: string): WorkflowDefinitionConfig {
       ...(item.requireDifferentActor === undefined
         ? {}
         : { requireDifferentActor: item.requireDifferentActor }),
+      ...(item.notifyStarter === undefined ? {} : { notifyStarter: item.notifyStarter }),
     });
   }
   for (const transition of transitions) {
@@ -209,6 +225,37 @@ export interface StartWorkflowInput {
   readonly resourceId: number;
   readonly idempotencyKey: string;
   readonly now?: Date;
+}
+
+export async function listAvailableWorkflowDefinitions(
+  db: Knex,
+  resourceModel: string,
+  role: WorkflowRole
+): Promise<AvailableWorkflowDefinition[]> {
+  const definitions = await db<DefinitionRow>('workflow_definitions')
+    .where({ enabled: true })
+    .orderBy([
+      { column: 'code', order: 'asc' },
+      { column: 'version', order: 'desc' },
+    ])
+    .select('code', 'name', 'version', 'config');
+  const latest = new Set<string>();
+  const available: AvailableWorkflowDefinition[] = [];
+  for (const definition of definitions) {
+    if (latest.has(definition.code)) continue;
+    latest.add(definition.code);
+    const config = parseConfig(definition.config);
+    if (!config.resourceModels.includes(resourceModel) || !config.startRoles.includes(role))
+      continue;
+    available.push({
+      code: definition.code,
+      name: definition.name,
+      version: definition.version,
+      startState: config.startState,
+      transitions: config.transitions,
+    });
+  }
+  return available;
 }
 
 export async function startWorkflow(db: Knex, input: StartWorkflowInput) {
@@ -409,6 +456,18 @@ export async function transitionWorkflow(db: Knex, input: TransitionWorkflowInpu
       comment: input.comment ?? null,
       createdAt: now.toISOString(),
     });
+    if (transition.notifyStarter && toState === transition.to) {
+      await enqueueNotification(
+        {
+          recipientId: instance.started_by_id,
+          companyId: instance.company_id,
+          actorId: input.actorId,
+          templateCode: transition.notifyStarter,
+          resource: { model: instance.resource_model, id: instance.resource_id },
+        },
+        trx
+      );
+    }
     return {
       ...rowFrom(instance),
       currentState: toState,

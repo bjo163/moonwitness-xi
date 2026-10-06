@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "apps/*/package.json and packages/*/package.json",
-  "sourceSha256": "51c65576b43d0a667704078e1fa130df810edb4da6a3eb82cb39fafdd461ab29",
+  "sourceSha256": "6d2d1bbf130f533adbc956a85126e81f74074833f70dec8823e89e20da0ac703",
   "packages": [
     {
       "name": "@moonwitness/api",
@@ -88,6 +88,12 @@
       "manifest": "packages/orm-organization"
     },
     {
+      "name": "@moonwitness/orm-request",
+      "kind": "package",
+      "version": "1.0.0-rc.1",
+      "manifest": "packages/orm-request"
+    },
+    {
       "name": "@moonwitness/orm-storage",
       "kind": "package",
       "version": "1.0.0-rc.1",
@@ -170,6 +176,12 @@
     {
       "from": "@moonwitness/api",
       "to": "@moonwitness/orm-organization",
+      "kind": "runtime",
+      "manifest": "apps/api"
+    },
+    {
+      "from": "@moonwitness/api",
+      "to": "@moonwitness/orm-request",
       "kind": "runtime",
       "manifest": "apps/api"
     },
@@ -300,6 +312,36 @@
       "manifest": "packages/orm-organization"
     },
     {
+      "from": "@moonwitness/orm-request",
+      "to": "@moonwitness/jobs",
+      "kind": "runtime",
+      "manifest": "packages/orm-request"
+    },
+    {
+      "from": "@moonwitness/orm-request",
+      "to": "@moonwitness/orm",
+      "kind": "runtime",
+      "manifest": "packages/orm-request"
+    },
+    {
+      "from": "@moonwitness/orm-request",
+      "to": "@moonwitness/orm-base",
+      "kind": "runtime",
+      "manifest": "packages/orm-request"
+    },
+    {
+      "from": "@moonwitness/orm-request",
+      "to": "@moonwitness/orm-notification",
+      "kind": "runtime",
+      "manifest": "packages/orm-request"
+    },
+    {
+      "from": "@moonwitness/orm-request",
+      "to": "@moonwitness/orm-workflow",
+      "kind": "runtime",
+      "manifest": "packages/orm-request"
+    },
+    {
       "from": "@moonwitness/orm-storage",
       "to": "@moonwitness/orm",
       "kind": "runtime",
@@ -320,6 +362,12 @@
     {
       "from": "@moonwitness/orm-workflow",
       "to": "@moonwitness/orm-base",
+      "kind": "runtime",
+      "manifest": "packages/orm-workflow"
+    },
+    {
+      "from": "@moonwitness/orm-workflow",
+      "to": "@moonwitness/orm-notification",
       "kind": "runtime",
       "manifest": "packages/orm-workflow"
     },

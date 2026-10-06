@@ -1037,7 +1037,9 @@
       "milestone": "M9",
       "dependsOn": ["M9.01", "M9.03", "M9.07"],
       "output": "Sample request addon dengan demo dataset",
-      "detailFile": "docs/roadmap/09-addons.md"
+      "detailFile": "docs/roadmap/09-addons.md",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/M9.06.md"
     },
     {
       "id": "M9.07",

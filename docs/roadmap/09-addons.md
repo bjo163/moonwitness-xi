@@ -108,11 +108,11 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 1. Pilih request/approval sebagai default example dengan requester, amount/description, company, status.
 2. Implementasikan lewat manifest/models/views/access/seed tanpa special-case API routing.
-3. Uji submit/approve/reject, notification dan history melalui Board serta API.
+3. Tampilkan start/action/history melalui panel Board yang generik; uji submit/approve/reject, notification dan history melalui API serta package. Sertakan browser E2E untuk interaksi panel pada environment PostgreSQL test.
 
 ### Verifikasi dan syarat selesai
 
-Addon berjalan tanpa patch core untuk nama model khusus; all role paths teruji.
+Addon berjalan tanpa patch core untuk nama model khusus; requester/reviewer/system role paths, scope akses, notifikasi dan history teruji. Panel Board tampil hanya pada model yang memiliki workflow. Browser E2E dan required hosted checks lulus pada exact source SHA.
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M9.06.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 

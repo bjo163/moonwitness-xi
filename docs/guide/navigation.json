@@ -30,6 +30,16 @@
           "kind": "how-to",
           "path": "docs/guide/how-to/organization-addon.md"
         },
+        {
+          "title": "Contoh addon request/approval",
+          "kind": "how-to",
+          "path": "docs/guide/how-to/request-approval-addon.md"
+        },
+        {
+          "title": "Addon workflow dan approval",
+          "kind": "how-to",
+          "path": "docs/guide/explanations/workflow-engine.md"
+        },
         { "title": "Menjalankan Board", "kind": "how-to", "path": "docs/guide/how-to/board.md" },
         {
           "title": "Jobs dan outbox",

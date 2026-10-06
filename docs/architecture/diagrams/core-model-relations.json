@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "addons": ["auth", "base", "jobs", "notification"],
   "generatedFrom": "core addon manifests and model field metadata; no seed values included",
-  "sourceSha256": "546fa06e800045524c0f903ea775d4b8c327610901f3ad9e505ad5bafa1496f9",
+  "sourceSha256": "70e89079add448094a9f611d72196f8c4ab020fe59c7d6b95aa158a415980dd6",
   "models": [
     {
       "name": "auth.refresh_token",
@@ -147,6 +147,10 @@
     {
       "name": "organization.team",
       "table": "organization_teams"
+    },
+    {
+      "name": "request.purchase",
+      "table": "purchase_requests"
     },
     {
       "name": "workflow.approval",
@@ -555,6 +559,27 @@
       "from": "organization.team",
       "field": "parent",
       "to": "organization.team",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "request.purchase",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "request.purchase",
+      "field": "currency",
+      "to": "base.currency",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "request.purchase",
+      "field": "vendor",
+      "to": "base.partner",
       "cardinality": "N:1",
       "kind": "belongsTo"
     },

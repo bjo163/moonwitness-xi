@@ -15,7 +15,7 @@ troubleshooting tersedia di [Developer guide](docs/guide/index.md).
 
 ## Generated workspace reference
 
-Monorepo version: `1.0.0-rc.1` · metadata fingerprint: `d35eed0b452adc02e81847a9c90e9afee56e17ff3ce5a3593e1a2c9c43f594c1`.
+Monorepo version: `1.0.0-rc.1` · metadata fingerprint: `8652e2467bf89511d7fdbb6b4fb2773608f72eefbd1a0281d0acafe73b89f08a`.
 
 | App/package                     | Kind    | Version      | Workspace scripts                                                                                                                                             |
 | ------------------------------- | ------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -34,6 +34,7 @@ Monorepo version: `1.0.0-rc.1` · metadata fingerprint: `d35eed0b452adc02e81847a
 | `@moonwitness/orm-integration`  | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                               |
 | `@moonwitness/orm-notification` | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                               |
 | `@moonwitness/orm-organization` | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                               |
+| `@moonwitness/orm-request`      | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                               |
 | `@moonwitness/orm-storage`      | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                               |
 | `@moonwitness/orm-workflow`     | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                               |
 | `@moonwitness/types`            | Package | `1.0.0-rc.1` | `build`                                                                                                                                                       |

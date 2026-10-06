@@ -1,7 +1,7 @@
 {
-  "name": "@moonwitness/orm-workflow",
+  "name": "@moonwitness/orm-request",
   "version": "1.0.0-rc.1",
-  "description": "Versioned, auditable workflow and approval engine for MoonWitness",
+  "description": "Reference purchase request addon demonstrating generic ORM and workflow extension",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -19,7 +19,8 @@
     "@moonwitness/orm": "workspace:*",
     "@moonwitness/orm-base": "workspace:*",
     "@moonwitness/jobs": "workspace:*",
-    "@moonwitness/orm-notification": "workspace:*"
+    "@moonwitness/orm-notification": "workspace:*",
+    "@moonwitness/orm-workflow": "workspace:*"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0",

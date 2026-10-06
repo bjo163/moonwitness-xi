@@ -12,6 +12,7 @@ import * as notification from '../../packages/orm-notification/dist/index.js';
 import * as organization from '../../packages/orm-organization/dist/index.js';
 import * as storage from '../../packages/orm-storage/dist/index.js';
 import * as workflow from '../../packages/orm-workflow/dist/index.js';
+import * as request from '../../packages/orm-request/dist/index.js';
 import * as integration from '../../packages/orm-integration/dist/index.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -26,6 +27,7 @@ const addonPackages = [
   { directory: 'orm-organization', module: organization, manifest: organization.manifest },
   { directory: 'orm-storage', module: storage, manifest: storage.manifest },
   { directory: 'orm-workflow', module: workflow, manifest: workflow.manifest },
+  { directory: 'orm-request', module: request, manifest: request.manifest },
   { directory: 'orm-integration', module: integration, manifest: integration.manifest },
 ];
 const addonManifests = addonPackages.map(({ manifest }) => manifest);

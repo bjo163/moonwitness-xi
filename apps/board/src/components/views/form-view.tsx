@@ -10,6 +10,7 @@ import { relationKey } from './field-utils';
 import { One2ManyWidget } from './one2many-widget';
 import { Chatter } from './chatter';
 import { TagsWidget } from './tags-widget';
+import { WorkflowPanel } from './workflow-panel';
 
 interface FormViewProps {
   model: string;
@@ -338,6 +339,8 @@ function FormEditor({
           <Check className="size-5" /> {successMsg}
         </div>
       )}
+
+      {!isCreate && recordId !== undefined && <WorkflowPanel model={model} recordId={recordId} />}
 
       {/* Form sections */}
       <form onSubmit={handleSave} className="space-y-6">
