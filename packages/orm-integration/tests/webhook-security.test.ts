@@ -22,7 +22,12 @@ describe('webhook target validation', () => {
     'fe80::1',
     'ff02::1',
     '2001:db8::1',
+    '2001:0000:0000:0000::1',
+    '2001:0002::1',
+    '2001:db8:ffff::1',
     '2002::1',
+    '3fff::1',
+    '3fff:0000::1',
   ])('rejects non-public address %s', (address) => {
     expect(isPublicWebhookAddress(address)).toBe(false);
   });

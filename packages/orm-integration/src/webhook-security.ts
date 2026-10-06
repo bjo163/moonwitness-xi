@@ -45,15 +45,25 @@ export function isPublicWebhookAddress(address: string): boolean {
     );
   }
   if (family !== 6) return false;
-  const normalized = address.toLowerCase().split('%')[0];
+  let normalized: string;
+  try {
+    normalized = new URL(`http://[${address}]`).hostname.slice(1, -1).toLowerCase();
+  } catch {
+    return false;
+  }
   // Only globally routed IPv6 unicast (2000::/3); this excludes mapped IPv4,
-  // ULA, link-local, loopback, multicast, and unspecified addresses.
+  // ULA, link-local, loopback, multicast, and unspecified addresses. IPv6 is
+  // normalized first so alternate textual forms cannot bypass special ranges.
   if (!normalized.startsWith('2') && !normalized.startsWith('3')) return false;
+  const groups = normalized.split(':').map((group) => Number.parseInt(group || '0', 16));
+  const first = groups[0];
+  const second = groups[1] ?? 0;
+  // IANA IPv6 special-purpose registry: non-global 2001::/23 assignments,
+  // 6to4 (2002::/16), and documentation (3fff::/20).
   return !(
-    normalized.startsWith('2001:db8:') ||
-    normalized.startsWith('2001:0000:') ||
-    normalized.startsWith('2002:') ||
-    normalized.startsWith('2001:0010:')
+    (first === 0x2001 && (second < 0x0200 || second === 0x0db8)) ||
+    first === 0x2002 ||
+    (first === 0x3fff && second < 0x1000)
   );
 }
 
