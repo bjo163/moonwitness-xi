@@ -1,6 +1,6 @@
 # Inventory MoonWitness
 
-Source audit refreshed on `dev` after full verification (`12256f9f94eeaaa8e587b8dffe49e48a65063a29`, code unchanged by the following documentation-only evidence commit). This is a source inventory, not proof that every route/role/data combination behaves correctly. The generated package/model references are maintained by `pnpm docs:generate` and checked in CI.
+Source audit refreshed on `dev` at `53b28d3f26fcf0568e8e2087a3d49632426cb30b`. This is a source inventory, not proof that every route/role/data combination behaves correctly. The generated package/model references are maintained by `pnpm docs:generate` and checked in CI.
 
 ## Workspace and public package surfaces
 
@@ -71,9 +71,9 @@ ORM addon installation uses programmatic model metadata and database operations;
 ## Verification and automation inventory
 
 - `pnpm verify` runs root lint, format, workspace build/typecheck, configured unit suites, addon conformance, UI/assets/charts and accessibility contracts, Board route-aware bundle budgets, release-policy tests, architecture verification and docs/Pages production build. It does not itself run live PostgreSQL integration, PostgreSQL-backed Board E2E, remote release/promotion, or Linux container runtime smoke.
-- `.github/workflows/ci.yml` defines parallel quality/integration/Board/UI/automation/container lanes and an aggregate gate. Other workflows cover visual/browser matrix, docs links and Pages, security scans, dependency candidates, promotion, release planning/preparation/publication, main-to-dev sync, platform audit, and roadmap issue planning/apply.
+- `.github/workflows/ci.yml` defines parallel quality/integration/Board/UI/automation/container lanes and an aggregate gate. The current `.github/workflows` directory contains 19 workflow files, including visual/browser matrix, docs links and Pages, security scans, dependency candidates, promotion, release planning/preparation/publication, main-to-dev sync, platform audit, roadmap issue planning/apply, and read-only maintainer issue intake. The intake workflow is source-configured on `dev` and still requires GitHub App repository variables/secrets plus default-branch promotion before hosted activation.
 - PR/promotion checks must be read against the exact current SHA. Previous green CI is not inherited by a changed head. Fresh CODEOWNER approval, GitHub settings, default-branch workflow discovery, token permissions and hosted workflows are external state; local source cannot prove activation.
-- Current local baseline on `dev` SHA `12256f9f94eeaaa8e587b8dffe49e48a65063a29`: root `pnpm verify` exit 0; API 103/103; package UI/asset, architecture and docs checks pass. Linux-only container runtime case is skipped on Windows. See [M10.03 evidence](../roadmap/evidence/M10.03.md). Coverage, live PostgreSQL on this workstation, hosted exact-head CI for later evidence commits, and remote issue apply are not inferred from that pass.
+- Latest full local verification passed on `dev` SHA `9df3205b3350e8fb906674c943a00d7743ae246c`: root `pnpm verify` exit 0, including API 103/103, package/addon/UI/assets/release/architecture/docs suites and Pages production build. On inventory head `53b28d3`, workflow trust tests pass 19/19 and repository lint/format/roadmap/docs validators pass. Linux container runtime smoke is blocked locally because Docker Desktop's Linux engine is unavailable. See [M10.03 evidence](../roadmap/evidence/M10.03.md). This does not infer live PostgreSQL, hosted exact-head CI for `53b28d3`, promotion, or remote issue apply.
 
 ## Remaining source questions and acceptance boundaries
 
