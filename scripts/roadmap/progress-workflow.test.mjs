@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { URL } from 'node:url';
 
 const workflow = await readFile(
   new URL('../../.github/workflows/roadmap-progress.yml', import.meta.url),
@@ -15,7 +16,7 @@ test('progress report workflow reads dev and publishes only short-lived Markdown
   );
   assert.match(workflow, /ref: dev\n/u);
   assert.match(workflow, /mkdir -p dist\/roadmap-progress/u);
-  assert.match(workflow, /permissions:\n  contents: read\n/u);
+  assert.match(workflow, /permissions:\n\x20{2}contents: read\n/u);
   assert.doesNotMatch(workflow, /^\s+(?:issues|pull-requests|contents):\s+write\s*$/mu);
   assert.match(workflow, /--output dist\/roadmap-progress\/roadmap-progress\.md/u);
   assert.match(workflow, /--format json --output dist\/roadmap-progress\/roadmap-progress\.json/u);
