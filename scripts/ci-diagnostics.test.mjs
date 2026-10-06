@@ -5,6 +5,7 @@ import { summarizeJunitFailures } from './summarize-junit-failures.mjs';
 import { renderUnitRunnerFailureReport } from './unit-runner-report.mjs';
 
 const workflow = readFileSync('.github/workflows/ci.yml', 'utf8');
+const pagesWorkflow = readFileSync('.github/workflows/pages.yml', 'utf8');
 const unitRunner = readFileSync('scripts/run-unit-tests.mjs', 'utf8');
 
 test('failed unit and PostgreSQL jobs annotate testcase names before report scanning', () => {
@@ -47,4 +48,12 @@ test('unit runner executes each workspace package suite only once', () => {
   );
   assert.ok(packageNames.length > 0, 'unit runner should define workspace package suites');
   assert.equal(new Set(packageNames).size, packageNames.length, 'package suites must be unique');
+});
+
+test('documentation portal failures annotate sanitized JUnit test names', () => {
+  assert.match(pagesWorkflow, /name: Build and test documentation portal\s+id: docs_portal_tests/u);
+  assert.match(
+    pagesWorkflow,
+    /name: Annotate failed documentation portal testcases\s+if: always\(\) && steps\.docs_portal_tests\.outcome == 'failure'\s+continue-on-error: true\s+run: node scripts\/summarize-junit-failures\.mjs test-results\/junit/u
+  );
 });

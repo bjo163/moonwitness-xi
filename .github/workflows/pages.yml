@@ -238,7 +238,12 @@ jobs:
       - name: Install Chromium for portal browser tests
         run: pnpm exec playwright install --with-deps chromium
       - name: Build and test documentation portal
+        id: docs_portal_tests
         run: pnpm test:docs-portal
+      - name: Annotate failed documentation portal testcases
+        if: always() && steps.docs_portal_tests.outcome == 'failure'
+        continue-on-error: true
+        run: node scripts/summarize-junit-failures.mjs test-results/junit
       - name: Require successful CI gate for trusted main source
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.publish == true)
         env:
