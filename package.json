@@ -109,7 +109,7 @@
     "automation:check:secrets": "node scripts/check-gitleaks-config.mjs",
     "test:secrets": "node --test scripts/check-gitleaks-config.test.mjs",
     "automation:check:roadmap": "node scripts/roadmap/validate-roadmap.mjs",
-    "test:roadmap": "node --test scripts/roadmap/validate-roadmap.test.mjs scripts/roadmap/sync-issues.test.mjs scripts/roadmap/lifecycle.test.mjs scripts/roadmap/lifecycle-snapshot.test.mjs scripts/roadmap/collect-lifecycle-snapshot.test.mjs scripts/roadmap/issue-intake.test.mjs scripts/roadmap/progress-dashboard.test.mjs scripts/roadmap/audit-issues.test.mjs",
+    "test:roadmap": "node --test scripts/roadmap/validate-roadmap.test.mjs scripts/roadmap/sync-issues.test.mjs scripts/roadmap/lifecycle.test.mjs scripts/roadmap/lifecycle-snapshot.test.mjs scripts/roadmap/collect-lifecycle-snapshot.test.mjs scripts/roadmap/issue-intake.test.mjs scripts/roadmap/progress-dashboard.test.mjs scripts/roadmap/progress-workflow.test.mjs scripts/roadmap/audit-issues.test.mjs",
     "roadmap:progress": "node scripts/roadmap/progress-dashboard.mjs",
     "roadmap:issues:audit": "node scripts/roadmap/audit-issues.mjs",
     "roadmap:issues:plan": "node scripts/roadmap/sync-issues.mjs",
