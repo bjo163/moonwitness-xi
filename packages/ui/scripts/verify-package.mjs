@@ -5,12 +5,14 @@ import { env, execPath, platform, stdout } from 'node:process';
 import { join, resolve } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { renderPackageVerificationAnnotation } from './verification-diagnostics.mjs';
 
 const execFileAsync = promisify(execFile);
 const packageManager = platform === 'win32' ? (env.ComSpec ?? 'cmd.exe') : 'pnpm';
 const packageManagerPrefix = platform === 'win32' ? ['/d', '/s', '/c', 'pnpm'] : [];
 const packageRoot = resolve(import.meta.dirname, '..');
 const tempRoot = await mkdtemp(join(tmpdir(), 'moonwitness-ui-package-'));
+let verificationPhase = 'create package archive';
 
 try {
   const packed = await execFileAsync(
@@ -21,6 +23,7 @@ try {
       windowsHide: true,
     }
   );
+  verificationPhase = 'validate package archive';
   const archiveName = packed.stdout.match(/moonwitness-ui-[\w.-]+\.tgz/u)?.[0];
   assert.ok(archiveName, 'pnpm pack should report the generated archive');
 
@@ -30,6 +33,7 @@ try {
     join(consumerRoot, 'package.json'),
     JSON.stringify({ private: true, type: 'module' })
   );
+  verificationPhase = 'install isolated consumer dependencies';
   await execFileAsync(
     packageManager,
     [
@@ -77,9 +81,10 @@ let internalPathWasRejected = false;
 try { await import('@moonwitness/ui/dist/components/button.js'); }
 catch (error) { internalPathWasRejected = error.code === 'ERR_PACKAGE_PATH_NOT_EXPORTED'; }
 assert.equal(internalPathWasRejected, true);
-`;
+  `;
   const consumerFile = join(consumerRoot, 'consumer.mjs');
   await writeFile(consumerFile, source);
+  verificationPhase = 'run consumer import smoke test';
   await execFileAsync(execPath, [consumerFile], {
     cwd: consumerRoot,
     windowsHide: true,
@@ -88,10 +93,16 @@ assert.equal(internalPathWasRejected, true);
   const packageJson = JSON.parse(
     await readFile(join(consumerRoot, 'node_modules/@moonwitness/ui/package.json'), 'utf8')
   );
+  verificationPhase = 'validate public stylesheet exports';
   for (const stylesheet of ['./components.css', './styles/tokens.css']) {
     assert.ok(packageJson.exports[stylesheet], `Missing public CSS export ${stylesheet}`);
   }
   stdout.write('Packed consumer imports, private-path rejection, and CSS exports passed.\n');
+} catch (error) {
+  const errorCode =
+    typeof error === 'object' && error !== null && 'code' in error ? error.code : undefined;
+  stdout.write(renderPackageVerificationAnnotation(verificationPhase, errorCode));
+  throw error;
 } finally {
   await rm(tempRoot, { recursive: true, force: true });
 }
