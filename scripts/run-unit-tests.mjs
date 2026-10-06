@@ -1,8 +1,10 @@
 import { mkdir } from 'node:fs/promises';
+import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { renderUnitRunnerFailureReport } from './unit-runner-report.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const reportDirectory = path.join(root, 'test-results', 'junit');
@@ -21,8 +23,21 @@ function run(args, label) {
     cwd: root,
     stdio: 'inherit',
   });
-  if (result.error) throw result.error;
+  if (result.error) {
+    writeFileSync(
+      path.join(reportDirectory, 'unit-runner.xml'),
+      renderUnitRunnerFailureReport(label, 1),
+      'utf8'
+    );
+    process.stderr.write(`${label} could not be started.\n`);
+    process.exit(1);
+  }
   if (result.status !== 0) {
+    writeFileSync(
+      path.join(reportDirectory, 'unit-runner.xml'),
+      renderUnitRunnerFailureReport(label, result.status ?? 1),
+      'utf8'
+    );
     process.stderr.write(`${label} failed with exit code ${result.status ?? 1}\n`);
     process.exit(result.status ?? 1);
   }
