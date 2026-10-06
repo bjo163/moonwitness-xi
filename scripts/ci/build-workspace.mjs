@@ -5,10 +5,11 @@ import {
   renderWorkspaceBuildFailure,
   summarizeWorkspaceBuildDiagnostics,
 } from './workspace-build-diagnostics.mjs';
+import { resolvePackageManager } from '../package-manager.mjs';
 
-const packageManagerCli = process.env.npm_execpath;
+const packageManager = resolvePackageManager();
 const buildFilter = process.argv[2];
-if (!packageManagerCli) {
+if (!packageManager) {
   process.stderr.write(
     'Run the workspace build through pnpm so the package manager can be resolved safely.\n'
   );
@@ -20,9 +21,10 @@ if (buildFilter && buildFilter !== '@moonwitness/api...') {
 }
 
 const buildArgs = buildFilter ? ['--filter', buildFilter, 'build'] : ['-r', 'build'];
-const result = spawnSync(process.execPath, [packageManagerCli, ...buildArgs], {
+const result = spawnSync(packageManager.command, [...packageManager.prefixArgs, ...buildArgs], {
   encoding: 'utf8',
   maxBuffer: 10 * 1024 * 1024,
+  ...(packageManager.shell ? { shell: true } : {}),
 });
 const output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
 

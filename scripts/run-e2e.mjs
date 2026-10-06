@@ -3,10 +3,11 @@ import { mkdir, unlink } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { env, stderr, stdout, exit, execPath, argv } from 'node:process';
+import { env, stderr, stdout, exit, argv } from 'node:process';
 import { URL } from 'node:url';
 import { writeE2EPreflightFailure } from './e2e-preflight-report.mjs';
 import { renderWorkspaceBuildFailure } from './ci/workspace-build-diagnostics.mjs';
+import { resolvePackageManager } from './package-manager.mjs';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const config = resolve(root, 'apps/board/playwright.config.ts');
@@ -69,42 +70,47 @@ async function runPreflight(stage, command, args, commandEnv = env) {
   }
 }
 
-const packageManagerCli = env.npm_execpath;
-if (!packageManagerCli) {
+const packageManager = resolvePackageManager();
+if (!packageManager) {
   stderr.write('Run test:e2e through pnpm so the package manager can be resolved safely.\n');
   await writeE2EPreflightFailure(junitDirectory, 'pnpm-invocation', 2);
   exit(2);
 }
 
-await runPreflight('flaky-policy', execPath, ['scripts/check-flaky-policy.mjs']);
-await runPreflight('build-api', execPath, [
-  'scripts/ci/build-workspace.mjs',
-  '@moonwitness/api...',
-]);
-await runPreflight('build-ui', execPath, [
-  packageManagerCli,
-  '--filter',
-  '@moonwitness/ui',
-  'build',
-]);
+await runPreflight('flaky-policy', 'node', ['scripts/check-flaky-policy.mjs']);
+await runPreflight('build-api', 'node', ['scripts/ci/build-workspace.mjs', '@moonwitness/api...']);
+await runPreflight(
+  'build-ui',
+  packageManager.command,
+  [...packageManager.prefixArgs, '--filter', '@moonwitness/ui', 'build'],
+  { ...env, ...(packageManager.shell ? { shell: true } : {}) }
+);
 
 const e2ePassword = env.MW_E2E_SUPERADMIN_PASSWORD ?? 'e2e-only-password';
 await runPreflight(
   'reset-superadmin-password',
-  execPath,
-  [packageManagerCli, '--filter', '@moonwitness/api', 'run', 'reset:superadmin-password'],
+  packageManager.command,
+  [
+    ...packageManager.prefixArgs,
+    '--filter',
+    '@moonwitness/api',
+    'run',
+    'reset:superadmin-password',
+  ],
   {
     ...env,
     DATABASE_URL: env.POSTGRES_TEST_URL,
     SUPERADMIN_PASSWORD: e2ePassword,
-  }
+    ...(packageManager.shell ? { shell: true } : {}),
+  },
+  packageManager.command
 );
 
 stderr.write('Starting Board E2E tests with Playwright.\n');
 const result = spawnSync(
-  execPath,
+  packageManager.command,
   [
-    packageManagerCli,
+    ...packageManager.prefixArgs,
     'exec',
     'playwright',
     'test',
@@ -116,6 +122,7 @@ const result = spawnSync(
     cwd: root,
     env,
     stdio: 'inherit',
+    ...(packageManager.shell ? { shell: true } : {}),
   }
 );
 if (

@@ -1,20 +1,21 @@
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
-import { env, exit, execPath, stderr } from 'node:process';
+import { env, exit, stderr } from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { URL } from 'node:url';
+import { resolvePackageManager } from './package-manager.mjs';
 
 const repositoryRoot = resolve(fileURLToPath(new URL('..', import.meta.url)));
-const packageManagerCli = env.npm_execpath;
-if (!packageManagerCli) {
+const packageManager = resolvePackageManager();
+if (!packageManager) {
   stderr.write('Run the visual browser matrix through pnpm.\n');
   exit(2);
 }
 
 const result = spawnSync(
-  execPath,
+  packageManager.command,
   [
-    packageManagerCli,
+    ...packageManager.prefixArgs,
     '--filter',
     '@moonwitness/board',
     'exec',
@@ -28,6 +29,7 @@ const result = spawnSync(
     cwd: repositoryRoot,
     env: { ...env, MW_VISUAL_BROWSER_MATRIX: 'true' },
     stdio: 'inherit',
+    ...(packageManager.shell ? { shell: true } : {}),
   }
 );
 

@@ -84,7 +84,7 @@ test('root workspace builds use the diagnostic wrapper and its tests run in CI',
   assert.equal(rootPackage.scripts.build, 'node scripts/ci/build-workspace.mjs');
   assert.match(
     e2eRunner,
-    /runPreflight\('build-api', execPath, \[\s+'scripts\/ci\/build-workspace\.mjs',\s+'@moonwitness\/api\.\.\.',\s+\]\)/u
+    /runPreflight\('build-api', 'node', \['scripts\/ci\/build-workspace\.mjs', '@moonwitness\/api\.\.\.'\]\)/u
   );
   assert.match(
     rootPackage.scripts['test:e2e:diagnostics'],

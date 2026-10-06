@@ -1,15 +1,16 @@
 import { spawnSync } from 'node:child_process';
-import { env, stderr, exit, execPath } from 'node:process';
+import { env, stderr, exit } from 'node:process';
 import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { resolvePackageManager } from './package-manager.mjs';
 
 const connectionString = env.POSTGRES_TEST_URL;
 if (!connectionString) {
   stderr.write('POSTGRES_TEST_URL is required for test:integration.\n');
   exit(2);
 }
-const packageManagerCli = env.npm_execpath;
-if (!packageManagerCli) {
+const packageManager = resolvePackageManager();
+if (!packageManager) {
   stderr.write(
     'Run test:integration through pnpm so the package manager can be resolved safely.\n'
   );
@@ -39,9 +40,10 @@ for (const args of [
     `--outputFile.junit=${resolve(reportDirectory, 'postgres.xml')}`,
   ],
 ]) {
-  const result = spawnSync(execPath, [packageManagerCli, ...args], {
+  const result = spawnSync(packageManager.command, [...packageManager.prefixArgs, ...args], {
     env: childEnvironment,
     stdio: 'inherit',
+    ...(packageManager.shell ? { shell: true } : {}),
   });
   if (result.error) {
     stderr.write(`${result.error.message}\n`);

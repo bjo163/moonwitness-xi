@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { renderUnitRunnerFailureReport } from './unit-runner-report.mjs';
+import { resolvePackageManager } from './package-manager.mjs';
 import {
   findFailedWorkspacePackage,
   renderWorkspaceBuildFailure,
@@ -13,8 +14,8 @@ import {
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const reportDirectory = path.join(root, 'test-results', 'junit');
-const packageManagerCli = process.env.npm_execpath;
-if (!packageManagerCli) {
+const packageManager = resolvePackageManager();
+if (!packageManager) {
   process.stderr.write(
     'Run test:unit:ci through pnpm so the package manager can be resolved safely.\n'
   );
@@ -24,10 +25,11 @@ if (!packageManagerCli) {
 await mkdir(reportDirectory, { recursive: true });
 
 function run(args, label) {
-  const result = spawnSync(process.execPath, [packageManagerCli, ...args], {
+  const result = spawnSync(packageManager.command, [...packageManager.prefixArgs, ...args], {
     cwd: root,
     encoding: 'utf8',
     maxBuffer: 10 * 1024 * 1024,
+    ...(packageManager.shell ? { shell: true } : {}),
   });
   const output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
   process.stdout.write(output);
