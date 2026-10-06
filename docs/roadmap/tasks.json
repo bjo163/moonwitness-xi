@@ -1087,6 +1087,8 @@
     },
     {
       "id": "M10.04",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M10.04.md",
       "title": "PostgreSQL integration benar-benar berjalan; upgrade, relasi/count, seed, dan izin negatif teruji.",
       "milestone": "M10",
       "dependsOn": ["M2.06", "M4.02", "M4.06"],
@@ -1095,6 +1097,8 @@
     },
     {
       "id": "M10.05",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M10.05.md",
       "title": "Image API/Board berjalan pada runner; health/readiness/shutdown dan konfigurasi container terverifikasi.",
       "milestone": "M10",
       "dependsOn": ["M7.09"],
