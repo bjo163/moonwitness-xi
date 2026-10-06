@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { summarizeJunitFailures } from './summarize-junit-failures.mjs';
 import { renderUnitRunnerFailureReport } from './unit-runner-report.mjs';
+import { assertReportsAreSanitized } from './scan-test-reports.mjs';
 
 const workflow = readFileSync('.github/workflows/ci.yml', 'utf8');
 const pagesWorkflow = readFileSync('.github/workflows/pages.yml', 'utf8');
@@ -36,13 +37,36 @@ test('unit runner records a safe phase name when it fails before writing a suite
 
   assert.deepEqual(summarizeJunitFailures(report), ['unit-runner :: API build <failed> exited 2']);
   assert.doesNotMatch(report, /compiler output|password|token/u);
-  assert.match(unitRunner, /renderUnitRunnerFailureReport\(label, result\.status \?\? 1\)/u);
+  assert.match(
+    unitRunner,
+    /renderUnitRunnerFailureReport\(label, result\.status \?\? 1, buildFailure\)/u
+  );
   assert.match(unitRunner, /renderUnitRunnerFailureReport\(label, 1\)/u);
   assert.match(unitRunner, /summarizeWorkspaceBuildDiagnostics\(output\)/u);
   assert.match(unitRunner, /title=Workspace build \$\{diagnostic\.code\}/u);
   assert.match(unitRunner, /See compiler details in the runner log\./u);
   assert.doesNotMatch(unitRunner, /::error[^\n]*\$\{diagnostic\.message\}/u);
   assert.throws(() => renderUnitRunnerFailureReport('Build', 0), /non-zero exit code/u);
+});
+
+test('workspace build JUnit exposes sanitized typecheck locations for hosted diagnosis', () => {
+  const report = renderUnitRunnerFailureReport('Build', 1, {
+    failedPackage: '@moonwitness/orm-request',
+    diagnostics: [
+      {
+        path: 'packages/orm-request/src/manifest.ts',
+        line: 3,
+        column: 36,
+        code: 'TS2307',
+        message: 'Cannot find module private-token',
+      },
+    ],
+  });
+
+  assert.match(report, /@moonwitness\/orm-request/u);
+  assert.match(report, /packages\/orm-request\/src\/manifest\.ts\(3,36\) TS2307/u);
+  assert.doesNotMatch(report, /private-token|Cannot find module/u);
+  assert.doesNotThrow(() => assertReportsAreSanitized(report));
 });
 
 test('unit runner executes each workspace package suite only once', () => {

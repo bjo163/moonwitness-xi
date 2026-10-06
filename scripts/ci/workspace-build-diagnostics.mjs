@@ -15,3 +15,13 @@ export function findFailedWorkspacePackage(output) {
   );
   return match?.[1];
 }
+
+export function renderWorkspaceBuildFailure(output, exitCode) {
+  const diagnostics = summarizeWorkspaceBuildDiagnostics(output);
+  const packageName = findFailedWorkspacePackage(output);
+  return {
+    exitCode: Number.isInteger(exitCode) && exitCode !== 0 ? exitCode : 1,
+    failedPackage: packageName ?? null,
+    diagnostics,
+  };
+}

@@ -5,7 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { assertReportsAreSanitized, assertRequiredTestReports } from './scan-test-reports.mjs';
 import { summarizeFailedTests } from './summarize-playwright-failures.mjs';
-import { writeE2EPreflightFailure } from './e2e-preflight-report.mjs';
+import { summarizePreflightDiagnostic, writeE2EPreflightFailure } from './e2e-preflight-report.mjs';
 
 test('preflight failure creates sanitized JUnit and retry diagnostics for the failing stage', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'moonwitness-e2e-preflight-'));
@@ -33,4 +33,62 @@ test('preflight reports reject unknown stages and successful exit codes', async 
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
+});
+
+test('API build preflight report retains safe TypeScript locations but strips compiler messages', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'moonwitness-e2e-diagnostic-'));
+  try {
+    await writeE2EPreflightFailure(directory, 'build-api', 1, {
+      failedPackage: '@moonwitness/orm-request',
+      diagnostics: [
+        {
+          path: 'packages/orm-request/src/manifest.ts',
+          line: 3,
+          column: 36,
+          code: 'TS2307',
+          message: 'Cannot find module private-token',
+        },
+        {
+          path: 'packages/orm-request/secrets/private.ts',
+          line: 1,
+          column: 1,
+          code: 'TS2307',
+        },
+      ],
+    });
+    const junit = await readFile(path.join(directory, 'board-e2e.xml'), 'utf8');
+    assert.match(junit, /@moonwitness\/orm-request/u);
+    assert.match(junit, /packages\/orm-request\/src\/manifest\.ts:3:36 TS2307/u);
+    assert.doesNotMatch(junit, /private-token|Cannot find module|secrets/u);
+    assert.doesNotThrow(() => assertReportsAreSanitized(junit));
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('preflight diagnostic formatter ignores untrusted paths and compiler messages', () => {
+  assert.deepEqual(
+    summarizePreflightDiagnostic({
+      path: 'packages/orm-request/src/manifest.ts',
+      line: 4,
+      column: 9,
+      code: 'TS2322',
+      message: 'secret=private-token',
+    }),
+    {
+      path: 'packages/orm-request/src/manifest.ts',
+      line: 4,
+      column: 9,
+      code: 'TS2322',
+    }
+  );
+  assert.equal(
+    summarizePreflightDiagnostic({
+      path: '../secrets.ts',
+      line: 4,
+      column: 9,
+      code: 'TS2322',
+    }),
+    undefined
+  );
 });

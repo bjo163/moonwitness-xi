@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { renderUnitRunnerFailureReport } from './unit-runner-report.mjs';
 import {
   findFailedWorkspacePackage,
+  renderWorkspaceBuildFailure,
   summarizeWorkspaceBuildDiagnostics,
 } from './ci/workspace-build-diagnostics.mjs';
 
@@ -40,11 +41,28 @@ function run(args, label) {
     process.exit(1);
   }
   if (result.status !== 0) {
+    const buildFailure =
+      label === 'Build' ? renderWorkspaceBuildFailure(output, result.status ?? 1) : undefined;
     writeFileSync(
       path.join(reportDirectory, 'unit-runner.xml'),
-      renderUnitRunnerFailureReport(label, result.status ?? 1),
+      renderUnitRunnerFailureReport(label, result.status ?? 1, buildFailure),
       'utf8'
     );
+    if (buildFailure && process.env.GITHUB_STEP_SUMMARY) {
+      const summary = [
+        '## Workspace build failure diagnostics',
+        '',
+        `- Failed package: ${buildFailure.failedPackage ?? 'unknown package'}`,
+        `- Exit code: ${buildFailure.exitCode}`,
+        ...(buildFailure.diagnostics.length > 0
+          ? buildFailure.diagnostics.map(
+              (item) => `- TypeScript: \`${item.path}:${item.line}:${item.column}\` — ${item.code}`
+            )
+          : ['- No allowlisted TypeScript location could be extracted from this build output.']),
+        '',
+      ].join('\n');
+      writeFileSync(process.env.GITHUB_STEP_SUMMARY, summary, { flag: 'a', encoding: 'utf8' });
+    }
     if (label === 'Build') {
       const diagnostics = summarizeWorkspaceBuildDiagnostics(output);
       for (const diagnostic of diagnostics) {

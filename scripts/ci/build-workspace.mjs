@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 import process from 'node:process';
 import {
   findFailedWorkspacePackage,
+  renderWorkspaceBuildFailure,
   summarizeWorkspaceBuildDiagnostics,
 } from './workspace-build-diagnostics.mjs';
 
@@ -32,6 +33,24 @@ if (result.status === 0) {
 
 process.stdout.write(output);
 const diagnostics = summarizeWorkspaceBuildDiagnostics(output);
+const failure = renderWorkspaceBuildFailure(output, result.status ?? 1);
+if (process.env.GITHUB_STEP_SUMMARY) {
+  const summary = [
+    '## Workspace build failure diagnostics',
+    '',
+    `- Failed package: ${failure.failedPackage ?? 'unknown package'}`,
+    `- Exit code: ${failure.exitCode}`,
+    ...(diagnostics.length > 0
+      ? diagnostics.map(
+          (item) => `- TypeScript: \`${item.path}:${item.line}:${item.column}\` — ${item.code}`
+        )
+      : ['- No allowlisted TypeScript location could be extracted from this build output.']),
+    '',
+  ].join('\n');
+  process.stdout.write(summary);
+  const { appendFile } = await import('node:fs/promises');
+  await appendFile(process.env.GITHUB_STEP_SUMMARY, summary, 'utf8');
+}
 if (diagnostics.length > 0) {
   for (const diagnostic of diagnostics) {
     process.stdout.write(

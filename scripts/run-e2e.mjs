@@ -3,9 +3,10 @@ import { mkdir, unlink } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { env, stderr, exit, execPath, argv } from 'node:process';
+import { env, stderr, stdout, exit, execPath, argv } from 'node:process';
 import { URL } from 'node:url';
 import { writeE2EPreflightFailure } from './e2e-preflight-report.mjs';
+import { renderWorkspaceBuildFailure } from './ci/workspace-build-diagnostics.mjs';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const config = resolve(root, 'apps/board/playwright.config.ts');
@@ -46,10 +47,24 @@ await Promise.all(
 
 async function runPreflight(stage, command, args, commandEnv = env) {
   stderr.write(`Running Board E2E preflight: ${stage}\n`);
-  const result = spawnSync(command, args, { cwd: root, env: commandEnv, stdio: 'inherit' });
+  const result = spawnSync(command, args, {
+    cwd: root,
+    env: commandEnv,
+    ...(stage === 'build-api'
+      ? { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 }
+      : { stdio: 'inherit' }),
+  });
+  if (stage === 'build-api') stdout.write(`${result.stdout ?? ''}${result.stderr ?? ''}`);
   if (result.error || result.status !== 0) {
     if (result.error) stderr.write(`Could not start Board E2E preflight stage: ${stage}.\n`);
-    await writeE2EPreflightFailure(junitDirectory, stage, result.status ?? 1);
+    const details =
+      stage === 'build-api'
+        ? renderWorkspaceBuildFailure(
+            `${result.stdout ?? ''}${result.stderr ?? ''}`,
+            result.status ?? 1
+          )
+        : undefined;
+    await writeE2EPreflightFailure(junitDirectory, stage, result.status ?? 1, details);
     exit(result.status ?? 1);
   }
 }
