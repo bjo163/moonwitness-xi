@@ -64,6 +64,10 @@ test('only unexpired ISO date exceptions remain active', () => {
   equal(isExceptionActive({ expiresOn: '2026-10-06' }, '2026-10-05'), true);
   equal(isExceptionActive({ expiresOn: '2026-10-04' }, '2026-10-05'), false);
   equal(isExceptionActive({ expiresOn: 'never' }, '2026-10-05'), false);
+  equal(isExceptionActive({ expiresOn: '2026-99-99' }, '2026-10-05'), false);
+  equal(isExceptionActive({ expiresOn: '2026-02-30' }, '2026-01-01'), false);
+  equal(isExceptionActive({ expiresOn: '2024-02-29' }, '2024-02-28'), true);
+  equal(isExceptionActive({ expiresOn: '2023-02-29' }, '2023-01-01'), false);
 });
 
 test('exception policy rejects expired or ownerless suppressions', () => {
@@ -72,12 +76,18 @@ test('exception policy rejects expired or ownerless suppressions', () => {
       [
         { id: 'expired', owner: 'security', reason: 'test', expiresOn: '2026-10-04' },
         { id: 'incomplete', expiresOn: '2026-10-06' },
+        { id: 'impossible', owner: 'security', reason: 'test', expiresOn: '2026-99-99' },
+        null,
       ],
       '2026-10-05'
     ),
     [
       'exception expired expired on 2026-10-04',
       'exception incomplete requires id, owner, and reason',
+      'exception impossible requires a real ISO calendar expiry date',
+      'exception 4 requires id, owner, and reason',
+      'exception 4 requires a real ISO calendar expiry date',
     ]
   );
+  deepEqual(validateExceptions({}, '2026-10-05'), ['exceptions must be an array']);
 });

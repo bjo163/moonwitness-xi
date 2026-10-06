@@ -50,20 +50,45 @@ export function extractSarifFindings(sarif) {
 }
 
 export function isExceptionActive(exception, today) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(exception.expiresOn) && exception.expiresOn >= today;
+  return isValidIsoDate(exception?.expiresOn) && exception.expiresOn >= today;
 }
 
 export function validateExceptions(exceptions, today) {
+  if (!Array.isArray(exceptions)) return ['exceptions must be an array'];
   const errors = [];
   for (const [index, exception] of exceptions.entries()) {
-    if (!exception.id || !exception.owner || !exception.reason) {
-      errors.push(`exception ${exception.id || index + 1} requires id, owner, and reason`);
+    const identity =
+      typeof exception?.id === 'string' && exception.id.length > 0
+        ? exception.id
+        : String(index + 1);
+    if (
+      typeof exception?.id !== 'string' ||
+      exception.id.trim().length === 0 ||
+      typeof exception?.owner !== 'string' ||
+      exception.owner.trim().length === 0 ||
+      typeof exception?.reason !== 'string' ||
+      exception.reason.trim().length === 0
+    ) {
+      errors.push(`exception ${identity} requires id, owner, and reason`);
     }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(exception.expiresOn ?? '')) {
-      errors.push(`exception ${exception.id || index + 1} requires an ISO expiry date`);
-    } else if (!isExceptionActive(exception, today)) {
-      errors.push(`exception ${exception.id || index + 1} expired on ${exception.expiresOn}`);
+    if (!isValidIsoDate(exception?.expiresOn)) {
+      errors.push(`exception ${identity} requires a real ISO calendar expiry date`);
+    } else if (exception.expiresOn < today) {
+      errors.push(`exception ${identity} expired on ${exception.expiresOn}`);
     }
   }
   return errors;
+}
+
+function isValidIsoDate(value) {
+  if (typeof value !== 'string') return false;
+  const match = /^(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})$/u.exec(value);
+  if (!match?.groups) return false;
+  const year = Number(match.groups.year);
+  const month = Number(match.groups.month);
+  const day = Number(match.groups.day);
+  if (year < 1 || month < 1 || month > 12 || day < 1) return false;
+  const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysInMonth = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return day <= (daysInMonth[month - 1] ?? 0);
 }
