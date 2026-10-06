@@ -1119,6 +1119,8 @@
     },
     {
       "id": "M10.08",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/M10.08.md",
       "title": "Hanya main/dev ada pada repository asal; tidak ada workflow deployment aplikasi yang aktif.",
       "milestone": "M10",
       "dependsOn": ["M1.02", "M1.11", "M1.12"],
