@@ -31,6 +31,7 @@
     "test:ui-budget": "node --test apps/ui-catalog/tests/bundle-budget.test.mjs && pnpm --filter @moonwitness/ui-catalog build && pnpm ui:budget",
     "ui:visual:update": "pnpm --filter @moonwitness/ui-catalog build && pnpm --filter @moonwitness/ui-catalog exec playwright test --update-snapshots",
     "test:e2e": "node scripts/run-e2e.mjs",
+    "test:e2e:diagnostics": "node --test scripts/e2e-preflight-report.test.mjs scripts/summarize-playwright-failures.test.mjs",
     "board:visual:update": "pnpm test:e2e --grep 'responsive screen audit|responsive protected screens' --update-snapshots",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

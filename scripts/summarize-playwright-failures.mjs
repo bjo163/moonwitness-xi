@@ -1,5 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import process from 'node:process';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const maxAnnotations = 10;
 
@@ -85,4 +87,6 @@ async function main() {
   }
 }
 
-await main();
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  await main();
+}
