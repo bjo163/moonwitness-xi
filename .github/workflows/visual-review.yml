@@ -57,10 +57,11 @@ jobs:
       - name: Render approved comparison candidates
         run: pnpm test:e2e --grep "responsive screen audit|responsive protected screens"
       - name: Scan reports before publishing screenshots
+        id: scan_reports
         if: always()
         run: node scripts/scan-test-reports.mjs
       - name: Publish screenshots for human review
-        if: always()
+        if: always() && steps.scan_reports.outcome == 'success'
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: visual-review-${{ github.run_id }}-${{ github.run_attempt }}

@@ -94,6 +94,13 @@ export function inspectTrustedCheckoutPolicies({
 
   if (!visualReview.includes('DISPATCH_REF" != "refs/heads/dev"'))
     findings.push('Visual review dispatch must be restricted to the protected dev branch.');
+  if (
+    visualReview.includes('name: Publish screenshots for human review') &&
+    (!visualReview.includes('id: scan_reports') ||
+      !visualReview.includes("if: always() && steps.scan_reports.outcome == 'success'"))
+  ) {
+    findings.push('Visual review must scan reports successfully before uploading screenshots.');
+  }
   if (visualReview.split(/\r?\n/u).some((line) => line.startsWith('    inputs:')))
     findings.push('Visual review must not accept an arbitrary ref input.');
 

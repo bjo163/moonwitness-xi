@@ -28,6 +28,10 @@ const visualReview = `
           ref: ${expressionStart}{ github.sha }}
           persist-credentials: false
     if [[ "$DISPATCH_REF" != "refs/heads/dev" ]]; then exit 1; fi
+      - name: Scan reports before publishing screenshots
+        id: scan_reports
+      - name: Publish screenshots for human review
+        if: always() && steps.scan_reports.outcome == 'success'
 `;
 const release = `
     if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref_type == 'tag'
@@ -101,6 +105,20 @@ test('rejects arbitrary workflow-dispatch checkout refs and persisted credential
   const findings = policies({ pages: untrustedPages, visualReview: untrustedVisual });
   assert.ok(findings.some((finding) => finding.includes('immutable event SHA')));
   assert.ok(findings.some((finding) => finding.includes('persist the workflow token')));
+});
+
+test('rejects screenshot upload when report secret scanning is missing or unsuccessful', () => {
+  const unsafeVisual = visualReview
+    .replace('        id: scan_reports\n', '')
+    .replace(
+      "        if: always() && steps.scan_reports.outcome == 'success'\n",
+      '        if: always()\n'
+    );
+  assert.ok(
+    policies({ visualReview: unsafeVisual }).some((finding) =>
+      finding.includes('scan reports successfully before uploading screenshots')
+    )
+  );
 });
 
 test('rejects release-tag checkout before ancestry validation and missing dev guard', () => {
