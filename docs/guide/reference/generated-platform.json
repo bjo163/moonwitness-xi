@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "cdece6f9122cb17ceff02ba68a4275c3d8dbb018d872c14f59d067cd39d77017",
+  "generatedFromSha256": "5ef28e4294351f8f15776ff76fd9786a11c60e592bf2e4e4ba9ca18371cfa18e",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -312,6 +312,7 @@
       "test:package-manager": "node --test scripts/package-manager.test.mjs",
       "test:platform-audit": "node --test scripts/platform-audit.test.mjs",
       "test:promotion-policy": "node --test scripts/git-range.test.mjs scripts/promotion-risk.test.mjs scripts/promotion-approval.test.mjs",
+      "test:promotion-report": "node --test scripts/render-promotion-report.test.mjs",
       "test:release-classification": "node --test scripts/release-classification.test.mjs",
       "test:release-dry-run": "node --test scripts/release-dry-run.test.mjs",
       "test:release-image-publish": "node --test scripts/publish-release-image.test.mjs",
