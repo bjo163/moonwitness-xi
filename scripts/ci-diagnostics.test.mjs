@@ -7,6 +7,7 @@ import { renderUnitRunnerFailureReport } from './unit-runner-report.mjs';
 const workflow = readFileSync('.github/workflows/ci.yml', 'utf8');
 const pagesWorkflow = readFileSync('.github/workflows/pages.yml', 'utf8');
 const unitRunner = readFileSync('scripts/run-unit-tests.mjs', 'utf8');
+const rootPackage = JSON.parse(readFileSync('package.json', 'utf8'));
 
 test('failed unit and PostgreSQL jobs annotate testcase names before report scanning', () => {
   assert.match(workflow, /id: unit_tests\s+run: pnpm test:unit:ci/u);
@@ -60,9 +61,9 @@ test('documentation builds are isolated and portal failures annotate sanitized J
     ['@moonwitness/orm-integration', 'integration'],
     ['@moonwitness/orm-notification', 'notifications'],
     ['@moonwitness/orm-organization', 'organization'],
+    ['@moonwitness/orm-workflow', 'workflow'],
     ['@moonwitness/orm-request', 'requests'],
     ['@moonwitness/orm-storage', 'storage'],
-    ['@moonwitness/orm-workflow', 'workflow'],
   ];
 
   for (const [packageName, label] of documentedPackages) {
@@ -73,6 +74,16 @@ test('documentation builds are isolated and portal failures annotate sanitized J
         'u'
       )
     );
+  }
+  const docsBuildPackages = documentedPackages.map(([packageName]) => packageName);
+  const requestPackageIndex = docsBuildPackages.indexOf('@moonwitness/orm-request');
+  const workflowPackageIndex = docsBuildPackages.indexOf('@moonwitness/orm-workflow');
+  assert.ok(workflowPackageIndex < requestPackageIndex);
+  for (const scriptName of ['docs:check', 'docs:generate']) {
+    const script = rootPackage.scripts[scriptName];
+    const workflowPosition = script.indexOf('pnpm --filter @moonwitness/orm-workflow build');
+    const requestPosition = script.indexOf('pnpm --filter @moonwitness/orm-request build');
+    assert.ok(workflowPosition >= 0 && requestPosition > workflowPosition);
   }
   assert.match(
     pagesWorkflow,

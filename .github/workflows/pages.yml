@@ -253,12 +253,12 @@ jobs:
         run: node scripts/ci/build-workspace-package.mjs @moonwitness/orm-notification
       - name: Build documentation package organization
         run: node scripts/ci/build-workspace-package.mjs @moonwitness/orm-organization
+      - name: Build documentation package workflow
+        run: node scripts/ci/build-workspace-package.mjs @moonwitness/orm-workflow
       - name: Build documentation package requests
         run: node scripts/ci/build-workspace-package.mjs @moonwitness/orm-request
       - name: Build documentation package storage
         run: node scripts/ci/build-workspace-package.mjs @moonwitness/orm-storage
-      - name: Build documentation package workflow
-        run: node scripts/ci/build-workspace-package.mjs @moonwitness/orm-workflow
       - name: Test documentation generators
         run: node --test scripts/docs/generate-reference.test.mjs scripts/docs/update-readme.test.mjs scripts/docs/build-guide.test.mjs
       - name: Verify generated documentation reference
