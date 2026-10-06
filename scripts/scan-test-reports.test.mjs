@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { assertReportsAreSanitized, assertRequiredTestReports } from './scan-test-reports.mjs';
+import {
+  assertReportsAreSanitized,
+  assertRequiredTestReports,
+  shouldScanReports,
+} from './scan-test-reports.mjs';
 
 test('accepts sanitized reports', () => {
   assert.doesNotThrow(() => assertReportsAreSanitized('<testsuite tests="2" failures="0"/>'));
@@ -36,4 +40,14 @@ test('requires the M4.15 performance report whenever PostgreSQL integration JUni
   assert.doesNotThrow(() =>
     assertRequiredTestReports(['junit/postgres.xml', 'performance/m4.15.json'])
   );
+});
+
+test('skips scanning when no test artifacts were produced', () => {
+  assert.equal(shouldScanReports([]), false);
+});
+
+test('keeps artifact validation fail-closed when reports are incomplete', () => {
+  assert.throws(() => shouldScanReports(['coverage/coverage-final.json']), /no JUnit report/u);
+  assert.throws(() => shouldScanReports(['board-e2e.xml']), /retry-diagnostics/u);
+  assert.equal(shouldScanReports(['api.xml']), true);
 });
