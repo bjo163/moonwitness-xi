@@ -525,7 +525,6 @@ export async function applyIssuePlan({
   repositoryUrl,
   cardDetailsByTask,
 }) {
-  client.assertWritable?.();
   const freshIssues = await client.listAll();
   const fresh = planIssueSync({
     tasks,
@@ -539,6 +538,11 @@ export async function applyIssuePlan({
     throw new Error('Remote issues changed after planning; refresh the plan before applying.');
   const conflict = fresh.operations.find((operation) => operation.operation === 'conflict');
   if (conflict) throw new Error(`Cannot apply ${conflict.taskId}: ${conflict.reason}`);
+  const hasWrites = fresh.operations.some(
+    (operation) => operation.operation === 'create' || operation.operation === 'update'
+  );
+  if (!hasWrites) return [];
+  client.assertWritable?.();
   const milestoneNumbers = client.ensureMetadata ? await client.ensureMetadata(tasks) : new Map();
   const operations = fresh.operations.map((operation) => ({
     ...operation,
@@ -680,10 +684,6 @@ async function main() {
     sha ??
     execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repositoryRoot, encoding: 'utf8' }).trim();
   const token = process.env.GITHUB_TOKEN;
-  if (apply && !token)
-    throw new Error(
-      'GITHUB_TOKEN is required for --apply; read-only planning can use public access.'
-    );
   const client = createGitHubIssuesClient({ token, owner, repo });
   const issues = await client.listAll();
   const validAssignees = await client.validateAssignees(tasks);
@@ -740,7 +740,11 @@ async function main() {
     repositoryUrl,
     cardDetailsByTask,
   });
-  process.stdout.write(`Applied ${results.length} create/update operations.\n`);
+  process.stdout.write(
+    results.length
+      ? `Applied ${results.length} create/update operations.\n`
+      : 'No issue changes were needed; no write permission was used.\n'
+  );
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

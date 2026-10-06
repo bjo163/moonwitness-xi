@@ -186,6 +186,60 @@ test('apply refuses stale plans and performs serial writes only for explicit ope
   );
 });
 
+test('apply no-op succeeds without write permission or metadata mutations', async () => {
+  const generated = plan().operations[0];
+  const remoteIssue = {
+    number: 47,
+    title: generated.title,
+    body: generated.body,
+    state: 'open',
+    labels: generated.labels.map((name) => ({ name })),
+    milestone: { number: 11, title: 'M11' },
+  };
+  let writes = 0;
+  const client = {
+    listAll: async () => [remoteIssue],
+    assertWritable: () => assert.fail('no-op apply must not require write permission'),
+    ensureMetadata: async () => {
+      writes += 1;
+      return new Map();
+    },
+    update: async () => {
+      writes += 1;
+    },
+    create: async () => {
+      writes += 1;
+    },
+  };
+  const result = await applyIssuePlan({
+    plan: plan([remoteIssue]),
+    client,
+    tasks: [task],
+    repositoryId,
+    sourceSha,
+  });
+  assert.deepEqual(result, []);
+  assert.equal(writes, 0);
+});
+
+test('apply validates conflicts before requiring write permission', async () => {
+  const generated = plan().operations[0];
+  const conflict = {
+    number: 48,
+    title: generated.title,
+    body: `${generated.body}\n${generated.body}`,
+    state: 'open',
+  };
+  const client = {
+    listAll: async () => [conflict],
+    assertWritable: () => assert.fail('conflict must be reported before write permission'),
+  };
+  await assert.rejects(
+    applyIssuePlan({ plan: plan([conflict]), client, tasks: [task], repositoryId, sourceSha }),
+    /Duplicate managed identity/u
+  );
+});
+
 test('apply rejects any duplicate conflict before the first remote mutation', async () => {
   const createTask = { ...task, id: 'M11.04', title: 'Create task' };
   const duplicateBody = plan().operations[0].body;
@@ -436,7 +490,7 @@ test('public read-only planning needs no token and writes fail closed without on
     /GITHUB_TOKEN is required/u
   );
   await assert.rejects(client.ensureMetadata([task]), /GITHUB_TOKEN is required/u);
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 4);
 });
 
 test('GitHub adapter honors bounded rate-limit delays on reads', async () => {
