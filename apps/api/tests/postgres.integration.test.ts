@@ -503,6 +503,72 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     expect(deniedForeignParent.statusCode).toBe(403);
   }, 30000);
 
+  it('matches PostgreSQL domain operator and nullable-field semantics', async () => {
+    const fixtures = await Partner.query().insert([
+      { name: 'Domain Probe Alpha', city: 'Jakarta' },
+      { name: 'DOMAIN PROBE Beta', city: 'Bandung' },
+      { name: 'Unrelated Domain Probe', city: null },
+    ]);
+    const fixtureIds = fixtures.map(({ id }) => id);
+    const fixtureDomain: [string, 'in', number[]][] = [['id', 'in', fixtureIds]];
+
+    const insensitiveMatches = await Partner.search([
+      ...fixtureDomain,
+      ['name', 'ilike', '%domain probe%'],
+    ]);
+    expect(insensitiveMatches.map(({ name }) => name).sort()).toEqual([
+      'DOMAIN PROBE Beta',
+      'Domain Probe Alpha',
+      'Unrelated Domain Probe',
+    ]);
+
+    const caseSensitiveMatches = await Partner.search([
+      ...fixtureDomain,
+      ['name', 'like', '%Domain Probe%'],
+    ]);
+    expect(caseSensitiveMatches.map(({ name }) => name).sort()).toEqual([
+      'Domain Probe Alpha',
+      'Unrelated Domain Probe',
+    ]);
+
+    const caseSensitiveExclusions = await Partner.search([
+      ...fixtureDomain,
+      ['name', 'not like', '%Domain Probe%'],
+    ]);
+    expect(caseSensitiveExclusions.map(({ name }) => name)).toEqual(['DOMAIN PROBE Beta']);
+
+    const negativeInsensitiveMatches = await Partner.search([
+      ...fixtureDomain,
+      ['name', 'not ilike', '%domain probe%'],
+    ]);
+    expect(negativeInsensitiveMatches).toHaveLength(0);
+
+    const nullCities = await Partner.search([...fixtureDomain, ['city', 'is null', null]]);
+    expect(nullCities.map(({ name }) => name)).toEqual(['Unrelated Domain Probe']);
+
+    const nonNullCities = await Partner.search([...fixtureDomain, ['city', 'is not null', null]]);
+    expect(nonNullCities.map(({ city }) => city).sort()).toEqual(['Bandung', 'Jakarta']);
+
+    const listedCities = await Partner.search([
+      ...fixtureDomain,
+      ['city', 'in', ['Jakarta', 'Bandung']],
+    ]);
+    expect(listedCities).toHaveLength(2);
+
+    const excludedCities = await Partner.search([
+      ...fixtureDomain,
+      ['city', 'not in', ['Jakarta', 'Bandung']],
+    ]);
+    expect(excludedCities).toHaveLength(0);
+
+    const boundedIds = await Partner.search([
+      ...fixtureDomain,
+      ['id', '>=', Math.min(...fixtureIds)],
+      ['id', '<=', Math.max(...fixtureIds)],
+    ]);
+    expect(boundedIds).toHaveLength(3);
+  }, 30000);
+
   it('claims one PostgreSQL job once when two workers race for the same queue item', async () => {
     let signalStarted: (() => void) | undefined;
     let releaseHandler: (() => void) | undefined;
