@@ -20,7 +20,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: dev
           fetch-depth: 1
@@ -31,7 +31,7 @@ jobs:
       - name: Generate dependency candidate plan without writes
         run: node scripts/dependency-update-plan.mjs --output dependency-update-plan.json
       - name: Upload dependency candidate plan
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: dependency-update-plan-${{ github.run_id }}
           path: dependency-update-plan.json

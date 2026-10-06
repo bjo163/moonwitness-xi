@@ -54,7 +54,7 @@ jobs:
       docs_only: ${{ steps.classification.outputs.docs_only }}
       release_change_kind: ${{ steps.classification.outputs.release_change_kind }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
@@ -147,7 +147,7 @@ jobs:
           else
             echo "selected_ref=dev" >> "$GITHUB_OUTPUT"
           fi
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
@@ -297,7 +297,7 @@ jobs:
         run: node scripts/write-docs-metadata.mjs apps/docs/dist
       - name: Upload development preview artifact
         if: github.ref == 'refs/heads/dev' || (github.event_name == 'workflow_dispatch' && inputs.publish != true)
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: docs-preview-${{ steps.source_sha.outputs.sha }}
           path: apps/docs/dist
@@ -305,7 +305,7 @@ jobs:
           retention-days: 7
       - name: Upload current documentation snapshot
         if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && inputs.publish == true)
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: docs-current-${{ steps.source_sha.outputs.sha }}
           path: apps/docs/dist
@@ -318,7 +318,7 @@ jobs:
           node scripts/docs/versioned-site.mjs package --site apps/docs/dist --tag '${{ steps.site.outputs.source_ref }}' --output 'versioned-docs/docs-site-${{ steps.site.outputs.source_ref }}.tar.gz'
       - name: Upload stable documentation archive
         if: steps.site.outputs.kind == 'stable'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: docs-stable-${{ steps.site.outputs.source_ref }}
           path: versioned-docs/*.tar.gz
@@ -338,7 +338,7 @@ jobs:
       contents: write
       actions: read
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
@@ -392,7 +392,7 @@ jobs:
       pages: write
       id-token: write
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           persist-credentials: false

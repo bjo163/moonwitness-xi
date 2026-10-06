@@ -27,7 +27,7 @@ jobs:
       approval-required: ${{ steps.risk.outputs.approval_required }}
       promotion-head: ${{ steps.risk.outputs.head_sha }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup-pnpm
@@ -71,7 +71,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
@@ -93,7 +93,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
@@ -138,7 +138,7 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/moonwitness_test
       REQUIRE_POSTGRES_TESTS: 'true'
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
@@ -152,7 +152,7 @@ jobs:
         run: node scripts/scan-test-reports.mjs
       - name: Upload unit and integration test reports
         if: always() && steps.scan_reports.outcome == 'success'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: test-junit-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
@@ -190,7 +190,7 @@ jobs:
     env:
       POSTGRES_TEST_URL: postgresql://postgres:postgres@127.0.0.1:5432/moonwitness_e2e
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
@@ -207,7 +207,7 @@ jobs:
         run: node scripts/scan-test-reports.mjs
       - name: Upload browser JUnit report and screenshots only
         if: always() && steps.scan_browser_reports.outcome == 'success'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: board-playwright-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
@@ -228,7 +228,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
@@ -249,7 +249,7 @@ jobs:
         run: node scripts/scan-test-reports.mjs
       - name: Upload UI browser report and visual screenshots only
         if: always() && steps.scan_ui_reports.outcome == 'success'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: ui-catalog-playwright-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
@@ -268,7 +268,7 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Validate production Compose configuration
         env:
           DATABASE_URL: postgresql://moonwitness:ci-password@postgres.example:5432/moonwitness
@@ -342,7 +342,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'

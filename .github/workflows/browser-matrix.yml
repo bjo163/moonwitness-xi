@@ -40,7 +40,7 @@ jobs:
       MW_E2E_BROWSER_MATRIX: 'true'
       POSTGRES_TEST_URL: postgresql://postgres:postgres@127.0.0.1:5432/moonwitness_e2e
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
@@ -55,7 +55,7 @@ jobs:
         run: node scripts/scan-test-reports.mjs
       - name: Upload sanitized browser reports and screenshots
         if: always() && steps.scan_reports.outcome == 'success'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: board-${{ matrix.browser }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
