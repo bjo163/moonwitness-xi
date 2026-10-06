@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "47c60f97a460f46038486115665d0bf1050ef26b5cb826e4644ed85383b88864",
+  "generatedFromSha256": "fd899f25d8ce08a7f37291804085bccfed7d99a0f9af3c85df7b73b7b6acb2f8",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -304,6 +304,7 @@
       "test:e2e": "node scripts/run-e2e.mjs",
       "test:e2e:diagnostics": "node --test scripts/e2e-preflight-report.test.mjs scripts/summarize-playwright-failures.test.mjs scripts/summarize-junit-failures.test.mjs scripts/ci-diagnostics.test.mjs",
       "test:e2e:visual": "pnpm --filter @moonwitness/board exec playwright test e2e/visual-audit.spec.ts --config playwright.visual.config.ts",
+      "test:e2e:visual:matrix": "node scripts/run-visual-matrix.mjs",
       "test:expected-ref": "node --test scripts/push-expected-ref.test.mjs",
       "test:flaky-policy": "node --test scripts/flaky-policy.test.mjs scripts/playwright-flake-reporter.test.mjs",
       "test:integration": "node scripts/run-postgres-tests.mjs",

@@ -7,6 +7,16 @@ const repositoryRoot = resolve(import.meta.dirname, '../..');
 const apiPort = env.MW_VISUAL_API_PORT ?? '3017';
 const boardPort = env.MW_VISUAL_BOARD_PORT ?? '5177';
 const baseURL = `http://127.0.0.1:${boardPort}`;
+const browserMatrix = env.MW_VISUAL_BROWSER_MATRIX === 'true';
+const projects = [
+  { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+  ...(browserMatrix
+    ? [
+        { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+        { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+      ]
+    : []),
+];
 
 export default defineConfig({
   testDir: './e2e',
@@ -20,7 +30,7 @@ export default defineConfig({
     screenshot: 'off',
     viewport: { width: 1440, height: 1000 },
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects,
   webServer: [
     {
       command: 'pnpm --filter @moonwitness/api run visual-audit:server',

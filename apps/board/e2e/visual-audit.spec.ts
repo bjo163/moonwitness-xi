@@ -1,5 +1,5 @@
 import { AxeBuilder } from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { E2E_SUPERADMIN_PASSWORD } from './constants.js';
@@ -50,7 +50,13 @@ async function expectNoA11yViolations(page: Page, label: string) {
   ).toEqual([]);
 }
 
-test('responsive screen audit: login across mobile, tablet, and desktop', async ({ page }) => {
+function browserSuffix(testInfo: TestInfo): string {
+  return testInfo.project.name === 'chromium' ? '' : `-${testInfo.project.name}`;
+}
+
+test('responsive screen audit: login across mobile, tablet, and desktop', async ({
+  page,
+}, testInfo) => {
   await mkdir(auditDirectory, { recursive: true });
   for (const size of sizes) {
     await page.setViewportSize({ width: size.width, height: size.height });
@@ -64,7 +70,7 @@ test('responsive screen audit: login across mobile, tablet, and desktop', async 
     await expect(page.locator('main .inline-block')).toHaveCSS('opacity', '1');
     await expectNoHorizontalOverflow(page, `login/${size.name}`);
     await page.screenshot({
-      path: path.join(auditDirectory, `login-${size.name}-light.png`),
+      path: path.join(auditDirectory, `login-${size.name}-light${browserSuffix(testInfo)}.png`),
       fullPage: true,
     });
     await expectNoA11yViolations(page, `login/${size.name}`);
@@ -78,7 +84,9 @@ test('responsive screen audit: login across mobile, tablet, and desktop', async 
   }
 });
 
-test('responsive protected screens fit and remain accessible in both themes', async ({ page }) => {
+test('responsive protected screens fit and remain accessible in both themes', async ({
+  page,
+}, testInfo) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/login');
@@ -116,7 +124,7 @@ test('responsive protected screens fit and remain accessible in both themes', as
           ).toBeVisible();
         }
         const visualKey = `${view.name}/${size.name}/${theme}`;
-        if (visualBaselines.has(visualKey)) {
+        if (visualBaselines.has(visualKey) && testInfo.project.name === 'chromium') {
           if (view.name === 'list') {
             await page.getByPlaceholder('Search partners...').fill('Acme Studio');
             const partnerRow = page.getByRole('row').filter({ hasText: 'Acme Studio' });
@@ -143,7 +151,10 @@ test('responsive protected screens fit and remain accessible in both themes', as
           });
         }
         await page.screenshot({
-          path: path.join(auditDirectory, `${view.name}-${size.name}-${theme}.png`),
+          path: path.join(
+            auditDirectory,
+            `${view.name}-${size.name}-${theme}${browserSuffix(testInfo)}.png`
+          ),
           fullPage: true,
         });
         if (view.name === 'dashboard' && size.name === 'mobile-375') {
