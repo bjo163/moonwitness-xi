@@ -41,6 +41,29 @@ describe('auth service', () => {
     ).rejects.toBeInstanceOf(AuthError);
   }, 20000);
 
+  it('models JWT key rotation by rejecting old refresh sessions and allowing a new login', async () => {
+    const previousSession = await auth.login('superadmin', PASSWORD, {
+      userAgent: 'pre-rotation',
+    });
+    const rotatedAuth = createAuthService({
+      refreshTtlSeconds: 60,
+      refreshTokenSecret: 'rotated-refresh-token-secret-which-is-long-enough',
+    });
+
+    await expect(rotatedAuth.refresh(previousSession.refreshToken)).rejects.toBeInstanceOf(
+      AuthError
+    );
+
+    const recoveredSession = await rotatedAuth.login('superadmin', PASSWORD, {
+      userAgent: 'post-rotation',
+    });
+    expect(recoveredSession.userId).toBe(previousSession.userId);
+    expect(recoveredSession.refreshToken).not.toBe(previousSession.refreshToken);
+    await expect(rotatedAuth.refresh(recoveredSession.refreshToken)).resolves.toMatchObject({
+      userId: previousSession.userId,
+    });
+  }, 20000);
+
   it('registers a new user with partner and prevents duplicate logins', async () => {
     const session = await auth.register({
       login: 'bob',
