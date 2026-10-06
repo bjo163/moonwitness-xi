@@ -371,6 +371,15 @@ describe('authentication and authorization', () => {
         expect(otherRefresh.statusCode).toBe(401);
         expect((await login('alice', USER_PASSWORD)).statusCode).toBe(401);
         expect((await login('alice', 'twelve-chars')).statusCode).toBe(200);
+
+        const maximumLengthPassword = 'a'.repeat(1024);
+        const changedToMaximumLength = await as(alice.access_token, {
+          method: 'POST',
+          url: '/auth/me/password',
+          payload: { current_password: 'twelve-chars', new_password: maximumLengthPassword },
+        });
+        expect(changedToMaximumLength.statusCode).toBe(200);
+        expect((await login('alice', maximumLengthPassword)).statusCode).toBe(200);
       } finally {
         await User.query().findById(alice.user.id).patch({ password: USER_PASSWORD });
       }
