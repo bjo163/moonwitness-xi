@@ -84,7 +84,12 @@ test('issue sync workflow keeps writes opt-in, dev-only, and isolated to its app
   assert.match(workflow, /default: false/u);
   assert.match(workflow, /--apply --task-ids "\$TASK_IDS"/u);
   assert.match(planJob, /issues: read/u);
+  assert.match(planJob, /checks: read/u);
   assert.doesNotMatch(planJob, /issues: write/u);
+  assert.match(planJob, /fetch-depth: 0/u);
+  assert.match(planJob, /collect-lifecycle-snapshot-cli\.mjs/u);
+  assert.match(planJob, /--lifecycle-snapshot/u);
+  assert.match(planJob, /trap 'rm -f/u);
   assert.match(
     applyJob,
     /event_name == 'workflow_dispatch' && inputs\.apply && github\.ref == 'refs\/heads\/dev'/u
@@ -737,6 +742,7 @@ test('planner projects lifecycle evidence deterministically and flags manual clo
     blockers: [],
     verifiedOnDevSha: 'b'.repeat(40),
     needsTriage: false,
+    shouldClose: true,
   };
   const input = {
     tasks: [task],
@@ -748,6 +754,14 @@ test('planner projects lifecycle evidence deterministically and flags manual clo
   const first = planIssueSync(input);
   assert.match(first.operations[0].body, /Work status: complete/u);
   assert.match(first.operations[0].body, /Delivery stage: verified-dev/u);
+  assert.deepEqual(first.lifecycleSummary, {
+    workStatuses: { complete: 1 },
+    deliveryStages: { 'verified-dev': 1 },
+    closeReadyTaskIds: ['M11.03'],
+    needsTriageTaskIds: [],
+  });
+  assert.match(renderIssuePlanSummary(first), /Lifecycle delivery: verified-dev=1/u);
+  assert.match(renderIssuePlanSummary(first), /Issue close candidates: M11\.03/u);
   assert.match(first.operations[0].body, new RegExp(`Verified dev SHA: ${'b'.repeat(40)}`, 'u'));
   assert.equal(planIssueSync(input).inputHash, first.inputHash);
   const changed = planIssueSync({

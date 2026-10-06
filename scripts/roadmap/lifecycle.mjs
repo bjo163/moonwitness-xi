@@ -51,9 +51,20 @@ export function evaluateTaskLifecycle(input) {
   if (blockers.length && input.status === 'complete')
     throw new Error('A complete task cannot have incomplete hard dependencies.');
 
-  const sourceSha = input.sourceSha ?? input.evidenceSha;
+  const sourceSha = input.sourceSha;
   let deliveryStage = 'planned';
   let verifiedOnDevSha;
+  if (input.acceptanceVerified && !sourceSha)
+    blockers.push('No implementation source SHA is recorded for delivery verification.');
+  if (
+    input.acceptanceVerified &&
+    sourceSha &&
+    input.sourceInDev !== true &&
+    input.sourceInMain !== true
+  )
+    blockers.push('Implementation source commit is not verified in dev or main.');
+  if (input.sourceInDev === true && !input.devHeadSha)
+    throw new Error('Verified dev ancestry requires the current dev head SHA.');
   if (sourceSha && input.devHeadSha !== undefined && input.devHeadSha !== null) {
     if (!isFullSha(input.devHeadSha))
       throw new Error('devHeadSha must be a full lowercase Git SHA.');

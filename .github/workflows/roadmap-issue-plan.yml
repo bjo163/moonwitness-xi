@@ -40,6 +40,7 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
+      checks: read
       issues: read
     env:
       TASK_IDS: ${{ inputs.task_ids }}
@@ -47,7 +48,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
-          fetch-depth: 1
+          fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/setup-pnpm
         with:
@@ -57,12 +58,17 @@ jobs:
         run: pnpm install --frozen-lockfile --no-runtime
       - name: Plan exact source SHA without issue writes
         run: |
+          set -euo pipefail
+          snapshot_file=.roadmap-lifecycle-snapshot.json
+          trap 'rm -f "$snapshot_file"' EXIT
+          node scripts/roadmap/collect-lifecycle-snapshot-cli.mjs
           args=(--quiet)
           if [[ -n "$TASK_IDS" ]]; then
             args+=(--task-ids "$TASK_IDS")
           fi
-          node scripts/roadmap/sync-issues.mjs "${args[@]}"
+          node scripts/roadmap/sync-issues.mjs "${args[@]}" --lifecycle-snapshot "$snapshot_file"
         env:
+          GH_TOKEN: ${{ github.token }}
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY_ID: ${{ github.repository_id }}
           GITHUB_SHA: ${{ github.sha }}

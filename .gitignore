@@ -11,6 +11,7 @@ storage/attachments/
 logs/
 tmp-test-logs/
 roadmap-issue-plan.json
+.roadmap-lifecycle-snapshot.json
 test-results/
 coverage/
 playwright-report/

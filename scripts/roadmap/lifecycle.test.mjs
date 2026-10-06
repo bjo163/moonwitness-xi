@@ -74,6 +74,16 @@ test('complete status cannot be claimed without acceptance evidence and source S
       }),
     /incomplete hard dependencies/u
   );
+  const evidenceOnly = evaluateTaskLifecycle({
+    taskId: 'M11.07',
+    status: 'complete',
+    acceptanceVerified: true,
+    evidenceSha: sourceSha,
+  });
+  assert.equal(evidenceOnly.workStatus, 'complete');
+  assert.equal(evidenceOnly.deliveryStage, 'planned');
+  assert.equal(evidenceOnly.shouldClose, false);
+  assert.match(evidenceOnly.blockers[0], /source SHA is recorded/u);
 });
 
 test('verified-dev requires current dev ancestry and every required check on exact current SHA', () => {
@@ -81,6 +91,10 @@ test('verified-dev requires current dev ancestry and every required check on exa
   assert.equal(result.deliveryStage, 'verified-dev');
   assert.equal(result.verifiedOnDevSha, devSha);
   assert.equal(result.shouldClose, true);
+  assert.throws(
+    () => evaluateTaskLifecycle({ ...completed, devHeadSha: undefined }),
+    /current dev head SHA/u
+  );
   assert.equal(
     evaluateTaskLifecycle({ ...completed, requiredChecks: [check('ci-gate', sourceSha)] })
       .deliveryStage,

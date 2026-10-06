@@ -89,6 +89,18 @@ export function selectTasksForSync(tasks, rawTaskIds, apply = false) {
 
 export function renderIssuePlanSummary(plan) {
   const byOperation = Object.groupBy(plan.operations, ({ operation }) => operation);
+  const lifecycleSummary = plan.lifecycleSummary
+    ? [
+        `Lifecycle work: ${Object.entries(plan.lifecycleSummary.workStatuses)
+          .map(([status, count]) => `${status}=${count}`)
+          .join(', ')}.`,
+        `Lifecycle delivery: ${Object.entries(plan.lifecycleSummary.deliveryStages)
+          .map(([stage, count]) => `${stage}=${count}`)
+          .join(', ')}.`,
+        `Issue close candidates: ${plan.lifecycleSummary.closeReadyTaskIds.join(', ') || 'none'}`,
+        `Manual-close triage: ${plan.lifecycleSummary.needsTriageTaskIds.join(', ') || 'none'}`,
+      ]
+    : [];
   return [
     `Roadmap issue plan source SHA: ${plan.sourceSha}`,
     `Remote input fingerprint: ${plan.inputHash}`,
@@ -99,6 +111,7 @@ export function renderIssuePlanSummary(plan) {
       (operation) =>
         `${operation}: ${byOperation[operation]?.map(({ taskId }) => taskId).join(', ') || 'none'}`
     ),
+    ...lifecycleSummary,
   ].join('\n');
 }
 
@@ -182,7 +195,7 @@ function generatedBlock(task, sourceSha, options) {
 
 /**
  * Pure deterministic planner. It never writes files or calls a remote API.
- * @param {{ tasks: Array<{id: string, title: string, milestone: string, dependsOn: string[], detailFile: string, output: string, evidence?: string, labels?: string[], priority?: string, assignee?: string}>, issues: RemoteIssue[], repositoryId: string, sourceSha: string, repositoryUrl?: string, cardDetailsByTask?: Map<string, {steps: string, acceptance: string}>, lifecycleByTask?: Map<string, {workStatus: string, deliveryStage: string, blockers: string[], verifiedOnDevSha?: string, releaseVersion?: string, needsTriage: boolean}> }} input
+ * @param {{ tasks: Array<{id: string, title: string, milestone: string, dependsOn: string[], detailFile: string, output: string, evidence?: string, labels?: string[], priority?: string, assignee?: string}>, issues: RemoteIssue[], repositoryId: string, sourceSha: string, repositoryUrl?: string, cardDetailsByTask?: Map<string, {steps: string, acceptance: string}>, lifecycleByTask?: Map<string, {workStatus: string, deliveryStage: string, blockers: string[], verifiedOnDevSha?: string, releaseVersion?: string, needsTriage: boolean, shouldClose: boolean}> }} input
  * @returns {{ repositoryId: string, sourceSha: string, inputHash: string, operations: IssueOperation[] }}
  */
 export function planIssueSync({
@@ -340,7 +353,38 @@ export function planIssueSync({
         .sort((a, b) => a.number - b.number),
     })
   );
-  return { repositoryId, sourceSha, inputHash, operations };
+  const lifecycleRows = lifecycleByTask
+    ? tasks.flatMap((task) => {
+        const lifecycle = lifecycleByTask.get(task.id);
+        return lifecycle ? [{ taskId: task.id, ...lifecycle }] : [];
+      })
+    : undefined;
+  const countBy = (key) =>
+    Object.fromEntries(
+      [...new Set((lifecycleRows ?? []).map((row) => row[key]))]
+        .sort()
+        .map((value) => [value, lifecycleRows.filter((row) => row[key] === value).length])
+    );
+  return {
+    repositoryId,
+    sourceSha,
+    inputHash,
+    operations,
+    ...(lifecycleRows
+      ? {
+          lifecycleSummary: {
+            workStatuses: countBy('workStatus'),
+            deliveryStages: countBy('deliveryStage'),
+            closeReadyTaskIds: lifecycleRows
+              .filter((row) => row.shouldClose)
+              .map(({ taskId }) => taskId),
+            needsTriageTaskIds: lifecycleRows
+              .filter((row) => row.needsTriage)
+              .map(({ taskId }) => taskId),
+          },
+        }
+      : {}),
+  };
 }
 
 /** GitHub REST adapter; list-all follows pagination and retains closed issues. */
