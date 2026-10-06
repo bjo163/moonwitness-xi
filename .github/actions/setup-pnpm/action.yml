@@ -12,11 +12,11 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: pnpm/action-setup@008330803749db0355799c700092d9a85fd074e9 # v6.0.9
-      with:
-        version: ${{ inputs.pnpm-version }}
     - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
       with:
         node-version: ${{ inputs.node-version }}
+    - uses: pnpm/action-setup@008330803749db0355799c700092d9a85fd074e9 # v6.0.9
+      with:
+        version: ${{ inputs.pnpm-version }}
     - run: pnpm install --frozen-lockfile
       shell: bash

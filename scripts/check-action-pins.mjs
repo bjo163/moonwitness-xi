@@ -52,6 +52,12 @@ export function findUnpinnedActions(sources) {
   return findings;
 }
 
+export function pnpmSetupOrderValid(actionSource) {
+  const nodeSetup = actionSource.indexOf('uses: actions/setup-node@');
+  const pnpmSetup = actionSource.indexOf('uses: pnpm/action-setup@');
+  return nodeSetup >= 0 && pnpmSetup > nodeSetup;
+}
+
 async function main() {
   const paths = await collectFiles(githubDirectory);
   const sources = await Promise.all(
@@ -61,6 +67,17 @@ async function main() {
     }))
   );
   const findings = findUnpinnedActions(sources);
+  const pnpmSetup = sources.find(
+    (source) => source.path === '.github/actions/setup-pnpm/action.yml'
+  );
+  if (pnpmSetup && !pnpmSetupOrderValid(pnpmSetup.content)) {
+    findings.push({
+      path: pnpmSetup.path,
+      line: 15,
+      reference: 'pnpm/action-setup',
+      reason: 'Node must be selected before pnpm 11 is installed',
+    });
+  }
   if (findings.length > 0) {
     for (const finding of findings) {
       process.stderr.write(

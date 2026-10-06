@@ -1,6 +1,25 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { findUnpinnedActions } from './check-action-pins.mjs';
+import { findUnpinnedActions, pnpmSetupOrderValid } from './check-action-pins.mjs';
+
+test('selects Node before installing pnpm 11', () => {
+  assert.equal(
+    pnpmSetupOrderValid(
+      ['- uses: actions/setup-node@node-sha # v7', '- uses: pnpm/action-setup@pnpm-sha # v6'].join(
+        '\n'
+      )
+    ),
+    true
+  );
+  assert.equal(
+    pnpmSetupOrderValid(
+      ['- uses: pnpm/action-setup@pnpm-sha # v6', '- uses: actions/setup-node@node-sha # v7'].join(
+        '\n'
+      )
+    ),
+    false
+  );
+});
 
 test('accepts immutable external actions with version comments and local actions', () => {
   const findings = findUnpinnedActions([
