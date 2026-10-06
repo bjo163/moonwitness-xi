@@ -392,6 +392,9 @@ describe('webhook outbox delivery', () => {
                   port,
                   path: `${delivery.url.pathname}${delivery.url.search}`,
                   method: 'POST',
+                  // The fixture has an ephemeral self-signed certificate; this exact
+                  // hostname and SHA-256 certificate pin provide its test-only peer identity.
+                  // codeql[js/disabling-certificate-validation]
                   rejectUnauthorized: false,
                   checkServerIdentity: (hostname, peer) => {
                     if (hostname !== delivery.url.hostname)
