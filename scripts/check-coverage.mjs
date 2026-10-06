@@ -41,6 +41,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     'orm',
     'orm-base',
     'orm-workflow',
+    'orm-integration',
     'orm-organization',
   ]) {
     const file = path.join(root, 'test-results/coverage', directory, 'coverage-summary.json');

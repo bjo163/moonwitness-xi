@@ -256,6 +256,7 @@ export async function collectReferenceMetadata() {
   const storagePath = path.join(root, 'packages/orm-storage/dist/index.js');
   const workflowPath = path.join(root, 'packages/orm-workflow/dist/manifest.js');
   const organizationPath = path.join(root, 'packages/orm-organization/dist/manifest.js');
+  const integrationPath = path.join(root, 'packages/orm-integration/dist/manifest.js');
   const [
     { manifest: base },
     { manifest: auth },
@@ -264,6 +265,7 @@ export async function collectReferenceMetadata() {
     { storageManifest },
     { manifest: workflow },
     { manifest: organization },
+    { manifest: integration },
   ] = await Promise.all([
     import(pathToFileURL(basePath).href),
     import(pathToFileURL(authPath).href),
@@ -272,6 +274,7 @@ export async function collectReferenceMetadata() {
     import(pathToFileURL(storagePath).href),
     import(pathToFileURL(workflowPath).href),
     import(pathToFileURL(organizationPath).href),
+    import(pathToFileURL(integrationPath).href),
   ]);
   const addonSources = [
     ...(await filesUnder('packages/orm/src', '.ts')),
@@ -282,8 +285,18 @@ export async function collectReferenceMetadata() {
     ...(await filesUnder('packages/orm-storage/src', '.ts')),
     ...(await filesUnder('packages/orm-workflow/src', '.ts')),
     ...(await filesUnder('packages/orm-organization/src', '.ts')),
+    ...(await filesUnder('packages/orm-integration/src', '.ts')),
   ];
-  const addons = [base, auth, jobs, notification, storageManifest, workflow, organization]
+  const addons = [
+    base,
+    auth,
+    jobs,
+    notification,
+    storageManifest,
+    workflow,
+    organization,
+    integration,
+  ]
     .sort((left, right) => compare(left.name, right.name))
     .map((addon) => {
       const models = addon.models
@@ -371,6 +384,7 @@ export async function collectReferenceMetadata() {
     ...(await filesUnder('packages/orm-storage/src', '.ts')),
     ...(await filesUnder('packages/orm-workflow/src', '.ts')),
     ...(await filesUnder('packages/orm-organization/src', '.ts')),
+    ...(await filesUnder('packages/orm-integration/src', '.ts')),
   ].sort(compare);
   const envSources = await Promise.all(
     envSourcePaths.map(async (file) => ({

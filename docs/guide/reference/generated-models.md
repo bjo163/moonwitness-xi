@@ -1,6 +1,6 @@
 # Generated model and addon reference
 
-Source fingerprint: `dca630609146937f0a7f56983f4601376ce0a37a5ce1a47da04a92225c18f49b`. Seed values and field defaults are intentionally omitted.
+Source fingerprint: `c3be05b79a126a3adbcffb2308eb82726cb2b44304020cb2a4848a8238c64d28`. Seed values and field defaults are intentionally omitted.
 
 ## Addon `auth`
 
@@ -390,6 +390,47 @@ Models: 4; declared views: 4; menu entries: 4; seed rows: 12.
 | `base.group_user` | `organization.membership` | Yes  | No     | No    | No     |
 | `base.group_user` | `organization.position`   | Yes  | No     | No    | No     |
 | `base.group_user` | `organization.team`       | Yes  | No     | No    | No     |
+
+## Addon `orm-integration`
+
+Version: `1.0.0`; dependencies: `base`, `jobs`.
+
+Models: 2; declared views: 2; menu entries: 2; seed rows: 3.
+
+| Model                          | Table                            | Field             | Kind      | Required | Optional | Default    | Relation                       |
+| ------------------------------ | -------------------------------- | ----------------- | --------- | -------- | -------- | ---------- | ------------------------------ |
+| `integration.webhook_delivery` | `integration_webhook_deliveries` | `attempts`        | integer   | No       | Yes      | [redacted] | —                              |
+| `integration.webhook_delivery` | `integration_webhook_deliveries` | `company`         | belongsTo | Yes      | No       | No         | `base.company`                 |
+| `integration.webhook_delivery` | `integration_webhook_deliveries` | `delivered_at`    | string    | No       | Yes      | No         | —                              |
+| `integration.webhook_delivery` | `integration_webhook_deliveries` | `endpoint`        | belongsTo | Yes      | No       | No         | `integration.webhook_endpoint` |
+| `integration.webhook_delivery` | `integration_webhook_deliveries` | `event_type`      | string    | Yes      | No       | No         | —                              |
+| `integration.webhook_delivery` | `integration_webhook_deliveries` | `last_error_code` | string    | No       | Yes      | No         | —                              |
+| `integration.webhook_delivery` | `integration_webhook_deliveries` | `outbox_event_id` | integer   | Yes      | No       | No         | —                              |
+| `integration.webhook_delivery` | `integration_webhook_deliveries` | `response_status` | integer   | No       | Yes      | No         | —                              |
+| `integration.webhook_delivery` | `integration_webhook_deliveries` | `status`          | enum      | Yes      | No       | No         | —                              |
+| `integration.webhook_endpoint` | `integration_webhook_endpoints`  | `company`         | belongsTo | Yes      | No       | No         | `base.company`                 |
+| `integration.webhook_endpoint` | `integration_webhook_endpoints`  | `enabled`         | boolean   | No       | Yes      | [redacted] | —                              |
+| `integration.webhook_endpoint` | `integration_webhook_endpoints`  | `event_types`     | text      | No       | Yes      | [redacted] | —                              |
+| `integration.webhook_endpoint` | `integration_webhook_endpoints`  | `name`            | string    | Yes      | No       | No         | —                              |
+| `integration.webhook_endpoint` | `integration_webhook_endpoints`  | `secret_ref`      | string    | Yes      | No       | No         | —                              |
+| `integration.webhook_endpoint` | `integration_webhook_endpoints`  | `url`             | string    | Yes      | No       | No         | —                              |
+
+### Menus and seed coverage
+
+| Menu model                     | Label              | Group     | Sequence | Visibility       |
+| ------------------------------ | ------------------ | --------- | -------: | ---------------- |
+| `integration.webhook_delivery` | Webhook Deliveries | Technical |      491 | Development mode |
+| `integration.webhook_endpoint` | Webhook Endpoints  | Technical |      490 | Development mode |
+
+- Seed coverage: `base.model_access` has 2 declared seed row(s); seed values are not included.
+- Seed coverage: `integration.webhook_endpoint` has 1 declared seed row(s); seed values are not included.
+
+### Seeded model access rules
+
+| Group reference         | Model                          | Read | Create | Write | Delete |
+| ----------------------- | ------------------------------ | ---- | ------ | ----- | ------ |
+| `base.group_superadmin` | `integration.webhook_delivery` | Yes  | Yes    | Yes   | Yes    |
+| `base.group_superadmin` | `integration.webhook_endpoint` | Yes  | Yes    | Yes   | Yes    |
 
 ## Addon `orm-storage`
 

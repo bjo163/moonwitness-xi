@@ -15,7 +15,7 @@ troubleshooting tersedia di [Developer guide](docs/guide/index.md).
 
 ## Generated workspace reference
 
-Monorepo version: `1.0.0-rc.1` · metadata fingerprint: `dca630609146937f0a7f56983f4601376ce0a37a5ce1a47da04a92225c18f49b`.
+Monorepo version: `1.0.0-rc.1` · metadata fingerprint: `c3be05b79a126a3adbcffb2308eb82726cb2b44304020cb2a4848a8238c64d28`.
 
 | App/package                     | Kind    | Version      | Workspace scripts                                                                                                                                             |
 | ------------------------------- | ------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -31,6 +31,7 @@ Monorepo version: `1.0.0-rc.1` · metadata fingerprint: `dca630609146937f0a7f569
 | `@moonwitness/logger`           | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                               |
 | `@moonwitness/orm`              | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                               |
 | `@moonwitness/orm-base`         | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                               |
+| `@moonwitness/orm-integration`  | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                               |
 | `@moonwitness/orm-notification` | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                               |
 | `@moonwitness/orm-organization` | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                               |
 | `@moonwitness/orm-storage`      | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                               |

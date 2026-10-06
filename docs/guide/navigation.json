@@ -74,6 +74,11 @@
           "title": "Paket, perintah, dan konfigurasi",
           "kind": "reference",
           "path": "docs/guide/reference/generated-platform.md"
+        },
+        {
+          "title": "Integrasi webhook",
+          "kind": "reference",
+          "path": "docs/guide/reference/integrations.md"
         }
       ]
     }

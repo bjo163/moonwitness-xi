@@ -57,6 +57,12 @@ const suites = [
     coverage: ['src/manifest.ts', 'src/data.ts'],
   },
   {
+    name: 'orm-integration',
+    packageName: '@moonwitness/orm-integration',
+    typecheck: true,
+    coverage: ['src/webhook-security.ts'],
+  },
+  {
     name: 'orm-notification',
     packageName: '@moonwitness/orm-notification',
     typecheck: true,

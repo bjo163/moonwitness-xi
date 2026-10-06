@@ -46,6 +46,11 @@ const addonManifestPaths = [
     sourceRoot: 'packages/orm-organization/src',
     manifest: 'manifest.ts',
   },
+  {
+    entry: 'packages/orm-integration/dist/manifest.js',
+    sourceRoot: 'packages/orm-integration/src',
+    manifest: 'manifest.ts',
+  },
 ];
 
 function compareText(left, right) {

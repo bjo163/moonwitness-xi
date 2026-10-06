@@ -41,6 +41,7 @@
     "@moonwitness/orm-workflow": "workspace:*",
     "@moonwitness/orm": "workspace:*",
     "@moonwitness/orm-base": "workspace:*",
+    "@moonwitness/orm-integration": "workspace:*",
     "@moonwitness/types": "workspace:*",
     "cron-parser": "^5.4.0",
     "dotenv": "^18.0.5",

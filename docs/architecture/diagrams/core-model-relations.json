@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "addons": ["auth", "base", "jobs", "notification"],
   "generatedFrom": "core addon manifests and model field metadata; no seed values included",
-  "sourceSha256": "3dc20d7629b8662b5662c7af2ea3f695fbc702dce8fc7034f2b475683be61869",
+  "sourceSha256": "546fa06e800045524c0f903ea775d4b8c327610901f3ad9e505ad5bafa1496f9",
   "models": [
     {
       "name": "auth.refresh_token",
@@ -111,6 +111,14 @@
     {
       "name": "base.user",
       "table": "users"
+    },
+    {
+      "name": "integration.webhook_delivery",
+      "table": "integration_webhook_deliveries"
+    },
+    {
+      "name": "integration.webhook_endpoint",
+      "table": "integration_webhook_endpoints"
     },
     {
       "name": "notification.notification",
@@ -401,6 +409,27 @@
       "field": "partner",
       "to": "base.partner",
       "cardinality": "1:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "integration.webhook_delivery",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "integration.webhook_delivery",
+      "field": "endpoint",
+      "to": "integration.webhook_endpoint",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "integration.webhook_endpoint",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
       "kind": "belongsTo"
     },
     {

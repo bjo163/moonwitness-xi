@@ -26,6 +26,7 @@ import { jobsManifest } from '@moonwitness/jobs';
 import { manifest as notificationAddon } from '@moonwitness/orm-notification';
 import { manifest as workflowAddon } from '@moonwitness/orm-workflow';
 import { manifest as organizationAddon } from '@moonwitness/orm-organization';
+import { manifest as integrationAddon } from '@moonwitness/orm-integration';
 
 import { createLogger, type LogLevel } from '@moonwitness/logger';
 import observabilityPlugin from './plugins/observability.plugin.js';
@@ -74,6 +75,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       baseAddon,
       authAddon,
       jobsManifest,
+      integrationAddon,
       notificationAddon,
       organizationAddon,
       workflowAddon,
