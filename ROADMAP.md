@@ -188,7 +188,7 @@ Gate: audit fitur existing sebelum membuat package. Jalankan berurutan berdasark
 
 ## M10 — Acceptance dan pembuktian satu siklus nyata
 
-- [ ] M10.01 Semua 32 baris feature matrix kini punya status, P0/P1, owner fungsional, assertion dan gap di [feature coverage report](docs/engineering/feature-coverage.md); unit suite 225 tes lulus pada SHA `1853fc1`, tetapi PostgreSQL/current-SHA browser acceptance P0 masih terbuka. [Evidence](docs/roadmap/evidence/M10.01.md).
+- [ ] M10.01 Semua 32 baris feature matrix punya status, P0/P1, owner, assertion dan gap di [feature coverage report](docs/engineering/feature-coverage.md); unit suite 225 tes dan docs check lulus pada `7cd6e85`, hosted PostgreSQL integration lulus pada app-source SHA `da46f85`, tetapi Board E2E gagal dan beberapa negative/access acceptance P0 masih terbuka. [Evidence](docs/roadmap/evidence/M10.01.md).
 - [ ] M10.02 Audit visual Board selesai dan bukti screenshot tersimpan; browser E2E tidak sekadar mengecek halaman terbuka.
 - [ ] M10.03 Lint/types/build/tests dan seluruh required checks lolos pada commit yang dipromosikan.
 - [ ] M10.04 PostgreSQL integration benar-benar berjalan; upgrade, relasi/count, seed, dan izin negatif teruji.
