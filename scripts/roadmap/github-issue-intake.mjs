@@ -69,8 +69,9 @@ export function normalizeGitHubIssueComment({ payload, expectedRepositoryId }) {
       isBot: false,
       pullRequest: false,
       action,
+      rationale,
       ...(action === 'status' ? { status: argument } : {}),
-      ...(action === 'scope' ? { proposal: rationale } : { rationale }),
+      ...(action === 'scope' ? { proposal: rationale } : {}),
     },
   };
 }
