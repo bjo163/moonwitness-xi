@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "809cd4a23a68fcba72499c30941484e6c72642f9ecf238892c3a1e6431f574f7",
+  "generatedFromSha256": "27d3d6769fce75a0fe6ee1ff241f17f9d7dc94af6b6bba60499edbeb8b012520",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -285,6 +285,7 @@
       "release:verify-attestations": "node scripts/verify-release-attestations.mjs",
       "reset:superadmin-password": "pnpm --filter @moonwitness/api reset:superadmin-password",
       "revoke:auth-sessions": "pnpm --filter @moonwitness/api revoke:auth-sessions",
+      "roadmap:issues:audit": "node scripts/roadmap/audit-issues.mjs",
       "roadmap:issues:plan": "node scripts/roadmap/sync-issues.mjs",
       "roadmap:progress": "node scripts/roadmap/progress-dashboard.mjs",
       "test": "pnpm test:unit",
@@ -325,7 +326,7 @@
       "test:release-workflow": "node --test scripts/release-workflow.test.mjs",
       "test:render-changelog": "node --test scripts/render-changelog.test.mjs",
       "test:restore-drill": "node scripts/verify-application-restore.mjs",
-      "test:roadmap": "node --test scripts/roadmap/validate-roadmap.test.mjs scripts/roadmap/sync-issues.test.mjs scripts/roadmap/lifecycle.test.mjs scripts/roadmap/lifecycle-snapshot.test.mjs scripts/roadmap/collect-lifecycle-snapshot.test.mjs scripts/roadmap/issue-intake.test.mjs scripts/roadmap/progress-dashboard.test.mjs",
+      "test:roadmap": "node --test scripts/roadmap/validate-roadmap.test.mjs scripts/roadmap/sync-issues.test.mjs scripts/roadmap/lifecycle.test.mjs scripts/roadmap/lifecycle-snapshot.test.mjs scripts/roadmap/collect-lifecycle-snapshot.test.mjs scripts/roadmap/issue-intake.test.mjs scripts/roadmap/progress-dashboard.test.mjs scripts/roadmap/audit-issues.test.mjs",
       "test:secrets": "node --test scripts/check-gitleaks-config.test.mjs",
       "test:security-policy": "node --test scripts/security-scan-policy.test.mjs scripts/check-trivy-sarif.test.mjs",
       "test:ubuntu-runner-candidate": "node --test scripts/check-ubuntu-runner-candidate.test.mjs",

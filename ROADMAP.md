@@ -217,7 +217,7 @@ Jalur ini melengkapi M1/M7/M8, bukan membuat release pipeline kedua. Detail: [ka
 - [x] M11.12 Terapkan aturan commit dan push per unit pekerjaan yang selesai. Protokol Conventional Commit, stage path terpilih, push normal ke `dev`, verifikasi SHA remote, CI state yang akurat, no-op tanpa empty commit, dan pemisahan promotion/release sudah dibuktikan pada M11.03: [evidence](docs/roadmap/evidence/M11.12.md).
 - [ ] M11.13 Gabungkan commit/push, version bump, docs dan issue sync tanpa release loop.
 - [ ] M11.14 Uji seluruh siklus roadmap → issue → commit → CI → PR → merge → release → status.
-- [ ] M11.15 Sediakan runbook audit/recovery dan pemeriksaan drift issue/roadmap.
+- [ ] M11.15 Sediakan runbook audit/recovery dan pemeriksaan drift issue/roadmap. Read-only auditor memeriksa missing/duplicate/orphan, stale SHA, metadata dan generated links lalu dijalankan sebelum workflow plan. Replay publik read-only pada `32232ec` menemukan 148 issue belum dibuat dan tanpa orphan/duplicate; apply pilot tertahan credential GitHub lokal invalid, hosted run revisi baru masih perlu diverifikasi: [Evidence](docs/roadmap/evidence/M11.15.md).
 
 ## Pemeliharaan jangka panjang
 

@@ -279,4 +279,6 @@ Simpan bukti aktual di `docs/roadmap/evidence/M11.14.md`. Jangan menandai aktiva
 
 Recovery import menjaga diskusi; stale roadmap projection terdeteksi; unresolved conflict tetap terlihat.
 
+Implementasi parsial: `scripts/roadmap/audit-issues.mjs` membaca semua managed issue open/closed, membandingkan marker ID, source SHA, milestone, managed labels, dan Card/Evidence target tanpa mengambil URL arbitrer atau mencetak body/notes. Ia melaporkan orphan sebagai `needs-triage` rekomendasi tanpa write. `Roadmap issue sync` memanggil audit read-only sebelum planner dan menghapus JSON ephemeral melalui EXIT trap; `docs/operations/roadmap-sync.md` berisi interpretasi drift dan bounded recovery. Hosted audit/pagination/failure recovery serta M11.14 write/fault pilot belum dibuktikan, maka M11.15 tetap terbuka.
+
 Simpan bukti aktual di `docs/roadmap/evidence/M11.15.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.

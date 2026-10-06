@@ -60,7 +60,9 @@ jobs:
         run: |
           set -euo pipefail
           snapshot_file=.roadmap-lifecycle-snapshot.json
-          trap 'rm -f "$snapshot_file"' EXIT
+          audit_file=.roadmap-issue-audit.json
+          trap 'rm -f "$snapshot_file" "$audit_file"' EXIT
+          node scripts/roadmap/audit-issues.mjs --quiet --output "$audit_file"
           node scripts/roadmap/collect-lifecycle-snapshot-cli.mjs
           args=(--quiet)
           if [[ -n "$TASK_IDS" ]]; then
@@ -70,6 +72,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_REPOSITORY_ID: ${{ github.repository_id }}
           GITHUB_SHA: ${{ github.sha }}
 
