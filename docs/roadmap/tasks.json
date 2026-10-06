@@ -346,7 +346,7 @@
       "milestone": "M3",
       "dependsOn": ["M3.02"],
       "output": "Visual regression suite",
-      "status": "in_progress",
+      "status": "complete",
       "evidence": "docs/roadmap/evidence/M3.10.md",
       "detailFile": "docs/roadmap/03-board.md"
     },
@@ -1069,6 +1069,8 @@
     },
     {
       "id": "M10.02",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M10.02.md",
       "title": "Audit visual Board selesai dan bukti screenshot tersimpan; browser E2E tidak sekadar mengecek halaman terbuka.",
       "milestone": "M10",
       "dependsOn": ["M3.10", "M5.14", "M5.17"],
