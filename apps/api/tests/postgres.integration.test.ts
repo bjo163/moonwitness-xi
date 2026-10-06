@@ -429,7 +429,9 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     const partnerGrant = await ModelAccess.query()
       .findOne({ group_id: userGroup.id, model_name: 'base.partner' })
       .throwIfNotFound();
-    await ModelAccess.query().findById(partnerGrant.id).patch({ create: true, write: true });
+    await apiDb('model_access')
+      .where({ id: partnerGrant.id })
+      .update({ create: true, write: true });
 
     const foreignCompany = await Company.query().insertAndFetch({
       name: 'PostgreSQL Foreign Tenant',
