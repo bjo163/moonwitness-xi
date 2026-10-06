@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "21ff94e74103f9b53edb8d218406a00757e1a1f4fc6ae144b96f75930d226384",
+  "generatedFromSha256": "0cd3858c894d92d81bf24854243a2a72e328c9fde4dc9ec8e70d49a4ef8e687d",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -166,7 +166,7 @@
     },
     "@moonwitness/docs": {
       "dev": "vite",
-      "portal:build": "pnpm --filter @moonwitness/ui build && tsc -p tsconfig.json && vite build && node scripts/copy-404.mjs && node scripts/verify-build.mjs",
+      "portal:build": "pnpm --filter @moonwitness/ui build && node ../../scripts/docs/build-guide.mjs && tsc -p tsconfig.json && vite build && node scripts/copy-404.mjs && node scripts/verify-build.mjs",
       "preview": "vite preview",
       "test": "playwright test",
       "typecheck": "tsc -p tsconfig.json"

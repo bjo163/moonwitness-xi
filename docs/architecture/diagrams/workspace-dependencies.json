@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "apps/*/package.json and packages/*/package.json",
-  "sourceSha256": "0fbcabffac28406909377aaf0d30252fc01d75683bd6c2882a6f7fa917095068",
+  "sourceSha256": "cbaecf1df74212f157d7fc08dc92285c2b8bbfa0c0658247dd1e61e0066d07b7",
   "packages": [
     {
       "name": "@moonwitness/api",

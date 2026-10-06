@@ -79,3 +79,14 @@ test('rejects malformed source SHA rather than emitting unbound progress', () =>
     /full Git SHA/u
   );
 });
+
+test('labels a dirty checkout so a base commit SHA is never presented as the exact build source', () => {
+  const report = buildRoadmapProgress({
+    tasks,
+    roadmap,
+    sourceSha: sha,
+    generatedAt: '2026-10-07T12:00:00.000Z',
+    sourceDirty: true,
+  });
+  assert.equal(report.sourceDirty, true);
+});

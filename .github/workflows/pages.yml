@@ -271,8 +271,6 @@ jobs:
         run: pnpm exec tsc --noEmit -p packages/orm/examples/tsconfig.json
       - name: Test documented addon examples
         run: pnpm --filter @moonwitness/orm exec vitest run tests/addon.test.ts
-      - name: Build documentation content bundle
-        run: node scripts/docs/build-guide.mjs
       - name: Build documentation portal site
         run: pnpm --filter @moonwitness/docs portal:build
       - name: Test documentation portal

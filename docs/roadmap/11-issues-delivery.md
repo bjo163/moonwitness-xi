@@ -177,6 +177,8 @@ Simpan bukti aktual di `docs/roadmap/evidence/M11.08.md`. Jangan menandai aktiva
 1. Bangun summary per milestone: todo/running/blocked/verified/main/released dengan source timestamp.
 2. Jika Projects tersedia, petakan fields status/priority/lane/task ID dan upsert item per issue node ID.
 3. Jika Projects unavailable, publish issue/dashboard summary setara; jangan membuat branch tambahan.
+4. Tampilkan read-only summary pada GitHub Pages docs portal: work status dan delivery stage terpisah, exact source SHA/waktu terlihat, dan status delivery unknown tanpa snapshot lifecycle tepercaya.
+5. Sertakan acceptance browser untuk deep link dalam Pages base path, provenance/status label, tabel semua milestone, keyboard semantics dan overflow mobile; jangan memasukkan issue body, komentar atau data privat ke bundle publik.
 
 ### Verifikasi dan syarat selesai
 

@@ -24,6 +24,31 @@ test('lands in the guide and renders responsive navigation and document content'
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });
 
+test('renders the source-bound roadmap dashboard with honest delivery status', async ({ page }) => {
+  await page.goto('roadmap');
+  await expect(page.getByRole('heading', { name: 'Roadmap progress' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Roadmap progress Status' })).toHaveAttribute(
+    'aria-current',
+    'page'
+  );
+  await expect(page.getByText('Belum tersedia', { exact: true })).toBeVisible();
+  await expect(page.getByText(/checkout berubah|bersih/u)).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Buka roadmap ↗' })).toHaveAttribute(
+    'href',
+    /blob\/[a-f0-9]{40}\/ROADMAP\.md/u
+  );
+  await expect(page.getByRole('table', { name: /Status berdasarkan milestone/u })).toBeVisible();
+  await expect(page.getByRole('table')).toContainText('M11');
+  await expect(page.getByRole('link', { name: /Metode dan batasan dashboard/u })).toHaveAttribute(
+    'href',
+    /docs\/roadmap\/evidence\/M11\.09\.md/u
+  );
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole('heading', { name: 'Roadmap progress' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+});
+
 test('search is keyboard reachable and routes to matching guide pages', async ({ page }) => {
   await page.goto('');
   const search = page.getByRole('searchbox', { name: 'Cari dokumentasi' });

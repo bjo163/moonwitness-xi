@@ -173,11 +173,16 @@ test('documentation builds are isolated and portal failures annotate sanitized J
   );
   assert.match(
     pagesWorkflow,
-    /name: Build documentation content bundle\s+run: node scripts\/docs\/build-guide\.mjs/u
+    /name: Build documentation portal site\s+run: pnpm --filter @moonwitness\/docs portal:build/u
+  );
+  const docsPackage = JSON.parse(readFileSync('apps/docs/package.json', 'utf8'));
+  assert.match(
+    docsPackage.scripts['portal:build'],
+    /node \.\.\/\.\.\/scripts\/docs\/build-guide\.mjs/u
   );
   assert.match(
-    pagesWorkflow,
-    /name: Build documentation portal site\s+run: pnpm --filter @moonwitness\/docs portal:build/u
+    readFileSync('apps/docs/playwright.config.ts', 'utf8'),
+    /portal:build && pnpm --filter @moonwitness\/docs exec vite preview/u
   );
   assert.match(pagesWorkflow, /name: Test documentation portal\s+id: docs_portal_tests/u);
   assert.match(

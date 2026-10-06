@@ -12,6 +12,7 @@ import { Button } from '@moonwitness/ui/components/button';
 import brandSymbol from '@moonwitness/assets/brand/moonwitness-symbol-light.svg';
 import notFoundImage from '@moonwitness/assets/illustrations/not-found-light.svg';
 import guideBundleSource from '../../../dist/docs/guide.bundle.json';
+import roadmapProgressSource from '../../../dist/roadmap-progress.json';
 import type { SearchPage } from './document-content.js';
 
 const MarkdownContent = lazy(() =>
@@ -32,8 +33,30 @@ type GuideBundle = {
   sections: GuideSection[];
 };
 type SearchPageData = GuideItem & { route: string; searchText: string };
+type WorkStatus = 'todo' | 'running' | 'blocked' | 'complete';
+type DeliveryStage = 'verified' | 'main' | 'released' | 'planned' | 'unknown';
+type RoadmapProgress = {
+  sourceSha: string;
+  sourceDirty: boolean;
+  generatedAt: string;
+  deliveryEvidence: string;
+  totals: {
+    taskCount: number;
+    work: Record<WorkStatus, number>;
+    delivery: Record<DeliveryStage, number>;
+  };
+  milestones: Record<
+    string,
+    {
+      taskCount: number;
+      work: Record<WorkStatus, number>;
+      delivery: Record<DeliveryStage, number>;
+    }
+  >;
+};
 
 const guideBundle: GuideBundle = guideBundleSource;
+const roadmapProgress: RoadmapProgress = roadmapProgressSource;
 const repository = 'https://github.com/bjo163/moonwitness-xi';
 const sourceRef = import.meta.env.MW_DOCS_SOURCE_REF ?? 'main';
 const applicationVersion = import.meta.env.MW_DOCS_APPLICATION_VERSION;
@@ -166,11 +189,12 @@ function PortalLayout() {
   const location = useLocation();
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
   const selectedPage = pages.find((page) => page.route === location.pathname);
+  const roadmapPage = location.pathname === '/roadmap';
   const navigate = useNavigate();
 
   useEffect(() => setMobileNavigationOpen(false), [location.pathname]);
 
-  if (!selectedPage) return <NotFound />;
+  if (!selectedPage && !roadmapPage) return <NotFound />;
 
   return (
     <div className="portal-shell">
@@ -226,9 +250,9 @@ function PortalLayout() {
                     <Link
                       key={item.path}
                       className={
-                        page.path === selectedPage.path ? 'nav-link nav-link-active' : 'nav-link'
+                        page.path === selectedPage?.path ? 'nav-link nav-link-active' : 'nav-link'
                       }
-                      aria-current={page.path === selectedPage.path ? 'page' : undefined}
+                      aria-current={page.path === selectedPage?.path ? 'page' : undefined}
                       to={page.route}
                     >
                       <span>{item.title}</span>
@@ -239,6 +263,19 @@ function PortalLayout() {
               </nav>
             </section>
           ))}
+          <section className="nav-section">
+            <h2>Project</h2>
+            <nav aria-label="Project">
+              <Link
+                className={roadmapPage ? 'nav-link nav-link-active' : 'nav-link'}
+                aria-current={roadmapPage ? 'page' : undefined}
+                to="/roadmap"
+              >
+                <span>Roadmap progress</span>
+                <span className="nav-kind">Status</span>
+              </Link>
+            </nav>
+          </section>
           <div className="sidebar-footnote">
             <span className="status-orbit" aria-hidden="true" />
             <span>
@@ -249,33 +286,167 @@ function PortalLayout() {
           </div>
         </aside>
         <main id="main-content" className="main-content" tabIndex={-1}>
-          <div className="content-toolbar">
-            <span>{selectedPage.kind.replaceAll('-', ' ')}</span>
-            <a href={sourceUrl(selectedPage.path)} target="_blank" rel="noreferrer">
-              Edit this page ↗
-            </a>
-          </div>
-          <Suspense
-            fallback={
-              <p className="document-loading" role="status">
-                Memuat halaman...
-              </p>
-            }
-          >
-            <MarkdownContent
-              page={selectedPage}
-              resolveHref={(href) => markdownHref(selectedPage, href)}
-            />
-          </Suspense>
+          {roadmapPage ? (
+            <RoadmapDashboard />
+          ) : selectedPage ? (
+            <>
+              <div className="content-toolbar">
+                <span>{selectedPage.kind.replaceAll('-', ' ')}</span>
+                <a href={sourceUrl(selectedPage.path)} target="_blank" rel="noreferrer">
+                  Edit this page ↗
+                </a>
+              </div>
+              <Suspense
+                fallback={
+                  <p className="document-loading" role="status">
+                    Memuat halaman...
+                  </p>
+                }
+              >
+                <MarkdownContent
+                  page={selectedPage}
+                  resolveHref={(href) => markdownHref(selectedPage, href)}
+                />
+              </Suspense>
+            </>
+          ) : null}
           <footer className="page-footer">
             <span>MoonWitness · dokumentasi untuk developer</span>
-            <button type="button" onClick={() => navigate(selectedPage.route)}>
+            <button
+              type="button"
+              onClick={() => navigate(roadmapPage ? '/roadmap' : (selectedPage?.route ?? '/'))}
+            >
               Kembali ke atas ↑
             </button>
           </footer>
         </main>
       </div>
     </div>
+  );
+}
+
+function RoadmapDashboard() {
+  const date = new Date(roadmapProgress.generatedAt);
+  const workLabels = [
+    ['todo', 'Belum dimulai'],
+    ['running', 'Berjalan'],
+    ['blocked', 'Terhambat'],
+    ['complete', 'Selesai'],
+  ] as const;
+  const deliveryLabels = [
+    ['verified', 'Terverifikasi di dev'],
+    ['main', 'Masuk main'],
+    ['released', 'Dirilis'],
+    ['planned', 'Direncanakan'],
+    ['unknown', 'Belum diverifikasi'],
+  ] as const;
+  const formatDate = Number.isNaN(date.getTime())
+    ? roadmapProgress.generatedAt
+    : `${roadmapProgress.generatedAt.replace('T', ' ').replace(/\.\d{3}Z$/u, '')} UTC`;
+
+  return (
+    <>
+      <div className="content-toolbar">
+        <span>Status proyek · {roadmapProgress.totals.taskCount} task</span>
+        <a
+          href={`${repository}/blob/${roadmapProgress.sourceSha}/ROADMAP.md`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Buka roadmap ↗
+        </a>
+      </div>
+      <article className="roadmap-dashboard" aria-labelledby="roadmap-title">
+        <p className="roadmap-eyebrow">MOONWITNESS · DELIVERY OVERVIEW</p>
+        <h1 id="roadmap-title">Roadmap progress</h1>
+        <p className="roadmap-intro">
+          Ringkasan checklist master per milestone. Penyelesaian pekerjaan dan bukti delivery
+          ditampilkan terpisah agar rencana selesai tidak dianggap sudah dirilis.
+        </p>
+        <dl className="roadmap-provenance">
+          <div>
+            <dt>Sumber</dt>
+            <dd>
+              <a href={`${repository}/tree/${roadmapProgress.sourceSha}`}>
+                {roadmapProgress.sourceSha.slice(0, 12)}
+              </a>
+              {roadmapProgress.sourceDirty ? ' · checkout berubah' : ' · bersih'}
+            </dd>
+          </div>
+          <div>
+            <dt>Dibuat</dt>
+            <dd>
+              <time dateTime={roadmapProgress.generatedAt}>{formatDate}</time>
+            </dd>
+          </div>
+          <div>
+            <dt>Bukti delivery</dt>
+            <dd>
+              {roadmapProgress.deliveryEvidence === 'validated-lifecycle-snapshot'
+                ? 'Snapshot lifecycle tervalidasi'
+                : 'Belum tersedia'}
+            </dd>
+          </div>
+        </dl>
+        <section className="roadmap-summary" aria-label="Ringkasan pekerjaan">
+          {workLabels.map(([key, label]) => (
+            <div className="roadmap-stat" key={key}>
+              <span>{label}</span>
+              <strong>{roadmapProgress.totals.work[key] ?? 0}</strong>
+            </div>
+          ))}
+        </section>
+        <div className="roadmap-table-wrap">
+          <table className="roadmap-table">
+            <caption>
+              Status berdasarkan milestone; delivery tidak disimpulkan dari checklist.
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Milestone</th>
+                <th scope="col">Task</th>
+                {workLabels.map(([key, label]) => (
+                  <th scope="col" key={key}>
+                    {label}
+                  </th>
+                ))}
+                {deliveryLabels.map(([key, label]) => (
+                  <th scope="col" key={key}>
+                    {label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(roadmapProgress.milestones).map(([milestone, counts]) => (
+                <tr key={milestone}>
+                  <th scope="row">{milestone}</th>
+                  <td>{counts.taskCount}</td>
+                  {workLabels.map(([key]) => (
+                    <td key={key}>{counts.work[key] ?? 0}</td>
+                  ))}
+                  {deliveryLabels.map(([key]) => (
+                    <td key={key}>{counts.delivery[key] ?? 0}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="roadmap-note" role="note">
+          Delivery berstatus “belum diverifikasi” karena artifact ini tidak menyertakan snapshot
+          lifecycle tervalidasi. Checklist selesai mengukur pekerjaan; status verified, main, atau
+          released hanya tampil dengan bukti lifecycle yang sesuai SHA sumber.
+        </p>
+        <p className="roadmap-source-link">
+          <a
+            href={`${repository}/blob/${roadmapProgress.sourceSha}/docs/roadmap/evidence/M11.09.md`}
+          >
+            Metode dan batasan dashboard di evidence M11.09 →
+          </a>
+        </p>
+      </article>
+    </>
   );
 }
 
@@ -304,6 +475,7 @@ export function DocsApp() {
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       <Routes>
         <Route path="/" element={<Navigate to={pages[0]?.route ?? '/'} replace />} />
+        <Route path="/roadmap" element={<PortalLayout />} />
         <Route path="/guide/*" element={<PortalLayout />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

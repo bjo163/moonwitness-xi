@@ -16,7 +16,8 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   webServer: {
-    command: 'pnpm exec vite preview --host 127.0.0.1 --port 4178 --strictPort',
+    command:
+      'pnpm --filter @moonwitness/docs portal:build && pnpm --filter @moonwitness/docs exec vite preview --host 127.0.0.1 --port 4178 --strictPort',
     url: baseUrl,
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,

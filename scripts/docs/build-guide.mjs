@@ -2,12 +2,12 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { execFileSync } from 'node:child_process';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const navigationPath = path.join(root, 'docs/guide/navigation.json');
 const metadataPath = path.join(root, 'docs/guide/reference/generated-platform.json');
 const outputPath = path.join(root, 'dist/docs/guide.bundle.json');
-
 export function createGuideBundle(navigation, pageContents, sourceFingerprint) {
   if (
     navigation?.schemaVersion !== 1 ||
@@ -90,6 +90,17 @@ export async function buildGuide() {
   const bundle = createGuideBundle(navigation, pageContents, metadata.generatedFromSha256);
   await mkdir(path.dirname(outputPath), { recursive: true });
   await writeFile(outputPath, `${JSON.stringify(bundle, null, 2)}\n`);
+  execFileSync(
+    process.execPath,
+    [
+      path.join(root, 'scripts/roadmap/progress-dashboard.mjs'),
+      '--format',
+      'json',
+      '--output',
+      'dist/roadmap-progress.json',
+    ],
+    { cwd: root, stdio: 'inherit' }
+  );
   process.stdout.write(
     `Built ${relativePaths.length} documentation pages to dist/docs/guide.bundle.json.\n`
   );

@@ -30,7 +30,14 @@ function canonicalDeliveryStage(stage) {
 }
 
 /** Build a source-SHA-bound report. Delivery stays unknown without trusted lifecycle evidence. */
-export function buildRoadmapProgress({ tasks, roadmap, sourceSha, generatedAt, lifecycleByTask }) {
+export function buildRoadmapProgress({
+  tasks,
+  roadmap,
+  sourceSha,
+  generatedAt,
+  lifecycleByTask,
+  sourceDirty = false,
+}) {
   if (!/^[a-f0-9]{40}$/u.test(sourceSha))
     throw new Error('Progress source SHA must be a full Git SHA.');
   const states = parseRoadmapTaskStates(roadmap, tasks);
@@ -71,6 +78,7 @@ export function buildRoadmapProgress({ tasks, roadmap, sourceSha, generatedAt, l
   return {
     schemaVersion: 1,
     sourceSha,
+    sourceDirty,
     generatedAt,
     deliveryEvidence: lifecycleByTask ? 'validated-lifecycle-snapshot' : 'not-provided',
     totals,
@@ -143,6 +151,7 @@ async function main() {
     return absolutePath;
   };
   const sha = git(['rev-parse', 'HEAD']);
+  const sourceDirty = git(['status', '--porcelain']).length > 0;
   const generatedAt = new Date().toISOString();
   const [index, roadmap] = await Promise.all([
     readFile(path.join(repositoryRoot, 'docs/roadmap/tasks.json'), 'utf8').then(JSON.parse),
@@ -174,6 +183,7 @@ async function main() {
     tasks: index.tasks,
     roadmap,
     sourceSha: sha,
+    sourceDirty,
     generatedAt,
     lifecycleByTask,
   });
