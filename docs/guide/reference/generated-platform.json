@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "0468f70cd8fb5db57dae9245368ad70d782e64d8adc79fcb015b6293bd0affe6",
+  "generatedFromSha256": "d35eed0b452adc02e81847a9c90e9afee56e17ff3ce5a3593e1a2c9c43f594c1",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -234,6 +234,7 @@
       "automation:check:action-pins": "node scripts/check-action-pins.mjs",
       "automation:check:roadmap": "node scripts/roadmap/validate-roadmap.mjs",
       "automation:check:secrets": "node scripts/check-gitleaks-config.mjs",
+      "automation:check:ubuntu-runner-candidate": "node scripts/check-ubuntu-runner-candidate.mjs",
       "automation:check:workflow-trust": "node scripts/check-workflow-checkout-trust.mjs",
       "board:budget": "node scripts/check-board-bundle.mjs",
       "board:visual:update": "pnpm test:e2e --grep 'responsive screen audit|responsive protected screens' --update-snapshots",
@@ -309,6 +310,7 @@
       "test:roadmap": "node --test scripts/roadmap/validate-roadmap.test.mjs scripts/roadmap/sync-issues.test.mjs",
       "test:secrets": "node --test scripts/check-gitleaks-config.test.mjs",
       "test:security-policy": "node --test scripts/security-scan-policy.test.mjs scripts/check-trivy-sarif.test.mjs",
+      "test:ubuntu-runner-candidate": "node --test scripts/check-ubuntu-runner-candidate.test.mjs",
       "test:ui": "pnpm --filter @moonwitness/ui build && node --test packages/ui/tests/*.test.mjs && node packages/ui/scripts/verify-package.mjs",
       "test:ui-budget": "node --test apps/ui-catalog/tests/bundle-budget.test.mjs && pnpm --filter @moonwitness/ui-catalog build && pnpm ui:budget",
       "test:ui-catalog": "pnpm --filter @moonwitness/ui-catalog build && pnpm --filter @moonwitness/ui-catalog test",
