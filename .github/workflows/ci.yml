@@ -166,8 +166,15 @@ jobs:
       - name: Install frozen workspace dependencies
         run: pnpm install --frozen-lockfile --no-runtime
       - name: Run unit tests and write JUnit reports
+        id: unit_tests
         run: pnpm test:unit:ci
-      - run: pnpm test:integration
+      - name: Run PostgreSQL integration tests
+        id: postgres_tests
+        run: pnpm test:integration
+      - name: Annotate failed unit and integration testcase names
+        if: always() && (steps.unit_tests.outcome == 'failure' || steps.postgres_tests.outcome == 'failure')
+        continue-on-error: true
+        run: node scripts/summarize-junit-failures.mjs test-results/junit
       - name: Scan reports for secrets before artifact upload
         id: scan_reports
         if: always()
