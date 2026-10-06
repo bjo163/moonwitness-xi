@@ -1,31 +1,31 @@
 # Generated platform reference
 
-Source fingerprint: `3e5ba22ae652c7931ec96a5c5e2f1c61167a14237b9eb3d751b2f03217da438c`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
+Source fingerprint: `47c60f97a460f46038486115665d0bf1050ef26b5cb826e4644ed85383b88864`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
 
 ## Workspace packages and apps
 
-| Name                            | Kind    | Version    | Scripts                                                                                                                                                       |
-| ------------------------------- | ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@moonwitness/api`              | App     | 1.0.0-rc.1 | `attachments:reconcile`, `build`, `dev`, `jobs:outbox`, `jobs:scheduler`, `jobs:worker`, `reset:superadmin-password`, `revoke:auth-sessions`, `start`, `test` |
-| `@moonwitness/board`            | App     | 1.0.0-rc.1 | `build`, `dev`, `lint`, `preview`, `typecheck`                                                                                                                |
-| `@moonwitness/docs`             | App     | 1.0.0-rc.1 | `dev`, `portal:build`, `preview`, `test`, `typecheck`                                                                                                         |
-| `@moonwitness/ui-catalog`       | App     | 1.0.0-rc.1 | `build`, `dev`, `preview`, `test`                                                                                                                             |
-| `@moonwitness/assets`           | Package | 1.0.0-rc.1 | —                                                                                                                                                             |
-| `@moonwitness/auth`             | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                               |
-| `@moonwitness/client`           | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                               |
-| `@moonwitness/eslint-config`    | Package | 1.0.0-rc.1 | —                                                                                                                                                             |
-| `@moonwitness/jobs`             | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                               |
-| `@moonwitness/logger`           | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                               |
-| `@moonwitness/orm`              | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                               |
-| `@moonwitness/orm-base`         | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                               |
-| `@moonwitness/orm-integration`  | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                               |
-| `@moonwitness/orm-notification` | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                               |
-| `@moonwitness/orm-organization` | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                               |
-| `@moonwitness/orm-request`      | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                               |
-| `@moonwitness/orm-storage`      | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                               |
-| `@moonwitness/orm-workflow`     | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                               |
-| `@moonwitness/types`            | Package | 1.0.0-rc.1 | `build`                                                                                                                                                       |
-| `@moonwitness/ui`               | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                               |
+| Name                            | Kind    | Version    | Scripts                                                                                                                                                                              |
+| ------------------------------- | ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@moonwitness/api`              | App     | 1.0.0-rc.1 | `attachments:reconcile`, `build`, `dev`, `jobs:outbox`, `jobs:scheduler`, `jobs:worker`, `reset:superadmin-password`, `revoke:auth-sessions`, `start`, `test`, `visual-audit:server` |
+| `@moonwitness/board`            | App     | 1.0.0-rc.1 | `build`, `dev`, `lint`, `preview`, `typecheck`                                                                                                                                       |
+| `@moonwitness/docs`             | App     | 1.0.0-rc.1 | `dev`, `portal:build`, `preview`, `test`, `typecheck`                                                                                                                                |
+| `@moonwitness/ui-catalog`       | App     | 1.0.0-rc.1 | `build`, `dev`, `preview`, `test`                                                                                                                                                    |
+| `@moonwitness/assets`           | Package | 1.0.0-rc.1 | —                                                                                                                                                                                    |
+| `@moonwitness/auth`             | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/client`           | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/eslint-config`    | Package | 1.0.0-rc.1 | —                                                                                                                                                                                    |
+| `@moonwitness/jobs`             | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/logger`           | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/orm`              | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/orm-base`         | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/orm-integration`  | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/orm-notification` | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/orm-organization` | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/orm-request`      | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/orm-storage`      | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/orm-workflow`     | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/types`            | Package | 1.0.0-rc.1 | `build`                                                                                                                                                                              |
+| `@moonwitness/ui`               | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
 
 ## Environment variable names
 
@@ -139,6 +139,7 @@ Value categories are inferred from variable names and example syntax; requiredne
 - `pnpm test:docs-publication`
 - `pnpm test:e2e`
 - `pnpm test:e2e:diagnostics`
+- `pnpm test:e2e:visual`
 - `pnpm test:expected-ref`
 - `pnpm test:flaky-policy`
 - `pnpm test:integration`

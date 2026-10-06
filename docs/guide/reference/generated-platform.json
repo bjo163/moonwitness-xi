@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "3e5ba22ae652c7931ec96a5c5e2f1c61167a14237b9eb3d751b2f03217da438c",
+  "generatedFromSha256": "47c60f97a460f46038486115665d0bf1050ef26b5cb826e4644ed85383b88864",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -24,7 +24,8 @@
         "reset:superadmin-password",
         "revoke:auth-sessions",
         "start",
-        "test"
+        "test",
+        "visual-audit:server"
       ]
     },
     {
@@ -153,7 +154,8 @@
       "reset:superadmin-password": "tsx src/commands/reset-superadmin-password.ts",
       "revoke:auth-sessions": "tsx src/commands/revoke-auth-sessions.ts",
       "start": "node dist/server.js",
-      "test": "vitest run"
+      "test": "vitest run",
+      "visual-audit:server": "tsx src/commands/visual-audit-server.ts"
     },
     "@moonwitness/board": {
       "build": "tsc -b && vite build",
@@ -301,6 +303,7 @@
       "test:docs-publication": "node --test scripts/check-docs-publication.test.mjs scripts/write-docs-metadata.test.mjs scripts/classify-docs-change.test.mjs scripts/main-ci-policy.test.mjs scripts/maintenance-incident.test.mjs scripts/docs/versioned-site.test.mjs",
       "test:e2e": "node scripts/run-e2e.mjs",
       "test:e2e:diagnostics": "node --test scripts/e2e-preflight-report.test.mjs scripts/summarize-playwright-failures.test.mjs scripts/summarize-junit-failures.test.mjs scripts/ci-diagnostics.test.mjs",
+      "test:e2e:visual": "pnpm --filter @moonwitness/board exec playwright test e2e/visual-audit.spec.ts --config playwright.visual.config.ts",
       "test:expected-ref": "node --test scripts/push-expected-ref.test.mjs",
       "test:flaky-policy": "node --test scripts/flaky-policy.test.mjs scripts/playwright-flake-reporter.test.mjs",
       "test:integration": "node scripts/run-postgres-tests.mjs",

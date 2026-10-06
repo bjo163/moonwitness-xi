@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "visual-audit:server": "tsx src/commands/visual-audit-server.ts",
     "reset:superadmin-password": "tsx src/commands/reset-superadmin-password.ts",
     "revoke:auth-sessions": "tsx src/commands/revoke-auth-sessions.ts",
     "attachments:reconcile": "tsx src/commands/attachments-reconcile.ts",
