@@ -122,7 +122,7 @@ Auto-merge GitHub menunggu required checks dan reviews; setting repository dan e
 ## Workflow target dan bootstrap
 
 1. Validator lokal memeriksa index/cards/dependencies dan menghasilkan desired issues.
-2. Dry-run membaca seluruh remote managed issues dan menulis plan create/update/no-op/conflict.
+2. Dry-run membaca seluruh remote managed issues dan menulis plan create/update/no-op/conflict. Pada repository publik, planning read-only tidak memerlukan token; private repositories tetap memerlukan credential read yang sesuai.
 3. Uji satu task pilot, termasuk title rename, notes maintainer dan repeated run.
 4. Bulk import dijalankan bertahap dengan pembatasan mutation rate dan checkpoint.
 5. Aktifkan push-trigger trusted dev roadmap/evidence, periodic reconciliation, serta manual dispatch.

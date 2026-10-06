@@ -331,10 +331,13 @@ export function createGitHubIssuesClient({
   now = Date.now,
   maxRetryDelayMs = 60_000,
 }) {
-  if (!token) throw new Error('GITHUB_TOKEN is required for GitHub API access.');
   const base = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues`;
+  function assertWritable() {
+    if (!token) throw new Error('GITHUB_TOKEN is required for GitHub issue mutations.');
+  }
   async function request(url, init = {}) {
     const method = init.method ?? 'GET';
+    if (method !== 'GET') assertWritable();
     const canRetry = method === 'GET';
     for (let attempt = 0; ; attempt += 1) {
       let response;
@@ -343,8 +346,8 @@ export function createGitHubIssuesClient({
           ...init,
           headers: {
             Accept: 'application/vnd.github+json',
-            Authorization: `Bearer ${token}`,
             'X-GitHub-Api-Version': '2022-11-28',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
             ...(init.headers ?? {}),
           },
         });
@@ -418,6 +421,7 @@ export function createGitHubIssuesClient({
     return logins;
   }
   async function ensureMetadata(tasks) {
+    assertWritable();
     const milestones = await listMilestones();
     const labels = await listLabels();
     const milestoneNumbers = new Map(milestones.map(({ title, number }) => [title, number]));
@@ -460,6 +464,7 @@ export function createGitHubIssuesClient({
     return milestoneNumbers;
   }
   return {
+    assertWritable,
     async listAll() {
       const result = [];
       for (const state of ['open', 'closed']) {
@@ -520,6 +525,7 @@ export async function applyIssuePlan({
   repositoryUrl,
   cardDetailsByTask,
 }) {
+  client.assertWritable?.();
   const freshIssues = await client.listAll();
   const fresh = planIssueSync({
     tasks,
@@ -674,6 +680,10 @@ async function main() {
     sha ??
     execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repositoryRoot, encoding: 'utf8' }).trim();
   const token = process.env.GITHUB_TOKEN;
+  if (apply && !token)
+    throw new Error(
+      'GITHUB_TOKEN is required for --apply; read-only planning can use public access.'
+    );
   const client = createGitHubIssuesClient({ token, owner, repo });
   const issues = await client.listAll();
   const validAssignees = await client.validateAssignees(tasks);

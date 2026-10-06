@@ -51,7 +51,7 @@ Simpan bukti aktual di `docs/roadmap/evidence/M11.02.md`. Jangan menandai aktiva
 1. Enumerasi issues open dan closed dengan pagination 100 per halaman; buang pull request entries dan batasi identity ke repository numeric ID yang sedang diproses.
 2. Hitung create/update/no-op/conflict berdasarkan marker repo ID + task ID dan konten generated; judul tidak menjadi identity. Duplicate marker atau generated-block yang rusak harus menjadi conflict tanpa mutasi.
 3. Pertahankan seluruh isi body di luar managed block (termasuk catatan maintainer), jangan menghapus issue, label manusia atau komentar, dan jangan pernah menjalankan shell berdasarkan issue content.
-4. Dry-run menjadi default. Tampilkan source SHA, hash input plan dan daftar operasi; mutasi hanya melalui `--apply` eksplisit dengan token scoped dari environment.
+4. Dry-run menjadi default. Tampilkan source SHA, hash input plan dan daftar operasi; pada repository publik, read-only planning dapat berjalan tanpa credential menggunakan akses anonim. Repository privat memerlukan token read yang sesuai. Mutasi hanya melalui `--apply` eksplisit dengan token scoped dari environment.
 5. Sebelum apply, ambil ulang remote state dan tolak plan jika hash berubah. Jalankan API write serial. Jika create timeout, baca ulang marker sebelum mempertimbangkan retry agar create yang sebenarnya sukses tidak menjadi duplikat.
 6. Validasi seluruh task/index sebelum remote read/write; fail closed pada autentikasi, rate limit, response invalid, duplicate identity atau malformed generated boundaries.
 

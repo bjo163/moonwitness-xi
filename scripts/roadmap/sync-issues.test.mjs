@@ -406,6 +406,39 @@ test('GitHub issue adapter follows open and closed pagination and serializes iss
   assert.equal(calls[4].url.endsWith('/issues/42'), true);
 });
 
+test('public read-only planning needs no token and writes fail closed without one', async () => {
+  const calls = [];
+  const client = createGitHubIssuesClient({
+    owner: 'owner',
+    repo: 'repo',
+    fetchImpl: async (url, init = {}) => {
+      calls.push({ url: String(url), init });
+      return { ok: true, status: 200, json: async () => [] };
+    },
+  });
+
+  assert.deepEqual(await client.listAll(), []);
+  assert.equal(
+    calls.every(({ init }) => !init.headers?.Authorization),
+    true
+  );
+  assert.throws(
+    () => client.assertWritable(),
+    /GITHUB_TOKEN is required for GitHub issue mutations/u
+  );
+  await assert.rejects(
+    applyIssuePlan({ plan: plan(), client, tasks: [task], repositoryId, sourceSha }),
+    /GITHUB_TOKEN is required/u
+  );
+  await assert.rejects(client.create({ title: 'test', body: 'body' }), /GITHUB_TOKEN is required/u);
+  await assert.rejects(
+    client.update({ issueNumber: 1, title: 'test', body: 'body' }),
+    /GITHUB_TOKEN is required/u
+  );
+  await assert.rejects(client.ensureMetadata([task]), /GITHUB_TOKEN is required/u);
+  assert.equal(calls.length, 2);
+});
+
 test('GitHub adapter honors bounded rate-limit delays on reads', async () => {
   const delays = [];
   let calls = 0;
