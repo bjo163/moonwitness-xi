@@ -47,6 +47,8 @@ export function inspectTrustedCheckoutPolicies({
   dependencyCandidate,
   releasePlan,
   promote,
+  issueIntake,
+  issueIntakeRunner,
 }) {
   const findings = [];
   for (const [name, source] of [
@@ -310,20 +312,99 @@ export function inspectTrustedCheckoutPolicies({
     }
   }
 
+  if (issueIntake) {
+    if (!issueIntake.includes('issue_comment:\n    types: [created]'))
+      findings.push('Issue intake must process only newly created issue comments.');
+    if (!issueIntake.includes('permissions:\n  contents: read'))
+      findings.push('Issue intake must grant the workflow token contents: read only.');
+    if (/^\s+(?:issues|contents|pull-requests|checks|actions):\s+write\s*$/mu.test(issueIntake))
+      findings.push('Issue intake must not grant write permissions to workflow tokens.');
+    const intakeCheckouts = checkoutSteps(issueIntake);
+    if (
+      intakeCheckouts.length !== 1 ||
+      !intakeCheckouts[0].includes('ref: ${{ github.sha }}') ||
+      !intakeCheckouts[0].includes('persist-credentials: false')
+    )
+      findings.push(
+        'Issue intake must use one immutable event-SHA checkout without persisted credentials.'
+      );
+    const requireToken = namedWorkflowStep(
+      issueIntake,
+      'Require the least-privilege GitHub App permission verifier'
+    );
+    const mintToken = namedWorkflowStep(issueIntake, 'Mint repository-scoped metadata-read token');
+    const runIntake = namedWorkflowStep(
+      issueIntake,
+      'Verify actor and report a read-only proposal'
+    );
+    if (
+      !requireToken?.includes('ROADMAP_INTAKE_APP_CLIENT_ID') ||
+      !requireToken.includes('ROADMAP_INTAKE_APP_PRIVATE_KEY') ||
+      !requireToken.includes('exit 2')
+    )
+      findings.push('Issue intake must fail clearly when its GitHub App credentials are missing.');
+    if (
+      !mintToken?.includes('actions/create-github-app-token@') ||
+      !mintToken.includes('permission-metadata: read') ||
+      mintToken.includes('permission-issues:') ||
+      mintToken.includes('permission-contents:')
+    )
+      findings.push(
+        'Issue intake must mint a least-privilege GitHub App token with Metadata: read only.'
+      );
+    if (
+      !runIntake?.includes('steps.intake-token.outputs.token') ||
+      runIntake.includes('github.token') ||
+      !runIntake.includes('GITHUB_EVENT_PATH')
+    )
+      findings.push(
+        'Issue intake must use the scoped verifier token and trusted runner event payload.'
+      );
+    if (
+      requireToken &&
+      mintToken &&
+      runIntake &&
+      (issueIntake.indexOf(requireToken) > issueIntake.indexOf(mintToken) ||
+        issueIntake.indexOf(mintToken) > issueIntake.indexOf(runIntake))
+    )
+      findings.push(
+        'Issue intake must validate credentials, mint its token, then run the planner in order.'
+      );
+    if (
+      !issueIntakeRunner?.includes('sourceSha: process.env.GITHUB_SHA') ||
+      !issueIntakeRunner.includes('deliveryId: result.deliveryId') ||
+      /proposal\.(?:rationale|requestedChange)|comment\.body|issue\.body/u.test(issueIntakeRunner)
+    )
+      findings.push(
+        'Issue intake summary must bind a proposal ID to source SHA and omit user text.'
+      );
+  }
+
   return findings;
 }
 
 async function main() {
-  const [pages, visualReview, release, releasePrepare, dependencyCandidate, releasePlan, promote] =
-    await Promise.all([
-      readFile(path.join(repositoryRoot, '.github/workflows/pages.yml'), 'utf8'),
-      readFile(path.join(repositoryRoot, '.github/workflows/visual-review.yml'), 'utf8'),
-      readFile(path.join(repositoryRoot, '.github/workflows/release.yml'), 'utf8'),
-      readFile(path.join(repositoryRoot, '.github/workflows/release-prepare.yml'), 'utf8'),
-      readFile(path.join(repositoryRoot, '.github/workflows/dependency-candidate.yml'), 'utf8'),
-      readFile(path.join(repositoryRoot, '.github/workflows/release-plan.yml'), 'utf8'),
-      readFile(path.join(repositoryRoot, '.github/workflows/promote.yml'), 'utf8'),
-    ]);
+  const [
+    pages,
+    visualReview,
+    release,
+    releasePrepare,
+    dependencyCandidate,
+    releasePlan,
+    promote,
+    issueIntake,
+    issueIntakeRunner,
+  ] = await Promise.all([
+    readFile(path.join(repositoryRoot, '.github/workflows/pages.yml'), 'utf8'),
+    readFile(path.join(repositoryRoot, '.github/workflows/visual-review.yml'), 'utf8'),
+    readFile(path.join(repositoryRoot, '.github/workflows/release.yml'), 'utf8'),
+    readFile(path.join(repositoryRoot, '.github/workflows/release-prepare.yml'), 'utf8'),
+    readFile(path.join(repositoryRoot, '.github/workflows/dependency-candidate.yml'), 'utf8'),
+    readFile(path.join(repositoryRoot, '.github/workflows/release-plan.yml'), 'utf8'),
+    readFile(path.join(repositoryRoot, '.github/workflows/promote.yml'), 'utf8'),
+    readFile(path.join(repositoryRoot, '.github/workflows/roadmap-issue-intake.yml'), 'utf8'),
+    readFile(path.join(repositoryRoot, 'scripts/roadmap/run-issue-intake.mjs'), 'utf8'),
+  ]);
   const findings = inspectTrustedCheckoutPolicies({
     pages,
     visualReview,
@@ -332,13 +413,17 @@ async function main() {
     dependencyCandidate,
     releasePlan,
     promote,
+    issueIntake,
+    issueIntakeRunner,
   });
   if (findings.length) {
     for (const finding of findings) process.stderr.write(`${finding}\n`);
     process.exitCode = 1;
     return;
   }
-  process.stdout.write('Pages and visual-review checkout trust policies are valid.\n');
+  process.stdout.write(
+    'Trusted checkout, promotion and issue-intake workflow policies are valid.\n'
+  );
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { URL as NodeURL } from 'node:url';
 import { inspectTrustedCheckoutPolicies } from './check-workflow-checkout-trust.mjs';
 
 const expressionStart = '$' + '{';
@@ -115,6 +117,34 @@ function policies(overrides = {}) {
 
 test('accepts immutable event-SHA checkout and trusted dispatch restrictions', () => {
   assert.deepEqual(policies(), []);
+});
+
+test('issue intake workflow keeps the current permission lookup scoped and report inert', async () => {
+  const [issueIntake, issueIntakeRunner] = await Promise.all([
+    readFile(new NodeURL('../.github/workflows/roadmap-issue-intake.yml', import.meta.url), 'utf8'),
+    readFile(new NodeURL('./roadmap/run-issue-intake.mjs', import.meta.url), 'utf8'),
+  ]);
+  assert.deepEqual(policies({ issueIntake, issueIntakeRunner }), []);
+});
+
+test('issue intake policy rejects write scopes, unpinned checkout, and user text in summaries', async () => {
+  const [issueIntake, issueIntakeRunner] = await Promise.all([
+    readFile(new NodeURL('../.github/workflows/roadmap-issue-intake.yml', import.meta.url), 'utf8'),
+    readFile(new NodeURL('./roadmap/run-issue-intake.mjs', import.meta.url), 'utf8'),
+  ]);
+  const unsafeWorkflow = issueIntake
+    .replace('      contents: read', '      contents: read\n      issues: write')
+    .replace('permission-metadata: read', 'permission-issues: write')
+    .replace('ref: ${{ github.sha }}', 'ref: ${{ github.event.comment.body }}');
+  const unsafeRunner = issueIntakeRunner.replace(
+    'kind: result.proposal.kind,',
+    'rationale: result.proposal.rationale,'
+  );
+  const findings = policies({ issueIntake: unsafeWorkflow, issueIntakeRunner: unsafeRunner });
+  assert.ok(findings.some((finding) => finding.includes('must not grant write permissions')));
+  assert.ok(findings.some((finding) => finding.includes('least-privilege GitHub App token')));
+  assert.ok(findings.some((finding) => finding.includes('immutable event-SHA checkout')));
+  assert.ok(findings.some((finding) => finding.includes('omit user text')));
 });
 
 test('rejects promotion reports without exact SHA checks or preservation of the existing PR body', () => {
