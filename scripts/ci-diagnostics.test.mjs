@@ -32,6 +32,30 @@ test('diagnostic report names do not enable upload when the sanitizer rejects JU
   );
 });
 
+test('UI CI splits build, component tests and export verification with scanned JUnit output', () => {
+  assert.match(
+    workflow,
+    /name: Build shared UI package\s+run: pnpm --filter @moonwitness\/ui build/u
+  );
+  assert.match(
+    workflow,
+    /name: Create UI unit test report directory\s+run: node -e ".+test-results\/junit/u
+  );
+  assert.match(
+    workflow,
+    /name: Test UI component contracts with JUnit diagnostics\s+run: node --test .+--test-reporter=junit .+ui-package\.xml/u
+  );
+  assert.match(
+    workflow,
+    /name: Verify shared UI package public exports\s+run: node packages\/ui\/scripts\/verify-package\.mjs/u
+  );
+  const uiTests = workflow.indexOf('Test UI component contracts with JUnit diagnostics');
+  const scanner = workflow.indexOf('Scan UI browser reports before artifact upload');
+  const upload = workflow.indexOf('Upload sanitized UI reports and visual screenshots');
+  assert.ok(uiTests >= 0 && scanner > uiTests && upload > scanner);
+  assert.match(workflow, /test-results\/junit\/ui-package\.xml/u);
+});
+
 test('unit runner records a safe phase name when it fails before writing a suite report', () => {
   const report = renderUnitRunnerFailureReport('API build <failed>', 2);
 

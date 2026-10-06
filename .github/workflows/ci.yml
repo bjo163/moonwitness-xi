@@ -274,8 +274,14 @@ jobs:
         run: pnpm install --frozen-lockfile --no-runtime
       - name: Install Chromium and operating-system dependencies
         run: pnpm exec playwright install --with-deps chromium
-      - name: Test shared UI package public exports and component contracts
-        run: pnpm test:ui
+      - name: Build shared UI package
+        run: pnpm --filter @moonwitness/ui build
+      - name: Create UI unit test report directory
+        run: node -e "require('node:fs').mkdirSync('test-results/junit', { recursive:true })"
+      - name: Test UI component contracts with JUnit diagnostics
+        run: node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=test-results/junit/ui-package.xml packages/ui/tests/*.test.mjs
+      - name: Verify shared UI package public exports
+        run: node packages/ui/scripts/verify-package.mjs
       - name: Validate source SVG assets and static documentation exports
         run: pnpm test:assets
       - name: Enforce tested JavaScript and CSS bundle budgets
@@ -286,12 +292,13 @@ jobs:
         id: scan_ui_reports
         if: always()
         run: node scripts/scan-test-reports.mjs
-      - name: Upload UI browser report and visual screenshots only
+      - name: Upload sanitized UI reports and visual screenshots
         if: always() && steps.scan_ui_reports.outcome == 'success'
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: ui-catalog-playwright-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
+            test-results/junit/ui-package.xml
             test-results/junit/ui-catalog.xml
             test-results/junit/ui-catalog-retries.json
             test-results/ui-catalog/**/*.png
