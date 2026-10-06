@@ -45,3 +45,20 @@ test('native SQLite dependency build installs its compiler toolchain only in the
 test('production image uses legacy deployment for the non-injected workspace layout', () => {
   assert.match(dockerfile, /pnpm --filter @moonwitness\/api deploy --prod --legacy \/deploy\/api/u);
 });
+
+test('API deployment has an isolated stage so it cannot mutate the Board build workspace', () => {
+  const buildStage = dockerfile.slice(0, dockerfile.indexOf('\nFROM build AS api-deploy'));
+  const apiDeployStage = dockerfile.slice(
+    dockerfile.indexOf('\nFROM build AS api-deploy'),
+    dockerfile.indexOf('\nFROM node:22-bookworm-slim AS runtime')
+  );
+  const boardBuildStage = dockerfile.slice(dockerfile.indexOf('\nFROM build AS board-build'));
+
+  assert.doesNotMatch(buildStage, /pnpm --filter @moonwitness\/api deploy/u);
+  assert.match(
+    apiDeployStage,
+    /FROM build AS api-deploy[\s\S]*pnpm --filter @moonwitness\/api deploy/u
+  );
+  assert.match(dockerfile, /COPY --from=api-deploy --chown=node:node \/deploy\/api/u);
+  assert.match(boardBuildStage, /FROM build AS board-build/u);
+});

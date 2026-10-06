@@ -31,6 +31,8 @@ RUN --mount=type=cache,id=moonwitness-pnpm-store,target=/root/.local/share/pnpm/
     pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm build
+
+FROM build AS api-deploy
 RUN pnpm --filter @moonwitness/api deploy --prod --legacy /deploy/api
 
 FROM node:22-bookworm-slim AS runtime
@@ -40,7 +42,7 @@ ENV NODE_ENV=production \
     LOG_TO_FILE=false \
     LOG_PRETTY=false
 WORKDIR /app
-COPY --from=build --chown=node:node /deploy/api ./
+COPY --from=api-deploy --chown=node:node /deploy/api ./
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
