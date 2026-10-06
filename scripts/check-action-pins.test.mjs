@@ -2,7 +2,18 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { findUnpinnedActions, pnpmSetupOrderValid } from './check-action-pins.mjs';
 
-test('selects Node before installing pnpm 11', () => {
+test('installs pnpm 11 with a Node runtime and required frozen lockfile', () => {
+  assert.equal(
+    pnpmSetupOrderValid(
+      [
+        '- uses: pnpm/setup@pnpm-sha # v3',
+        '  with:',
+        '    runtime: node@${{ inputs.node-version }}',
+        '    require-lockfile: true',
+      ].join('\n')
+    ),
+    true
+  );
   assert.equal(
     pnpmSetupOrderValid(
       ['- uses: actions/setup-node@node-sha # v7', '- uses: pnpm/action-setup@pnpm-sha # v6'].join(

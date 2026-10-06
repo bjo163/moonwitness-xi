@@ -53,6 +53,12 @@ export function findUnpinnedActions(sources) {
 }
 
 export function pnpmSetupOrderValid(actionSource) {
+  if (actionSource.includes('uses: pnpm/setup@')) {
+    return (
+      /runtime:\s*node@\$\{\{\s*inputs\.node-version\s*\}\}/u.test(actionSource) &&
+      /require-lockfile:\s*true/u.test(actionSource)
+    );
+  }
   const nodeSetup = actionSource.indexOf('uses: actions/setup-node@');
   const pnpmSetup = actionSource.indexOf('uses: pnpm/action-setup@');
   return nodeSetup >= 0 && pnpmSetup > nodeSetup;
