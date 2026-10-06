@@ -94,6 +94,13 @@ test('responsive protected screens fit and remain accessible in both themes', as
   await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the board' }).click();
   await expect(page).toHaveURL(/\/$/u);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  for (const label of ['Organization Members', 'Notification Preferences']) {
+    const menuItem = page.getByRole('link', { name: label, exact: true });
+    await expect(menuItem).toBeVisible();
+    await expect(menuItem.locator('span')).toHaveCSS('white-space', 'normal');
+    await expect(menuItem.locator('span')).toHaveCSS('text-overflow', 'clip');
+  }
 
   for (const theme of ['light', 'dark'] as const) {
     for (const size of sizes) {

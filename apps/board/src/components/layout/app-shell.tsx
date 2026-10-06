@@ -72,9 +72,10 @@ function NavItem({
       to={to}
       end={to === '/'}
       onClick={onNavigate}
+      title={label}
       className={({ isActive }) =>
         cn(
-          'group relative flex items-center gap-3 px-3 py-2 font-display text-lg uppercase tracking-wide text-ink/70 transition-colors hover:text-ink',
+          'group relative flex min-w-0 items-center gap-3 px-3 py-2 font-display text-lg uppercase tracking-wide text-ink/70 transition-colors hover:text-ink',
           isActive && 'text-on-accent hover:text-on-accent'
         )
       }
@@ -90,7 +91,7 @@ function NavItem({
             />
           )}
           <Icon className="relative size-5" strokeWidth={2.4} />
-          <span className="relative truncate">{label}</span>
+          <span className="relative min-w-0 whitespace-normal leading-tight">{label}</span>
         </>
       )}
     </NavLink>
