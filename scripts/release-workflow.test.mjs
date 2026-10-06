@@ -44,6 +44,22 @@ test('the verified and scanned API and Board images are smoke-tested and handed 
   assert.match(verify, /SMOKE_USE_PREBUILT_IMAGES: 'true'/u);
   assert.match(smokeScript, /SMOKE_USE_PREBUILT_IMAGES:-false/u);
   assert.match(smokeScript, /up --detach --no-build --wait --wait-timeout 180 api board/u);
+  for (const phase of [
+    'compose-up',
+    'api-root',
+    'api-banner',
+    'api-readiness',
+    'board-root',
+    'api-stop',
+    'graceful-shutdown',
+  ]) {
+    assert.ok(smokeScript.includes(`phase=${phase}`), `container smoke should name ${phase}`);
+  }
+  assert.match(
+    smokeScript,
+    /::error title=Container smoke failed::Phase %s failed; inspect the authorized runner log for details\./u
+  );
+  assert.match(smokeScript, /trap cleanup EXIT/u);
   assert.match(verify, /docker save --output release-images\.tar/u);
   assert.match(verify, /docker image inspect moonwitness-api:production --format '\{\{\.Id\}\}'/u);
   assert.match(
