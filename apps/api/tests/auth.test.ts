@@ -317,6 +317,7 @@ describe('authentication and authorization', () => {
 
     it('changes password only with the current password and revokes refresh sessions', async () => {
       const oldSession = (await login('alice', USER_PASSWORD)).json<TokenBody>().data;
+      const anotherSession = (await login('alice', USER_PASSWORD)).json<TokenBody>().data;
       try {
         const wrongCurrentPassword = await as(alice.access_token, {
           method: 'POST',
@@ -335,6 +336,16 @@ describe('authentication and authorization', () => {
         });
         expect(tooShort.statusCode).toBe(400);
 
+        const tooLong = await as(alice.access_token, {
+          method: 'POST',
+          url: '/auth/me/password',
+          payload: {
+            current_password: USER_PASSWORD,
+            new_password: 'a'.repeat(1025),
+          },
+        });
+        expect(tooLong.statusCode).toBe(400);
+
         const changed = await as(alice.access_token, {
           method: 'POST',
           url: '/auth/me/password',
@@ -352,6 +363,12 @@ describe('authentication and authorization', () => {
           payload: { refresh_token: oldSession.refresh_token },
         });
         expect(oldRefresh.statusCode).toBe(401);
+        const otherRefresh = await app.inject({
+          method: 'POST',
+          url: '/auth/refresh',
+          payload: { refresh_token: anotherSession.refresh_token },
+        });
+        expect(otherRefresh.statusCode).toBe(401);
         expect((await login('alice', USER_PASSWORD)).statusCode).toBe(401);
         expect((await login('alice', 'new-strong-password-123')).statusCode).toBe(200);
       } finally {
