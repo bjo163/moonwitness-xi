@@ -98,8 +98,16 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11'
-      - name: Validate workflows and shell scripts
-        run: bash scripts/check-automation.sh
+      - name: Lint workflows with actionlint
+        run: bash scripts/check-automation.sh actionlint
+      - name: Check shell syntax
+        run: bash scripts/check-automation.sh shell-syntax
+      - name: Lint shell scripts with ShellCheck
+        run: bash scripts/check-automation.sh shellcheck
+      - name: Verify actionlint rejects invalid workflow fixture
+        run: bash scripts/check-automation.sh actionlint-fixture
+      - name: Verify ShellCheck rejects unsafe shell fixture
+        run: bash scripts/check-automation.sh shellcheck-fixture
       - name: Validate immutable GitHub Action pins
         run: pnpm automation:check:action-pins
       - name: Validate workflow checkout trust boundaries
