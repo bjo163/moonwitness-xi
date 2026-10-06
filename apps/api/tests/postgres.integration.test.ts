@@ -6,15 +6,19 @@ import { defineAddon, defineModel, fields, installAddons, ref, seed } from '@moo
 import {
   Company,
   AuditLog,
+  AccessGroup,
+  CompanyMembership,
   Country,
   CountryState,
   Currency,
+  ModelAccess,
   Language,
   Partner,
   Sequence,
   User,
   initializeSuperadminPassword,
   resetSuperadminPassword,
+  assignDefaultUserGroup,
   nextSequence,
   manifest,
 } from '@moonwitness/orm-base';
@@ -399,6 +403,102 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     await resetSuperadminPassword('postgres-flow-reset-password');
     expect((await login('postgres-flow-initial-password')).statusCode).toBe(401);
     expect((await login('postgres-flow-reset-password')).statusCode).toBe(200);
+  }, 30000);
+
+  it('enforces PostgreSQL company isolation for partner list, count, relations and foreign references', async () => {
+    if (!app) throw new Error('PostgreSQL API app is not initialized');
+
+    const localCompany = await Company.query().findOne({ name: 'MoonWitness' }).throwIfNotFound();
+    const localPartner = await Partner.query().insertAndFetch({
+      name: 'PostgreSQL Tenant Contact',
+      company_id: localCompany.id,
+    });
+    const localUser = await User.query().insertAndFetch({
+      login: 'postgres-tenant-user',
+      password: 'postgres-tenant-password',
+      partner_id: localPartner.id,
+      role: 'user',
+    });
+    await assignDefaultUserGroup(localUser.id);
+    await CompanyMembership.query().insert({
+      user_id: localUser.id,
+      company_id: localCompany.id,
+      is_default: true,
+    });
+    const userGroup = await AccessGroup.query().findOne({ code: 'user' }).throwIfNotFound();
+    const partnerGrant = await ModelAccess.query()
+      .findOne({ group_id: userGroup.id, model_name: 'base.partner' })
+      .throwIfNotFound();
+    await ModelAccess.query().findById(partnerGrant.id).patch({ create: true, write: true });
+
+    const foreignCompany = await Company.query().insertAndFetch({
+      name: 'PostgreSQL Foreign Tenant',
+    });
+    const foreignPartner = await Partner.query().insertAndFetch({
+      name: 'PostgreSQL Foreign Contact',
+      company_id: foreignCompany.id,
+    });
+    const login = await app.inject({
+      method: 'POST',
+      url: '/auth/login',
+      payload: { login: 'postgres-tenant-user', password: 'postgres-tenant-password' },
+    });
+    expect(login.statusCode).toBe(200);
+    const accessToken = login.json<{ data: { access_token: string } }>().data.access_token;
+    const headers = { authorization: `Bearer ${accessToken}` };
+
+    const listed = await app.inject({
+      method: 'GET',
+      url: '/api/base.partner?limit=500&count=true&with=company',
+      headers,
+    });
+    expect(listed.statusCode).toBe(200);
+    const result = listed.json<{
+      total: number;
+      data: { id: number; name: string; company: { name: string } | null }[];
+    }>();
+    expect(result.total).toBe(result.data.length);
+    expect(result.data.map(({ id }) => id)).toContain(localPartner.id);
+    expect(result.data.map(({ id }) => id)).not.toContain(foreignPartner.id);
+    expect(result.data.find(({ id }) => id === localPartner.id)?.company?.name).toBe('MoonWitness');
+
+    const directRead = await app.inject({
+      method: 'GET',
+      url: `/api/base.partner/${foreignPartner.id}`,
+      headers,
+    });
+    expect(directRead.statusCode).toBe(404);
+
+    const filteredCount = await app.inject({
+      method: 'GET',
+      url: `/api/base.partner?domain=${encodeURIComponent(JSON.stringify([['id', '=', foreignPartner.id]]))}&limit=500&count=true`,
+      headers,
+    });
+    expect(filteredCount.statusCode).toBe(200);
+    expect(filteredCount.json<{ total: number; data: { id: number }[] }>()).toMatchObject({
+      total: 0,
+      data: [],
+    });
+
+    const deniedForeignCreate = await app.inject({
+      method: 'POST',
+      url: '/api/base.partner',
+      headers,
+      payload: { name: 'Foreign company assignment', company_id: foreignCompany.id },
+    });
+    expect(deniedForeignCreate.statusCode).toBe(403);
+
+    const deniedForeignParent = await app.inject({
+      method: 'POST',
+      url: '/api/base.partner',
+      headers,
+      payload: {
+        name: 'Cross-company parent assignment',
+        company_id: localCompany.id,
+        parent_id: foreignPartner.id,
+      },
+    });
+    expect(deniedForeignParent.statusCode).toBe(403);
   }, 30000);
 
   it('claims one PostgreSQL job once when two workers race for the same queue item', async () => {

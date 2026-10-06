@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "45e115c7af6da5d9e2f94b1448881ffdc92b5a42552f44b0f960011000d34bda",
+  "generatedFromSha256": "5139d6ceea5063c9db8e58cd50521b8d5cd3e00d22e9e3c9093fee2ca8610348",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -300,6 +300,7 @@
       "test:docs-portal": "pnpm docs:build && pnpm --filter @moonwitness/docs test",
       "test:docs-publication": "node --test scripts/check-docs-publication.test.mjs scripts/write-docs-metadata.test.mjs scripts/classify-docs-change.test.mjs scripts/main-ci-policy.test.mjs scripts/maintenance-incident.test.mjs scripts/docs/versioned-site.test.mjs",
       "test:e2e": "node scripts/run-e2e.mjs",
+      "test:e2e:diagnostics": "node --test scripts/e2e-preflight-report.test.mjs scripts/summarize-playwright-failures.test.mjs",
       "test:expected-ref": "node --test scripts/push-expected-ref.test.mjs",
       "test:flaky-policy": "node --test scripts/flaky-policy.test.mjs scripts/playwright-flake-reporter.test.mjs",
       "test:integration": "node scripts/run-postgres-tests.mjs",
