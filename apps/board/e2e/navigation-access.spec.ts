@@ -82,15 +82,24 @@ test('development mode reveals technical navigation without changing API access'
   });
   expect(userResponse.status()).toBe(201);
 
-  const ordinaryLogin = await page.request.post('/auth/login', {
-    data: { login: userLogin, password: userPassword },
-  });
-  expect(ordinaryLogin.status()).toBe(200);
-  const ordinarySession = (await ordinaryLogin.json()) as {
-    data: { access_token: string };
-  };
+  await page.getByRole('button', { name: 'superadmin' }).click();
+  await page.getByRole('menuitem', { name: 'Sign out' }).click();
+  await expect(page).toHaveURL(/\/login$/u);
+  await page.getByLabel('Login').fill(userLogin);
+  await page.getByLabel('Password').fill(userPassword);
+  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await expect(page).toHaveURL(/\/$/u);
+  await expect(page.getByRole('button', { name: 'Development Mode: On' }).first()).toBeVisible();
+
+  const ordinarySession = await page.evaluate(
+    () =>
+      JSON.parse(localStorage.getItem('mw-board-session') ?? 'null') as {
+        access_token: string;
+      } | null
+  );
+  expect(ordinarySession).not.toBeNull();
   const ordinaryModels = await page.request.get('/api/models', {
-    headers: { authorization: `Bearer ${ordinarySession.data.access_token}` },
+    headers: { authorization: `Bearer ${ordinarySession!.access_token}` },
   });
   expect(ordinaryModels.status()).toBe(200);
   const ordinaryModelPayload = (await ordinaryModels.json()) as {
@@ -100,10 +109,20 @@ test('development mode reveals technical navigation without changing API access'
     true
   );
   expect(ordinaryModelPayload.models.some((item) => item.model === 'base.partner')).toBe(true);
-  const developmentOnlyMenuModel = technicalModel!.menu.developmentOnly;
-  expect(developmentOnlyMenuModel).toBe(true);
+  expect(ordinaryModelPayload.models.some((item) => item.model === 'base.user')).toBe(false);
+  await expect(
+    page.getByRole('navigation', { name: 'Models' }).getByRole('link', { name: 'Users' })
+  ).toHaveCount(0);
+
+  const forbiddenModelResponse = page.waitForResponse((response) =>
+    response.url().includes('/api/base.user/views')
+  );
+  await page.goto('/m/base.user');
+  expect((await forbiddenModelResponse).status()).toBe(403);
+  await expect(page.getByText(/you do not have permission to view it/i)).toBeVisible();
+
   const modelRead = await page.request.get('/api/base.partner_address', {
-    headers: { authorization: `Bearer ${ordinarySession.data.access_token}` },
+    headers: { authorization: `Bearer ${ordinarySession!.access_token}` },
   });
   expect(modelRead.status()).toBe(200);
 });
