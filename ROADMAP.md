@@ -54,7 +54,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 - [ ] M1.08 Tentukan kebijakan promosi: patch/minor kompatibel bisa otomatis; breaking change, perubahan destruktif, dan perubahan kebijakan keamanan memerlukan persetujuan eksplisit. Semua lane CI lulus; `ci-gate` menunggu review CODEOWNER pada SHA PR terkini dan bukti merge. Bukti: [M1.08](docs/roadmap/evidence/M1.08.md).
 - [x] M1.09 Sinkronkan `main → dev` tanpa force-push; perubahan bersamaan atau konflik menghasilkan laporan, bukan overwrite. Push + rekonsiliasi terjadwal + trigger manual terbukti pada run 37172778791.
 - [x] M1.10 Lindungi tag release dari pemindahan/penghapusan rutin; ruleset aktif `Protect version tags` membatasi update/delete `refs/tags/v*`, tanpa bypass. Bukti: [M1.10](docs/roadmap/evidence/M1.10.md).
-- [ ] M1.11 Hapus workflow deploy staging/production; pertahankan smoke test container API/Board runner-local dengan PostgreSQL sementara. Local dan semua lane CI lulus; tunggu promosi bersama PR M1.08. Bukti: [M1.11](docs/roadmap/evidence/M1.11.md).
+- [ ] M1.11 Hapus workflow deploy staging/production dan instruksi otomatis stale dari README; container Compose config valid dan smoke-script syntax lulus. Runtime smoke lokal belum jalan karena Docker Desktop Linux engine tidak tersedia; penghapusan menunggu promosi melalui PR main dan exact-head CI. Bukti: [M1.11](docs/roadmap/evidence/M1.11.md).
 - [x] M1.12 Audit updater dependency, generator docs, dan release workflow: tidak ada updater/generator aktif; workflows yang ada tidak membuat branch ketiga. Batas dua branch dan tindak lanjut tercatat: [M1.12](docs/roadmap/evidence/M1.12.md).
 
 ## M2 — CI terpusat dan paralel (jalur A; kontrak M0)

@@ -452,10 +452,12 @@ menulis log ke stdout. Worker diberi waktu drain sebelum dihentikan. Tambahkan h
 domain ke image dan isi `JOB_HANDLERS_MODULE`/`OUTBOX_HANDLERS_MODULE` dengan path modul
 di dalam image. Endpoint readiness akan tetap gagal sampai PostgreSQL siap.
 
-Urutan rilis yang aman: pastikan CI lulus (termasuk PostgreSQL, backup/restore, dan
-build image), buat backup terverifikasi, deploy staging, periksa `/readyz`, `/livez`,
-login, alur mutasi, job/outbox, dan log, lalu promosikan image yang sama ke production.
-Catat tag image, commit, waktu deploy, hasil backup, dan hasil smoke test. Saat rollback,
+Deployment aplikasi dikelola operator di luar workflow GitHub repository ini. Sebelum
+operator mengganti image, verifikasi CI (termasuk PostgreSQL, backup/restore, dan build
+image), backup database, dan image provenance; setelah perubahan, periksa `/readyz`,
+`/livez`, login, alur mutasi, job/outbox, dan log, lalu catat image, commit, waktu,
+backup, serta hasil smoke test. Staging bukan prasyarat automation/release repository.
+Saat rollback,
 gunakan image sebelumnya hanya jika schema/data baru masih kompatibel dengannya; hook
 upgrade tidak dibalik otomatis. Pemulihan database adalah tindakan terpisah dan
 destruktif: lakukan ke target yang dipilih dengan backup yang telah diuji, ikuti
@@ -478,11 +480,3 @@ Perubahan melalui REST dan JSON-RPC ditulis ke `base.audit_log`, berisi actor, m
 record, operasi, dan diff field. Password, token, secret, credential, dan hash tidak
 disalin. Log hanya bisa dibaca role `system`/`superadmin` melalui API dan tidak dapat
 diubah/dihapus lewat generic API.
-
-Workflow `.github/workflows/deploy.yml` berjalan setelah CI sukses, menggunakan deployment hook dan smoke test.
-Atur GitHub environment `staging` dengan secret `STAGING_DEPLOY_HOOK_URL` dan variable
-`STAGING_BASE_URL`. Push ke `main` memicu CI terlebih dahulu; setelah sukses, workflow ini
-men-deploy staging lalu memeriksa `/readyz`, `/livez`,
-dan root API. Workflow manual dapat melanjutkan ke production jika input disetujui;
-configure protected environment `production` dengan `PRODUCTION_DEPLOY_HOOK_URL` dan
-`PRODUCTION_BASE_URL` agar approval policy GitHub berlaku sebelum deploy.
