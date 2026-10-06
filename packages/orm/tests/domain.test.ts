@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parseDomainToAST, normalizeLeaf, validateDomain, type ASTNode } from '../src/domain.js';
-import type { Domain } from '../src/types.js';
+import type { Domain, DomainLeaf } from '../src/types.js';
 
 const generatedFields = ['id', 'active', 'name', 'company_id'] as const;
 const generatedOperators = ['=', '!=', '>', '>=', '<', '<=', 'ilike', 'in', 'not in'] as const;
@@ -33,7 +33,7 @@ function choose<T>(random: () => number, values: readonly T[]): T {
   return value;
 }
 
-function generatedLeaf(random: () => number): unknown[] {
+function generatedLeaf(random: () => number): DomainLeaf {
   const field = choose(random, generatedFields);
   const operator = choose(random, generatedOperators);
   if (operator === 'in' || operator === 'not in') {
@@ -57,20 +57,37 @@ function generatedLeaf(random: () => number): unknown[] {
 function generatedExpression(
   random: () => number,
   remainingDepth: number
-): { terms: unknown[]; leaves: number; depth: number } {
-  if (remainingDepth === 0 || random() < 0.35)
-    return { terms: [generatedLeaf(random)], leaves: 1, depth: 1 };
+): { terms: unknown[]; expected: ASTNode; leaves: number; depth: number } {
+  if (remainingDepth === 0 || random() < 0.35) {
+    const leaf = generatedLeaf(random);
+    const normalized = normalizeLeaf(leaf);
+    return {
+      terms: [leaf],
+      expected: { type: 'LEAF', ...normalized },
+      leaves: 1,
+      depth: 1,
+    };
+  }
 
   const operator = choose(random, ['&', '|', '!'] as const);
   if (operator === '!') {
     const child = generatedExpression(random, remainingDepth - 1);
-    return { terms: ['!', ...child.terms], leaves: child.leaves, depth: child.depth + 1 };
+    return {
+      terms: ['!', ...child.terms],
+      expected: { type: 'NOT', child: child.expected },
+      leaves: child.leaves,
+      depth: child.depth + 1,
+    };
   }
 
   const left = generatedExpression(random, remainingDepth - 1);
   const right = generatedExpression(random, remainingDepth - 1);
   return {
     terms: [operator, ...left.terms, ...right.terms],
+    expected:
+      operator === '&'
+        ? { type: 'AND', left: left.expected, right: right.expected }
+        : { type: 'OR', left: left.expected, right: right.expected },
     leaves: left.leaves + right.leaves,
     depth: Math.max(left.depth, right.depth) + 1,
   };
@@ -127,7 +144,10 @@ describe('Domain Parser', () => {
       const domain = validateDomain(generated.terms, allowedGeneratedFields);
       const ast = parseDomainToAST(domain);
       expect(ast).not.toBeNull();
-      if (ast) assertGeneratedAst(ast, generated);
+      if (ast) {
+        expect(ast).toEqual(generated.expected);
+        assertGeneratedAst(ast, generated);
+      }
     }
 
     const invalidInputs: Array<() => unknown> = [
