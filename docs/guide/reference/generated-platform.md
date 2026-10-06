@@ -1,6 +1,6 @@
 # Generated platform reference
 
-Source fingerprint: `3a8a4dce51878fc0b5b1a53a97376fc6217eb94be6dcb9cbfa79bd1ca9fbfba5`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
+Source fingerprint: `806d6ccd8ed1497dde3c92775292c513d2d6906dd97b92ab5bdae9e8a8341e84`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
 
 ## Workspace packages and apps
 
@@ -80,6 +80,7 @@ Value categories are inferred from variable names and example syntax; requiredne
 - `pnpm attachments:reconcile`
 - `pnpm audit:workspace`
 - `pnpm automation:check:action-pins`
+- `pnpm automation:check:action-tags`
 - `pnpm automation:check:roadmap`
 - `pnpm automation:check:secrets`
 - `pnpm automation:check:ubuntu-runner-candidate`
@@ -126,6 +127,7 @@ Value categories are inferred from variable names and example syntax; requiredne
 - `pnpm roadmap:progress`
 - `pnpm test`
 - `pnpm test:action-pins`
+- `pnpm test:action-tags`
 - `pnpm test:addon-conformance`
 - `pnpm test:affected`
 - `pnpm test:architecture`

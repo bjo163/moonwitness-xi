@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "3a8a4dce51878fc0b5b1a53a97376fc6217eb94be6dcb9cbfa79bd1ca9fbfba5",
+  "generatedFromSha256": "806d6ccd8ed1497dde3c92775292c513d2d6906dd97b92ab5bdae9e8a8341e84",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -244,6 +244,7 @@
       "attachments:reconcile": "pnpm --filter @moonwitness/api attachments:reconcile",
       "audit:workspace": "node scripts/audit-workspace.mjs",
       "automation:check:action-pins": "node scripts/check-action-pins.mjs",
+      "automation:check:action-tags": "node scripts/check-action-tag-pins.mjs",
       "automation:check:roadmap": "node scripts/roadmap/validate-roadmap.mjs",
       "automation:check:secrets": "node scripts/check-gitleaks-config.mjs",
       "automation:check:ubuntu-runner-candidate": "node scripts/check-ubuntu-runner-candidate.mjs",
@@ -290,6 +291,7 @@
       "roadmap:progress": "node scripts/roadmap/progress-dashboard.mjs",
       "test": "pnpm test:unit",
       "test:action-pins": "node --test scripts/check-action-pins.test.mjs",
+      "test:action-tags": "node --test scripts/check-action-tag-pins.test.mjs",
       "test:addon-conformance": "node --test scripts/roadmap/addon-conformance.test.mjs",
       "test:affected": "node --test scripts/select-affected.test.mjs",
       "test:architecture": "node --test scripts/architecture/*.test.mjs",
