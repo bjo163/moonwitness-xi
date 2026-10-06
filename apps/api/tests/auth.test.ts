@@ -329,12 +329,12 @@ describe('authentication and authorization', () => {
         });
         expect(wrongCurrentPassword.statusCode).toBe(400);
 
-        const tooShort = await as(alice.access_token, {
+        const belowMinimum = await as(alice.access_token, {
           method: 'POST',
           url: '/auth/me/password',
-          payload: { current_password: USER_PASSWORD, new_password: 'short' },
+          payload: { current_password: USER_PASSWORD, new_password: 'a'.repeat(11) },
         });
-        expect(tooShort.statusCode).toBe(400);
+        expect(belowMinimum.statusCode).toBe(400);
 
         const tooLong = await as(alice.access_token, {
           method: 'POST',
@@ -351,7 +351,7 @@ describe('authentication and authorization', () => {
           url: '/auth/me/password',
           payload: {
             current_password: USER_PASSWORD,
-            new_password: 'new-strong-password-123',
+            new_password: 'twelve-chars',
           },
         });
         expect(changed.statusCode).toBe(200);
@@ -370,7 +370,7 @@ describe('authentication and authorization', () => {
         });
         expect(otherRefresh.statusCode).toBe(401);
         expect((await login('alice', USER_PASSWORD)).statusCode).toBe(401);
-        expect((await login('alice', 'new-strong-password-123')).statusCode).toBe(200);
+        expect((await login('alice', 'twelve-chars')).statusCode).toBe(200);
       } finally {
         await User.query().findById(alice.user.id).patch({ password: USER_PASSWORD });
       }
