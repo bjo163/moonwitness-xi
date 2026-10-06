@@ -212,7 +212,7 @@ describe('authentication and authorization', () => {
       expect(response.statusCode).toBe(401);
     });
 
-    it('rejects garbage, wrongly-claimed and expired tokens', async () => {
+    it('rejects garbage and wrongly-claimed tokens', async () => {
       const garbage = await as('not.a.jwt', { method: 'GET', url: '/api/models' });
       expect(garbage.statusCode).toBe(401);
       expect(garbage.headers['www-authenticate']).toBe('Bearer');
@@ -221,10 +221,24 @@ describe('authentication and authorization', () => {
       expect((await as(badSubject, { method: 'GET', url: '/api/models' })).statusCode).toBe(401);
       const badRole = app.jwt.sign({ role: 'root' }, { sub: '1' });
       expect((await as(badRole, { method: 'GET', url: '/api/models' })).statusCode).toBe(401);
+    });
 
-      const shortLived = app.jwt.sign({ role: 'superadmin' }, { sub: '1', expiresIn: 1 });
-      await new Promise((resolve) => setTimeout(resolve, 1200));
-      expect((await as(shortLived, { method: 'GET', url: '/api/models' })).statusCode).toBe(401);
+    it('accepts a live access token and rejects tokens at or beyond their expiry boundary', async () => {
+      const live = app.jwt.sign({ role: 'superadmin' }, { sub: '1', expiresIn: '1 minute' });
+      expect((await as(live, { method: 'GET', url: '/api/models' })).statusCode).toBe(200);
+
+      const atExpiry = app.jwt.sign({ role: 'superadmin' }, { sub: '1', expiresIn: '-1 ms' });
+      const expiredAtBoundary = await as(atExpiry, { method: 'GET', url: '/api/models' });
+      expect(expiredAtBoundary.statusCode).toBe(401);
+      expect(expiredAtBoundary.headers['www-authenticate']).toBe('Bearer');
+
+      const alreadyExpired = app.jwt.sign(
+        { role: 'superadmin' },
+        { sub: '1', expiresIn: '-1 second' }
+      );
+      expect((await as(alreadyExpired, { method: 'GET', url: '/api/models' })).statusCode).toBe(
+        401
+      );
     });
 
     it('returns the current user from /auth/me', async () => {
