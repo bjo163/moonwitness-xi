@@ -51,9 +51,49 @@ test('unit runner executes each workspace package suite only once', () => {
 });
 
 test('documentation portal failures annotate sanitized JUnit test names', () => {
+  const documentedPackages = [
+    ['@moonwitness/types', 'types'],
+    ['@moonwitness/orm', 'ORM'],
+    ['@moonwitness/orm-base', 'base addon'],
+    ['@moonwitness/auth', 'auth'],
+    ['@moonwitness/jobs', 'jobs'],
+    ['@moonwitness/orm-integration', 'integration'],
+    ['@moonwitness/orm-notification', 'notifications'],
+    ['@moonwitness/orm-organization', 'organization'],
+    ['@moonwitness/orm-request', 'requests'],
+    ['@moonwitness/orm-storage', 'storage'],
+    ['@moonwitness/orm-workflow', 'workflow'],
+  ];
+
+  for (const [packageName, label] of documentedPackages) {
+    assert.match(
+      pagesWorkflow,
+      new RegExp(
+        `name: Build documentation package ${label}\\s+run: pnpm --filter ${packageName} build`,
+        'u'
+      )
+    );
+  }
   assert.match(
     pagesWorkflow,
-    /name: Check documentation source and references\s+run: pnpm docs:check/u
+    /name: Test documentation generators\s+run: node --test scripts\/docs\/generate-reference\.test\.mjs scripts\/docs\/update-readme\.test\.mjs scripts\/docs\/build-guide\.test\.mjs/u
+  );
+  assert.match(
+    pagesWorkflow,
+    /name: Verify generated documentation reference\s+run: node scripts\/docs\/generate-reference\.mjs --check/u
+  );
+  assert.match(
+    pagesWorkflow,
+    /name: Verify generated README\s+run: node scripts\/docs\/update-readme\.mjs --check/u
+  );
+  assert.match(pagesWorkflow, /name: Check documentation links\s+run: pnpm docs:links/u);
+  assert.match(
+    pagesWorkflow,
+    /name: Check documentation example types\s+run: pnpm exec tsc --noEmit -p packages\/orm\/examples\/tsconfig\.json/u
+  );
+  assert.match(
+    pagesWorkflow,
+    /name: Test documented addon examples\s+run: pnpm --filter @moonwitness\/orm exec vitest run tests\/addon\.test\.ts/u
   );
   assert.match(
     pagesWorkflow,

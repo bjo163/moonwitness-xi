@@ -237,8 +237,40 @@ jobs:
           } >> "$GITHUB_ENV"
       - name: Install Chromium for portal browser tests
         run: pnpm exec playwright install --with-deps chromium
-      - name: Check documentation source and references
-        run: pnpm docs:check
+      - name: Build documentation package types
+        run: pnpm --filter @moonwitness/types build
+      - name: Build documentation package ORM
+        run: pnpm --filter @moonwitness/orm build
+      - name: Build documentation package base addon
+        run: pnpm --filter @moonwitness/orm-base build
+      - name: Build documentation package auth
+        run: pnpm --filter @moonwitness/auth build
+      - name: Build documentation package jobs
+        run: pnpm --filter @moonwitness/jobs build
+      - name: Build documentation package integration
+        run: pnpm --filter @moonwitness/orm-integration build
+      - name: Build documentation package notifications
+        run: pnpm --filter @moonwitness/orm-notification build
+      - name: Build documentation package organization
+        run: pnpm --filter @moonwitness/orm-organization build
+      - name: Build documentation package requests
+        run: pnpm --filter @moonwitness/orm-request build
+      - name: Build documentation package storage
+        run: pnpm --filter @moonwitness/orm-storage build
+      - name: Build documentation package workflow
+        run: pnpm --filter @moonwitness/orm-workflow build
+      - name: Test documentation generators
+        run: node --test scripts/docs/generate-reference.test.mjs scripts/docs/update-readme.test.mjs scripts/docs/build-guide.test.mjs
+      - name: Verify generated documentation reference
+        run: node scripts/docs/generate-reference.mjs --check
+      - name: Verify generated README
+        run: node scripts/docs/update-readme.mjs --check
+      - name: Check documentation links
+        run: pnpm docs:links
+      - name: Check documentation example types
+        run: pnpm exec tsc --noEmit -p packages/orm/examples/tsconfig.json
+      - name: Test documented addon examples
+        run: pnpm --filter @moonwitness/orm exec vitest run tests/addon.test.ts
       - name: Build documentation content bundle
         run: node scripts/docs/build-guide.mjs
       - name: Build documentation portal site
