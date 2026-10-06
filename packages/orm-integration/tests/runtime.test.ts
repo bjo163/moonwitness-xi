@@ -4,7 +4,7 @@ import { request as httpsRequest, createServer } from 'node:https';
 import { createHash, X509Certificate } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { SecureContextOptions } from 'node:tls';
+import { checkServerIdentity, type SecureContextOptions } from 'node:tls';
 import knex, { type Knex } from 'knex';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { installAddons } from '@moonwitness/orm';
@@ -34,7 +34,7 @@ const hasPowerShellCertificates =
   ).status === 0;
 
 async function createReceiverCertificate(directory: string): Promise<{
-  certificate: Buffer;
+  ca: Buffer;
   keyOrPfx: SecureContextOptions;
   fingerprint: string;
 }> {
@@ -113,10 +113,11 @@ async function createReceiverCertificate(directory: string): Promise<{
     if (signedResult.status !== 0)
       throw new Error(`OpenSSL could not sign test cert: ${signedResult.stderr}`);
     const certificate = await readFile(certificatePath);
+    const ca = await readFile(caCertificatePath);
     return {
-      certificate,
+      ca,
       fingerprint: createHash('sha256').update(new X509Certificate(certificate).raw).digest('hex'),
-      keyOrPfx: { key: await readFile(keyPath), cert: certificate },
+      keyOrPfx: { key: await readFile(keyPath), cert: certificate, ca },
     };
   }
 
@@ -168,7 +169,7 @@ async function createReceiverCertificate(directory: string): Promise<{
     );
     const parsedCertificate = new X509Certificate(certificate);
     return {
-      certificate,
+      ca: certificate,
       fingerprint: createHash('sha256').update(parsedCertificate.raw).digest('hex'),
       keyOrPfx: { pfx: await readFile(pfxPath), passphrase },
     };
@@ -324,7 +325,7 @@ describe('webhook outbox delivery', () => {
     'delivers a signed retry through a real local HTTPS receiver',
     async () => {
       const directory = await mkdtemp(join(tmpdir(), 'moonwitness-webhook-'));
-      const { fingerprint, keyOrPfx } = await createReceiverCertificate(directory);
+      const { ca, fingerprint, keyOrPfx } = await createReceiverCertificate(directory);
       const secret = 'local-https-receiver-test-secret-32chars';
       const received: {
         body: string;
@@ -392,11 +393,10 @@ describe('webhook outbox delivery', () => {
                   port,
                   path: `${delivery.url.pathname}${delivery.url.search}`,
                   method: 'POST',
-                  // The fixture has an ephemeral self-signed certificate; this exact
-                  // hostname and SHA-256 certificate pin provide its test-only peer identity.
-                  // codeql[js/disabling-certificate-validation]
-                  rejectUnauthorized: false,
+                  ca,
                   checkServerIdentity: (hostname, peer) => {
+                    const identityError = checkServerIdentity(hostname, peer);
+                    if (identityError) return identityError;
                     if (hostname !== delivery.url.hostname)
                       return new Error('TLS hostname mismatch');
                     const actual = peer.raw
