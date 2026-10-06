@@ -1,6 +1,6 @@
 # Generated API route reference
 
-Extracted from literal Fastify route declarations. Source fingerprint: `b9974cd0a6920e99f9befa9aefa986fbd4b6729a81af7e64d873ce33297f4b6b`. Generic handler request payloads are not inferred where the source does not declare a static schema.
+Extracted from literal Fastify route declarations. Source fingerprint: `f38e8764809f62bcef57727998e769f23a0331e16c578fb0da65b92fb684851b`. Generic handler request payloads are not inferred where the source does not declare a static schema.
 
 | Method | Path                                  |
 | ------ | ------------------------------------- |

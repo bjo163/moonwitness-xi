@@ -63,10 +63,8 @@ if (!packageManagerCli) {
 
 await runPreflight('flaky-policy', execPath, ['scripts/check-flaky-policy.mjs']);
 await runPreflight('build-api', execPath, [
-  packageManagerCli,
-  '--filter',
+  'scripts/ci/build-workspace.mjs',
   '@moonwitness/api...',
-  'build',
 ]);
 await runPreflight('build-ui', execPath, [
   packageManagerCli,

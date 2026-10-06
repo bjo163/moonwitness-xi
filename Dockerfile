@@ -14,10 +14,15 @@ COPY packages/eslint-config/package.json ./packages/eslint-config/package.json
 COPY packages/jobs/package.json ./packages/jobs/package.json
 COPY packages/logger/package.json ./packages/logger/package.json
 COPY packages/orm-base/package.json ./packages/orm-base/package.json
+COPY packages/orm-integration/package.json ./packages/orm-integration/package.json
+COPY packages/orm-notification/package.json ./packages/orm-notification/package.json
 COPY packages/orm-organization/package.json ./packages/orm-organization/package.json
 COPY packages/orm/package.json ./packages/orm/package.json
+COPY packages/orm-request/package.json ./packages/orm-request/package.json
+COPY packages/orm-storage/package.json ./packages/orm-storage/package.json
 COPY packages/types/package.json ./packages/types/package.json
 COPY packages/ui/package.json ./packages/ui/package.json
+COPY packages/orm-workflow/package.json ./packages/orm-workflow/package.json
 RUN --mount=type=cache,id=moonwitness-pnpm-store,target=/root/.local/share/pnpm/store/v11 \
     pnpm install --frozen-lockfile
 COPY . .

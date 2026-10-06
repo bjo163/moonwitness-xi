@@ -7,6 +7,7 @@ import { renderUnitRunnerFailureReport } from './unit-runner-report.mjs';
 const workflow = readFileSync('.github/workflows/ci.yml', 'utf8');
 const pagesWorkflow = readFileSync('.github/workflows/pages.yml', 'utf8');
 const unitRunner = readFileSync('scripts/run-unit-tests.mjs', 'utf8');
+const e2eRunner = readFileSync('scripts/run-e2e.mjs', 'utf8');
 const rootPackage = JSON.parse(readFileSync('package.json', 'utf8'));
 
 test('failed unit and PostgreSQL jobs annotate testcase names before report scanning', () => {
@@ -49,6 +50,18 @@ test('unit runner executes each workspace package suite only once', () => {
   );
   assert.ok(packageNames.length > 0, 'unit runner should define workspace package suites');
   assert.equal(new Set(packageNames).size, packageNames.length, 'package suites must be unique');
+});
+
+test('root workspace builds use the diagnostic wrapper and its tests run in CI', () => {
+  assert.equal(rootPackage.scripts.build, 'node scripts/ci/build-workspace.mjs');
+  assert.match(
+    e2eRunner,
+    /runPreflight\('build-api', execPath, \[\s+'scripts\/ci\/build-workspace\.mjs',\s+'@moonwitness\/api\.\.\.',\s+\]\)/u
+  );
+  assert.match(
+    rootPackage.scripts['test:e2e:diagnostics'],
+    /scripts\/ci\/workspace-build-diagnostics\.test\.mjs/u
+  );
 });
 
 test('documentation builds are isolated and portal failures annotate sanitized JUnit names', () => {
