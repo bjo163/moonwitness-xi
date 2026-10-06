@@ -41,6 +41,8 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11.17.0'
+      - name: Install frozen workspace dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
       - name: Run PostgreSQL upgrade and recovery integration suite
         run: pnpm test:integration
       - name: Run jobs queue and recovery suite

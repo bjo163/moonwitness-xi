@@ -27,6 +27,8 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11.17.0'
+      - name: Install frozen workspace dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
       - name: Generate a read-only release plan
         run: pnpm release:dry-run -- --output "$RUNNER_TEMP/release-plan.json"
       - name: Summarize planned version, assets, and pending gates

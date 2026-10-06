@@ -222,6 +222,8 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11.17.0'
+      - name: Install frozen workspace dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
       - name: Export docs channel metadata
         env:
           BASE_PATH: ${{ steps.site.outputs.base_path }}
@@ -400,6 +402,8 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11.17.0'
+      - name: Install frozen workspace dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
       - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
           name: docs-current-${{ needs.build.outputs.source_sha }}

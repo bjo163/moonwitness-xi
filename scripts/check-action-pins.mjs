@@ -57,12 +57,38 @@ export function pnpmSetupOrderValid(actionSource) {
     return (
       /runtime:\s*node@\$\{\{\s*inputs\.node-version\s*\}\}/u.test(actionSource) &&
       /install:\s*false/u.test(actionSource) &&
-      /run:\s*pnpm install --frozen-lockfile/u.test(actionSource)
+      !/run:\s*pnpm install/u.test(actionSource)
     );
   }
   const nodeSetup = actionSource.indexOf('uses: actions/setup-node@');
   const pnpmSetup = actionSource.indexOf('uses: pnpm/action-setup@');
   return nodeSetup >= 0 && pnpmSetup > nodeSetup;
+}
+
+export function workflowInstallsFrozenWorkspaceAfterSetup(source) {
+  const lines = source.split(/\r?\n/u);
+  for (let index = 0; index < lines.length; index += 1) {
+    if (!/^\s*- uses: \.\/\.github\/actions\/setup-pnpm\s*$/u.test(lines[index] ?? '')) continue;
+    const setupIndent = (lines[index]?.match(/^\s*/u)?.[0] ?? '').length;
+    const nextStep = lines.findIndex(
+      (line, lineIndex) => lineIndex > index && /^\s*-\s/u.test(line)
+    );
+    if (nextStep < 0) return false;
+    const expectedIndent = ' '.repeat(setupIndent);
+    if (lines[nextStep]?.trim() !== '- name: Install frozen workspace dependencies') return false;
+    if (lines[nextStep]?.slice(0, setupIndent) !== expectedIndent) return false;
+    const followingStep = lines.findIndex(
+      (line, lineIndex) => lineIndex > nextStep && /^\s*-\s/u.test(line)
+    );
+    const stepLines = lines.slice(nextStep, followingStep < 0 ? undefined : followingStep);
+    if (
+      !stepLines.some((line) =>
+        /run:\s*pnpm install --frozen-lockfile --no-runtime\s*$/u.test(line)
+      )
+    )
+      return false;
+  }
+  return true;
 }
 
 export function findPnpmVersionDrift(sources, packageManager) {
@@ -111,6 +137,20 @@ async function main() {
     }))
   );
   const findings = findUnpinnedActions(sources);
+  for (const source of sources) {
+    if (
+      source.path.startsWith('.github/workflows/') &&
+      source.content.includes('uses: ./.github/actions/setup-pnpm') &&
+      !workflowInstallsFrozenWorkspaceAfterSetup(source.content)
+    ) {
+      findings.push({
+        path: source.path,
+        line: 1,
+        reference: 'setup-pnpm',
+        reason: 'must install frozen workspace dependencies in a separate visible step',
+      });
+    }
+  }
   const packageManifest = JSON.parse(await readFile(join(repositoryRoot, 'package.json'), 'utf8'));
   findings.push(...findPnpmVersionDrift(sources, packageManifest.packageManager ?? ''));
   const pnpmSetup = sources.find(

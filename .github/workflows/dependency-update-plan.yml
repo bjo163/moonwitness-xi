@@ -28,6 +28,8 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11.17.0'
+      - name: Install frozen workspace dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
       - name: Generate dependency candidate plan without writes
         run: node scripts/dependency-update-plan.mjs --output dependency-update-plan.json
       - name: Upload dependency candidate plan

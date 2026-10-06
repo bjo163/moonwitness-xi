@@ -4,6 +4,7 @@ import {
   findPnpmVersionDrift,
   findUnpinnedActions,
   pnpmSetupOrderValid,
+  workflowInstallsFrozenWorkspaceAfterSetup,
 } from './check-action-pins.mjs';
 
 test('requires one exact pnpm version across workflow setup and the workspace manifest', () => {
@@ -44,7 +45,6 @@ test('installs pnpm 11 with a Node runtime and required frozen lockfile', () => 
         '  with:',
         '    runtime: node@${{ inputs.node-version }}',
         '    install: false',
-        '- run: pnpm install --frozen-lockfile',
       ].join('\n')
     ),
     true
@@ -62,6 +62,29 @@ test('installs pnpm 11 with a Node runtime and required frozen lockfile', () => 
       ['- uses: pnpm/action-setup@pnpm-sha # v6', '- uses: actions/setup-node@node-sha # v7'].join(
         '\n'
       )
+    ),
+    false
+  );
+});
+
+test('keeps frozen dependency installation visible after toolchain setup', () => {
+  assert.equal(
+    workflowInstallsFrozenWorkspaceAfterSetup(
+      [
+        '      - uses: ./.github/actions/setup-pnpm',
+        '        with:',
+        "          node-version: '22'",
+        "          pnpm-version: '11.17.0'",
+        '      - name: Install frozen workspace dependencies',
+        '        run: pnpm install --frozen-lockfile --no-runtime',
+        '      - run: pnpm test',
+      ].join('\n')
+    ),
+    true
+  );
+  assert.equal(
+    workflowInstallsFrozenWorkspaceAfterSetup(
+      ['      - uses: ./.github/actions/setup-pnpm', '      - run: pnpm test'].join('\n')
     ),
     false
   );

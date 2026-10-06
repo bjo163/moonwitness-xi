@@ -55,6 +55,8 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11.17.0'
+      - name: Install frozen workspace dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
       - name: Record current dev source SHA
         id: source
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"

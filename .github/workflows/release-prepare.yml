@@ -43,6 +43,8 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11.17.0'
+      - name: Install frozen workspace dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
       - name: Verify checkout and prepare release files
         env:
           EXPECTED_SOURCE_SHA: ${{ inputs.expected_dev_sha }}

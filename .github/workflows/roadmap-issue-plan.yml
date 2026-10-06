@@ -53,6 +53,8 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11.17.0'
+      - name: Install frozen workspace dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
       - name: Plan exact source SHA without issue writes
         run: |
           args=(--quiet)
@@ -89,6 +91,8 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11.17.0'
+      - name: Install frozen workspace dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
       - name: Apply selected tasks with fresh-state and retry guards
         run: |
           if [[ -z "$TASK_IDS" ]]; then

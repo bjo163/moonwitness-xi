@@ -17,6 +17,3 @@ runs:
         version: ${{ inputs.pnpm-version }}
         runtime: node@${{ inputs.node-version }}
         install: false
-    - name: Install frozen workspace dependencies
-      run: pnpm install --frozen-lockfile
-      shell: bash

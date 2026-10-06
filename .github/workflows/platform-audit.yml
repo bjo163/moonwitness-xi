@@ -78,6 +78,8 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11.17.0'
+      - name: Install frozen workspace dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
       - name: Upsert the monthly platform audit incident
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -109,6 +111,8 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11.17.0'
+      - name: Install frozen workspace dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
       - name: Resolve the incident after a complete successful audit
         env:
           GITHUB_TOKEN: ${{ github.token }}

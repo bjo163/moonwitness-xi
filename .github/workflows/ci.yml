@@ -34,6 +34,8 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11.17.0'
+      - name: Install frozen workspace dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
       - name: Select affected CI projects (promotion is always full)
         id: affected
         env:
@@ -76,6 +78,8 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11.17.0'
+      - name: Install frozen workspace dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
       - run: pnpm lint
       - run: pnpm format:check
       - run: pnpm typecheck
@@ -98,6 +102,8 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11.17.0'
+      - name: Install frozen workspace dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
       - name: Lint workflows with actionlint
         run: bash scripts/check-automation.sh actionlint
       - name: Check shell syntax
@@ -153,6 +159,8 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11.17.0'
+      - name: Install frozen workspace dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
       - name: Run unit tests and write JUnit reports
         run: pnpm test:unit:ci
       - run: pnpm test:integration
@@ -205,6 +213,8 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11.17.0'
+      - name: Install frozen workspace dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
       - name: Install Chromium and operating-system dependencies
         run: pnpm exec playwright install --with-deps chromium
       - name: Run Board browser tests
@@ -248,6 +258,8 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11.17.0'
+      - name: Install frozen workspace dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
       - name: Install Chromium and operating-system dependencies
         run: pnpm exec playwright install --with-deps chromium
       - name: Test shared UI package public exports and component contracts
@@ -362,6 +374,8 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11.17.0'
+      - name: Install frozen workspace dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
       - name: Test CI gate decisions
         run: pnpm test:ci-gate && pnpm test:artifact-safety
       - name: Write CI job summary
