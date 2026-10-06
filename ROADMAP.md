@@ -190,7 +190,7 @@ Gate: audit fitur existing sebelum membuat package. Jalankan berurutan berdasark
 
 - [ ] M10.01 Semua 32 baris feature matrix punya status, P0/P1, owner, assertion dan gap di [feature coverage report](docs/engineering/feature-coverage.md); unit suite 225 tes dan docs check lulus pada `7cd6e85`, hosted PostgreSQL integration lulus pada app-source SHA `da46f85`, tetapi Board E2E gagal dan beberapa negative/access acceptance P0 masih terbuka. [Evidence](docs/roadmap/evidence/M10.01.md).
 - [ ] M10.02 Audit visual Board selesai dan bukti screenshot tersimpan; browser E2E tidak sekadar mengecek halaman terbuka.
-- [ ] M10.03 Lint/types/build/tests dan seluruh required checks lolos pada commit yang dipromosikan.
+- [ ] M10.03 Berjalan: `pnpm verify` lulus lengkap pada source `1ddad18`, mencakup lint/format/build/typecheck/unit/architecture/docs, dan roadmap validator lulus untuk 148 kartu. Tetap terbuka sampai required hosted checks lulus pada exact SHA; CI terbaru yang dapat diperiksa (`37406311795`, parent `9078667`) gagal pada dependency install sebelum lane tests. [Evidence](docs/roadmap/evidence/M10.03.md).
 - [ ] M10.04 PostgreSQL integration benar-benar berjalan; upgrade, relasi/count, seed, dan izin negatif teruji.
 - [ ] M10.05 Image API/Board berjalan pada runner; health/readiness/shutdown dan konfigurasi container terverifikasi.
 - [ ] M10.06 Simulasi gagal membuktikan promosi/release diblokir; rerun tidak membuat duplikasi atau workflow loop.

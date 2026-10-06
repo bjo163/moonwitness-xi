@@ -1073,6 +1073,8 @@
     },
     {
       "id": "M10.03",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/M10.03.md",
       "title": "Lint/types/build/tests dan seluruh required checks lolos pada commit yang dipromosikan.",
       "milestone": "M10",
       "dependsOn": ["M2.05", "M7.07"],
