@@ -2,6 +2,8 @@
 
 This repository currently uses the workflow-scoped `GITHUB_TOKEN`. It does not require a personal access token or a GitHub App private key. The permissions below describe the current workflows and the optional App design for a future installation when repository-scoped `GITHUB_TOKEN` permissions are insufficient.
 
+For the observed account capabilities and the date of the last read-only settings audit, see [the GitHub capability baseline](../engineering/github-capabilities.md). For the detailed effective per-job grants and CI evidence, see [the workflow permission evidence](../roadmap/evidence/M8.01.md). Those records are authoritative for the current repository state; this runbook is the setup procedure and must be rechecked after workflow or repository-policy changes.
+
 ## Current workflow permissions
 
 Workflow permissions are declared at the top level or on individual jobs. Keep top-level grants read-only wherever possible, and add write access only to the job that performs that operation.
@@ -16,6 +18,7 @@ Workflow permissions are declared at the top level or on individual jobs. Keep t
 | Release publish        | `contents: write`, `packages: write`                       | Publish versioned GHCR images and GitHub Release after explicit dispatch and successful verification.                                                 |
 | Pages publication job  | `pages: write`, `id-token: write` only for the publish job | Publish documentation only; build/verification jobs stay read-only.                                                                                   |
 | Pages failure reporter | `issues: write`, `actions: read`                           | Deduplicate/update a Pages failure issue using workflow run metadata.                                                                                 |
+| Roadmap issue-plan job | `contents: read`, `issues: read`                           | Produce a read-only roadmap reconciliation plan; apply remains opt-in, scoped to `dev`, explicit Task IDs, and a maximum batch size.                  |
 
 The source workflow is authoritative. Recheck this table after changing a workflow permission or operation. Never put a token or private key in a repository file, artifact, workflow output, or log.
 
@@ -40,14 +43,14 @@ Suggested repository Actions variables/secrets when an App is approved:
 | `PROMOTION_APP_PRIVATE_KEY`     | Actions secret   | PEM private key, rotated when an owner/operator leaves or a key is suspected exposed. |
 | `PROMOTION_APP_INSTALLATION_ID` | Actions variable | Installation ID for this repository.                                                  |
 
-These names are documentation only; the current workflows do not read them. Never commit real values. Do not add secrets until a workflow actually uses the App and its permissions have been verified.
+These names are documentation only; the current workflows do not read them. Never commit real values. Do not add secrets until a workflow actually uses the App and its permissions have been verified. Keep the App ID and installation ID as Actions variables, and the private key as an Actions secret; never use a personal token or reusable private key as a workflow input. Reassess whether the App is needed before provisioning it.
 
 ## Create and validate an App
 
 1. Create a GitHub App owned by the organization/user that owns the repository. Disable user-to-server permissions and webhook subscriptions unless a separately reviewed feature requires them.
 2. Set repository permissions to the narrow list above, install it only on `bjo163/moonwitness-xi`, and record its owner, purpose, permission review date, and rotation owner in an access-controlled operations record.
 3. Generate a private key once and add it directly as an Actions secret. Never paste it into chat, issue comments, command-line arguments, workflow summaries, or local repository files.
-4. Before enabling writes, use a temporary validation workflow/job with `contents: read` and `metadata: read` to request repository metadata. Print only the HTTP success/failure and repository name; do not print token, headers, private key, or full response headers. Delete the temporary validation job after a successful check.
+4. Before enabling writes, use a temporary validation workflow/job with `contents: read` and GitHub's implicit `metadata: read` to request repository metadata. Print only the HTTP success/failure and repository name; do not print token, headers, private key, or full response headers. Delete the temporary validation job after a successful check.
 5. Add only the write scopes required for the production operation, then run the workflow on a controlled manual dispatch. Confirm the installation token expires, cannot access a second repository, and cannot perform an unrelated write.
 6. Rotate by creating a replacement key, updating the Actions secret, validating the new key, and revoking the old key. If compromise is suspected, revoke first, disable affected automation, review audit logs, and issue corrected releases through new version tags rather than moving an existing tag.
 
