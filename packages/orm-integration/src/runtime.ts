@@ -26,6 +26,22 @@ export type WebhookSecretResolver = (
   companyId: number
 ) => Promise<string | null>;
 
+export interface WebhookDeliveryRequest {
+  readonly url: URL;
+  readonly targetAddress: string;
+  readonly body: string;
+  readonly eventId: number;
+  readonly eventType: string;
+  readonly signature: string;
+  readonly idempotencyKey: string;
+  readonly signal: AbortSignal;
+}
+
+export interface WebhookDeliveryAdapters {
+  readonly resolveAddresses?: (hostname: string) => Promise<LookupAddress[]>;
+  readonly send?: (request: WebhookDeliveryRequest) => Promise<number>;
+}
+
 interface DispatchPayload {
   companyId: number;
   eventType: string;
@@ -126,10 +142,14 @@ export async function enqueueWebhookEvent(
   return event.id;
 }
 
-async function resolvePublicTarget(url: URL): Promise<string> {
+async function resolvePublicTarget(
+  url: URL,
+  resolveAddresses: (hostname: string) => Promise<LookupAddress[]> = (hostname) =>
+    lookup(hostname, { all: true, verbatim: true })
+): Promise<string> {
   let addresses: LookupAddress[];
   try {
-    addresses = await lookup(url.hostname, { all: true, verbatim: true });
+    addresses = await resolveAddresses(url.hostname);
   } catch {
     throw new Error('WEBHOOK_DNS_FAILED');
   }
@@ -142,39 +162,28 @@ async function resolvePublicTarget(url: URL): Promise<string> {
   return addresses[0].address;
 }
 
-function sendSignedRequest(
-  url: URL,
-  targetAddress: string,
-  body: string,
-  eventId: number,
-  eventType: string,
-  secret: string,
-  signal: AbortSignal
-): Promise<number> {
-  const signature = createHmac('sha256', secret)
-    .update(`${eventId}.${eventType}.${body}`, 'utf8')
-    .digest('hex');
+function sendSignedRequest(delivery: WebhookDeliveryRequest): Promise<number> {
   return new Promise((resolve, reject) => {
     const request = httpsRequest(
       {
         protocol: 'https:',
-        hostname: url.hostname,
+        hostname: delivery.url.hostname,
         port: 443,
-        path: `${url.pathname}${url.search}`,
+        path: `${delivery.url.pathname}${delivery.url.search}`,
         method: 'POST',
         timeout: REQUEST_TIMEOUT_MS,
         headers: {
           'content-type': 'application/json',
-          'content-length': Buffer.byteLength(body),
-          'x-mw-event-id': String(eventId),
-          'x-mw-event-type': eventType,
-          'x-mw-signature': `sha256=${signature}`,
-          'idempotency-key': `moonwitness:${eventId}`,
+          'content-length': Buffer.byteLength(delivery.body),
+          'x-mw-event-id': String(delivery.eventId),
+          'x-mw-event-type': delivery.eventType,
+          'x-mw-signature': `sha256=${delivery.signature}`,
+          'idempotency-key': delivery.idempotencyKey,
         },
         // Pin the TCP connection to the validated DNS result while retaining
         // the original hostname for TLS certificate verification and SNI.
         lookup: (_hostname, _options, callback) =>
-          callback(null, targetAddress, targetAddress.includes(':') ? 6 : 4),
+          callback(null, delivery.targetAddress, delivery.targetAddress.includes(':') ? 6 : 4),
       },
       (response) => {
         let responseBytes = 0;
@@ -188,11 +197,12 @@ function sendSignedRequest(
       }
     );
     const abort = () => request.destroy(new Error('WEBHOOK_ABORTED'));
-    signal.addEventListener('abort', abort, { once: true });
-    request.on('close', () => signal.removeEventListener('abort', abort));
+    delivery.signal.addEventListener('abort', abort, { once: true });
+    if (delivery.signal.aborted) abort();
+    request.on('close', () => delivery.signal.removeEventListener('abort', abort));
     request.on('timeout', () => request.destroy(new Error('WEBHOOK_TIMEOUT')));
     request.on('error', reject);
-    request.end(body);
+    request.end(delivery.body);
   });
 }
 
@@ -201,7 +211,8 @@ async function deliverEndpoint(
   event: DispatchPayload,
   eventId: number,
   resolveSecret: WebhookSecretResolver,
-  signal: AbortSignal
+  signal: AbortSignal,
+  adapters: WebhookDeliveryAdapters
 ): Promise<void> {
   const prior = await WebhookDelivery.query().findOne({
     endpoint_id: endpoint.id,
@@ -223,7 +234,7 @@ async function deliverEndpoint(
   try {
     const url = validateWebhookUrl(endpoint.url);
     const [target, secret] = await Promise.all([
-      resolvePublicTarget(url),
+      resolvePublicTarget(url, adapters.resolveAddresses),
       resolveSecret(endpoint.secret_ref, event.companyId),
     ]);
     if (!secret || secret.length < 32 || secret.length > 4096) {
@@ -245,15 +256,20 @@ async function deliverEndpoint(
         'WEBHOOK_PAYLOAD_TOO_LARGE'
       );
     }
-    const status = await sendSignedRequest(
+    const signature = createHmac('sha256', secret)
+      .update(`${eventId}.${event.eventType}.${body}`, 'utf8')
+      .digest('hex');
+    const request: WebhookDeliveryRequest = {
       url,
-      target,
+      targetAddress: target,
       body,
       eventId,
-      event.eventType,
-      secret,
-      signal
-    );
+      eventType: event.eventType,
+      signature,
+      idempotencyKey: `moonwitness:${eventId}`,
+      signal,
+    };
+    const status = await (adapters.send ?? sendSignedRequest)(request);
     if (status >= 200 && status < 300) {
       await WebhookDelivery.query()
         .findOne({ endpoint_id: endpoint.id, outbox_event_id: eventId })
@@ -296,7 +312,8 @@ async function deliver(
   eventId: number,
   companyId: number | undefined,
   resolveSecret: WebhookSecretResolver,
-  signal: AbortSignal
+  signal: AbortSignal,
+  adapters: WebhookDeliveryAdapters
 ): Promise<void> {
   const event = parseDispatchPayload(payloadValue);
   if (companyId !== event.companyId || !isPositiveId(companyId)) {
@@ -311,7 +328,7 @@ async function deliver(
   for (const endpoint of endpoints) {
     try {
       if (!parseEventTypes(endpoint.event_types).includes(event.eventType)) continue;
-      await deliverEndpoint(endpoint, event, eventId, resolveSecret, signal);
+      await deliverEndpoint(endpoint, event, eventId, resolveSecret, signal, adapters);
     } catch (error) {
       if (error instanceof PermanentJobError) {
         if (error.code === 'INVALID_EVENT_FILTER') {
@@ -338,9 +355,12 @@ async function deliver(
   }
 }
 
-export function registerWebhookOutboxConsumer(resolveSecret: WebhookSecretResolver): () => void {
+export function registerWebhookOutboxConsumer(
+  resolveSecret: WebhookSecretResolver,
+  adapters: WebhookDeliveryAdapters = {}
+): () => void {
   return registerOutboxConsumer(EVENT_TYPE, async (payload, eventId, context) => {
-    await deliver(payload, eventId, context.companyId, resolveSecret, context.signal);
+    await deliver(payload, eventId, context.companyId, resolveSecret, context.signal, adapters);
   });
 }
 

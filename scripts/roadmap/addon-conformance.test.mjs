@@ -129,6 +129,20 @@ describe('workspace addon conformance', () => {
     );
     assert.equal(Number(seeded?.count), expectedSeedCount);
     assert.equal(Number((await db('users').count({ count: '*' }).first())?.count), 2);
+    const exampleEndpointRef = await db('_orm_data')
+      .where({ id: 'orm-integration.endpoint_example_disabled' })
+      .first();
+    assert.ok(exampleEndpointRef, 'integration addon needs a safe disabled endpoint example');
+    assert.deepEqual(
+      await db('integration_webhook_endpoints')
+        .where({ id: exampleEndpointRef.record_id })
+        .first('enabled', 'url', 'secret_ref'),
+      {
+        enabled: 0,
+        url: 'https://example.invalid/moonwitness-webhook',
+        secret_ref: 'MW_WEBHOOK_SECRET_C1_EXAMPLE',
+      }
+    );
     assert.equal(
       Number((await db('organization_departments').count({ count: '*' }).first())?.count),
       2
