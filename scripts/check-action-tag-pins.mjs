@@ -2,7 +2,8 @@ import { execFileSync } from 'node:child_process';
 import { readdir, readFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import process from 'node:process';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL, URL } from 'node:url';
+import { setTimeout } from 'node:timers/promises';
 
 const repositoryRoot = fileURLToPath(new URL('../', import.meta.url));
 const githubDirectory = join(repositoryRoot, '.github');
@@ -59,7 +60,7 @@ export async function verifyActionPinTargets(pins, resolveTag) {
           break;
         } catch {
           if (attempt === 2) break;
-          await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
+          await setTimeout(250 * (attempt + 1));
         }
       }
       resolved.set(key, tagRefs);
