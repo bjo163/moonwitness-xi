@@ -195,7 +195,7 @@ Gate: audit fitur existing sebelum membuat package. Jalankan berurutan berdasark
 - [ ] M10.05 Image API/Board berjalan pada runner; health/readiness/shutdown dan konfigurasi container terverifikasi.
 - [ ] M10.06 Simulasi gagal membuktikan promosi/release diblokir; rerun tidak membuat duplikasi atau workflow loop.
 - [ ] M10.07 Satu siklus dev → main → version/tag/release/artifacts/Pages → sync dev terbukti dengan bukti SHA dan run URL.
-- [ ] M10.08 Berjalan: GitHub REST API dan `git ls-remote` mengonfirmasi hanya `main`/`dev`; ruleset aktif membatasi branch creation dan melindungi `main` melalui PR + `ci-gate`. Tidak ada app deployment workflow; Pages hanya menerbitkan docs dan release hanya menerbitkan images. Ditahan sampai prasyarat M1.11/hosted gate selesai. [Evidence](docs/roadmap/evidence/M10.08.md).
+- [ ] M10.08 Berjalan: GitHub REST API dan `git ls-remote` mengonfirmasi hanya `main`/`dev`; ruleset aktif membatasi branch creation dan melindungi `main` melalui PR + `ci-gate`. `dev` sudah menghapus app deploy; `main` masih memiliki workflow lama `deploy.yml` yang `on: []` dan berstatus disabled. Ditahan sampai penghapusan M1.11 dipromosikan. [Evidence](docs/roadmap/evidence/M10.08.md).
 - [ ] M10.09 README/Pages/asset catalog sesuai source dan release; tidak ada secret atau data pengguna dalam output publik.
 - [ ] M10.10 Tetapkan recurring maintenance di bawah dan catat keterbatasan tersisa sebelum milestone dinyatakan selesai.
 
