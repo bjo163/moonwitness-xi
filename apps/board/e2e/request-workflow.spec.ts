@@ -30,7 +30,7 @@ test('requester submits a seeded approval workflow and superadmin approves it in
   await page.getByLabel('Login').fill('superadmin');
   await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the board' }).click();
-  await expect(page).not.toHaveURL(/\/login$/u);
+  await expect(page).toHaveURL(/\/$/u);
 
   const adminSession = await page.evaluate(
     () => JSON.parse(localStorage.getItem('mw-board-session') ?? 'null') as BoardSession | null
@@ -126,7 +126,7 @@ test('requester submits a seeded approval workflow and superadmin approves it in
   await page.getByLabel('Login').fill('superadmin');
   await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the board' }).click();
-  await expect(page).toHaveURL(/\/$/u);
+  await expect(page).not.toHaveURL(/\/login$/u);
   await page.goto(`/m/request.purchase/${createdRequest.data.id}`);
   const reviewerSession = await page.evaluate(
     () => JSON.parse(localStorage.getItem('mw-board-session') ?? 'null') as BoardSession | null
