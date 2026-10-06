@@ -33,7 +33,7 @@ Urutan nomor bukan urutan aktivasi mutlak: misalnya required checks M1.06 baru d
 
 ## M0 — Inventarisasi dan baseline (prasyarat semua jalur)
 
-- [x] M0.01 Inventarisasi package, model, endpoint, view, menu, akses, seed, scheduler, worker, outbox, import/export, dan attachment yang benar-benar tersedia. Bukti: [M0.01](docs/roadmap/evidence/M0.01.md).
+- [x] M0.01 Inventarisasi package, model, endpoint, view, menu, akses, seed, scheduler, worker, outbox, import/export, dan attachment yang benar-benar tersedia; inventory diperbarui terhadap 4 apps/16 packages, model/relation graph, Board E2E, job roles, dan workflows pada refresh source 2026-10-07. Bukti: [M0.01](docs/roadmap/evidence/M0.01.md), [inventory](docs/engineering/inventory.md).
 - [x] M0.02 Buat matriks fitur → role/company → skenario sukses/gagal → unit/integration/E2E → bukti → gap. Bukti: [M0.02](docs/roadmap/evidence/M0.02.md).
 - [x] M0.03 Rekam baseline typecheck, lint, format, build, test, coverage, bundle, performa, dan warning. Pisahkan kegagalan dari test yang skipped. Bukti: [M0.03](docs/roadmap/evidence/M0.03.md).
 - [x] M0.04 Audit GitHub settings, workflows, permissions, Pages, registry, rulesets, status checks, dan ketersediaan fitur akun tanpa menampilkan secret. Bukti: [M0.04](docs/roadmap/evidence/M0.04.md).
