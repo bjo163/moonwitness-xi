@@ -30,6 +30,8 @@ jobs:
           pnpm-version: '11.17.0'
       - name: Install frozen workspace dependencies
         run: pnpm install --frozen-lockfile --no-runtime
+      - name: Verify immutable GitHub Action pins against official tags
+        run: pnpm automation:check:action-tags
       - name: Generate dependency candidate plan without writes
         run: node scripts/dependency-update-plan.mjs --output dependency-update-plan.json
       - name: Upload dependency candidate plan

@@ -142,7 +142,7 @@ jobs:
           SMOKE_USE_PREBUILT_IMAGES: 'true'
         run: bash scripts/smoke-containers.sh
       - name: Scan the exact release images for critical vulnerabilities
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: image
           image-ref: moonwitness-api:production
@@ -152,7 +152,7 @@ jobs:
           format: table
           exit-code: '1'
       - name: Scan the exact Board release image for critical vulnerabilities
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: image
           image-ref: moonwitness-board:production

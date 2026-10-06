@@ -94,7 +94,7 @@ jobs:
       - name: Scan candidate workspace dependencies for CRITICAL vulnerabilities
         id: trivy-workspace
         continue-on-error: true
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: fs
           scan-ref: ${{ runner.temp }}/candidate
@@ -106,7 +106,7 @@ jobs:
       - name: Scan candidate API image for CRITICAL vulnerabilities
         id: trivy-api
         continue-on-error: true
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: image
           image-ref: moonwitness-api:candidate
@@ -118,7 +118,7 @@ jobs:
       - name: Scan candidate Board image for CRITICAL vulnerabilities
         id: trivy-board
         continue-on-error: true
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: image
           image-ref: moonwitness-board:candidate
