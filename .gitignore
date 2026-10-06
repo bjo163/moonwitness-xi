@@ -12,5 +12,6 @@ logs/
 tmp-test-logs/
 roadmap-issue-plan.json
 test-results/
+coverage/
 playwright-report/
 .DS_Store

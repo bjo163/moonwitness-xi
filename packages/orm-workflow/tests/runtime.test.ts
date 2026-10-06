@@ -87,6 +87,72 @@ describe('workflow addon', () => {
     ).resolves.toMatchObject([{ code: 'sample.request_approval', canStart: false }]);
   });
 
+  it('hides workflows from ineligible roles and ignores older definition versions', async () => {
+    const database = await setup();
+    const definition = await database('workflow_definitions')
+      .where({ code: 'sample.request_approval' })
+      .first();
+    if (!definition) throw new Error('Example workflow definition is missing');
+    await database('workflow_definitions').insert({
+      code: definition.code,
+      version: 0,
+      name: 'Older request approval',
+      config: definition.config,
+      enabled: true,
+    });
+    const config = JSON.parse(String(definition.config)) as Record<string, unknown>;
+    const transitions = config.transitions;
+    if (!Array.isArray(transitions)) throw new Error('Example transitions are missing');
+    await database('workflow_definitions')
+      .where({ id: definition.id })
+      .update({
+        config: JSON.stringify({
+          ...config,
+          startRoles: ['system'],
+          transitions: transitions.map((transition) => {
+            if (typeof transition !== 'object' || transition === null) return transition;
+            return { ...transition, roles: ['system'] };
+          }),
+        }),
+      });
+
+    await expect(
+      listAvailableWorkflowDefinitions(database, 'base.partner', 'user')
+    ).resolves.toEqual([]);
+  });
+
+  it('replays workflow starts and rejects key reuse by a different actor', async () => {
+    const database = await setup();
+    const { systemId, adminId, companyId, resourceId } = await actors(database);
+    const input = {
+      code: 'sample.request_approval',
+      companyId,
+      actorId: systemId,
+      role: 'system' as const,
+      resourceModel: 'base.partner',
+      resourceId,
+      idempotencyKey: 'repeat-start-key-01',
+      now: new Date('2026-10-05T00:00:00.000Z'),
+    };
+
+    const first = await startWorkflow(database, input);
+    const replay = await startWorkflow(database, input);
+
+    expect(replay).toMatchObject({ id: first.id, revision: 0 });
+    await expect(
+      startWorkflow(database, { ...input, actorId: adminId, role: 'superadmin' })
+    ).rejects.toMatchObject({ code: 'IDEMPOTENCY_CONFLICT' });
+    expect(
+      await database('workflow_instances').where({ id: first.id }).count({ count: '*' }).first()
+    ).toMatchObject({ count: 1 });
+    expect(
+      await database('workflow_events')
+        .where({ idempotency_key: 'start:repeat-start-key-01' })
+        .count({ count: '*' })
+        .first()
+    ).toMatchObject({ count: 1 });
+  });
+
   it('enforces submitter separation, optimistic revision, approval quorum, snapshots, and idempotent retries', async () => {
     const database = await setup();
     const { systemId, adminId, companyId, resourceId } = await actors(database);
