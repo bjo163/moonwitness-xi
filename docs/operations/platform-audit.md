@@ -12,6 +12,8 @@ Use `--previous <report.json>` to calculate deltas from an earlier report. Never
 
 The monthly report checks scheduled-event freshness separately from manual dispatch for the weekly browser matrix, deep PostgreSQL/jobs/restore regression, CodeQL, Gitleaks, and the monthly audit itself. Each entry records its most recent run and successful run, with an 8-day weekly or 38-day monthly threshold. Missing scheduled history, a failed latest run, or a stale success is reported as a limitation; run status is not inferred from a manually dispatched success.
 
+The general 90-day workflow inventory is limited to GitHub's 1,000-run API window. To keep that cap from hiding a scheduled run, the audit also queries each required scheduled workflow by its workflow file and `event=schedule`, then computes freshness from those targeted results. These requests use the same read-only Actions permission. API rate-limit or access errors stop the audit rather than silently treating a schedule as missing.
+
 The workflow token needs only `contents: read` and `actions: read`. Repository package inventory or billing APIs can return `403`/`404` when the repository/account plan or token does not expose those capabilities. Such fields remain `unknown`; they must not be interpreted as zero. Record the missing capability and owner in the next review.
 
 The cleanup section is a plan only. It classifies only known ephemeral report names and only after 90 days; release, provenance, evidence, backup, restore, migration and unknown names are never candidates. The audit has no deletion implementation or write permission. Review retention settings and published release assets separately before proposing any cleanup change.

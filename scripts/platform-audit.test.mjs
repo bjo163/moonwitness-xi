@@ -214,6 +214,30 @@ test('scheduled regression audit detects healthy, missed, stale, and failing sch
   assert.throws(() => auditScheduledWorkflows([], 'invalid'), /valid timestamp/u);
 });
 
+test('scheduled audit uses workflow-scoped runs when the global inventory is truncated', () => {
+  const checks = auditScheduledWorkflows(
+    {
+      'browser-matrix.yml': [
+        {
+          name: 'Scheduled browser matrix',
+          event: 'schedule',
+          created_at: '2026-10-04T00:00:00.000Z',
+          conclusion: 'success',
+        },
+      ],
+      'deep-regression.yml': [],
+      'codeql.yml': [],
+      'gitleaks.yml': [],
+      'platform-audit.yml': [],
+    },
+    generatedAt
+  );
+
+  assert.equal(checks[0].status, 'healthy');
+  assert.equal(checks[0].lastSuccessAt, '2026-10-04T00:00:00.000Z');
+  assert.equal(checks[1].status, 'missing-success');
+});
+
 test('runtime support reviews become due and overdue without claiming the software is unsupported', () => {
   const current = evaluateRuntimeSupportReviews(supportReviewPolicy, generatedAt);
   const due = evaluateRuntimeSupportReviews(

@@ -11,11 +11,11 @@ const disposableArtifactName =
   /^(?:board-[a-z0-9-]+-\d+-\d+|ui-catalog-playwright-\d+-\d+|dependency-update-plan-\d+|docs-preview-[a-f0-9]{40}|test-junit-\d+-\d+)$/u;
 
 const scheduledWorkflowExpectations = [
-  { name: 'Scheduled browser matrix', maximumAgeDays: 8 },
-  { name: 'Deep scheduled regression', maximumAgeDays: 8 },
-  { name: 'CodeQL', maximumAgeDays: 8 },
-  { name: 'Gitleaks', maximumAgeDays: 8 },
-  { name: 'Monthly platform audit', maximumAgeDays: 38 },
+  { name: 'Scheduled browser matrix', workflowFile: 'browser-matrix.yml', maximumAgeDays: 8 },
+  { name: 'Deep scheduled regression', workflowFile: 'deep-regression.yml', maximumAgeDays: 8 },
+  { name: 'CodeQL', workflowFile: 'codeql.yml', maximumAgeDays: 8 },
+  { name: 'Gitleaks', workflowFile: 'gitleaks.yml', maximumAgeDays: 8 },
+  { name: 'Monthly platform audit', workflowFile: 'platform-audit.yml', maximumAgeDays: 38 },
 ];
 
 function knownApiFailure(error) {
@@ -100,8 +100,11 @@ export function auditScheduledWorkflows(workflowRuns, generatedAt) {
     throw new Error('Scheduled workflow audit requires a valid timestamp.');
   }
 
-  return scheduledWorkflowExpectations.map(({ name, maximumAgeDays }) => {
-    const scheduledRuns = workflowRuns
+  return scheduledWorkflowExpectations.map(({ name, workflowFile, maximumAgeDays }) => {
+    const sourceRuns = Array.isArray(workflowRuns)
+      ? workflowRuns
+      : (workflowRuns[workflowFile] ?? []);
+    const scheduledRuns = sourceRuns
       .filter((run) => run.name === name && run.event === 'schedule')
       .sort(
         (left, right) => Date.parse(right.created_at ?? '') - Date.parse(left.created_at ?? '')
@@ -189,6 +192,7 @@ export function buildPlatformAudit(input) {
     actionPermissions,
     artifacts,
     workflowRuns,
+    scheduledWorkflowRuns = workflowRuns,
     packages,
     billing,
     previous,
@@ -220,7 +224,7 @@ export function buildPlatformAudit(input) {
   const cleanup = planArtifactCleanup(artifacts, generatedAt);
   const previousArtifacts = previous?.inventory?.artifacts;
   const previousRuns = previous?.inventory?.workflowRuns;
-  const scheduledWorkflows = auditScheduledWorkflows(workflowRuns, generatedAt);
+  const scheduledWorkflows = auditScheduledWorkflows(scheduledWorkflowRuns, generatedAt);
   const supportReviews = evaluateRuntimeSupportReviews(supportReviewPolicy, generatedAt);
 
   return {
@@ -233,6 +237,9 @@ export function buildPlatformAudit(input) {
       workflowRunsScanned: workflowRuns.length,
       workflowRunResultLimit: 1000,
       workflowRunHistoryMayBeTruncated: workflowRuns.length >= 1000,
+      scheduledWorkflowRunsScanned: Array.isArray(scheduledWorkflowRuns)
+        ? null
+        : Object.values(scheduledWorkflowRuns).reduce((count, runs) => count + runs.length, 0),
     },
     inventory: {
       artifacts: {
@@ -376,6 +383,14 @@ async function main() {
     `repos/${repo}/actions/runs?per_page=100&created=%3E%3D${encodedWindowStart}`
   );
   const workflowRuns = runPages.flatMap((page) => page.workflow_runs ?? []);
+  const scheduledWorkflowRuns = Object.fromEntries(
+    scheduledWorkflowExpectations.map(({ workflowFile }) => {
+      const pages = runGhApi(
+        `repos/${repo}/actions/workflows/${workflowFile}/runs?per_page=100&event=schedule&created=%3E%3D${encodedWindowStart}`
+      );
+      return [workflowFile, pages.flatMap((page) => page.workflow_runs ?? [])];
+    })
+  );
   const workflowPermissions = readOptionalApi(`repos/${repo}/actions/permissions/workflow`);
   const actionPermissions = readOptionalApi(`repos/${repo}/actions/permissions`);
   const packages = readOptionalApi(
@@ -399,6 +414,7 @@ async function main() {
     actionPermissions: actionPermissions.status === 'available' ? actionPermissions : null,
     artifacts,
     workflowRuns,
+    scheduledWorkflowRuns,
     packages,
     billing,
     previous,
