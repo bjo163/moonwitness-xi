@@ -56,7 +56,8 @@ export function pnpmSetupOrderValid(actionSource) {
   if (actionSource.includes('uses: pnpm/setup@')) {
     return (
       /runtime:\s*node@\$\{\{\s*inputs\.node-version\s*\}\}/u.test(actionSource) &&
-      /require-lockfile:\s*true/u.test(actionSource)
+      /install:\s*false/u.test(actionSource) &&
+      /run:\s*pnpm install --frozen-lockfile/u.test(actionSource)
     );
   }
   const nodeSetup = actionSource.indexOf('uses: actions/setup-node@');

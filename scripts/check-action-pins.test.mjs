@@ -9,7 +9,8 @@ test('installs pnpm 11 with a Node runtime and required frozen lockfile', () => 
         '- uses: pnpm/setup@pnpm-sha # v3',
         '  with:',
         '    runtime: node@${{ inputs.node-version }}',
-        '    require-lockfile: true',
+        '    install: false',
+        '- run: pnpm install --frozen-lockfile',
       ].join('\n')
     ),
     true
