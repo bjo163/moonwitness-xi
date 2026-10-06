@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { createHash } from 'node:crypto';
 import knex, { type Knex } from 'knex';
 import type { FastifyInstance, InjectOptions } from 'fastify';
 import {
@@ -157,6 +158,17 @@ describe('authentication and authorization', () => {
       });
       expect(admin.access_token.split('.')).toHaveLength(3);
       expect(JSON.stringify(admin)).not.toContain('scrypt$');
+      const tokenBytes = Buffer.from(admin.refresh_token, 'base64url');
+      expect(tokenBytes).toHaveLength(32);
+      expect(tokenBytes.toString('base64url')).toBe(admin.refresh_token);
+      const storedToken = await db<{ token_hash: string }>('auth_refresh_tokens')
+        .select('token_hash')
+        .where({ user_id: admin.user.id })
+        .first();
+      expect(storedToken?.token_hash).toBe(
+        createHash('sha256').update(admin.refresh_token).digest('hex')
+      );
+      expect(storedToken?.token_hash).not.toBe(admin.refresh_token);
     });
 
     it('answers wrong password and unknown login identically', async () => {

@@ -55,6 +55,10 @@ export interface AuthServiceOptions {
   refreshTtlSeconds?: number;
 }
 
+/**
+ * Refresh tokens are generated from 256 bits of cryptographic randomness, not passwords.
+ * A fast one-way digest is appropriate for their indexed lookup; user passwords use scrypt.
+ */
 const hashToken = (token: string) => createHash('sha256').update(token).digest('hex');
 const REFRESH_REUSE_GRACE_MS = 5_000;
 

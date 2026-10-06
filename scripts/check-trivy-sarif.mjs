@@ -58,7 +58,7 @@ try {
       `Trivy reports valid; ${findings.length} finding(s) reviewed and no CRITICAL vulnerabilities found.\n`
     );
   }
-} catch (error) {
+} catch {
   fail(
     'Trivy SARIF validation failed; inspect the scanner artifact in the authorized workflow context.'
   );
