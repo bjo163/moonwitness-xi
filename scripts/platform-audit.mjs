@@ -29,6 +29,71 @@ function compareCounts(current, previous) {
   return current - previous;
 }
 
+export function evaluateRuntimeSupportReviews(policy, generatedAt) {
+  const generatedTime = Date.parse(generatedAt);
+  if (!Number.isFinite(generatedTime)) {
+    throw new Error('Runtime support review requires a valid audit timestamp.');
+  }
+  if (
+    !policy ||
+    typeof policy !== 'object' ||
+    policy.schemaVersion !== 1 ||
+    !Array.isArray(policy.items) ||
+    policy.items.length === 0
+  ) {
+    throw new Error(
+      'Runtime support review policy must define schemaVersion 1 and non-empty items.'
+    );
+  }
+
+  const seen = new Set();
+  return policy.items.map((item) => {
+    if (
+      !item ||
+      typeof item !== 'object' ||
+      typeof item.id !== 'string' ||
+      !/^[a-z0-9-]+$/u.test(item.id) ||
+      seen.has(item.id) ||
+      typeof item.component !== 'string' ||
+      typeof item.configured !== 'string' ||
+      typeof item.owner !== 'string' ||
+      !item.owner.trim() ||
+      typeof item.source !== 'string' ||
+      !item.source.startsWith('https://') ||
+      !/^\d{4}-\d{2}-\d{2}$/u.test(item.reviewedAt) ||
+      !/^\d{4}-\d{2}-\d{2}$/u.test(item.reviewBy)
+    ) {
+      throw new Error(
+        'Runtime support review items require unique IDs, owner, source and ISO dates.'
+      );
+    }
+    seen.add(item.id);
+    const reviewedTime = Date.parse(`${item.reviewedAt}T00:00:00Z`);
+    const reviewByTime = Date.parse(`${item.reviewBy}T00:00:00Z`);
+    const auditDate = new Date(generatedTime).toISOString().slice(0, 10);
+    if (
+      !Number.isFinite(reviewedTime) ||
+      !Number.isFinite(reviewByTime) ||
+      item.reviewBy <= item.reviewedAt ||
+      item.reviewedAt > auditDate
+    ) {
+      throw new Error(`Runtime support review '${item.id}' has an invalid review window.`);
+    }
+    const reviewStatus =
+      auditDate > item.reviewBy ? 'overdue' : auditDate === item.reviewBy ? 'due' : 'current';
+    return {
+      id: item.id,
+      component: item.component,
+      configured: item.configured,
+      owner: item.owner,
+      reviewedAt: item.reviewedAt,
+      reviewBy: item.reviewBy,
+      source: item.source,
+      reviewStatus,
+    };
+  });
+}
+
 export function auditScheduledWorkflows(workflowRuns, generatedAt) {
   const generatedTime = Date.parse(generatedAt);
   if (!Number.isFinite(generatedTime)) {
@@ -128,6 +193,7 @@ export function buildPlatformAudit(input) {
     billing,
     previous,
     nodeSchedule,
+    supportReviewPolicy,
   } = input;
   const generatedTime = Date.parse(generatedAt);
   if (!repo || !/^[a-f0-9]{40}$/u.test(sourceSha) || !Number.isFinite(generatedTime)) {
@@ -155,6 +221,7 @@ export function buildPlatformAudit(input) {
   const previousArtifacts = previous?.inventory?.artifacts;
   const previousRuns = previous?.inventory?.workflowRuns;
   const scheduledWorkflows = auditScheduledWorkflows(workflowRuns, generatedAt);
+  const supportReviews = evaluateRuntimeSupportReviews(supportReviewPolicy, generatedAt);
 
   return {
     schemaVersion: 1,
@@ -205,6 +272,7 @@ export function buildPlatformAudit(input) {
       },
       otherRuntimePolicy:
         'See docs/engineering/support-policy.md; compare each upstream schedule during monthly review.',
+      reviews: supportReviews,
     },
     trends: {
       previousGeneratedAt: previous?.generatedAt ?? null,
@@ -230,6 +298,12 @@ export function buildPlatformAudit(input) {
       ...scheduledWorkflows
         .filter((workflow) => workflow.status !== 'healthy')
         .map((workflow) => `Scheduled workflow ${workflow.name} is ${workflow.status}.`),
+      ...supportReviews
+        .filter((review) => review.reviewStatus !== 'current')
+        .map(
+          (review) =>
+            `Runtime support review ${review.component} is ${review.reviewStatus}; owner: ${review.owner}; due: ${review.reviewBy}; source: ${review.source}.`
+        ),
       'This command is read-only; cleanupPlan never performs deletion.',
       'Only Node.js end-of-life is checked automatically; other runtime policy rows require maintainer review against upstream sources.',
     ],
@@ -289,6 +363,12 @@ async function main() {
     .toISOString()
     .slice(0, 10);
   const repository = runGhApi(`repos/${repo}`)[0];
+  const supportReviewPolicy = JSON.parse(
+    await readFile(
+      path.join(repositoryRoot, 'docs/engineering/runtime-support-review.json'),
+      'utf8'
+    )
+  );
   const artifacts = runGhApi(`repos/${repo}/actions/artifacts?per_page=100`).flatMap(
     (page) => page.artifacts ?? []
   );
@@ -323,6 +403,7 @@ async function main() {
     billing,
     previous,
     nodeSchedule,
+    supportReviewPolicy,
   });
   if (nodeSchedule === null) {
     audit.runtimeSupport.node.status = 'unknown';

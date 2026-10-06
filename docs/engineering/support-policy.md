@@ -12,6 +12,8 @@ Observed values on 2026-10-06:
 | Coverage       | No coverage baseline command/result recorded                                      | unavailable                                                                              | Add scoped coverage to M2.13; don't assert zero or 100%                                                                                    |
 | Performance    | Board bundle build reports compressed and raw chunk sizes                         | No stable application latency/load benchmark                                             | Establish repeatable app/query budgets before gating                                                                                       |
 
+Monthly upstream support review dates, accountable owner, and primary source links are tracked in the machine-readable [runtime support review ledger](runtime-support-review.json). `pnpm platform:audit` emits `current`, `due`, or `overdue` per runtime/toolchain; those states describe review freshness and do not claim the component is unsupported. Node.js end-of-life remains checked separately against the official release schedule.
+
 ## Initial CI service objectives (measurement targets, not guarantees)
 
 - PR quick verification target: under 10 minutes wall-clock, measured over at least 10 representative affected runs. Not yet measured as a separate stable cohort.

@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "node",
+      "component": "Node.js",
+      "configured": "22",
+      "owner": "repository maintainer (@bjo163)",
+      "reviewedAt": "2026-10-06",
+      "reviewBy": "2026-11-06",
+      "source": "https://github.com/nodejs/Release/blob/main/schedule.json"
+    },
+    {
+      "id": "pnpm",
+      "component": "pnpm",
+      "configured": "11.17.0",
+      "owner": "repository maintainer (@bjo163)",
+      "reviewedAt": "2026-10-06",
+      "reviewBy": "2026-11-06",
+      "source": "https://pnpm.io/installation"
+    },
+    {
+      "id": "postgresql",
+      "component": "PostgreSQL",
+      "configured": "16-alpine",
+      "owner": "repository maintainer (@bjo163)",
+      "reviewedAt": "2026-10-06",
+      "reviewBy": "2026-11-06",
+      "source": "https://www.postgresql.org/support/versioning/"
+    },
+    {
+      "id": "playwright",
+      "component": "Playwright",
+      "configured": "^1.63.0",
+      "owner": "repository maintainer (@bjo163)",
+      "reviewedAt": "2026-10-06",
+      "reviewBy": "2026-11-06",
+      "source": "https://playwright.dev/docs/release-notes"
+    },
+    {
+      "id": "ubuntu-runner",
+      "component": "GitHub Actions Ubuntu runner",
+      "configured": "ubuntu-24.04",
+      "owner": "repository maintainer (@bjo163)",
+      "reviewedAt": "2026-10-06",
+      "reviewBy": "2026-10-15",
+      "source": "https://github.com/actions/runner-images/issues/14748"
+    }
+  ]
+}

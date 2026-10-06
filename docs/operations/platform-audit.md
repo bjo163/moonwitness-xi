@@ -1,6 +1,6 @@
 # Monthly platform audit
 
-The monthly audit is a read-only inventory. It records Actions artifacts and 90-day workflow outcomes, repository/workflow permissions, available package registry and billing data, and the Node.js release schedule. It compares the result to the previous successful baseline artifact when that artifact is still available.
+The monthly audit is a read-only inventory. It records Actions artifacts and 90-day workflow outcomes, repository/workflow permissions, available package registry and billing data, the Node.js release schedule, and dated upstream support reviews for Node.js, pnpm, PostgreSQL, Playwright and the Actions runner image. It compares the result to the previous successful baseline artifact when that artifact is still available.
 
 Run locally with an authenticated GitHub CLI:
 
@@ -17,3 +17,5 @@ The workflow token needs only `contents: read` and `actions: read`. Repository p
 The cleanup section is a plan only. It classifies only known ephemeral report names and only after 90 days; release, provenance, evidence, backup, restore, migration and unknown names are never candidates. The audit has no deletion implementation or write permission. Review retention settings and published release assets separately before proposing any cleanup change.
 
 Node.js end-of-life is checked against the official [`nodejs/Release` schedule](https://github.com/nodejs/Release/blob/main/schedule.json). Review the pinned Ubuntu runner image, pnpm, PostgreSQL, Playwright, and GitHub Action runtime notices against their official support schedules during each audit; the report deliberately leaves those upstream checks visible as human follow-up rather than inferring support from a version number alone.
+
+The [runtime support review ledger](../engineering/runtime-support-review.json) records the configured version, responsible owner, last review date, next review deadline, and official source for each component. The report marks a review `due` on its deadline and `overdue` after it; these are review-freshness states, not claims that a component has reached end of support. Update the ledger only after checking its linked upstream source and current repository configuration. The Ubuntu runner review is due before GitHub's announced November 2026 `ubuntu-latest` transition so the pinned 24.04 runner can be deliberately revalidated.

@@ -1,13 +1,49 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import {
   auditScheduledWorkflows,
   buildPlatformAudit,
+  evaluateRuntimeSupportReviews,
   planArtifactCleanup,
 } from './platform-audit.mjs';
 import { renderPlatformAuditSummary } from './write-platform-audit-summary.mjs';
 
 const generatedAt = '2026-10-05T00:00:00.000Z';
+const supportReviewPolicy = {
+  schemaVersion: 1,
+  items: [
+    {
+      id: 'postgresql',
+      component: 'PostgreSQL',
+      configured: '16-alpine',
+      owner: 'repository maintainer',
+      reviewedAt: '2026-10-01',
+      reviewBy: '2026-11-01',
+      source: 'https://www.postgresql.org/support/versioning/',
+    },
+  ],
+};
+
+test('checked-in support ledger covers every declared platform runtime', async () => {
+  const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const ledger = JSON.parse(
+    await readFile(
+      path.join(repositoryRoot, 'docs/engineering/runtime-support-review.json'),
+      'utf8'
+    )
+  );
+  const reviews = evaluateRuntimeSupportReviews(ledger, '2026-10-06T00:00:00.000Z');
+
+  assert.deepEqual(
+    reviews.map(({ id }) => id),
+    ['node', 'pnpm', 'postgresql', 'playwright', 'ubuntu-runner']
+  );
+  assert.ok(reviews.every(({ owner, source, reviewStatus }) => owner && source && reviewStatus));
+  assert.equal(reviews.find(({ id }) => id === 'ubuntu-runner')?.reviewBy, '2026-10-15');
+});
 
 test('audit summarizes paginated inventory and compares a prior baseline', () => {
   const report = buildPlatformAudit({
@@ -44,6 +80,7 @@ test('audit summarizes paginated inventory and compares a prior baseline', () =>
       },
     },
     nodeSchedule: { v22: { end: '2027-04-30' } },
+    supportReviewPolicy,
   });
 
   assert.equal(report.inventory.artifacts.count, 1);
@@ -58,6 +95,13 @@ test('audit summarizes paginated inventory and compares a prior baseline', () =>
   assert.equal(report.trends.artifactBytesDelta, 224);
   assert.equal(report.trends.workflowRunCountDelta, -2);
   assert.equal(report.runtimeSupport.node.status, 'supported-on-audit-date');
+  assert.deepEqual(
+    report.runtimeSupport.reviews.map(({ component, reviewStatus }) => ({
+      component,
+      reviewStatus,
+    })),
+    [{ component: 'PostgreSQL', reviewStatus: 'current' }]
+  );
   assert.match(report.limitations.join(' '), /Registry inventory unknown/u);
   assert.match(report.limitations.join(' '), /read:packages/u);
   assert.match(report.limitations.join(' '), /billing administrator/u);
@@ -170,6 +214,66 @@ test('scheduled regression audit detects healthy, missed, stale, and failing sch
   assert.throws(() => auditScheduledWorkflows([], 'invalid'), /valid timestamp/u);
 });
 
+test('runtime support reviews become due and overdue without claiming the software is unsupported', () => {
+  const current = evaluateRuntimeSupportReviews(supportReviewPolicy, generatedAt);
+  const due = evaluateRuntimeSupportReviews(
+    {
+      ...supportReviewPolicy,
+      items: [{ ...supportReviewPolicy.items[0], reviewBy: '2026-10-05' }],
+    },
+    generatedAt
+  );
+  const overdue = evaluateRuntimeSupportReviews(
+    {
+      ...supportReviewPolicy,
+      items: [{ ...supportReviewPolicy.items[0], reviewBy: '2026-10-04' }],
+    },
+    generatedAt
+  );
+
+  assert.equal(current[0].reviewStatus, 'current');
+  assert.equal(due[0].reviewStatus, 'due');
+  assert.equal(overdue[0].reviewStatus, 'overdue');
+  assert.equal(overdue[0].configured, '16-alpine');
+  assert.throws(
+    () => evaluateRuntimeSupportReviews({ schemaVersion: 1, items: [] }, generatedAt),
+    /non-empty items/u
+  );
+  assert.throws(
+    () =>
+      evaluateRuntimeSupportReviews(
+        {
+          ...supportReviewPolicy,
+          items: [supportReviewPolicy.items[0], supportReviewPolicy.items[0]],
+        },
+        generatedAt
+      ),
+    /unique IDs/u
+  );
+  assert.throws(
+    () =>
+      evaluateRuntimeSupportReviews(
+        {
+          ...supportReviewPolicy,
+          items: [{ ...supportReviewPolicy.items[0], reviewBy: '2026-09-30' }],
+        },
+        generatedAt
+      ),
+    /invalid review window/u
+  );
+  assert.throws(
+    () =>
+      evaluateRuntimeSupportReviews(
+        {
+          ...supportReviewPolicy,
+          items: [{ ...supportReviewPolicy.items[0], reviewedAt: '2026-10-06' }],
+        },
+        generatedAt
+      ),
+    /invalid review window/u
+  );
+});
+
 test('audit rejects invalid provenance and never presents missing values as zero', () => {
   assert.throws(
     () =>
@@ -191,6 +295,7 @@ test('audit rejects invalid provenance and never presents missing values as zero
     workflowRuns: [],
     packages: { status: 'unknown', reason: 'permission unavailable' },
     billing: { status: 'unknown', reason: 'permission unavailable' },
+    supportReviewPolicy,
   });
   assert.equal(report.inventory.packages.status, 'unknown');
   assert.equal(report.inventory.billing.status, 'unknown');
@@ -219,6 +324,17 @@ test('summary reports unknown capabilities and never implies cleanup executed', 
       packages: { status: 'unknown' },
       billing: { status: 'unknown' },
     },
+    runtimeSupport: {
+      reviews: [
+        {
+          component: 'PostgreSQL',
+          configured: '16-alpine',
+          reviewStatus: 'overdue',
+          owner: 'repository maintainer',
+          reviewBy: '2026-10-01',
+        },
+      ],
+    },
     cleanupPlan: { candidates: [] },
     limitations: ['Billing API unavailable.'],
   };
@@ -226,5 +342,6 @@ test('summary reports unknown capabilities and never implies cleanup executed', 
   assert.match(summary, /Registry inventory: unknown; Actions billing: unknown/u);
   assert.match(summary, /0 allowlisted candidates; no delete capability/u);
   assert.match(summary, /Schedule Deep scheduled regression: missing-success/u);
+  assert.match(summary, /Runtime review PostgreSQL \(16-alpine\): overdue/u);
   assert.match(summary, /Limitation: Billing API unavailable\./u);
 });

@@ -14,6 +14,10 @@ export function renderPlatformAuditSummary(report) {
       (workflow) =>
         `- Schedule ${workflow.name}: ${workflow.status}; last success ${workflow.lastSuccessAt ?? 'none'} (limit ${workflow.maximumAgeDays} days).`
     ),
+    ...(report.runtimeSupport?.reviews ?? []).map(
+      (review) =>
+        `- Runtime review ${review.component} (${review.configured}): ${review.reviewStatus}; owner ${review.owner}; due ${review.reviewBy}.`
+    ),
     `- Registry inventory: ${report.inventory.packages.status}; Actions billing: ${report.inventory.billing.status}.`,
     `- Cleanup: dry-run only; ${report.cleanupPlan.candidates.length} allowlisted candidates; no delete capability.`,
     '',
