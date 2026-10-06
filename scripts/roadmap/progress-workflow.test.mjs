@@ -14,6 +14,7 @@ test('progress report workflow reads dev and publishes only short-lived Markdown
     /github\.event_name == 'schedule' \|\| github\.ref == 'refs\/heads\/dev'/u
   );
   assert.match(workflow, /ref: dev\n/u);
+  assert.match(workflow, /mkdir -p dist\/roadmap-progress/u);
   assert.match(workflow, /permissions:\n  contents: read\n/u);
   assert.doesNotMatch(workflow, /^\s+(?:issues|pull-requests|contents):\s+write\s*$/mu);
   assert.match(workflow, /--output dist\/roadmap-progress\/roadmap-progress\.md/u);
