@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   collectLifecycleSnapshot,
+  flattenGitHubPages,
   parseEvidenceSourceSha,
   parseRoadmapTaskStates,
 } from './collect-lifecycle-snapshot.mjs';
@@ -15,6 +16,24 @@ const releaseSha = 'e'.repeat(40);
 const task = { id: 'M1.01', dependsOn: [], status: 'complete', evidence: 'evidence.md' };
 const indexTasks = [task, { id: 'M1.02', dependsOn: [], evidence: 'partial.md' }];
 const roadmap = '- [x] M1.01 Finished with evidence.\n- [ ] M1.02 In progress.\n';
+
+test('flattens every GitHub CLI pagination page and rejects malformed page shapes', () => {
+  const checkPages = [
+    { check_runs: [{ id: 1, name: 'ci-gate' }] },
+    { check_runs: [{ id: 2, name: 'ci-gate' }] },
+  ];
+  const releasePages = [[{ tag_name: 'v1.0.0' }], [{ tag_name: 'v1.1.0' }]];
+  assert.deepEqual(flattenGitHubPages(checkPages, 'check_runs'), [
+    { id: 1, name: 'ci-gate' },
+    { id: 2, name: 'ci-gate' },
+  ]);
+  assert.deepEqual(flattenGitHubPages(releasePages, undefined), [
+    { tag_name: 'v1.0.0' },
+    { tag_name: 'v1.1.0' },
+  ]);
+  assert.throws(() => flattenGitHubPages({}, 'check_runs'), /pagination returned/u);
+  assert.throws(() => flattenGitHubPages([{ check_runs: null }], 'check_runs'), /page has/u);
+});
 
 test('parses the explicit source commit marker and derives canonical roadmap task states', () => {
   assert.equal(parseEvidenceSourceSha(`# Evidence\n- Source SHA: \`${sourceSha}\`\n`), sourceSha);

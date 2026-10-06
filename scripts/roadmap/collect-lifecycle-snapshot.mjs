@@ -5,6 +5,21 @@ const sourceLinePattern =
 const versionPattern =
   /^v?(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$/u;
 
+/**
+ * Flatten the `--paginate --slurp` response shape returned by `gh api`.
+ * @param {unknown} pages
+ * @param {string | undefined} property
+ * @returns {unknown[]}
+ */
+export function flattenGitHubPages(pages, property) {
+  if (!Array.isArray(pages)) throw new Error('GitHub API pagination returned an invalid response.');
+  return pages.flatMap((page) => {
+    const values = property ? page?.[property] : page;
+    if (!Array.isArray(values)) throw new Error('GitHub API pagination page has an invalid shape.');
+    return values;
+  });
+}
+
 /** @param {string} markdown */
 export function parseEvidenceSourceSha(markdown) {
   const matches = [...markdown.matchAll(sourceLinePattern)].map((match) => match[1]);

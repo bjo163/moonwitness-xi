@@ -4,7 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { collectLifecycleSnapshot } from './collect-lifecycle-snapshot.mjs';
+import { collectLifecycleSnapshot, flattenGitHubPages } from './collect-lifecycle-snapshot.mjs';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const execFileAsync = promisify(execFile);
@@ -61,15 +61,6 @@ function resolveReleaseCommit(tag) {
   }
 }
 
-function flattenPages(pages, property) {
-  if (!Array.isArray(pages)) throw new Error('GitHub API pagination returned an invalid response.');
-  return pages.flatMap((page) => {
-    const values = property ? page?.[property] : page;
-    if (!Array.isArray(values)) throw new Error('GitHub API pagination page has an invalid shape.');
-    return values;
-  });
-}
-
 async function main() {
   const repository = process.env.GITHUB_REPOSITORY;
   const repositoryId = process.env.GITHUB_REPOSITORY_ID;
@@ -99,8 +90,8 @@ async function main() {
     ghJson([`repos/${repository}/commits/${branchHeads.dev}/check-runs?per_page=100`]),
     ghJson([`repos/${repository}/releases?per_page=100`]),
   ]);
-  const checkRuns = flattenPages(checkPages, 'check_runs');
-  const releases = flattenPages(releasePages);
+  const checkRuns = flattenGitHubPages(checkPages, 'check_runs');
+  const releases = flattenGitHubPages(releasePages);
   const snapshot = await collectLifecycleSnapshot({
     tasks: index.tasks,
     roadmap,
