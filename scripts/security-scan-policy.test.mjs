@@ -14,6 +14,21 @@ test('blocks CRITICAL dependency findings', () => {
   deepEqual(result.blockingFindings, [finding]);
 });
 
+test('exceptions apply only to the exact SARIF rule ID and scan target', () => {
+  const findings = [
+    { id: 'CVE-2026-0001', severity: 'CRITICAL', target: 'workspace' },
+    { id: 'CVE-2026-0001', severity: 'CRITICAL', target: 'api-image' },
+    { id: 'CVE-2026-0002', severity: 'CRITICAL', target: 'api-image' },
+  ];
+  const result = evaluateScanResult({
+    exitCode: 0,
+    findings,
+    exceptions: [{ id: 'CVE-2026-0001', target: 'api-image' }],
+  });
+  equal(result.passed, false);
+  deepEqual(result.blockingFindings, [findings[0], findings[2]]);
+});
+
 test('scanner errors fail closed rather than reporting a clean scan', () => {
   const result = evaluateScanResult({
     exitCode: 0,
@@ -40,10 +55,10 @@ test('extracts severities from SARIF and allows high findings under a critical-o
       },
     ],
   };
-  const findings = extractSarifFindings(sarif);
+  const findings = extractSarifFindings(sarif, 'workspace');
   deepEqual(findings, [
-    { id: 'critical-fixture', severity: 'CRITICAL' },
-    { id: 'high-fixture', severity: 'HIGH' },
+    { id: 'critical-fixture', severity: 'CRITICAL', target: 'workspace' },
+    { id: 'high-fixture', severity: 'HIGH', target: 'workspace' },
   ]);
   equal(evaluateScanResult({ exitCode: 0, findings }).passed, false);
   equal(evaluateScanResult({ exitCode: 0, findings: findings.slice(1) }).passed, true);
@@ -74,9 +89,21 @@ test('exception policy rejects expired or ownerless suppressions', () => {
   deepEqual(
     validateExceptions(
       [
-        { id: 'expired', owner: 'security', reason: 'test', expiresOn: '2026-10-04' },
-        { id: 'incomplete', expiresOn: '2026-10-06' },
-        { id: 'impossible', owner: 'security', reason: 'test', expiresOn: '2026-99-99' },
+        {
+          id: 'expired',
+          target: 'api-image',
+          owner: 'security',
+          reason: 'test',
+          expiresOn: '2026-10-04',
+        },
+        { id: 'incomplete', target: 'api-image', expiresOn: '2026-10-06' },
+        {
+          id: 'impossible',
+          target: 'api-image',
+          owner: 'security',
+          reason: 'test',
+          expiresOn: '2026-99-99',
+        },
         null,
       ],
       '2026-10-05'
@@ -90,4 +117,39 @@ test('exception policy rejects expired or ownerless suppressions', () => {
     ]
   );
   deepEqual(validateExceptions({}, '2026-10-05'), ['exceptions must be an array']);
+});
+
+test('exception policy rejects unknown targets and duplicate scoped identities', () => {
+  const item = {
+    id: 'CVE-2026-0001',
+    target: 'api-image',
+    owner: 'security',
+    reason: 'upstream fix unavailable',
+    expiresOn: '2026-10-06',
+  };
+  deepEqual(
+    validateExceptions(
+      [item, { ...item, owner: 'another owner' }, { ...item, id: 'unknown', target: 'all' }],
+      '2026-10-05'
+    ),
+    [
+      'exception CVE-2026-0001 duplicates api-image:CVE-2026-0001',
+      'exception unknown requires a target from workspace, api-image, board-image',
+    ]
+  );
+  deepEqual(
+    validateExceptions(
+      [
+        {
+          id: 'CVE-2026-0001\n::notice::',
+          target: 'workspace',
+          owner: 'security',
+          reason: 'test',
+          expiresOn: '2026-10-06',
+        },
+      ],
+      '2026-10-05'
+    ),
+    ['exception CVE-2026-0001\n::notice:: requires an exact SARIF rule ID']
+  );
 });

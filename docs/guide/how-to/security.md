@@ -25,3 +25,12 @@ Lihat [attachment contract](../../engineering/attachments.md).
 
 Readiness `/readyz` menyentuh DB; liveness `/livez` hanya proses. Health probes worker tidak
 terautentikasi, sehingga jangan diekspos ke jaringan publik.
+
+## Vulnerability scan exceptions
+
+Container CI memblokir temuan Trivy `CRITICAL`. Jangan menambahkan pengecualian luas berdasarkan
+severity atau package name: setiap entri di `docs/security/vulnerability-policy.json` harus menunjuk
+tepat ke SARIF rule ID dan satu target (`workspace`, `api-image`, atau `board-image`), serta mencatat
+owner, alasan, dan expiry kalender. Target lain dan rule ID lain tetap diblokir; entri duplikat,
+tanggal tidak valid, atau exception kedaluwarsa menggagalkan pemeriksaan policy. Pastikan exception
+memang diperlukan, telah direview, dan hapus segera setelah perbaikan tersedia.

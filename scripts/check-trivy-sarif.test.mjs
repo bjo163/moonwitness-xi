@@ -13,14 +13,20 @@ const checker = path.join(root, 'scripts', 'check-trivy-sarif.mjs');
 function runGate(reports, outcomes = reports.map(() => 'success')) {
   const directory = mkdtempSync(path.join(tmpdir(), 'moonwitness-trivy-'));
   try {
-    const files = reports.map((report, index) => {
+    const completeReports = [...reports];
+    while (completeReports.length < 3) {
+      completeReports.push({ runs: [{ tool: { driver: { rules: [] } }, results: [] }] });
+    }
+    const completeOutcomes = [...outcomes];
+    while (completeOutcomes.length < 3) completeOutcomes.push('success');
+    const files = completeReports.map((report, index) => {
       const file = path.join(directory, `scan-${index}.sarif`);
       writeFileSync(file, JSON.stringify(report));
       return file;
     });
     return spawnSync(process.execPath, [checker, ...files], {
       encoding: 'utf8',
-      env: { ...process.env, TRIVY_SCAN_OUTCOMES: JSON.stringify(outcomes) },
+      env: { ...process.env, TRIVY_SCAN_OUTCOMES: JSON.stringify(completeOutcomes) },
     });
   } finally {
     rmSync(directory, { recursive: true, force: true });
@@ -52,7 +58,7 @@ test('SARIF gate blocks CRITICAL findings', () => {
   const result = runGate([report('CRITICAL')]);
   equal(result.status, 1);
   equal(result.stderr.includes('1 CRITICAL vulnerability'), true);
-  equal(result.stdout.includes('::error title=Trivy CRITICAL findings::fixture'), true);
+  equal(result.stdout.includes('::error title=Trivy CRITICAL findings::workspace:fixture'), true);
   equal(result.stdout.includes('scan-0.sarif'), false);
 });
 
@@ -74,4 +80,20 @@ test('SARIF gate fails closed for malformed scanner output', () => {
   equal(result.status, 1);
   equal(result.stderr.includes('Trivy SARIF validation failed'), true);
   equal(result.stderr.includes('SARIF must contain at least one run'), false);
+});
+
+test('SARIF gate requires a report from every configured scan target', () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'moonwitness-trivy-targets-'));
+  try {
+    const file = path.join(directory, 'workspace.sarif');
+    writeFileSync(file, JSON.stringify(report('HIGH')));
+    const result = spawnSync(process.execPath, [checker, file], {
+      encoding: 'utf8',
+      env: { ...process.env, TRIVY_SCAN_OUTCOMES: '["success"]' },
+    });
+    equal(result.status, 1);
+    equal(result.stderr.includes('Expected one SARIF report for each target'), true);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });

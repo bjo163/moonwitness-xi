@@ -1,11 +1,18 @@
 const blockingSeverity = 'CRITICAL';
+export const vulnerabilityScanTargets = ['workspace', 'api-image', 'board-image'];
 
-export function evaluateScanResult({ exitCode, findings, scannerError = null }) {
+export function evaluateScanResult({ exitCode, findings, scannerError = null, exceptions = [] }) {
   if (scannerError) {
     return { passed: false, reason: 'scanner-error', blockingFindings: [] };
   }
 
-  const blockingFindings = findings.filter((finding) => finding.severity === blockingSeverity);
+  const blockingFindings = findings.filter(
+    (finding) =>
+      finding.severity === blockingSeverity &&
+      !exceptions.some(
+        (exception) => exception.id === finding.id && exception.target === finding.target
+      )
+  );
   if (exitCode !== 0 || blockingFindings.length > 0) {
     return { passed: false, reason: 'blocking-findings', blockingFindings };
   }
@@ -13,7 +20,7 @@ export function evaluateScanResult({ exitCode, findings, scannerError = null }) 
   return { passed: true, reason: 'clean', blockingFindings: [] };
 }
 
-export function extractSarifFindings(sarif) {
+export function extractSarifFindings(sarif, target) {
   if (!sarif || !Array.isArray(sarif.runs) || sarif.runs.length === 0) {
     throw new Error('SARIF must contain at least one run');
   }
@@ -43,7 +50,11 @@ export function extractSarifFindings(sarif) {
       if (typeof result?.ruleId !== 'string' || !severityByRule.has(result.ruleId)) {
         throw new Error('SARIF result references a missing vulnerability rule');
       }
-      findings.push({ id: result.ruleId, severity: severityByRule.get(result.ruleId) });
+      findings.push({
+        id: result.ruleId,
+        severity: severityByRule.get(result.ruleId),
+        ...(target ? { target } : {}),
+      });
     }
   }
   return findings;
@@ -56,6 +67,7 @@ export function isExceptionActive(exception, today) {
 export function validateExceptions(exceptions, today) {
   if (!Array.isArray(exceptions)) return ['exceptions must be an array'];
   const errors = [];
+  const identities = new Set();
   for (const [index, exception] of exceptions.entries()) {
     const identity =
       typeof exception?.id === 'string' && exception.id.length > 0
@@ -70,6 +82,23 @@ export function validateExceptions(exceptions, today) {
       exception.reason.trim().length === 0
     ) {
       errors.push(`exception ${identity} requires id, owner, and reason`);
+    }
+    if (typeof exception?.id === 'string' && !/^[A-Za-z0-9._:-]{1,80}$/u.test(exception.id)) {
+      errors.push(`exception ${identity} requires an exact SARIF rule ID`);
+    }
+    if (
+      typeof exception?.id === 'string' &&
+      exception.id.trim().length > 0 &&
+      (typeof exception.target !== 'string' || !vulnerabilityScanTargets.includes(exception.target))
+    ) {
+      errors.push(
+        `exception ${identity} requires a target from ${vulnerabilityScanTargets.join(', ')}`
+      );
+    }
+    if (typeof exception?.id === 'string' && typeof exception?.target === 'string') {
+      const key = `${exception.target}:${exception.id}`;
+      if (identities.has(key)) errors.push(`exception ${identity} duplicates ${key}`);
+      identities.add(key);
     }
     if (!isValidIsoDate(exception?.expiresOn)) {
       errors.push(`exception ${identity} requires a real ISO calendar expiry date`);

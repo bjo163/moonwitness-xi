@@ -1,6 +1,12 @@
 import { readFile } from 'node:fs/promises';
 import process from 'node:process';
-import { evaluateScanResult, extractSarifFindings } from './security-scan-policy.mjs';
+import { URL } from 'node:url';
+import {
+  evaluateScanResult,
+  extractSarifFindings,
+  validateExceptions,
+  vulnerabilityScanTargets,
+} from './security-scan-policy.mjs';
 
 function fail(message) {
   process.stderr.write(`${message}\n`);
@@ -10,9 +16,11 @@ function fail(message) {
 function annotateCriticalFindings(findings) {
   const ids = [
     ...new Set(
-      findings.map((finding) =>
-        /^[A-Za-z0-9._:-]{1,80}$/u.test(finding.id) ? finding.id : 'unrecognized-id'
-      )
+      findings.map((finding) => {
+        const safeId = /^[A-Za-z0-9._:-]{1,80}$/u.test(finding.id);
+        const safeTarget = vulnerabilityScanTargets.includes(finding.target);
+        return safeId && safeTarget ? `${finding.target}:${finding.id}` : 'unrecognized-id';
+      })
     ),
   ];
   const visibleIds = ids.slice(0, 10);
@@ -23,6 +31,11 @@ function annotateCriticalFindings(findings) {
 }
 
 const files = process.argv.slice(2);
+if (files.length !== vulnerabilityScanTargets.length) {
+  fail(`Expected one SARIF report for each target: ${vulnerabilityScanTargets.join(', ')}.`);
+  process.exit();
+}
+
 let outcomes;
 try {
   outcomes = JSON.parse(process.env.TRIVY_SCAN_OUTCOMES ?? '[]');
@@ -42,12 +55,27 @@ if (
 }
 
 try {
-  const findings = [];
-  for (const file of files) {
-    const sarif = JSON.parse(await readFile(file, 'utf8'));
-    findings.push(...extractSarifFindings(sarif));
+  const policy = JSON.parse(
+    await readFile(new URL('../docs/security/vulnerability-policy.json', import.meta.url), 'utf8')
+  );
+  const policyErrors = validateExceptions(
+    policy?.exceptions,
+    new Date().toISOString().slice(0, 10)
+  );
+  if (policy?.blockingSeverity !== 'CRITICAL' || policy?.ignoreUnfixed !== true) {
+    policyErrors.push('severity policy must block CRITICAL and may only ignore unfixed advisories');
   }
-  const result = evaluateScanResult({ exitCode: 0, findings });
+  if (policyErrors.length > 0) {
+    fail(`Vulnerability policy invalid: ${policyErrors.join('; ')}`);
+    process.exit();
+  }
+
+  const findings = [];
+  for (const [index, file] of files.entries()) {
+    const sarif = JSON.parse(await readFile(file, 'utf8'));
+    findings.push(...extractSarifFindings(sarif, vulnerabilityScanTargets[index]));
+  }
+  const result = evaluateScanResult({ exitCode: 0, findings, exceptions: policy.exceptions });
   if (!result.passed) {
     annotateCriticalFindings(result.blockingFindings);
     fail(
@@ -55,7 +83,7 @@ try {
     );
   } else {
     process.stdout.write(
-      `Trivy reports valid; ${findings.length} finding(s) reviewed and no CRITICAL vulnerabilities found.\n`
+      `Trivy reports valid; ${findings.length} finding(s) reviewed and no unexcepted CRITICAL vulnerabilities found.\n`
     );
   }
 } catch {
