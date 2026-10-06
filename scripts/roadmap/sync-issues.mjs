@@ -5,7 +5,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { projectLifecycleSnapshot } from './lifecycle-snapshot.mjs';
+import { assertLifecycleSnapshotFresh, projectLifecycleSnapshot } from './lifecycle-snapshot.mjs';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const beginMarker = '<!-- BEGIN MOONWITNESS MANAGED -->';
@@ -14,7 +14,7 @@ const maximumApplyBatchSize = 5;
 
 /**
  * @typedef {{ number: number, title: string, body: string, state: 'open'|'closed', labels?: Array<{name: string}>, milestone?: {number: number, title: string}|null, assignees?: Array<{login: string}>, pull_request?: unknown }} RemoteIssue
- * @typedef {{ taskId: string, operation: 'create'|'update'|'noop'|'conflict', issueNumber?: number, reason?: string, title: string, body: string, labels?: string[], assignees?: string[], managedLabels?: string[], managedAssignees?: string[], milestoneTitle?: string, expectedTitle?: string, expectedManagedBlock?: string, expectedMilestoneTitle?: string }} IssueOperation
+ * @typedef {{ taskId: string, operation: 'create'|'update'|'noop'|'conflict', issueNumber?: number, reason?: string, title: string, body: string, labels?: string[], assignees?: string[], managedLabels?: string[], managedAssignees?: string[], milestoneTitle?: string, expectedTitle?: string, expectedManagedBlock?: string, expectedMilestoneTitle?: string, expectedIssueState?: 'open'|'closed', closeIssue?: true }} IssueOperation
  */
 
 function sha256(value) {
@@ -289,10 +289,13 @@ export function planIssueSync({
       if (!labelsByName.has(label.toLowerCase())) labelsByName.set(label.toLowerCase(), label);
     }
     const desiredLabels = [...labelsByName.values()].sort();
+    const closeIssue =
+      issue.state === 'open' && lifecycleByTask?.get(task.id)?.shouldClose === true;
     if (
       issue.title === title &&
       currentBlock === block &&
       issue.milestone?.title === task.milestone &&
+      !closeIssue &&
       JSON.stringify((issue.labels ?? []).map(({ name }) => name).sort()) ===
         JSON.stringify(desiredLabels) &&
       JSON.stringify((issue.assignees ?? []).map(({ login }) => login).sort()) ===
@@ -324,6 +327,8 @@ export function planIssueSync({
       expectedTitle: issue.title,
       expectedManagedBlock: currentBlock,
       expectedMilestoneTitle: issue.milestone?.title,
+      expectedIssueState: issue.state,
+      ...(closeIssue ? { closeIssue: true } : {}),
     };
   });
   const inputHash = sha256(
@@ -570,6 +575,7 @@ export function createGitHubIssuesClient({
           ...(operation.labels ? { labels: operation.labels } : {}),
           ...(operation.assignees?.length ? { assignees: operation.assignees } : {}),
           ...(operation.milestoneNumber ? { milestone: operation.milestoneNumber } : {}),
+          ...(operation.closeIssue ? { state: 'closed' } : {}),
         }),
       });
     },
@@ -585,6 +591,8 @@ export async function applyIssuePlan({
   sourceSha,
   repositoryUrl,
   cardDetailsByTask,
+  lifecycleByTask,
+  lifecycleSnapshotGeneratedAt,
 }) {
   const freshIssues = await client.listAll();
   const fresh = planIssueSync({
@@ -594,6 +602,7 @@ export async function applyIssuePlan({
     sourceSha,
     repositoryUrl,
     cardDetailsByTask,
+    lifecycleByTask,
   });
   if (fresh.inputHash !== plan.inputHash)
     throw new Error('Remote issues changed after planning; refresh the plan before applying.');
@@ -603,6 +612,8 @@ export async function applyIssuePlan({
     (operation) => operation.operation === 'create' || operation.operation === 'update'
   );
   if (!hasWrites) return [];
+  if (lifecycleByTask && lifecycleSnapshotGeneratedAt)
+    assertLifecycleSnapshotFresh(lifecycleSnapshotGeneratedAt);
   client.assertWritable?.();
   const milestoneNumbers = client.ensureMetadata ? await client.ensureMetadata(tasks) : new Map();
   const operations = fresh.operations.map((operation) => ({
@@ -648,6 +659,7 @@ export async function applyIssuePlan({
       const desiredBlock = readManagedBlock(operation.body);
       if (
         (latest.title !== operation.expectedTitle && latest.title !== operation.title) ||
+        (operation.expectedIssueState && latest.state !== operation.expectedIssueState) ||
         (latestBlock !== operation.expectedManagedBlock && latestBlock !== desiredBlock) ||
         (latest.milestone?.title !== operation.expectedMilestoneTitle &&
           latest.milestone?.title !== operation.milestoneTitle)
@@ -709,12 +721,10 @@ async function main() {
     (!lifecycleSnapshotPath || lifecycleSnapshotPath.startsWith('--'))
   )
     throw new Error('--lifecycle-snapshot requires a repository-relative JSON file path.');
-  if (apply && lifecycleSnapshotPath)
-    throw new Error('--lifecycle-snapshot is read-only and cannot be combined with --apply.');
   if (process.argv.includes('--help')) {
     process.stdout.write(
       'Usage: node scripts/roadmap/sync-issues.mjs [--quiet] [--output <path>] [--task-ids <id,id>] [--lifecycle-snapshot <path>] [--apply]\n' +
-        `Apply requires an explicit selection of at most ${maximumApplyBatchSize} roadmap tasks; lifecycle snapshots are read-only.\n`
+        `Apply requires an explicit selection of at most ${maximumApplyBatchSize} roadmap tasks. Lifecycle close transitions require a fresh exact-SHA snapshot.\n`
     );
     return;
   }
@@ -778,9 +788,12 @@ async function main() {
     }
     cardDetailsByTask.set(task.id, renderTaskCardDetails(markdown, task.id));
   }
-  const lifecycleByTask = resolvedLifecycleSnapshot
+  const lifecycleSnapshot = resolvedLifecycleSnapshot
+    ? JSON.parse(await readFile(resolvedLifecycleSnapshot, 'utf8'))
+    : undefined;
+  const lifecycleByTask = lifecycleSnapshot
     ? projectLifecycleSnapshot({
-        snapshot: JSON.parse(await readFile(resolvedLifecycleSnapshot, 'utf8')),
+        snapshot: lifecycleSnapshot,
         tasks: index.tasks,
         issues,
         repositoryId,
@@ -795,6 +808,7 @@ async function main() {
     repositoryUrl,
     cardDetailsByTask,
     lifecycleByTask,
+    lifecycleSnapshotGeneratedAt: lifecycleSnapshot?.generatedAt,
   });
   const metadata = await client.listMetadata();
   plan.metadata = {
@@ -829,6 +843,8 @@ async function main() {
     sourceSha,
     repositoryUrl,
     cardDetailsByTask,
+    lifecycleByTask,
+    lifecycleSnapshotGeneratedAt: lifecycleSnapshot?.generatedAt,
   });
   process.stdout.write(
     results.length

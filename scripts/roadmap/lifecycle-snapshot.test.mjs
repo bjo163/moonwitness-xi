@@ -148,14 +148,22 @@ test('marks missing hard dependencies blocked and rejects duplicate matching rem
   );
 });
 
-test('CLI rejects combining lifecycle snapshot input with issue writes before any network request', () => {
+test('CLI documents that bounded issue writes require lifecycle evidence for close transitions', () => {
   const scriptPath = fileURLToPath(new URL('./sync-issues.mjs', import.meta.url));
   const result = spawnSync(
     process.execPath,
-    [scriptPath, '--apply', '--lifecycle-snapshot', 'snapshot.json'],
+    [
+      scriptPath,
+      '--help',
+      '--apply',
+      '--task-ids',
+      'M11.03',
+      '--lifecycle-snapshot',
+      'snapshot.json',
+    ],
     { encoding: 'utf8' }
   );
-  assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /read-only and cannot be combined with --apply/u);
-  assert.equal(result.stdout, '');
+  assert.equal(result.status, 0);
+  assert.match(result.stdout, /Lifecycle close transitions require a fresh exact-SHA snapshot/u);
+  assert.equal(result.stderr, '');
 });

@@ -87,6 +87,7 @@ jobs:
       cancel-in-progress: false
     permissions:
       contents: read
+      checks: read
       issues: write
     env:
       TASK_IDS: ${{ inputs.task_ids }}
@@ -94,7 +95,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
-          fetch-depth: 1
+          fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/setup-pnpm
         with:
@@ -102,14 +103,25 @@ jobs:
           pnpm-version: '11.17.0'
       - name: Install frozen workspace dependencies
         run: pnpm install --frozen-lockfile --no-runtime
-      - name: Apply selected tasks with fresh-state and retry guards
+      - name: Collect lifecycle evidence and apply selected tasks with fresh-state guards
         run: |
+          set -euo pipefail
           if [[ -z "$TASK_IDS" ]]; then
             echo 'Applying roadmap issues requires explicit task IDs.' >&2
             exit 2
           fi
-          node scripts/roadmap/sync-issues.mjs --quiet --apply --task-ids "$TASK_IDS"
+          git fetch origin dev main --tags --no-recurse-submodules
+          if [[ "$(git rev-parse refs/remotes/origin/dev)" != "$GITHUB_SHA" ]]; then
+            echo 'The dev head changed after dispatch; refresh the plan before applying.' >&2
+            exit 2
+          fi
+          snapshot_file=.roadmap-lifecycle-snapshot.json
+          trap 'rm -f "$snapshot_file"' EXIT
+          node scripts/roadmap/collect-lifecycle-snapshot-cli.mjs
+          node scripts/roadmap/sync-issues.mjs --quiet --apply --task-ids "$TASK_IDS" --lifecycle-snapshot "$snapshot_file"
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_REPOSITORY_ID: ${{ github.repository_id }}
           GITHUB_SHA: ${{ github.sha }}

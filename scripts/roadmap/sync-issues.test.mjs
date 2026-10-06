@@ -82,7 +82,7 @@ test('issue sync workflow keeps writes opt-in, dev-only, and isolated to its app
   assert.match(workflow, /schedule:/u);
   assert.match(workflow, /workflow_dispatch:/u);
   assert.match(workflow, /default: false/u);
-  assert.match(workflow, /--apply --task-ids "\$TASK_IDS"/u);
+  assert.match(workflow, /--apply --task-ids "\$TASK_IDS" --lifecycle-snapshot/u);
   assert.match(planJob, /issues: read/u);
   assert.match(planJob, /checks: read/u);
   assert.doesNotMatch(planJob, /issues: write/u);
@@ -95,9 +95,13 @@ test('issue sync workflow keeps writes opt-in, dev-only, and isolated to its app
     /event_name == 'workflow_dispatch' && inputs\.apply && github\.ref == 'refs\/heads\/dev'/u
   );
   assert.match(applyJob, /issues: write/u);
+  assert.match(applyJob, /checks: read/u);
   assert.match(applyJob, /group: repository-write-coordinator/u);
   assert.match(applyJob, /needs: \[plan\]/u);
   assert.match(applyJob, /persist-credentials: false/u);
+  assert.match(applyJob, /fetch-depth: 0/u);
+  assert.match(applyJob, /refs\/remotes\/origin\/dev/u);
+  assert.match(applyJob, /collect-lifecycle-snapshot-cli\.mjs/u);
 });
 
 test('managed issue update preserves maintainer notes outside the generated block', () => {
@@ -586,6 +590,25 @@ test('public read-only planning needs no token and writes fail closed without on
   assert.equal(calls.length, 4);
 });
 
+test('GitHub adapter closes an issue only when a lifecycle operation explicitly requests it', async () => {
+  const writes = [];
+  const client = createGitHubIssuesClient({
+    token: 'test-token',
+    owner: 'owner',
+    repo: 'repo',
+    fetchImpl: async (_url, init = {}) => {
+      writes.push(JSON.parse(init.body));
+      return { ok: true, status: 200, json: async () => ({ number: 1 }) };
+    },
+  });
+  await client.update({ issueNumber: 1, title: 'candidate', body: 'evidence', closeIssue: true });
+  await client.update({ issueNumber: 2, title: 'still open', body: 'evidence' });
+  assert.deepEqual(writes, [
+    { title: 'candidate', body: 'evidence', state: 'closed' },
+    { title: 'still open', body: 'evidence' },
+  ]);
+});
+
 test('GitHub adapter honors bounded rate-limit delays on reads', async () => {
   const delays = [];
   let calls = 0;
@@ -862,4 +885,157 @@ test('planner projects lifecycle evidence deterministically and flags manual clo
     /Issue state: closed manually; maintainer triage required\./u
   );
   assert.equal(changed.operations[0].operation, 'create');
+});
+
+test('lifecycle apply closes only an existing issue with a verified close candidate', async () => {
+  const initial = plan().operations[0];
+  const remoteIssue = {
+    number: 71,
+    title: initial.title,
+    body: initial.body,
+    state: 'open',
+    labels: initial.labels.map((name) => ({ name })),
+    milestone: { number: 11, title: 'M11' },
+  };
+  const lifecycleByTask = new Map([
+    [
+      task.id,
+      {
+        workStatus: 'complete',
+        deliveryStage: 'verified-dev',
+        blockers: [],
+        verifiedOnDevSha: 'b'.repeat(40),
+        needsTriage: false,
+        shouldClose: true,
+      },
+    ],
+  ]);
+  const desired = planIssueSync({
+    tasks: [task],
+    issues: [remoteIssue],
+    repositoryId,
+    sourceSha,
+    lifecycleByTask,
+    lifecycleSnapshotGeneratedAt: new Date().toISOString(),
+  });
+  assert.equal(desired.operations[0].operation, 'update');
+  assert.equal(desired.operations[0].closeIssue, true);
+  assert.equal(desired.operations[0].expectedIssueState, 'open');
+
+  const writes = [];
+  const client = {
+    listAll: async () => [remoteIssue],
+    getIssue: async () => remoteIssue,
+    assertWritable() {},
+    ensureMetadata: async () => new Map([['M11', 11]]),
+    update: async (operation) => writes.push(operation),
+  };
+  const result = await applyIssuePlan({
+    plan: desired,
+    client,
+    tasks: [task],
+    repositoryId,
+    sourceSha,
+    lifecycleByTask,
+  });
+  assert.equal(result.length, 1);
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0].closeIssue, true);
+  assert.match(writes[0].body, /Work status: complete/u);
+});
+
+test('lifecycle apply aborts if an issue was manually closed after planning', async () => {
+  const initial = plan().operations[0];
+  const remoteIssue = {
+    number: 72,
+    title: initial.title,
+    body: initial.body,
+    state: 'open',
+    labels: initial.labels.map((name) => ({ name })),
+    milestone: { number: 11, title: 'M11' },
+  };
+  const lifecycleByTask = new Map([
+    [
+      task.id,
+      {
+        workStatus: 'complete',
+        deliveryStage: 'verified-dev',
+        blockers: [],
+        verifiedOnDevSha: 'b'.repeat(40),
+        needsTriage: false,
+        shouldClose: true,
+      },
+    ],
+  ]);
+  const desired = planIssueSync({
+    tasks: [task],
+    issues: [remoteIssue],
+    repositoryId,
+    sourceSha,
+    lifecycleByTask,
+  });
+  const client = {
+    listAll: async () => [remoteIssue],
+    getIssue: async () => ({ ...remoteIssue, state: 'closed' }),
+    assertWritable() {},
+    ensureMetadata: async () => new Map(),
+    update: async () => assert.fail('manual close race must prevent the write'),
+  };
+  await assert.rejects(
+    applyIssuePlan({
+      plan: desired,
+      client,
+      tasks: [task],
+      repositoryId,
+      sourceSha,
+      lifecycleByTask,
+      lifecycleSnapshotGeneratedAt: new Date().toISOString(),
+    }),
+    /managed field after planning/u
+  );
+});
+
+test('lifecycle apply rejects a snapshot that expires before issue writes', async () => {
+  const issue = plan().operations[0];
+  const lifecycleByTask = new Map([
+    [
+      task.id,
+      {
+        workStatus: 'complete',
+        deliveryStage: 'verified-dev',
+        blockers: [],
+        verifiedOnDevSha: 'b'.repeat(40),
+        needsTriage: false,
+        shouldClose: true,
+      },
+    ],
+  ]);
+  const desired = planIssueSync({
+    tasks: [task],
+    issues: [{ number: 73, title: issue.title, body: issue.body, state: 'open' }],
+    repositoryId,
+    sourceSha,
+    lifecycleByTask,
+  });
+  const writes = [];
+  const client = {
+    listAll: async () => [{ number: 73, title: issue.title, body: issue.body, state: 'open' }],
+    getIssue: async () => assert.fail('stale snapshot must fail before issue reads'),
+    assertWritable: () => assert.fail('stale snapshot must fail before enabling writes'),
+    ensureMetadata: async () => new Map(),
+    update: async (operation) => writes.push(operation),
+  };
+  await assert.rejects(
+    applyIssuePlan({
+      plan: desired,
+      client,
+      tasks: [task],
+      repositoryId,
+      sourceSha,
+      lifecycleByTask,
+      lifecycleSnapshotGeneratedAt: new Date(Date.now() - 6 * 60 * 1000).toISOString(),
+    }),
+    /five minutes old/u
+  );
+  assert.equal(writes.length, 0);
 });

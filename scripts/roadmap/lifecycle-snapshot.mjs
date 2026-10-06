@@ -2,6 +2,12 @@ import { evaluateTaskLifecycle } from './lifecycle.mjs';
 
 const maximumSnapshotAgeMs = 5 * 60 * 1000;
 
+export function assertLifecycleSnapshotFresh(generatedAt, now = Date.now()) {
+  const timestamp = Date.parse(generatedAt);
+  if (!Number.isFinite(timestamp) || timestamp > now || now - timestamp > maximumSnapshotAgeMs)
+    throw new Error('Lifecycle snapshot must be no more than five minutes old.');
+}
+
 function isFullSha(value) {
   return typeof value === 'string' && /^[a-f0-9]{40}$/u.test(value);
 }
@@ -35,13 +41,7 @@ export function projectLifecycleSnapshot({
     throw new Error('Lifecycle snapshot repository ID does not match this repository.');
   if (!isFullSha(sourceSha) || snapshot.sourceSha !== sourceSha)
     throw new Error('Lifecycle snapshot source SHA does not match the current plan SHA.');
-  const generatedAt = Date.parse(snapshot.generatedAt);
-  if (
-    !Number.isFinite(generatedAt) ||
-    generatedAt > now ||
-    now - generatedAt > maximumSnapshotAgeMs
-  )
-    throw new Error('Lifecycle snapshot must be no more than five minutes old.');
+  assertLifecycleSnapshotFresh(snapshot.generatedAt, now);
   const branchHeads = snapshot.branchHeads;
   if (!branchHeads || !isFullSha(branchHeads.dev) || !isFullSha(branchHeads.main))
     throw new Error('Lifecycle snapshot must identify full dev and main head SHAs.');
