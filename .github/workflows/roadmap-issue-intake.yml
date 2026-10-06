@@ -19,12 +19,27 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
-      issues: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+      - name: Require the least-privilege GitHub App permission verifier
+        env:
+          APP_CLIENT_ID: ${{ vars.ROADMAP_INTAKE_APP_CLIENT_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.ROADMAP_INTAKE_APP_PRIVATE_KEY }}
+        run: |
+          if [[ -z "$APP_CLIENT_ID" || -z "$APP_PRIVATE_KEY" ]]; then
+            echo 'Configure ROADMAP_INTAKE_APP_CLIENT_ID and ROADMAP_INTAKE_APP_PRIVATE_KEY for Metadata: read permission verification.' >&2
+            exit 2
+          fi
+      - name: Mint repository-scoped metadata-read token
+        id: intake-token
+        uses: actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42 # v2.3.1
+        with:
+          client-id: ${{ vars.ROADMAP_INTAKE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.ROADMAP_INTAKE_APP_PRIVATE_KEY }}
+          permission-metadata: read
       - name: Verify actor and report a read-only proposal
         run: node scripts/roadmap/run-issue-intake.mjs >> "$GITHUB_STEP_SUMMARY"
         env:
@@ -32,4 +47,4 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_REPOSITORY_ID: ${{ github.repository_id }}
           GITHUB_SHA: ${{ github.sha }}
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ steps.intake-token.outputs.token }}
