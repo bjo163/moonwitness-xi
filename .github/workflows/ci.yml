@@ -156,6 +156,7 @@ jobs:
     env:
       POSTGRES_TEST_URL: postgresql://postgres:postgres@127.0.0.1:5432/moonwitness_test
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/moonwitness_test
+      JWT_SECRET: ci-only-secret-that-is-at-least-32-characters-long
       REQUIRE_POSTGRES_TESTS: 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
