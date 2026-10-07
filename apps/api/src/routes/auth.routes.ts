@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { AuthError, ConflictError, type AuthService, type AuthSession } from '@moonwitness/auth';
+import type { Partner, User } from '@moonwitness/orm-base';
 
 export interface AuthRoutesOptions {
   authService: AuthService;
@@ -201,18 +202,8 @@ export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (fastify,
     '/auth/me',
     { schema: { tags: ['Auth'], summary: 'Return the authenticated user' } },
     async (req, reply) => {
-      const UserModel = req.env.get('base.user');
-      const user = req.auth
-        ? ((await UserModel.query().findById(req.auth.userId)) as
-            | (InstanceType<typeof UserModel> & {
-                login: string;
-                role: string;
-                partner_id?: number;
-                language_id?: number | null;
-                timezone?: string;
-              })
-            | undefined)
-        : undefined;
+      const UserModel = req.env.get<typeof User>('base.user');
+      const user = req.auth ? await UserModel.query().findById(req.auth.userId) : undefined;
       if (!user || user.active === false) {
         return reply.code(401).send({ success: false, error: 'Authentication required' });
       }
@@ -257,7 +248,7 @@ export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (fastify,
         return reply.code(400).send({ success: false, error: 'Invalid timezone' });
       }
 
-      const UserModel = req.env.get('base.user');
+      const UserModel = req.env.get<typeof User>('base.user');
       if (req.body.language_id !== null) {
         const LanguageModel = req.env.get('base.language');
         const language = await LanguageModel.query().findById(req.body.language_id);
@@ -267,12 +258,10 @@ export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (fastify,
       if (!user || user.active === false) {
         return reply.code(401).send({ success: false, error: 'Authentication required' });
       }
-      await UserModel.query()
-        .findById(req.auth.userId)
-        .patch({
-          language_id: req.body.language_id,
-          timezone: req.body.timezone,
-        } as never);
+      await UserModel.query().findById(req.auth.userId).patch({
+        language_id: req.body.language_id,
+        timezone: req.body.timezone,
+      });
       return { success: true };
     }
   );
@@ -312,19 +301,16 @@ export const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (fastify,
     async (req, reply) => {
       if (!req.auth)
         return reply.code(401).send({ success: false, error: 'Authentication required' });
-      const UserModel = req.env.get('base.user');
-      const user = (await UserModel.query().findById(req.auth.userId)) as
-        (InstanceType<typeof UserModel> & { partner_id?: number; active?: boolean }) | undefined;
+      const UserModel = req.env.get<typeof User>('base.user');
+      const user = await UserModel.query().findById(req.auth.userId);
       if (!user || user.active === false || !user.partner_id) {
         return reply.code(401).send({ success: false, error: 'Profile is unavailable' });
       }
-      const PartnerModel = req.env.get('base.partner');
+      const PartnerModel = req.env.get<typeof Partner>('base.partner');
       const partner = await PartnerModel.query().findById(user.partner_id);
       if (!partner)
         return reply.code(404).send({ success: false, error: 'Profile is unavailable' });
-      await PartnerModel.query()
-        .findById(user.partner_id)
-        .patch(req.body as never);
+      await PartnerModel.query().findById(user.partner_id).patch(req.body);
       return { success: true };
     }
   );

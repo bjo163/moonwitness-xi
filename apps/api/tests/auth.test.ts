@@ -294,6 +294,7 @@ describe('authentication and authorization', () => {
     });
 
     it('updates only the contact linked to the authenticated user profile', async () => {
+      const adminBefore = await User.query().findById(admin.user.id).throwIfNotFound();
       const response = await as(alice.access_token, {
         method: 'PATCH',
         url: '/auth/me/profile',
@@ -301,7 +302,12 @@ describe('authentication and authorization', () => {
           name: 'Alice Regular',
           email: 'alice.updated@example.com',
           phone: '+62-555-0199',
+          id: admin.user.id,
+          login: admin.user.login,
           role: 'superadmin',
+          partner_id: admin.user.partner_id,
+          active: false,
+          company_id: 999999,
         },
       });
       expect(response.statusCode).toBe(200);
@@ -312,7 +318,20 @@ describe('authentication and authorization', () => {
         email: 'alice.updated@example.com',
         phone: '+62-555-0199',
       });
-      expect(aliceRecord.role).toBe('user');
+      expect(aliceRecord).toMatchObject({
+        id: alice.user.id,
+        login: 'alice',
+        role: 'user',
+        partner_id: alicePartner.id,
+        active: true,
+      });
+      await expect(User.query().findById(admin.user.id)).resolves.toMatchObject({
+        id: adminBefore.id,
+        login: adminBefore.login,
+        role: adminBefore.role,
+        partner_id: adminBefore.partner_id,
+        active: adminBefore.active,
+      });
     });
 
     it('changes password only with the current password and revokes refresh sessions', async () => {
