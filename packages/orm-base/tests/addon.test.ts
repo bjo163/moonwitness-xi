@@ -590,6 +590,36 @@ describe('declarative addons', () => {
     expect(updated.write_uid).toBe(42);
   });
 
+  it('keeps audit records append-only through direct ORM updates and deletes', async () => {
+    await installAddons(db, [manifest]);
+    const audit = new Environment({ userId: 42 }).get<typeof AuditLog>(AuditLog.modelName);
+    const event = await audit.query().insertAndFetch({
+      model: 'base.partner',
+      record_id: 1,
+      operation: 'create',
+      changes: '{"name":"Original"}',
+    });
+
+    await expect(
+      audit.query().findById(event.id).patch({ changes: '{"name":"Tampered"}' })
+    ).rejects.toThrow('Audit log records are append-only');
+    await expect(
+      audit.query().patch({ changes: '{"name":"Tampered"}' }).where('id', event.id)
+    ).rejects.toThrow('Audit log records are append-only');
+    await expect(audit.query().findById(event.id).delete()).rejects.toThrow(
+      'Audit log records are append-only'
+    );
+    await expect(audit.query().delete().where('id', event.id)).rejects.toThrow(
+      'Audit log records are append-only'
+    );
+    await expect(audit.query().findById(event.id)).resolves.toMatchObject({
+      model: 'base.partner',
+      record_id: 1,
+      operation: 'create',
+      changes: '{"name":"Original"}',
+    });
+  });
+
   it('rolls back schema and data if an external reference is missing', async () => {
     const broken = defineAddon({
       ...manifest,
