@@ -6,6 +6,18 @@ const verificationPhases = new Set([
   'validate public stylesheet exports',
 ]);
 
+export function extractPackageVerificationErrorCode(error) {
+  if (typeof error !== 'object' || error === null) return undefined;
+
+  const stderr = 'stderr' in error ? error.stderr : undefined;
+  if (typeof stderr === 'string') {
+    const packageManagerCode = stderr.match(/\bERR_PNPM_[A-Z0-9_]+\b/u)?.[0];
+    if (packageManagerCode) return packageManagerCode;
+  }
+
+  return 'code' in error ? error.code : undefined;
+}
+
 export function renderPackageVerificationAnnotation(phase, errorCode) {
   if (!verificationPhases.has(phase)) {
     throw new Error('Unknown UI package verification phase.');

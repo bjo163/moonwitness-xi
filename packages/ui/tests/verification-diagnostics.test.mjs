@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { renderPackageVerificationAnnotation } from '../scripts/verification-diagnostics.mjs';
+import {
+  extractPackageVerificationErrorCode,
+  renderPackageVerificationAnnotation,
+} from '../scripts/verification-diagnostics.mjs';
 
 test('emits a safe annotation for a known verification phase', () => {
   assert.equal(
@@ -18,4 +21,16 @@ test('does not include unsafe error text or allow annotation injection', () => {
     '::error title=UI package verification failed::install isolated consumer dependencies\n'
   );
   assert.throws(() => renderPackageVerificationAnnotation('untrusted phase', 1), /Unknown/u);
+});
+
+test('extracts only a pnpm error identifier from package-manager stderr', () => {
+  assert.equal(
+    extractPackageVerificationErrorCode({
+      code: 1,
+      stderr: 'ERR_PNPM_NO_OFFLINE_META: authorization=secret-value',
+    }),
+    'ERR_PNPM_NO_OFFLINE_META'
+  );
+  assert.equal(extractPackageVerificationErrorCode({ code: 1, stderr: 'other failure detail' }), 1);
+  assert.equal(extractPackageVerificationErrorCode('untrusted error'), undefined);
 });
