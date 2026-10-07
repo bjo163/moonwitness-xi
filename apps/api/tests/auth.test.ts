@@ -862,6 +862,40 @@ describe('authentication and authorization', () => {
           })
         ).statusCode
       ).toBe(403);
+      expect(
+        (
+          await as(admin.access_token, {
+            method: 'POST',
+            url: '/api/base.audit_log',
+            payload: { model: 'base.partner', record_id: partnerId, operation: 'create' },
+          })
+        ).statusCode
+      ).toBe(403);
+      expect(
+        (
+          await as(admin.access_token, {
+            method: 'PATCH',
+            url: `/api/base.audit_log/${event.id}`,
+            payload: { changes: '{"forged":true}' },
+          })
+        ).statusCode
+      ).toBe(403);
+
+      for (const [method, args] of [
+        ['create', [[{ model: 'base.partner', record_id: partnerId, operation: 'create' }]]],
+        ['write', [[event.id], { changes: '{"forged":true}' }]],
+        ['unlink', [[event.id]]],
+      ] as const) {
+        const rpcMutation = await rpc(admin.access_token, ['base.audit_log', method, args]);
+        expect(rpcMutation.statusCode).toBe(403);
+        expect(rpcMutation.json<{ error: { code: number } }>().error.code).toBe(-32003);
+      }
+      await expect(AuditLog.query().findById(event.id)).resolves.toMatchObject({
+        id: event.id,
+        model: 'base.user',
+        record_id: userId,
+        operation: 'create',
+      });
 
       const rpcWrite = await rpc(admin.access_token, [
         'base.partner',
