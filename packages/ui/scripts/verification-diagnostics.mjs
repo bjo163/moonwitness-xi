@@ -1,6 +1,7 @@
 const verificationPhases = new Set([
   'create package archive',
   'validate package archive',
+  'read locked consumer dependency versions',
   'install isolated consumer dependencies',
   'run consumer import smoke test',
   'validate public stylesheet exports',

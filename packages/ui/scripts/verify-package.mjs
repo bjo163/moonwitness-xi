@@ -36,6 +36,25 @@ try {
     join(consumerRoot, 'package.json'),
     JSON.stringify({ private: true, type: 'module' })
   );
+  verificationPhase = 'read locked consumer dependency versions';
+  const consumerDependencyNames = ['react', 'react-dom', 'radix-ui', 'cmdk'];
+  const consumerDependencySpecs = await Promise.all(
+    consumerDependencyNames.map(async (dependencyName) => {
+      const dependencyPackagePath = join(
+        packageRoot,
+        'node_modules',
+        dependencyName,
+        'package.json'
+      );
+      const dependencyPackage = JSON.parse(await readFile(dependencyPackagePath, 'utf8'));
+      assert.match(
+        dependencyPackage.version,
+        /^\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/u,
+        `Expected an exact installed version for ${dependencyName}`
+      );
+      return `${dependencyName}@${dependencyPackage.version}`;
+    })
+  );
   verificationPhase = 'install isolated consumer dependencies';
   await execFileAsync(
     packageManager,
@@ -46,9 +65,7 @@ try {
       '--ignore-workspace',
       '--save-exact',
       `file:${join(tempRoot, archiveName)}`,
-      'react@19',
-      'radix-ui@1.6.7',
-      'cmdk@1.1.1',
+      ...consumerDependencySpecs,
     ],
     { cwd: consumerRoot, windowsHide: true }
   );
