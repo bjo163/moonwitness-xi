@@ -1,4 +1,4 @@
-# Feature coverage at `6900c93` (hosted execution refreshed 2026-10-07)
+# Feature coverage at `8a47636` (hosted execution refreshed 2026-10-07)
 
 This report expands the initial [feature-to-test matrix](feature-matrix.md) with an explicit status, priority, accountable role, executed assertion references, and remaining gap for every inventory row. It is a coverage inventory, not a claim that every feature is release-ready.
 
@@ -12,7 +12,7 @@ This report expands the initial [feature-to-test matrix](feature-matrix.md) with
 
 ## Snapshot and method
 
-- Coverage inventory baseline: `53fade13722bbde4c95d15b62033d050fada60e0`; latest local follow-up source: `6900c93df360190f0424c4f0a8e70a352398948c` (`dev`). Follow-ups cover audit ORM/API append-only boundaries, PostgreSQL transaction-to-outbox delivery, and PostgreSQL expired-job-lease recovery. Their PostgreSQL integration tests are authored and compile, but skip locally without `POSTGRES_TEST_URL`; no hosted result for `6900c93` is claimed.
+- Coverage inventory baseline: `53fade13722bbde4c95d15b62033d050fada60e0`; latest local follow-up source: `8a4763691c8cc6965c92338ea1d6e1b100078c86` (`dev`). Follow-ups cover audit ORM/API append-only boundaries, PostgreSQL transaction-to-outbox delivery, expired-job-lease recovery, and idempotent worker process shutdown. Lifecycle child-process tests passed 4/4 locally; PostgreSQL integration tests are authored and compile, but skip locally without `POSTGRES_TEST_URL`. No hosted result for `8a47636` is claimed.
 - Repository policy identifies one maintainer; the owner column assigns that maintainer an accountable functional area, not a second person or an unverified GitHub team.
 - Latest local `pnpm test:unit:ci` passed on `53fade1`: API 103/103, all package/UI/assets suites, and branch-coverage thresholds for 10 critical files. ORM domain parsing has 7 tests, generic API routes 13, and auth API 32; coverage includes invalid REST/RPC domains, unknown model fields, rate-limit route/IP boundaries, and access-token expiry at and beyond the boundary. This command does not run PostgreSQL integration or Playwright E2E.
 - Latest `pnpm typecheck`, `pnpm lint`, and `pnpm format:check` passed on `53fade1`. `pnpm docs:check`, roadmap automation, and architecture checks passed on its code-equivalent predecessor after refreshing generated documentation and diagrams; docs validation checked 213 Markdown files and 19 navigation targets, and roadmap automation validated all 148 task records.
