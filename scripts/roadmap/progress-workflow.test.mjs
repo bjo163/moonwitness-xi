@@ -26,11 +26,11 @@ test('progress report workflow reads dev and publishes only short-lived Markdown
   assert.doesNotMatch(workflow, /^\s+(?:issues|pull-requests|contents):\s+write\s*$/mu);
   assert.match(
     workflow,
-    /name: Generate Markdown progress report\n\s+run: pnpm roadmap:progress -- --output dist\/roadmap-progress\/roadmap-progress\.md/u
+    /name: Generate Markdown progress report\n\s+run: node scripts\/roadmap\/progress-dashboard\.mjs --output dist\/roadmap-progress\/roadmap-progress\.md/u
   );
   assert.match(
     workflow,
-    /name: Generate JSON progress report\n\s+run: pnpm roadmap:progress -- --format json --output dist\/roadmap-progress\/roadmap-progress\.json/u
+    /name: Generate JSON progress report\n\s+run: node scripts\/roadmap\/progress-dashboard\.mjs --format json --output dist\/roadmap-progress\/roadmap-progress\.json/u
   );
   assert.match(workflow, /if-no-files-found: error/u);
   assert.match(workflow, /retention-days: 7/u);
