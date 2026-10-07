@@ -15,12 +15,15 @@ describe('graceful process shutdown', () => {
     const helperUrl = new URL('../src/lifecycle/process-shutdown.ts', import.meta.url).href;
     const program = `
       const { createProcessShutdownController } = await import(${JSON.stringify(helperUrl)});
-      const shutdown = createProcessShutdownController();
+      let stopCount = 0;
+      const shutdown = createProcessShutdownController(() => { stopCount += 1; });
       process.on('message', () => process.emit('SIGTERM'));
       console.log('worker-started');
       await new Promise((resolve) => shutdown.signal.addEventListener('abort', resolve, { once: true }));
       console.log('drain-started');
+      process.emit('SIGINT');
       await new Promise((resolve) => setTimeout(resolve, 80));
+      if (stopCount !== 1) throw new Error('termination callback ran more than once');
       console.log('drain-complete');
       shutdown.dispose();
       if (process.connected) process.disconnect();
