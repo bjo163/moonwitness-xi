@@ -28,7 +28,9 @@ import {
   JobRun,
   enqueueJob,
   jobsManifest,
+  dispatchOneOutboxEvent,
   registerJobHandler,
+  registerOutboxConsumer,
   runOneJob,
 } from '@moonwitness/jobs';
 import { manifest as baseManifest } from '@moonwitness/orm-base';
@@ -367,6 +369,53 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     expect(duplicateRecord.statusCode).toBe(409);
     expect(duplicateRecord.payload).not.toContain('postgres-unique-probe@example.test');
     expect(duplicateRecord.payload).not.toContain('23505');
+
+    const deliveredEvents: Array<{ eventId: number; payload: unknown }> = [];
+    const unregisterConsumer = registerOutboxConsumer(
+      'record.created',
+      async (payload, eventId) => {
+        deliveredEvents.push({ eventId, payload });
+      }
+    );
+    try {
+      const outboxProbe = await app.inject({
+        method: 'POST',
+        url: '/api/base.partner',
+        headers: authorization,
+        payload: { name: 'PostgreSQL transaction outbox probe' },
+      });
+      expect(outboxProbe.statusCode).toBe(201);
+      const partnerId = outboxProbe.json<{ data: { id: number } }>().data.id;
+      const pendingEvent = await OutboxEvent.query()
+        .where({
+          aggregate_model: 'base.partner',
+          aggregate_id: partnerId,
+          event_type: 'record.created',
+        })
+        .first()
+        .throwIfNotFound();
+      expect(JSON.parse(pendingEvent.payload)).toMatchObject({
+        model: 'base.partner',
+        id: partnerId,
+        operation: 'created',
+        record: { id: partnerId, name: 'PostgreSQL transaction outbox probe' },
+      });
+
+      expect(await dispatchOneOutboxEvent('postgres-outbox-integration')).toBe(true);
+      expect(deliveredEvents).toEqual([
+        {
+          eventId: pendingEvent.id,
+          payload: expect.objectContaining({ model: 'base.partner', id: partnerId }),
+        },
+      ]);
+      await expect(OutboxEvent.query().findById(pendingEvent.id)).resolves.toMatchObject({
+        status: 'published',
+        attempts: 1,
+        fencing_token: 1,
+      });
+    } finally {
+      unregisterConsumer();
+    }
 
     const concurrentRecord = await app.inject({
       method: 'POST',
