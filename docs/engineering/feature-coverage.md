@@ -1,10 +1,10 @@
-# Feature coverage at `53fade1` (hosted execution refreshed 2026-10-07)
+# Feature coverage at `6900c93` (hosted execution refreshed 2026-10-07)
 
 This report expands the initial [feature-to-test matrix](feature-matrix.md) with an explicit status, priority, accountable role, executed assertion references, and remaining gap for every inventory row. It is a coverage inventory, not a claim that every feature is release-ready.
 
 ## Latest exact-head execution
 
-- The per-feature table below remains the reviewed assertion/gap inventory from `53fade1`; its source-level notes are historical and are not silently relabeled as current.
+- The per-feature table below retains its reviewed assertion inventory from `53fade1`, with follow-up coverage rows updated through `6900c93`; local authored tests are not reported as hosted execution.
 - Current hosted execution: PR CI [37505319936](https://github.com/bjo163/moonwitness-xi/actions/runs/37505319936) completed on exact source SHA `e59e6280c1961ab111e73d2298b7b8c918d750eb`. Plan, quality/typecheck, automation, PostgreSQL integration and restore, browser E2E plus docs portal, containers/CRITICAL scans, and UI catalog all passed. JUnit, Board browser, and UI browser artifacts are attached to that run. This supplies current execution evidence for the corresponding enabled suites; it does not by itself prove each listed feature-specific acceptance criterion or release readiness.
 - Push/PR Gitleaks and CodeQL passed on the same SHA ([Gitleaks](https://github.com/bjo163/moonwitness-xi/actions/runs/37505319898), [CodeQL](https://github.com/bjo163/moonwitness-xi/actions/runs/37505319902)). The PR `ci-gate` failed only its fresh CODEOWNER approval check for the sensitive promotion. No merge or release occurred.
 - `e59e628` is a documentation/evidence descendant of implementation SHA `e87a656`; the current workflow ran a full promotion suite. The PR run proves technical CI on that exact head, not a promoted `main` SHA.
@@ -12,7 +12,7 @@ This report expands the initial [feature-to-test matrix](feature-matrix.md) with
 
 ## Snapshot and method
 
-- Audited source: `53fade13722bbde4c95d15b62033d050fada60e0` (`dev`). Follow-ups verify login throttle boundaries, validate ORM search domains at REST and JSON-RPC boundaries, and test access-token expiry boundaries; prior inventory evidence below is retained where no new run exists.
+- Coverage inventory baseline: `53fade13722bbde4c95d15b62033d050fada60e0`; latest local follow-up source: `6900c93df360190f0424c4f0a8e70a352398948c` (`dev`). Follow-ups cover audit ORM/API append-only boundaries, PostgreSQL transaction-to-outbox delivery, and PostgreSQL expired-job-lease recovery. Their PostgreSQL integration tests are authored and compile, but skip locally without `POSTGRES_TEST_URL`; no hosted result for `6900c93` is claimed.
 - Repository policy identifies one maintainer; the owner column assigns that maintainer an accountable functional area, not a second person or an unverified GitHub team.
 - Latest local `pnpm test:unit:ci` passed on `53fade1`: API 103/103, all package/UI/assets suites, and branch-coverage thresholds for 10 critical files. ORM domain parsing has 7 tests, generic API routes 13, and auth API 32; coverage includes invalid REST/RPC domains, unknown model fields, rate-limit route/IP boundaries, and access-token expiry at and beyond the boundary. This command does not run PostgreSQL integration or Playwright E2E.
 - Latest `pnpm typecheck`, `pnpm lint`, and `pnpm format:check` passed on `53fade1`. `pnpm docs:check`, roadmap automation, and architecture checks passed on its code-equivalent predecessor after refreshing generated documentation and diagrams; docs validation checked 213 Markdown files and 19 navigation targets, and roadmap automation validated all 148 task records.
