@@ -5,20 +5,17 @@ import { jobsManifest, runSchedulerLoop } from '@moonwitness/jobs';
 import { readWorkerHealthPort, startWorkerHealthServer } from './worker-health.js';
 import { manifest as workflowAddon } from '@moonwitness/orm-workflow';
 import { manifest as notificationAddon } from '@moonwitness/orm-notification';
+import { createProcessShutdownController } from '../lifecycle/process-shutdown.js';
 
 const db = createDatabase();
-const stop = new AbortController();
 let workerHealth: Awaited<ReturnType<typeof startWorkerHealthServer>> = null;
-const stopScheduler = () => {
+const shutdown = createProcessShutdownController(() => {
   workerHealth?.setReady(false);
-  stop.abort();
-};
-process.once('SIGINT', stopScheduler);
-process.once('SIGTERM', stopScheduler);
+});
 
 try {
   await installAddons(db, [baseManifest, jobsManifest, notificationAddon, workflowAddon]);
-  if (!stop.signal.aborted) {
+  if (!shutdown.signal.aborted) {
     workerHealth = await startWorkerHealthServer({
       db,
       host: process.env.WORKER_HEALTH_HOST || '127.0.0.1',
@@ -29,8 +26,9 @@ try {
       ),
     });
   }
-  await runSchedulerLoop(stop.signal);
+  await runSchedulerLoop(shutdown.signal);
 } finally {
+  shutdown.dispose();
   await workerHealth?.close();
   await db.destroy();
 }

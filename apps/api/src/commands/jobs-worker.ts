@@ -11,22 +11,19 @@ import {
   registerWorkflowExpiryHandler,
 } from '@moonwitness/orm-workflow';
 import { manifest as notificationAddon } from '@moonwitness/orm-notification';
+import { createProcessShutdownController } from '../lifecycle/process-shutdown.js';
 
 const db = createDatabase();
-const stop = new AbortController();
 let workerHealth: Awaited<ReturnType<typeof startWorkerHealthServer>> = null;
-const stopWorker = () => {
+const shutdown = createProcessShutdownController(() => {
   workerHealth?.setReady(false);
-  stop.abort();
-};
-process.once('SIGINT', stopWorker);
-process.once('SIGTERM', stopWorker);
+});
 
 try {
   await installAddons(db, [baseManifest, jobsManifest, notificationAddon, workflowAddon]);
   const handlerModule = process.env.JOB_HANDLERS_MODULE;
   if (handlerModule) await import(pathToFileURL(path.resolve(handlerModule)).href);
-  if (!stop.signal.aborted) {
+  if (!shutdown.signal.aborted) {
     workerHealth = await startWorkerHealthServer({
       db,
       host: process.env.WORKER_HEALTH_HOST || '127.0.0.1',
@@ -46,12 +43,13 @@ try {
   });
   const unregisterWorkflow = registerWorkflowExpiryHandler();
   try {
-    await runWorkerLoop({ workerId: `moonwitness-${randomUUID()}` }, stop.signal);
+    await runWorkerLoop({ workerId: `moonwitness-${randomUUID()}` }, shutdown.signal);
   } finally {
     unregisterWorkflow();
     unregisterExample();
   }
 } finally {
+  shutdown.dispose();
   await workerHealth?.close();
   await db.destroy();
 }

@@ -15,18 +15,15 @@ import {
   registerWebhookOutboxConsumer,
 } from '@moonwitness/orm-integration';
 import { manifest as requestAddon } from '@moonwitness/orm-request';
+import { createProcessShutdownController } from '../lifecycle/process-shutdown.js';
 
 const db = createDatabase();
-const stop = new AbortController();
 let workerHealth: Awaited<ReturnType<typeof startWorkerHealthServer>> = null;
 let unregisterNotificationConsumer = () => {};
 let unregisterWebhookConsumer = () => {};
-const stopWorker = () => {
+const shutdown = createProcessShutdownController(() => {
   workerHealth?.setReady(false);
-  stop.abort();
-};
-process.once('SIGINT', stopWorker);
-process.once('SIGTERM', stopWorker);
+});
 
 try {
   await installAddons(db, [
@@ -44,7 +41,7 @@ try {
   });
   const consumerModule = process.env.OUTBOX_HANDLERS_MODULE;
   if (consumerModule) await import(pathToFileURL(path.resolve(consumerModule)).href);
-  if (!stop.signal.aborted) {
+  if (!shutdown.signal.aborted) {
     workerHealth = await startWorkerHealthServer({
       db,
       host: process.env.WORKER_HEALTH_HOST || '127.0.0.1',
@@ -55,8 +52,9 @@ try {
       ),
     });
   }
-  await runOutboxLoop(`moonwitness-outbox-${randomUUID()}`, stop.signal);
+  await runOutboxLoop(`moonwitness-outbox-${randomUUID()}`, shutdown.signal);
 } finally {
+  shutdown.dispose();
   unregisterNotificationConsumer();
   unregisterWebhookConsumer();
   await workerHealth?.close();
