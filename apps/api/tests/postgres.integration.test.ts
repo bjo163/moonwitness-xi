@@ -26,6 +26,7 @@ import { createAuthService, manifest as authManifest } from '@moonwitness/auth';
 import {
   Job,
   JobRun,
+  OutboxEvent,
   enqueueJob,
   jobsManifest,
   dispatchOneOutboxEvent,
@@ -661,6 +662,62 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       expect(await JobRun.query().where({ job_id: jobId })).toHaveLength(1);
     } finally {
       releaseHandler?.();
+      unregister();
+    }
+  }, 30000);
+
+  it('recovers an expired PostgreSQL worker lease with a new fence and preserved attempt history', async () => {
+    const unregister = registerJobHandler({
+      name: 'test.postgres-reclaim',
+      version: 1,
+      parse(payload: unknown): { run: true } {
+        if (typeof payload !== 'object' || payload === null || !('run' in payload))
+          throw new Error('invalid payload');
+        return { run: true };
+      },
+      async run() {
+        return { recovered: true };
+      },
+    });
+    try {
+      const expired = await Job.query().insertAndFetch({
+        handler: 'test.postgres-reclaim',
+        handler_version: 1,
+        payload: '{"run":true}',
+        status: 'running',
+        attempts: 1,
+        max_attempts: 3,
+        fencing_token: 1,
+        lease_owner: 'crashed-postgres-worker',
+        lease_until: new Date(0).toISOString(),
+        available_at: new Date(0).toISOString(),
+      });
+      const previousRun = await JobRun.query().insertAndFetch({
+        job_id: expired.id,
+        attempt: 1,
+        worker_id: 'crashed-postgres-worker',
+        status: 'running',
+        started_at: new Date(0).toISOString(),
+      });
+
+      expect(await runOneJob({ workerId: 'postgres-recovery-worker' })).toBe(true);
+      await expect(Job.query().findById(expired.id)).resolves.toMatchObject({
+        status: 'succeeded',
+        attempts: 2,
+        fencing_token: 2,
+        lease_owner: null,
+      });
+      await expect(JobRun.query().findById(previousRun.id)).resolves.toMatchObject({
+        status: 'retrying',
+        error_code: 'LEASE_EXPIRED',
+      });
+      const history = await JobRun.query().where({ job_id: expired.id }).orderBy('attempt');
+      expect(history).toHaveLength(2);
+      expect(history.map(({ worker_id, status }) => ({ worker_id, status }))).toEqual([
+        { worker_id: 'crashed-postgres-worker', status: 'retrying' },
+        { worker_id: 'postgres-recovery-worker', status: 'succeeded' },
+      ]);
+    } finally {
       unregister();
     }
   }, 30000);
