@@ -860,6 +860,57 @@ describe('authentication and authorization', () => {
             `granted permission metadata for ${model}`
           ).toEqual(expected);
         }
+
+        // Exercise every allowed HTTP authorization branch without changing data:
+        // managed identity fields fail create validation, while absent IDs stop
+        // write/unlink/action handlers before any record can be mutated.
+        const allowedOperations: {
+          operation: string;
+          request: InjectOptions;
+          statuses: number[];
+        }[] = [];
+        if (expected.create) {
+          allowedOperations.push({
+            operation: 'create',
+            request: { method: 'POST', url: `/api/${model}`, payload: { id: 1 } },
+            statuses: [400],
+          });
+        }
+        if (expected.write) {
+          allowedOperations.push({
+            operation: 'write',
+            request: {
+              method: 'PATCH',
+              url: `/api/${model}/2147483647`,
+              payload: {},
+            },
+            statuses: [400, 404],
+          });
+        }
+        if (expected.unlink) {
+          allowedOperations.push({
+            operation: 'unlink',
+            request: { method: 'DELETE', url: `/api/${model}/2147483647` },
+            statuses: [404],
+          });
+        }
+        if (canAccess('user', model, 'action', grants)) {
+          allowedOperations.push({
+            operation: 'action',
+            request: {
+              method: 'POST',
+              url: `/api/${model}/2147483647/action/action_archive`,
+            },
+            statuses: [404],
+          });
+        }
+        for (const { operation, request, statuses } of allowedOperations) {
+          const response = await as(alice.access_token, request);
+          expect(
+            statuses,
+            `granted ${operation} authorization for ${model} should reach its safe validation boundary (got ${response.statusCode})`
+          ).toContain(response.statusCode);
+        }
       }
 
       await GroupMembership.query().findById(membership.id).patch({ active: false });
