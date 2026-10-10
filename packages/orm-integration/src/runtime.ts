@@ -9,6 +9,7 @@ import { isPublicWebhookAddress, validateWebhookUrl } from './webhook-security.j
 
 const EVENT_TYPE = 'integration.webhook.dispatch';
 const MAX_PAYLOAD_BYTES = 256 * 1024;
+const DNS_LOOKUP_TIMEOUT_MS = 5_000;
 
 export interface WebhookEventRequest {
   readonly companyId: number;
@@ -142,14 +143,30 @@ export async function enqueueWebhookEvent(
 
 async function resolvePublicTarget(
   url: URL,
+  signal: AbortSignal,
   resolveAddresses: (hostname: string) => Promise<LookupAddress[]> = (hostname) =>
     lookup(hostname, { all: true, verbatim: true })
 ): Promise<string> {
   let addresses: LookupAddress[];
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  let abort: (() => void) | undefined;
   try {
-    addresses = await resolveAddresses(url.hostname);
-  } catch {
-    throw new Error('WEBHOOK_DNS_FAILED');
+    if (signal.aborted) throw new Error('WEBHOOK_ABORTED');
+    addresses = await Promise.race([
+      resolveAddresses(url.hostname),
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => reject(new Error('WEBHOOK_DNS_TIMEOUT')), DNS_LOOKUP_TIMEOUT_MS);
+        abort = () => reject(new Error('WEBHOOK_ABORTED'));
+        signal.addEventListener('abort', abort, { once: true });
+      }),
+    ]);
+  } catch (error) {
+    if (signal.aborted) throw new Error('WEBHOOK_ABORTED', { cause: error });
+    if (error instanceof Error && error.message === 'WEBHOOK_DNS_TIMEOUT') throw error;
+    throw new Error('WEBHOOK_DNS_FAILED', { cause: error });
+  } finally {
+    if (timeout) clearTimeout(timeout);
+    if (abort) signal.removeEventListener('abort', abort);
   }
   if (addresses.length === 0 || addresses.some(({ address }) => !isPublicWebhookAddress(address))) {
     throw new PermanentJobError(
@@ -188,7 +205,7 @@ async function deliverEndpoint(
   try {
     const url = validateWebhookUrl(endpoint.url);
     const [target, secret] = await Promise.all([
-      resolvePublicTarget(url, adapters.resolveAddresses),
+      resolvePublicTarget(url, signal, adapters.resolveAddresses),
       resolveSecret(endpoint.secret_ref, event.companyId),
     ]);
     if (!secret || secret.length < 32 || secret.length > 4096) {

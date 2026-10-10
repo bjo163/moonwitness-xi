@@ -317,6 +317,31 @@ describe('webhook outbox delivery', () => {
     }
   });
 
+  it('bounds a stalled DNS lookup and leaves the delivery retryable', async () => {
+    await addEndpoint(companyId, 'DNS_TIMEOUT');
+    const eventId = await enqueue(companyId);
+    let sends = 0;
+    const unregister = registerWebhookOutboxConsumer(async () => 's'.repeat(48), {
+      resolveAddresses: async () => new Promise<never>(() => {}),
+      send: async () => {
+        sends += 1;
+        return 204;
+      },
+    });
+
+    try {
+      expect(await dispatchOneOutboxEvent('webhook-dns-timeout-worker')).toBe(true);
+      expect(sends).toBe(0);
+      expect(await WebhookDelivery.query().findOne({ outbox_event_id: eventId })).toMatchObject({
+        status: 'retrying',
+        attempts: 1,
+        last_error_code: 'WEBHOOK_DNS_TIMEOUT',
+      });
+    } finally {
+      unregister();
+    }
+  }, 10_000);
+
   it.skipIf(!hasOpenSsl && !hasPowerShellCertificates)(
     'delivers a signed retry through a real local HTTPS receiver',
     async () => {
