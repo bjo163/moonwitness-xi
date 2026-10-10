@@ -738,10 +738,18 @@ describe('authentication and authorization', () => {
                 ({ group_id }) => group_id
               )
             : [];
-        const grants =
+        const activeGroups =
           groupIds.length === 0
             ? []
-            : await ModelAccess.query().whereIn('group_id', groupIds).where({ active: true });
+            : await AccessGroup.query()
+                .whereIn('id', groupIds)
+                .where({ active: true })
+                .select('id');
+        const activeGroupIds = activeGroups.map(({ id }) => id);
+        const grants =
+          activeGroupIds.length === 0
+            ? []
+            : await ModelAccess.query().whereIn('group_id', activeGroupIds).where({ active: true });
         const listed = await as(token, { method: 'GET', url: '/api/models' });
         expect(listed.statusCode).toBe(200);
         const visible = new Set(
