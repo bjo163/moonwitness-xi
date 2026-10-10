@@ -1037,6 +1037,55 @@ describe('authentication and authorization', () => {
       expect(protectedGrant.statusCode).toBe(400);
     });
 
+    it('persists REST mutations for both administrative roles', async () => {
+      for (const { role, token } of [
+        { role: 'superadmin', token: admin.access_token },
+        { role: 'system', token: system.access_token },
+      ] as const) {
+        const created = await as(token, {
+          method: 'POST',
+          url: '/api/base.tag',
+          payload: { name: `${role} created tag` },
+        });
+        expect(created.statusCode, `${role} create`).toBe(201);
+        const tagId = created.json<{ data: { id: number } }>().data.id;
+        expect(await Tag.query().findById(tagId)).toMatchObject({
+          name: `${role} created tag`,
+        });
+
+        const updated = await as(token, {
+          method: 'PATCH',
+          url: `/api/base.tag/${tagId}`,
+          payload: { name: `${role} updated tag` },
+        });
+        expect(updated.statusCode, `${role} write`).toBe(200);
+        expect(await Tag.query().findById(tagId)).toMatchObject({
+          name: `${role} updated tag`,
+        });
+
+        const archived = await as(token, {
+          method: 'POST',
+          url: `/api/base.tag/${tagId}/action/action_archive`,
+        });
+        expect(archived.statusCode, `${role} archive`).toBe(200);
+        expect(await Tag.query().findById(tagId)).toMatchObject({ active: false });
+
+        const restored = await as(token, {
+          method: 'POST',
+          url: `/api/base.tag/${tagId}/action/action_unarchive`,
+        });
+        expect(restored.statusCode, `${role} unarchive`).toBe(200);
+        expect(await Tag.query().findById(tagId)).toMatchObject({ active: true });
+
+        const unlinked = await as(token, {
+          method: 'DELETE',
+          url: `/api/base.tag/${tagId}`,
+        });
+        expect(unlinked.statusCode, `${role} unlink`).toBe(200);
+        expect(await Tag.query().findById(tagId)).toMatchObject({ active: false });
+      }
+    });
+
     it('scopes structured addresses and categories to the user partner profile', async () => {
       const aliceUser = await User.query().findOne({ login: 'alice' }).throwIfNotFound();
       const customerCategory = await PartnerCategory.query()
