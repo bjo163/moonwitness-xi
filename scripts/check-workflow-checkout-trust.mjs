@@ -373,6 +373,8 @@ export function inspectTrustedCheckoutPolicies({
     if (
       !issueIntakeRunner?.includes('sourceSha: process.env.GITHUB_SHA') ||
       !issueIntakeRunner.includes('deliveryId: result.deliveryId') ||
+      !issueIntakeRunner.includes('requestedStatus: result.proposal.requestedStatus') ||
+      !issueIntakeRunner.includes('requestedAction: result.proposal.requestedAction') ||
       /proposal\.(?:rationale|requestedChange)|comment\.body|issue\.body/u.test(issueIntakeRunner)
     )
       findings.push(

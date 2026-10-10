@@ -32,6 +32,12 @@ const report =
         taskId: result.proposal.taskId,
         issueNumber: result.proposal.issueNumber,
         actor: result.proposal.actor,
+        ...('requestedStatus' in result.proposal
+          ? { requestedStatus: result.proposal.requestedStatus }
+          : {}),
+        ...('requestedAction' in result.proposal
+          ? { requestedAction: result.proposal.requestedAction }
+          : {}),
         sourceSha: process.env.GITHUB_SHA,
       }
     : { disposition: result.disposition, reason: result.reason };
