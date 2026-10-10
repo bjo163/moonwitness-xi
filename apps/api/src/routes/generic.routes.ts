@@ -40,12 +40,24 @@ type RpcEnvelope = {
   id?: unknown;
 };
 
+const SERVER_MANAGED_FIELDS = new Set([
+  'id',
+  'create_date',
+  'write_date',
+  'create_uid',
+  'write_uid',
+]);
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function asJsonObject(value: unknown): JsonObject | null {
   return isObject(value) && Object.values(value).every(isJsonValue) ? (value as JsonObject) : null;
+}
+
+function hasServerManagedFields(value: JsonObject): boolean {
+  return Object.keys(value).some((key) => SERVER_MANAGED_FIELDS.has(key));
 }
 
 function isJsonValue(value: unknown): value is JsonValue {
@@ -1089,6 +1101,10 @@ export const genericRoutes: FastifyPluginAsync<GenericRoutesOptions> = async (fa
         .status(400)
         .send({ success: false, error: 'Request body must be a JSON object or array of objects' });
     const inputRecords = values as JsonObject[];
+    if (inputRecords.some(hasServerManagedFields))
+      return reply
+        .status(400)
+        .send({ success: false, error: 'Identity and audit fields are managed by the server' });
     if (
       req.params.model === 'base.user' &&
       !inputRecords.every((value) =>
@@ -1165,6 +1181,10 @@ export const genericRoutes: FastifyPluginAsync<GenericRoutesOptions> = async (fa
       return reply
         .status(400)
         .send({ success: false, error: 'Request body must be a JSON object' });
+    if (hasServerManagedFields(values))
+      return reply
+        .status(400)
+        .send({ success: false, error: 'Identity and audit fields are managed by the server' });
     if (!(await hasCompanyAccess(req, req.params.model, values, record)))
       return reply.code(403).send({ success: false, error: 'Company access denied' });
     if (!(await hasValidResourceReference(req, req.params.model, values, record))) {
@@ -1452,6 +1472,14 @@ export const genericRoutes: FastifyPluginAsync<GenericRoutesOptions> = async (fa
     }
     const args = Array.isArray(rawArgs) && rawArgs.every(isJsonValue) ? rawArgs : [];
     const kwargs = asJsonObject(rawKwargs) ?? {};
+    const rpcMutationValues =
+      required === 'create'
+        ? (Array.isArray(args[0]) ? args[0] : [args[0]]).map(asJsonObject)
+        : required === 'write'
+          ? [asJsonObject(args[1])]
+          : [];
+    if (rpcMutationValues.some((value) => value !== null && hasServerManagedFields(value)))
+      return reply.send(rpcError(-32602, 'Identity and audit fields are managed by the server'));
     if (required === 'read' && (method === 'search_read' || method === 'search')) {
       try {
         validateDomain(args[0] ?? [], new Set(Object.keys(Model.jsonSchema.properties ?? {})));

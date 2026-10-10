@@ -1046,6 +1046,51 @@ describe('authentication and authorization', () => {
       expect(row?.create_uid).toBe(admin.user.id);
     });
 
+    it('rejects client writes to ORM-managed identity and audit fields over REST and RPC', async () => {
+      const partner = await Partner.query().insert({
+        name: 'Server-managed metadata probe',
+        company_id: 1,
+      });
+      const managedFields = ['id', 'create_date', 'write_date', 'create_uid', 'write_uid'] as const;
+      for (const field of managedFields) {
+        const proposedValue = field.endsWith('_date') ? new Date().toISOString() : partner.id + 1;
+        const payload = { name: 'Forged metadata', [field]: proposedValue };
+        const create = await as(admin.access_token, {
+          method: 'POST',
+          url: '/api/base.partner',
+          payload,
+        });
+        expect(create.statusCode, `REST create rejects ${field}`).toBe(400);
+
+        const update = await as(admin.access_token, {
+          method: 'PATCH',
+          url: `/api/base.partner/${partner.id}`,
+          payload: { [field]: proposedValue },
+        });
+        expect(update.statusCode, `REST update rejects ${field}`).toBe(400);
+
+        const rpcCreate = await rpc(admin.access_token, ['base.partner', 'create', [payload]]);
+        expect(
+          rpcCreate.json<{ error: { code: number } }>().error.code,
+          `RPC create rejects ${field}`
+        ).toBe(-32602);
+
+        const rpcUpdate = await rpc(admin.access_token, [
+          'base.partner',
+          'write',
+          [[partner.id], { [field]: proposedValue }],
+        ]);
+        expect(
+          rpcUpdate.json<{ error: { code: number } }>().error.code,
+          `RPC update rejects ${field}`
+        ).toBe(-32602);
+      }
+      await expect(Partner.query().findById(partner.id)).resolves.toMatchObject({
+        name: 'Server-managed metadata probe',
+      });
+      await expect(Partner.query().findOne({ name: 'Forged metadata' })).resolves.toBeUndefined();
+    });
+
     it('does not let password hashes be probed through filters or sorting', async () => {
       const probe = await as(admin.access_token, {
         method: 'GET',
