@@ -11,6 +11,7 @@ import {
   resolveViews,
   getModelMenuInfo,
   columnName,
+  type Field,
   type FieldMap,
   type Domain,
 } from '@moonwitness/orm';
@@ -123,8 +124,6 @@ function recordNotFound(name: string, id: number) {
   return { success: false, error: `Record #${id} of model '${name}' not found` };
 }
 
-const POLYMORPHIC_REFERENCE_MODELS = new Set(['base.tag_link', 'base.attachment', 'base.activity']);
-
 function property(value: unknown, key: string): unknown {
   return isObject(value) ? value[key] : undefined;
 }
@@ -132,6 +131,17 @@ function property(value: unknown, key: string): unknown {
 function roleOf(value: unknown): string | undefined {
   const role = property(value, 'role');
   return typeof role === 'string' ? role : undefined;
+}
+
+function resolveFieldTarget(field: Field): typeof BaseModel | undefined {
+  const target = field.target;
+  if (!target) return undefined;
+  if (typeof target === 'function' && !('modelName' in target)) return target();
+  return target as typeof BaseModel;
+}
+
+function hasPolymorphicResourceFields(fields: FieldMap): boolean {
+  return 'resource_model' in fields && 'resource_id' in fields;
 }
 
 async function findReference(
@@ -143,12 +153,9 @@ async function findReference(
   for (const [modelName, RegisteredModel] of Registry.getAll()) {
     const fields = (RegisteredModel as typeof BaseModel & { fields?: FieldMap }).fields ?? {};
     const references = Object.entries(fields).flatMap(([fieldName, field]) => {
-      if (field.kind !== 'belongsTo' || !field.target) return [];
-      const target =
-        typeof field.target === 'function' && !('modelName' in field.target)
-          ? field.target()
-          : field.target;
-      return target.modelName === targetModel ? [columnName(fieldName, field)] : [];
+      if (field.kind !== 'belongsTo') return [];
+      const target = resolveFieldTarget(field);
+      return target?.modelName === targetModel ? [columnName(fieldName, field)] : [];
     });
     for (const column of references) {
       let query = RegisteredModel.query(trx).where(column, targetId);
@@ -156,7 +163,7 @@ async function findReference(
       if (await query.first()) return modelName;
     }
 
-    if ('resource_model' in fields && 'resource_id' in fields) {
+    if (hasPolymorphicResourceFields(fields)) {
       const reference = await RegisteredModel.query(trx)
         .where({ resource_model: targetModel, resource_id: targetId })
         .first();
@@ -189,15 +196,9 @@ async function hasCompanyAccess(
   current?: BaseModel,
   trx?: Transaction
 ): Promise<boolean> {
-  type RelationModel = typeof BaseModel & {
-    modelName: string;
-    fields: Record<
-      string,
-      { kind?: string; required?: boolean; target?: RelationModel | (() => RelationModel) }
-    >;
-  };
   const companyId = req.auth?.companyId;
-  const modelFields = (Registry.get(modelName) as RelationModel).fields ?? {};
+  const modelFields =
+    (Registry.get(modelName) as typeof BaseModel & { fields?: FieldMap }).fields ?? {};
   const targetCompany = Object.hasOwn(values, 'company_id')
     ? values.company_id
     : property(current, 'company_id');
@@ -218,20 +219,18 @@ async function hasCompanyAccess(
       return false;
   }
   for (const [fieldName, field] of Object.entries(modelFields)) {
-    if (field.kind !== 'belongsTo' || !field.target) continue;
+    if (field.kind !== 'belongsTo') continue;
     const relationId = Object.hasOwn(values, `${fieldName}_id`)
       ? values[`${fieldName}_id`]
       : Object.hasOwn(values, fieldName)
         ? values[fieldName]
         : property(current, `${fieldName}_id`);
     if (typeof relationId !== 'number' || !Number.isSafeInteger(relationId)) continue;
-    const targetModel =
-      typeof field.target === 'function' && !('modelName' in field.target)
-        ? field.target()
-        : field.target;
+    const targetModel = resolveFieldTarget(field);
+    if (!targetModel) continue;
     const target = await req.env.get(targetModel.modelName).query(trx).findById(relationId);
     if (!target) return false;
-    const targetFields = targetModel.fields ?? {};
+    const targetFields = (targetModel as typeof BaseModel & { fields?: FieldMap }).fields ?? {};
     if ('company' in targetFields || 'company_id' in targetFields) {
       const relatedCompany = property(target, 'company_id');
       if (relatedCompany !== undefined && relatedCompany !== null && relatedCompany !== companyId)
@@ -377,7 +376,8 @@ async function hasValidResourceReference(
   current?: BaseModel,
   trx?: Transaction
 ): Promise<boolean> {
-  if (!POLYMORPHIC_REFERENCE_MODELS.has(modelName)) return true;
+  const Model = Registry.get(modelName) as typeof BaseModel & { fields?: FieldMap };
+  if (!hasPolymorphicResourceFields(Model.fields ?? {})) return true;
   const resourceModel = Object.hasOwn(values, 'resource_model')
     ? values.resource_model
     : property(current, 'resource_model');
