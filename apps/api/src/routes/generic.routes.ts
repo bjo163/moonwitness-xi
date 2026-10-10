@@ -10,6 +10,8 @@ import {
   validateDomain,
   resolveViews,
   getModelMenuInfo,
+  columnName,
+  type FieldMap,
   type Domain,
 } from '@moonwitness/orm';
 import { assignDefaultCompanyMembership, assignDefaultUserGroup } from '@moonwitness/orm-base';
@@ -121,28 +123,6 @@ function recordNotFound(name: string, id: number) {
   return { success: false, error: `Record #${id} of model '${name}' not found` };
 }
 
-const BASE_REFERENCES: Readonly<Record<string, readonly { model: string; column: string }[]>> = {
-  'base.partner': [
-    { model: 'base.user', column: 'partner_id' },
-    { model: 'base.partner_address', column: 'partner_id' },
-    { model: 'base.partner_category_link', column: 'partner_id' },
-  ],
-  'base.partner_category': [{ model: 'base.partner_category_link', column: 'category_id' }],
-  'base.company': [
-    { model: 'base.partner', column: 'company_id' },
-    { model: 'base.company_membership', column: 'company_id' },
-  ],
-  'base.user': [{ model: 'base.company_membership', column: 'user_id' }],
-  'base.country': [
-    { model: 'base.partner', column: 'country_id' },
-    { model: 'base.company', column: 'country_id' },
-  ],
-  'base.currency': [{ model: 'base.company', column: 'currency_id' }],
-  'base.language': [
-    { model: 'base.company', column: 'language_id' },
-    { model: 'base.user', column: 'language_id' },
-  ],
-};
 const POLYMORPHIC_REFERENCE_MODELS = new Set(['base.tag_link', 'base.attachment', 'base.activity']);
 
 function property(value: unknown, key: string): unknown {
@@ -160,19 +140,28 @@ async function findReference(
   activeUsersOnly = false,
   trx?: Transaction
 ): Promise<string | null> {
-  for (const reference of BASE_REFERENCES[targetModel] ?? []) {
-    if (!Registry.has(reference.model)) continue;
-    let query = Registry.get(reference.model).query(trx).where(reference.column, targetId);
-    if (activeUsersOnly && reference.model === 'base.user') query = query.where('active', true);
-    if (await query.first()) return reference.model;
-  }
-  for (const modelName of POLYMORPHIC_REFERENCE_MODELS) {
-    if (!Registry.has(modelName)) continue;
-    const reference = await Registry.get(modelName)
-      .query(trx)
-      .where({ resource_model: targetModel, resource_id: targetId })
-      .first();
-    if (reference) return modelName;
+  for (const [modelName, RegisteredModel] of Registry.getAll()) {
+    const fields = (RegisteredModel as typeof BaseModel & { fields?: FieldMap }).fields ?? {};
+    const references = Object.entries(fields).flatMap(([fieldName, field]) => {
+      if (field.kind !== 'belongsTo' || !field.target) return [];
+      const target =
+        typeof field.target === 'function' && !('modelName' in field.target)
+          ? field.target()
+          : field.target;
+      return target.modelName === targetModel ? [columnName(fieldName, field)] : [];
+    });
+    for (const column of references) {
+      let query = RegisteredModel.query(trx).where(column, targetId);
+      if (activeUsersOnly && modelName === 'base.user') query = query.where('active', true);
+      if (await query.first()) return modelName;
+    }
+
+    if ('resource_model' in fields && 'resource_id' in fields) {
+      const reference = await RegisteredModel.query(trx)
+        .where({ resource_model: targetModel, resource_id: targetId })
+        .first();
+      if (reference) return modelName;
+    }
   }
   return null;
 }

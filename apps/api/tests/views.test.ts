@@ -4,10 +4,12 @@ import type { FastifyInstance } from 'fastify';
 import {
   Company,
   CompanyMembership,
+  Bank,
   Country,
   Currency,
   Language,
   Partner,
+  PartnerBank,
   User,
 } from '@moonwitness/orm-base';
 import { defineView, describeFields } from '@moonwitness/orm';
@@ -292,6 +294,19 @@ describe('data-driven view metadata', () => {
       },
     });
     expect(rpcDelete.statusCode).toBe(409);
+
+    const bank = await Bank.query().insert({ name: 'Referenced bank' });
+    await PartnerBank.query().insert({
+      acc_number: 'test-account-001',
+      partner_id: viewerPartnerId,
+      bank_id: bank.id,
+    });
+    const referencedAddonRecord = await app.inject({
+      method: 'DELETE',
+      url: `/api/base.bank/${bank.id}?hard=true`,
+      headers: { authorization: `Bearer ${adminToken}` },
+    });
+    expect(referencedAddonRecord.statusCode).toBe(409);
   });
 
   it('hides archived records from normal search and lets admins restore them', async () => {
