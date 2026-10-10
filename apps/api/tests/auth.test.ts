@@ -926,6 +926,29 @@ describe('authentication and authorization', () => {
       expect(deleted.statusCode).toBe(200);
       expect(await Tag.query().findById(tagId)).toMatchObject({ active: false });
 
+      const rpcCreated = await rpc(alice.access_token, [
+        'base.tag',
+        'create',
+        [{ name: 'Group-created RPC tag' }],
+      ]);
+      expect(rpcCreated.statusCode, rpcCreated.payload).toBe(200);
+      expect(rpcCreated.json()).not.toHaveProperty('error');
+      const rpcTagId = rpcCreated.json<{ result: number }>().result;
+      const rpcUpdated = await rpc(alice.access_token, [
+        'base.tag',
+        'write',
+        [[rpcTagId], { name: 'Group-updated RPC tag' }],
+      ]);
+      expect(rpcUpdated.statusCode, rpcUpdated.payload).toBe(200);
+      expect(rpcUpdated.json()).not.toHaveProperty('error');
+      expect(await Tag.query().findById(rpcTagId)).toMatchObject({
+        name: 'Group-updated RPC tag',
+      });
+      const rpcUnlinked = await rpc(alice.access_token, ['base.tag', 'unlink', [[rpcTagId]]]);
+      expect(rpcUnlinked.statusCode, rpcUnlinked.payload).toBe(200);
+      expect(rpcUnlinked.json()).not.toHaveProperty('error');
+      expect(await Tag.query().findById(rpcTagId)).toMatchObject({ active: false });
+
       const unrelatedModelWrites = await Promise.all([
         as(alice.access_token, {
           method: 'POST',
