@@ -811,6 +811,60 @@ describe('authentication and authorization', () => {
       }
     });
 
+    it('reports active group grants consistently across every registered model', async () => {
+      const models = app.models.getNames();
+      const group = await AccessGroup.query().insert({
+        code: 'registry_grants',
+        name: 'Registry Grants',
+      });
+      const membership = await GroupMembership.query().insert({
+        user_id: alice.user.id,
+        group_id: group.id,
+      });
+      for (const model_name of models) {
+        await ModelAccess.query().insert({
+          group_id: group.id,
+          model_name,
+          read: true,
+          create: true,
+          write: true,
+          unlink: true,
+        });
+      }
+      const grants = await ModelAccess.query().where({ group_id: group.id, active: true });
+      const listed = await as(alice.access_token, { method: 'GET', url: '/api/models' });
+      expect(listed.statusCode).toBe(200);
+      const visible = new Set(
+        listed.json<{ models: { model: string }[] }>().models.map(({ model }) => model)
+      );
+
+      for (const model of models) {
+        const expected = {
+          read: canAccess('user', model, 'read', grants),
+          create: canAccess('user', model, 'create', grants),
+          write: canAccess('user', model, 'write', grants),
+          unlink: canAccess('user', model, 'unlink', grants),
+        };
+        expect(visible.has(model), `granted discovery permission for ${model}`).toBe(expected.read);
+
+        const metadata = await as(alice.access_token, {
+          method: 'GET',
+          url: `/api/${model}/fields`,
+        });
+        expect(metadata.statusCode, `granted metadata access for ${model}`).toBe(
+          expected.read ? 200 : 403
+        );
+        if (expected.read) {
+          expect(
+            metadata.json<{ permissions: typeof expected }>().permissions,
+            `granted permission metadata for ${model}`
+          ).toEqual(expected);
+        }
+      }
+
+      await GroupMembership.query().findById(membership.id).patch({ active: false });
+    });
+
     it('allows model-specific user writes granted through an access group', async () => {
       const group = await AccessGroup.query().insert({
         code: 'partner_creators',
