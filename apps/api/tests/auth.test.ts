@@ -811,7 +811,10 @@ describe('authentication and authorization', () => {
         code: 'partner_creators',
         name: 'Partner Creators',
       });
-      await GroupMembership.query().insert({ user_id: alice.user.id, group_id: group.id });
+      const membership = await GroupMembership.query().insert({
+        user_id: alice.user.id,
+        group_id: group.id,
+      });
       await ModelAccess.query().insert({
         group_id: group.id,
         model_name: 'base.tag',
@@ -863,6 +866,35 @@ describe('authentication and authorization', () => {
       });
       expect(deleted.statusCode).toBe(200);
       expect(await Tag.query().findById(tagId)).toMatchObject({ active: false });
+
+      const unrelatedModelWrites = await Promise.all([
+        as(alice.access_token, {
+          method: 'POST',
+          url: '/api/base.partner',
+          payload: { name: 'Out-of-scope partner' },
+        }),
+        as(alice.access_token, {
+          method: 'PATCH',
+          url: '/api/base.partner/1',
+          payload: { name: 'Out-of-scope update' },
+        }),
+        as(alice.access_token, {
+          method: 'POST',
+          url: '/api/base.partner/1/action/action_archive',
+        }),
+        as(alice.access_token, { method: 'DELETE', url: '/api/base.partner/1' }),
+      ]);
+      expect(unrelatedModelWrites.map(({ statusCode }) => statusCode)).toEqual([
+        403, 403, 403, 403,
+      ]);
+
+      await GroupMembership.query().findById(membership.id).patch({ active: false });
+      const revoked = await as(alice.access_token, {
+        method: 'POST',
+        url: '/api/base.tag',
+        payload: { name: 'Revoked group tag' },
+      });
+      expect(revoked.statusCode).toBe(403);
 
       const protectedGrant = await as(admin.access_token, {
         method: 'POST',
