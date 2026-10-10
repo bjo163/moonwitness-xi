@@ -117,7 +117,6 @@ function parseConfig(raw: string): WorkflowDefinitionConfig {
     throw new WorkflowError('INVALID_DEFINITION', 'Workflow config has an invalid shape');
 
   const actions = new Set<string>();
-  const states = new Set([value.startState]);
   const transitions: WorkflowTransitionDefinition[] = [];
   for (const item of value.transitions as unknown[]) {
     if (
@@ -142,8 +141,6 @@ function parseConfig(raw: string): WorkflowDefinitionConfig {
     if (actions.has(item.action))
       throw new WorkflowError('INVALID_DEFINITION', `Duplicate action '${item.action}'`);
     actions.add(item.action);
-    states.add(item.from);
-    states.add(item.to);
     transitions.push({
       action: item.action,
       from: item.from,
@@ -157,10 +154,6 @@ function parseConfig(raw: string): WorkflowDefinitionConfig {
         : { requireDifferentActor: item.requireDifferentActor }),
       ...(item.notifyStarter === undefined ? {} : { notifyStarter: item.notifyStarter }),
     });
-  }
-  for (const transition of transitions) {
-    if (!states.has(transition.from) || !states.has(transition.to))
-      throw new WorkflowError('INVALID_DEFINITION', 'Transition references an unknown state');
   }
   return {
     startState: value.startState,

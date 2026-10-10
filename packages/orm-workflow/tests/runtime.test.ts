@@ -47,6 +47,19 @@ async function actors(database: Knex) {
   };
 }
 
+function rejectAfterCommit(database: Knex, afterCommit?: () => Promise<void>): void {
+  const transaction = database.transaction.bind(database);
+  Object.defineProperty(database, 'transaction', {
+    configurable: true,
+    value: async (handler: unknown) => {
+      const callback = handler as (trx: Knex.Transaction) => Promise<unknown>;
+      await transaction(callback);
+      await afterCommit?.();
+      throw new Error('Simulated acknowledgement loss after commit');
+    },
+  });
+}
+
 describe('workflow addon', () => {
   it('seeds versioned example definition, access, menus, and views programmatically', async () => {
     const database = await setup();
@@ -179,6 +192,99 @@ describe('workflow addon', () => {
     expect(await database('workflow_events').count({ count: '*' }).first()).toMatchObject({
       count: 1,
     });
+  });
+
+  it('replays a committed start after a transaction acknowledgement failure', async () => {
+    const database = await setup();
+    const { systemId, companyId, resourceId } = await actors(database);
+    const input = {
+      code: 'sample.request_approval',
+      companyId,
+      actorId: systemId,
+      role: 'system' as const,
+      resourceModel: 'base.partner',
+      resourceId,
+      idempotencyKey: 'lost-start-ack-0001',
+    };
+    rejectAfterCommit(database);
+
+    const result = await startWorkflow(database, input);
+
+    expect(result).toMatchObject({ revision: 0, status: 'active' });
+    expect(await database('workflow_instances').count({ count: '*' }).first()).toMatchObject({
+      count: 1,
+    });
+  });
+
+  it('replays a committed transition after a transaction acknowledgement failure', async () => {
+    const database = await setup();
+    const { systemId, adminId, companyId, resourceId } = await actors(database);
+    const started = await startWorkflow(database, {
+      code: 'sample.request_approval',
+      companyId,
+      actorId: systemId,
+      role: 'system',
+      resourceModel: 'base.partner',
+      resourceId,
+      idempotencyKey: 'lost-action-start-01',
+    });
+    rejectAfterCommit(database);
+
+    const result = await transitionWorkflow(database, {
+      instanceId: started.id,
+      companyId,
+      actorId: adminId,
+      role: 'superadmin',
+      action: 'submit',
+      expectedRevision: 0,
+      idempotencyKey: 'lost-action-ack-0001',
+    });
+
+    expect(result).toMatchObject({ currentState: 'submitted', revision: 1, status: 'active' });
+    expect(await database('workflow_events').where({ instance_id: started.id })).toHaveLength(2);
+  });
+
+  it('propagates start failures when no committed idempotency event exists', async () => {
+    const database = await setup();
+    const { systemId, companyId, resourceId } = await actors(database);
+    const existing = await startWorkflow(database, {
+      code: 'sample.request_approval',
+      companyId,
+      actorId: systemId,
+      role: 'system',
+      resourceModel: 'base.partner',
+      resourceId,
+      idempotencyKey: 'preexisting-start-001',
+    });
+    Object.defineProperty(database, 'transaction', {
+      configurable: true,
+      value: async () => {
+        throw new Error('Simulated transaction failure before commit');
+      },
+    });
+
+    await expect(
+      startWorkflow(database, {
+        code: 'sample.request_approval',
+        companyId,
+        actorId: systemId,
+        role: 'system',
+        resourceModel: 'base.partner',
+        resourceId,
+        idempotencyKey: 'uncommitted-start-0001',
+      })
+    ).rejects.toThrow('Simulated transaction failure before commit');
+    await expect(
+      transitionWorkflow(database, {
+        instanceId: existing.id,
+        companyId,
+        actorId: systemId,
+        role: 'system',
+        action: 'submit',
+        expectedRevision: 0,
+        idempotencyKey: 'uncommitted-action-01',
+      })
+    ).rejects.toThrow('Simulated transaction failure before commit');
   });
 
   it('enforces submitter separation, optimistic revision, approval quorum, snapshots, and idempotent retries', async () => {
@@ -452,5 +558,56 @@ describe('workflow addon', () => {
         idempotencyKey: 'forbidden-resource-1',
       })
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+  });
+
+  it('validates every workflow configuration and transition boundary', async () => {
+    const database = await setup();
+    const definition = await database('workflow_definitions')
+      .where({ code: 'sample.request_approval' })
+      .first();
+    if (!definition) throw new Error('Example workflow definition is missing');
+    const config = JSON.parse(String(definition.config)) as Record<string, unknown>;
+    const transitions = config.transitions as Record<string, unknown>[];
+    const firstTransition = transitions[0];
+    if (!firstTransition) throw new Error('Example workflow transition is missing');
+    const invalidConfigs = [
+      '{',
+      'null',
+      JSON.stringify({ ...config, startState: 1 }),
+      JSON.stringify({ ...config, startRoles: ['owner'] }),
+      JSON.stringify({ ...config, timeoutMinutes: '60' }),
+      JSON.stringify({ ...config, timeoutMinutes: 1.5 }),
+      JSON.stringify({ ...config, timeoutMinutes: 0 }),
+      JSON.stringify({ ...config, timeoutMinutes: 525601 }),
+      JSON.stringify({ ...config, resourceModels: ['base'] }),
+      JSON.stringify({ ...config, resourceModels: ['Invalid.Model'] }),
+      JSON.stringify({ ...config, transitions: [] }),
+      JSON.stringify({ ...config, transitions: [null] }),
+      JSON.stringify({ ...config, transitions: [{ ...firstTransition, action: 1 }] }),
+      JSON.stringify({ ...config, transitions: [{ ...firstTransition, action: 'Bad Action' }] }),
+      JSON.stringify({ ...config, transitions: [{ ...firstTransition, from: 1 }] }),
+      JSON.stringify({ ...config, transitions: [{ ...firstTransition, to: 1 }] }),
+      JSON.stringify({ ...config, transitions: [{ ...firstTransition, roles: ['owner'] }] }),
+      JSON.stringify({ ...config, transitions: [{ ...firstTransition, roles: [] }] }),
+      JSON.stringify({ ...config, transitions: [{ ...firstTransition, requiredApprovals: 1.5 }] }),
+      JSON.stringify({ ...config, transitions: [{ ...firstTransition, requiredApprovals: 0 }] }),
+      JSON.stringify({ ...config, transitions: [{ ...firstTransition, requiredApprovals: 101 }] }),
+      JSON.stringify({
+        ...config,
+        transitions: [{ ...firstTransition, requireDifferentActor: 1 }],
+      }),
+      JSON.stringify({ ...config, transitions: [{ ...firstTransition, notifyStarter: 1 }] }),
+      JSON.stringify({ ...config, transitions: [{ ...firstTransition, notifyStarter: 'x' }] }),
+      JSON.stringify({ ...config, transitions: [firstTransition, firstTransition] }),
+    ];
+
+    for (const invalidConfig of invalidConfigs) {
+      await database('workflow_definitions')
+        .where({ id: definition.id })
+        .update({ config: invalidConfig });
+      await expect(
+        listAvailableWorkflowDefinitions(database, 'base.partner', 'user')
+      ).rejects.toMatchObject({ code: 'INVALID_DEFINITION' });
+    }
   });
 });
