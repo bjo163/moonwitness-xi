@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "82c6b9f5e3943ee614169b49fe857e3e71cbea1cbb260dfda6ee12f5b6bb24b6",
+  "generatedFromSha256": "5d0a290c10862ac5dc5b3f7a55801b8e45d953ee72d72a54d28933724f7120cd",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,

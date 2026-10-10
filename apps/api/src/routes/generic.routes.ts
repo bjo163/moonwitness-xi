@@ -384,6 +384,7 @@ async function hasValidResourceReference(
   const resourceId = Object.hasOwn(values, 'resource_id')
     ? values.resource_id
     : property(current, 'resource_id');
+  if (resourceModel === undefined && resourceId === undefined) return true;
   if (
     typeof resourceModel !== 'string' ||
     !Registry.has(resourceModel) ||

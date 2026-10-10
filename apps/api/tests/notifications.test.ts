@@ -135,6 +135,37 @@ describe('notification inbox authorization', () => {
     await app.close();
   });
 
+  it('allows a notification without its optional resource reference', async () => {
+    const login = await app.inject({
+      method: 'POST',
+      url: '/auth/login',
+      payload: { login: 'superadmin', password: ADMIN_PASSWORD },
+    });
+    const adminToken = login.json<LoginResponse>().data.access_token;
+    const admin = await User.query().findOne({ login: 'superadmin' }).throwIfNotFound();
+    const company = await Company.query().findOne({ name: 'MoonWitness' }).throwIfNotFound();
+    const template = await NotificationTemplate.query()
+      .findOne({ code: 'example.in_app' })
+      .throwIfNotFound();
+    const response = await authenticated(adminToken, {
+      method: 'POST',
+      url: '/api/notification.notification',
+      payload: {
+        recipient_id: admin.id,
+        company_id: company.id,
+        template_id: template.id,
+        channel: 'in_app',
+        title: 'Optional resource test',
+        body: 'A notification may omit its linked resource.',
+        delivery_status: 'delivered',
+        state: 'unread',
+        idempotency_key: 'test:optional-resource:notification',
+        delivered_at: new Date().toISOString(),
+      },
+    });
+    expect(response.statusCode).toBe(201);
+  });
+
   it('returns only the authenticated recipient inbox, even within one company', async () => {
     const response = await authenticated(userToken, { method: 'GET', url: '/notifications/inbox' });
     expect(response.statusCode).toBe(200);
