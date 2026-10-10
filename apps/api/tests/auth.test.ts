@@ -1086,6 +1086,68 @@ describe('authentication and authorization', () => {
       }
     });
 
+    it('persists group-granted user mutations on an owned addon record', async () => {
+      const group = await AccessGroup.query().insert({
+        code: 'category_maintainers',
+        name: 'Category Maintainers',
+      });
+      const membership = await GroupMembership.query().insert({
+        user_id: alice.user.id,
+        group_id: group.id,
+      });
+      await ModelAccess.query().insert({
+        group_id: group.id,
+        model_name: 'base.partner_category',
+        create: true,
+        write: true,
+        unlink: true,
+      });
+
+      const created = await as(alice.access_token, {
+        method: 'POST',
+        url: '/api/base.partner_category',
+        payload: { code: `alice-category-${Date.now()}`, name: 'Alice category' },
+      });
+      expect(created.statusCode, created.payload).toBe(201);
+      const categoryId = created.json<{ data: { id: number } }>().data.id;
+      expect(await PartnerCategory.query().findById(categoryId)).toMatchObject({
+        name: 'Alice category',
+      });
+
+      const updated = await as(alice.access_token, {
+        method: 'PATCH',
+        url: `/api/base.partner_category/${categoryId}`,
+        payload: { name: 'Alice updated category' },
+      });
+      expect(updated.statusCode, updated.payload).toBe(200);
+      expect(await PartnerCategory.query().findById(categoryId)).toMatchObject({
+        name: 'Alice updated category',
+      });
+
+      const archived = await as(alice.access_token, {
+        method: 'POST',
+        url: `/api/base.partner_category/${categoryId}/action/action_archive`,
+      });
+      expect(archived.statusCode).toBe(200);
+      expect(await PartnerCategory.query().findById(categoryId)).toMatchObject({ active: false });
+
+      const restored = await as(alice.access_token, {
+        method: 'POST',
+        url: `/api/base.partner_category/${categoryId}/action/action_unarchive`,
+      });
+      expect(restored.statusCode).toBe(200);
+      expect(await PartnerCategory.query().findById(categoryId)).toMatchObject({ active: true });
+
+      const unlinked = await as(alice.access_token, {
+        method: 'DELETE',
+        url: `/api/base.partner_category/${categoryId}`,
+      });
+      expect(unlinked.statusCode).toBe(200);
+      expect(await PartnerCategory.query().findById(categoryId)).toMatchObject({ active: false });
+
+      await GroupMembership.query().findById(membership.id).patch({ active: false });
+    });
+
     it('scopes structured addresses and categories to the user partner profile', async () => {
       const aliceUser = await User.query().findOne({ login: 'alice' }).throwIfNotFound();
       const customerCategory = await PartnerCategory.query()
