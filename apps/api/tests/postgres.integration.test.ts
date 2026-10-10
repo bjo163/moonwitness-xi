@@ -542,6 +542,31 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       data: [],
     });
 
+    const mixedCompanyDomain = encodeURIComponent(
+      JSON.stringify(['|', ['id', '=', localPartner.id], ['id', '=', foreignPartner.id]])
+    );
+    const scopedOrCount = await app.inject({
+      method: 'GET',
+      url: `/api/base.partner?domain=${mixedCompanyDomain}&limit=1&count=true`,
+      headers,
+    });
+    expect(scopedOrCount.statusCode).toBe(200);
+    expect(scopedOrCount.json<{ total: number; data: { id: number }[] }>()).toMatchObject({
+      total: 1,
+      data: [{ id: localPartner.id }],
+    });
+
+    const scopedOrExport = await app.inject({
+      method: 'GET',
+      url: `/api/base.partner?domain=${mixedCompanyDomain}&limit=500`,
+      headers,
+    });
+    expect(scopedOrExport.statusCode).toBe(200);
+    expect(scopedOrExport.json<{ data: { id: number; name: string }[] }>().data).toEqual([
+      expect.objectContaining({ id: localPartner.id, name: 'PostgreSQL Tenant Contact' }),
+    ]);
+    expect(scopedOrExport.payload).not.toContain('PostgreSQL Foreign Contact');
+
     const deniedForeignCreate = await app.inject({
       method: 'POST',
       url: '/api/base.partner',

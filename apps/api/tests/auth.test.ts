@@ -519,6 +519,32 @@ describe('authentication and authorization', () => {
         url: '/api/base.partner?limit=500',
       });
       expect(JSON.stringify(exportRows.json())).not.toContain('Foreign Partner');
+      const ownPartner = await Partner.query().findOne({ name: 'Alice Regular' }).throwIfNotFound();
+      const mixedCompanyDomain = encodeURIComponent(
+        JSON.stringify(['|', ['id', '=', ownPartner.id], ['id', '=', foreignPartner.id]])
+      );
+      const scopedOrCount = await as(alice.access_token, {
+        method: 'GET',
+        url: `/api/base.partner?domain=${mixedCompanyDomain}&count=true&limit=1`,
+      });
+      expect(scopedOrCount.statusCode).toBe(200);
+      const scopedOrCountBody = scopedOrCount.json<{ total: number; data: { id: number }[] }>();
+      expect(scopedOrCountBody).toMatchObject({
+        success: true,
+        model: 'base.partner',
+        count: 1,
+        total: 1,
+      });
+      expect(scopedOrCountBody.data.map(({ id }) => id)).toEqual([ownPartner.id]);
+      const scopedOrExport = await as(alice.access_token, {
+        method: 'GET',
+        url: `/api/base.partner?domain=${mixedCompanyDomain}&limit=500`,
+      });
+      expect(scopedOrExport.statusCode).toBe(200);
+      expect(scopedOrExport.json<{ data: { id: number }[] }>().data.map(({ id }) => id)).toEqual([
+        ownPartner.id,
+      ]);
+      expect(scopedOrExport.payload).not.toContain('Foreign Partner');
       await ModelAccess.query().findById(partnerGrant.id).patch({ write: false, create: false });
       expect(
         (
