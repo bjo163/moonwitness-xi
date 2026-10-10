@@ -1013,6 +1013,7 @@
       "title": "Implementasikan `orm-workflow`: typed state/approval engine, authenticated company-scoped API, jobs expiry, audit history, dan generated docs.",
       "milestone": "M9",
       "dependsOn": ["M4.06", "M4.10"],
+      "status": "in_progress",
       "output": "Typed workflow addon, sample definition, authenticated API, expiry jobs, tests, and generated references",
       "detailFile": "docs/roadmap/09-addons.md"
     },
