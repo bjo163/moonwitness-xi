@@ -38,6 +38,11 @@ import {
 } from '@moonwitness/jobs';
 import { manifest as baseManifest } from '@moonwitness/orm-base';
 import { manifest as notificationManifest } from '@moonwitness/orm-notification';
+import {
+  manifest as workflowManifest,
+  startWorkflow,
+  transitionWorkflow,
+} from '@moonwitness/orm-workflow';
 import { buildApp } from '../src/app.js';
 import { verifyDefaultBaseAccounts } from '../src/startup-checks.js';
 import { createPostgresKnexConfig } from '../src/config/knexfile.js';
@@ -241,11 +246,23 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     });
     try {
       await Promise.all([
-        installAddons(concurrentDb, [manifest, authManifest, jobsManifest, notificationManifest]),
-        installAddons(concurrentDb, [manifest, authManifest, jobsManifest, notificationManifest]),
+        installAddons(concurrentDb, [
+          manifest,
+          authManifest,
+          jobsManifest,
+          notificationManifest,
+          workflowManifest,
+        ]),
+        installAddons(concurrentDb, [
+          manifest,
+          authManifest,
+          jobsManifest,
+          notificationManifest,
+          workflowManifest,
+        ]),
       ]);
       expect(Number((await concurrentDb('_orm_addons').count({ count: '*' }).first())?.count)).toBe(
-        4
+        5
       );
       expect(Number((await concurrentDb('users').count({ count: '*' }).first())?.count)).toBe(2);
       const seedCount = baseManifest.data?.length ?? 0;
@@ -253,7 +270,8 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
         seedCount +
           (authManifest.data?.length ?? 0) +
           (jobsManifest.data?.length ?? 0) +
-          (notificationManifest.data?.length ?? 0)
+          (notificationManifest.data?.length ?? 0) +
+          (workflowManifest.data?.length ?? 0)
       );
       const seededSuperadmin = await concurrentDb('_orm_data')
         .where({ id: 'base.user_superadmin', model: 'base.user' })
@@ -265,18 +283,77 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
         authManifest,
         jobsManifest,
         notificationManifest,
+        workflowManifest,
       ]);
       expect(Number((await concurrentDb('_orm_data').count({ count: '*' }).first())?.count)).toBe(
         seedCount +
           (authManifest.data?.length ?? 0) +
           (jobsManifest.data?.length ?? 0) +
-          (notificationManifest.data?.length ?? 0)
+          (notificationManifest.data?.length ?? 0) +
+          (workflowManifest.data?.length ?? 0)
       );
       await expect(
         concurrentDb('_orm_data')
           .where({ id: 'base.user_superadmin', model: 'base.user' })
           .first('record_id')
       ).resolves.toEqual(seededSuperadmin);
+
+      const system = await concurrentDb('users').where({ login: 'system' }).first('id');
+      const company = await concurrentDb('companies').where({ name: 'MoonWitness' }).first('id');
+      const partner = await concurrentDb('partners')
+        .where({ email: 'system@moonwitness.local' })
+        .first('id');
+      expect(system).toBeDefined();
+      expect(company).toBeDefined();
+      expect(partner).toBeDefined();
+      const workflowStart = {
+        code: 'sample.request_approval',
+        companyId: Number(company?.id),
+        actorId: Number(system?.id),
+        role: 'system' as const,
+        resourceModel: 'base.partner',
+        resourceId: Number(partner?.id),
+        idempotencyKey: `pg-concurrent-start-${randomUUID()}`,
+      };
+      const started = await Promise.all([
+        startWorkflow(concurrentDb, workflowStart),
+        startWorkflow(concurrentDb, workflowStart),
+      ]);
+      expect(started[0]?.id).toBe(started[1]?.id);
+      expect(
+        Number(
+          (
+            await concurrentDb('workflow_events')
+              .where({ idempotency_key: `start:${workflowStart.idempotencyKey}` })
+              .count({ count: '*' })
+              .first()
+          )?.count
+        )
+      ).toBe(1);
+      const workflowAction = {
+        instanceId: started[0]!.id,
+        companyId: workflowStart.companyId,
+        actorId: workflowStart.actorId,
+        role: workflowStart.role,
+        action: 'submit',
+        expectedRevision: 0,
+        idempotencyKey: `pg-concurrent-action-${randomUUID()}`,
+      };
+      const actions = await Promise.all([
+        transitionWorkflow(concurrentDb, workflowAction),
+        transitionWorkflow(concurrentDb, workflowAction),
+      ]);
+      expect(actions.map(({ revision }) => revision)).toEqual([1, 1]);
+      expect(
+        Number(
+          (
+            await concurrentDb('workflow_events')
+              .where({ idempotency_key: workflowAction.idempotencyKey })
+              .count({ count: '*' })
+              .first()
+          )?.count
+        )
+      ).toBe(1);
 
       const handlerName = `test.pg-scheduler-${randomUUID()}`;
       const unregister = registerJobHandler({

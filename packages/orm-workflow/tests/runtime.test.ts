@@ -153,6 +153,34 @@ describe('workflow addon', () => {
     ).toMatchObject({ count: 1 });
   });
 
+  it('replays concurrent starts with one idempotency key as one workflow instance', async () => {
+    const database = await setup();
+    const { systemId, companyId, resourceId } = await actors(database);
+    const input = {
+      code: 'sample.request_approval',
+      companyId,
+      actorId: systemId,
+      role: 'system' as const,
+      resourceModel: 'base.partner',
+      resourceId,
+      idempotencyKey: 'concurrent-start-0001',
+      now: new Date('2026-10-05T00:00:00.000Z'),
+    };
+
+    const results = await Promise.all([
+      startWorkflow(database, input),
+      startWorkflow(database, input),
+    ]);
+
+    expect(results[0]?.id).toBe(results[1]?.id);
+    expect(await database('workflow_instances').count({ count: '*' }).first()).toMatchObject({
+      count: 1,
+    });
+    expect(await database('workflow_events').count({ count: '*' }).first()).toMatchObject({
+      count: 1,
+    });
+  });
+
   it('enforces submitter separation, optimistic revision, approval quorum, snapshots, and idempotent retries', async () => {
     const database = await setup();
     const { systemId, adminId, companyId, resourceId } = await actors(database);

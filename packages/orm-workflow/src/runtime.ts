@@ -265,7 +265,7 @@ export async function startWorkflow(db: Knex, input: StartWorkflowInput) {
   if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/u.test(input.idempotencyKey))
     throw new WorkflowError('IDEMPOTENCY_CONFLICT', 'A valid idempotency key is required');
   const now = input.now ?? new Date();
-  return db.transaction(async (trx) => {
+  const transaction = db.transaction(async (trx) => {
     const prior = await trx('workflow_events')
       .where({ idempotency_key: `start:${input.idempotencyKey}` })
       .first('instance_id');
@@ -333,6 +333,38 @@ export async function startWorkflow(db: Knex, input: StartWorkflowInput) {
     });
     return rowFrom(created as unknown as InstanceRow);
   });
+  return transaction.catch(async (error) => {
+    if (error instanceof WorkflowError) throw error;
+    const prior = await db('workflow_events')
+      .where({ idempotency_key: `start:${input.idempotencyKey}` })
+      .first('instance_id');
+    if (!prior) throw error;
+    const existing = await db<InstanceRow>('workflow_instances')
+      .where({ id: prior.instance_id })
+      .first();
+    if (
+      !existing ||
+      existing.company_id !== input.companyId ||
+      existing.started_by_id !== input.actorId ||
+      existing.resource_model !== input.resourceModel ||
+      existing.resource_id !== input.resourceId
+    ) {
+      throw new WorkflowError(
+        'IDEMPOTENCY_CONFLICT',
+        'Idempotency key belongs to a different workflow start'
+      );
+    }
+    const definition = await db<DefinitionRow>('workflow_definitions')
+      .where({ id: existing.definition_id })
+      .first();
+    if (definition?.code !== input.code) {
+      throw new WorkflowError(
+        'IDEMPOTENCY_CONFLICT',
+        'Idempotency key belongs to a different workflow definition'
+      );
+    }
+    return rowFrom(existing);
+  });
 }
 
 export interface TransitionWorkflowInput {
@@ -351,7 +383,7 @@ export async function transitionWorkflow(db: Knex, input: TransitionWorkflowInpu
   if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/u.test(input.idempotencyKey))
     throw new WorkflowError('IDEMPOTENCY_CONFLICT', 'A valid idempotency key is required');
   const now = input.now ?? new Date();
-  return db.transaction(async (trx) => {
+  const transaction = db.transaction(async (trx) => {
     const prior = await trx('workflow_events')
       .where({ idempotency_key: input.idempotencyKey })
       .first('instance_id', 'actor_id', 'action');
@@ -377,6 +409,21 @@ export async function transitionWorkflow(db: Knex, input: TransitionWorkflowInpu
       .forUpdate()
       .first();
     if (!instance) throw new WorkflowError('INSTANCE_NOT_FOUND', 'Workflow instance not found');
+    const replay = await trx('workflow_events')
+      .where({ idempotency_key: input.idempotencyKey })
+      .first('instance_id', 'actor_id', 'action');
+    if (replay) {
+      if (
+        replay.instance_id !== input.instanceId ||
+        replay.actor_id !== input.actorId ||
+        replay.action !== input.action
+      )
+        throw new WorkflowError(
+          'IDEMPOTENCY_CONFLICT',
+          'Idempotency key belongs to a different workflow action'
+        );
+      return rowFrom(instance);
+    }
     if (instance.status !== 'active')
       throw new WorkflowError('INSTANCE_CLOSED', 'Workflow is closed');
     if (instance.revision !== input.expectedRevision)
@@ -478,6 +525,29 @@ export async function transitionWorkflow(db: Knex, input: TransitionWorkflowInpu
       revision: nextRevision,
       completedAt: status === 'active' ? null : now.toISOString(),
     };
+  });
+  return transaction.catch(async (error) => {
+    if (error instanceof WorkflowError) throw error;
+    const prior = await db('workflow_events')
+      .where({ idempotency_key: input.idempotencyKey })
+      .first('instance_id', 'actor_id', 'action');
+    if (!prior) throw error;
+    if (
+      prior.instance_id !== input.instanceId ||
+      prior.actor_id !== input.actorId ||
+      prior.action !== input.action
+    ) {
+      throw new WorkflowError(
+        'IDEMPOTENCY_CONFLICT',
+        'Idempotency key belongs to a different workflow action'
+      );
+    }
+    const existing = await db<InstanceRow>('workflow_instances')
+      .where({ id: prior.instance_id, company_id: input.companyId })
+      .first();
+    if (!existing)
+      throw new WorkflowError('IDEMPOTENCY_CONFLICT', 'Event has no matching instance');
+    return rowFrom(existing);
   });
 }
 
