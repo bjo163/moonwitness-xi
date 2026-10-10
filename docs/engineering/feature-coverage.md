@@ -62,6 +62,8 @@ This report expands the initial [feature-to-test matrix](feature-matrix.md) with
 
 ## Highest-priority gaps
 
+The registry-wide ACCESS-ROLE follow-up at `2ba00ab` iterates every registered model for ordinary user and superadmin, compares `/api/models` discovery and `/api/:model/fields` permissions against `canAccess()`, and verifies direct-read denial. Its fixtures only grant permissions through active memberships, active groups, and active model grants. Exact details and test evidence are recorded in [M10.01](../roadmap/evidence/M10.01.md).
+
 1. **P0 feature-specific database/access depth:** exact-head PostgreSQL integration/restore and Board browser suites now pass in CI `37505319936`. Keep the per-feature gaps in the table open where they require additional matrix combinations, such as grouped/company-scoped counts, model/action combinations, multi-worker crash recovery, or cross-company export. Owner: repository maintainer across API/ORM/Jobs.
 2. **P0 release integrity:** PR #24 still needs fresh CODEOWNER approval on the exact head; then verify `dev → main`, immutable version tag, exact artifact digest, SBOM/provenance, release retry, and `main → dev` sync. Owner: repository maintainer / Release.
 3. **P0 security history and platform coverage:** exact-head Gitleaks, CodeQL, and all three Trivy critical gates pass at `e59e628`; historical secret revocation/history handling and unavailable non-provider patterns remain unresolved. Owner: repository maintainer / Security.
