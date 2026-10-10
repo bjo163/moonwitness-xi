@@ -779,9 +779,28 @@ describe('authentication and authorization', () => {
           }
 
           const read = await as(token, { method: 'GET', url: `/api/${model}?limit=1` });
-          expect(read.statusCode === 403, `${role} direct read authorization for ${model}`).toBe(
-            !expected.read
+          expect(read.statusCode, `${role} direct read authorization for ${model}`).toBe(
+            expected.read ? 200 : 403
           );
+
+          const deniedOperations: InjectOptions[] = [];
+          if (!expected.create)
+            deniedOperations.push({ method: 'POST', url: `/api/${model}`, payload: {} });
+          if (!expected.write)
+            deniedOperations.push({ method: 'PUT', url: `/api/${model}/1`, payload: {} });
+          if (!expected.unlink) deniedOperations.push({ method: 'DELETE', url: `/api/${model}/1` });
+          if (!canAccess(role, model, 'action', grants))
+            deniedOperations.push({
+              method: 'POST',
+              url: `/api/${model}/1/action/action_archive`,
+            });
+
+          for (const operation of deniedOperations) {
+            const response = await as(token, operation);
+            expect(response.statusCode, `${role} denied ${operation.method} ${operation.url}`).toBe(
+              403
+            );
+          }
         }
       }
     });
