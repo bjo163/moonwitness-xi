@@ -40,6 +40,7 @@ describe('authentication and authorization', () => {
   let app: FastifyInstance;
   let admin: TokenBody['data'];
   let alice: TokenBody['data'];
+  let system: TokenBody['data'];
 
   const login = (loginName: string, password: string) =>
     app.inject({ method: 'POST', url: '/auth/login', payload: { login: loginName, password } });
@@ -87,6 +88,9 @@ describe('authentication and authorization', () => {
     });
     admin = (await login('superadmin', ADMIN_PASSWORD)).json<TokenBody>().data;
     alice = (await login('alice', USER_PASSWORD)).json<TokenBody>().data;
+    const systemUser = await User.query().findOne({ login: 'system' }).throwIfNotFound();
+    await User.query().findById(systemUser.id).patch({ password: 'system-test-password' });
+    system = (await login('system', 'system-test-password')).json<TokenBody>().data;
   }, 30000);
 
   afterAll(async () => {
@@ -730,6 +734,7 @@ describe('authentication and authorization', () => {
       const roleCases = [
         { token: alice.access_token, role: 'user', userId: alice.user.id },
         { token: admin.access_token, role: 'superadmin', userId: admin.user.id },
+        { token: system.access_token, role: 'system', userId: system.user.id },
       ] as const;
 
       for (const { token, role, userId } of roleCases) {
