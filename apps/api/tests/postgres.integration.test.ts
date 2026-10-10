@@ -587,6 +587,34 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     await resetSuperadminPassword('postgres-flow-reset-password');
     expect((await login('postgres-flow-initial-password')).statusCode).toBe(401);
     expect((await login('postgres-flow-reset-password')).statusCode).toBe(200);
+
+    await app.close();
+    app = undefined;
+    apiDb = knex({
+      client: 'pg',
+      connection: connectionString,
+      searchPath: [apiSchema],
+      pool: { min: 0, max: 4 },
+    });
+    app = await buildApp({
+      db: apiDb,
+      superadminPassword: 'postgres-flow-initial-password',
+      jwtSecret: 'postgres-flow-jwt-secret-must-be-32-chars',
+    });
+    await app.ready();
+
+    const oldPasswordAfterRestart = await app.inject({
+      method: 'POST',
+      url: '/auth/login',
+      payload: { login: 'superadmin', password: 'postgres-flow-initial-password' },
+    });
+    expect(oldPasswordAfterRestart.statusCode).toBe(401);
+    const resetPasswordAfterRestart = await app.inject({
+      method: 'POST',
+      url: '/auth/login',
+      payload: { login: 'superadmin', password: 'postgres-flow-reset-password' },
+    });
+    expect(resetPasswordAfterRestart.statusCode).toBe(200);
   }, 30000);
 
   it('enforces PostgreSQL company isolation for partner list, count, relations and foreign references', async () => {
