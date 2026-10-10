@@ -398,6 +398,147 @@ describe('durable job runtime', () => {
     }
   });
 
+  it('honors skip and bounded catch-up misfire policies while advancing past the backlog', async () => {
+    const unregister = registerJobHandler({
+      name: 'test.cron-misfire',
+      version: 1,
+      parse(payload: unknown): { run: true } {
+        if (typeof payload !== 'object' || payload === null || !('run' in payload))
+          throw new Error('invalid payload');
+        return { run: true };
+      },
+      async run() {
+        return null;
+      },
+    });
+    try {
+      const company = await Company.query().findOne({ name: 'MoonWitness' }).throwIfNotFound();
+      const now = new Date('2026-10-03T12:03:00.000Z');
+      const common = {
+        handler: 'test.cron-misfire',
+        payload: '{"run":true}',
+        company_id: company.id,
+        cron_expression: '* * * * *',
+        timezone: 'UTC',
+        enabled: true,
+        next_run_at: '2026-10-03T12:00:00.000Z',
+        concurrency_policy: 'allow' as const,
+      };
+      const skipped = await Cron.query().insertAndFetch({
+        ...common,
+        code: 'test.minute-skip',
+        name: 'Skip missed occurrences',
+        misfire_policy: 'skip',
+        max_catch_up: 3,
+      });
+      const caughtUp = await Cron.query().insertAndFetch({
+        ...common,
+        code: 'test.minute-catch-up',
+        name: 'Bounded catch-up',
+        misfire_policy: 'catch_up',
+        max_catch_up: 2,
+      });
+
+      expect(await enqueueDueCrons({ now })).toBe(2);
+      expect(await Job.query().where({ cron_id: skipped.id })).toHaveLength(0);
+      const caughtUpJobs = await Job.query()
+        .where({ cron_id: caughtUp.id })
+        .orderBy('schedule_key');
+      expect(caughtUpJobs.map((job) => job.schedule_key)).toEqual([
+        `cron:${caughtUp.id}:2026-10-03T12:00:00.000Z`,
+        `cron:${caughtUp.id}:2026-10-03T12:01:00.000Z`,
+      ]);
+      for (const cron of [skipped, caughtUp]) {
+        const advanced = await Cron.query().findById(cron.id).throwIfNotFound();
+        expect(Date.parse(advanced.next_run_at)).toBeGreaterThan(now.getTime());
+      }
+    } finally {
+      unregister();
+    }
+  });
+
+  it('enforces forbid and replace concurrency policies for existing work', async () => {
+    const unregister = registerJobHandler({
+      name: 'test.cron-concurrency',
+      version: 1,
+      parse(payload: unknown): { run: true } {
+        if (typeof payload !== 'object' || payload === null || !('run' in payload))
+          throw new Error('invalid payload');
+        return { run: true };
+      },
+      async run() {
+        return null;
+      },
+    });
+    try {
+      const company = await Company.query().findOne({ name: 'MoonWitness' }).throwIfNotFound();
+      const now = new Date('2026-10-03T12:03:00.000Z');
+      const common = {
+        handler: 'test.cron-concurrency',
+        payload: '{"run":true}',
+        company_id: company.id,
+        cron_expression: '* * * * *',
+        timezone: 'UTC',
+        enabled: true,
+        next_run_at: '2026-10-03T12:03:00.000Z',
+        misfire_policy: 'coalesce' as const,
+        max_catch_up: 1,
+      };
+      const forbid = await Cron.query().insertAndFetch({
+        ...common,
+        code: 'test.minute-forbid',
+        name: 'Forbid overlapping work',
+        concurrency_policy: 'forbid',
+      });
+      const replace = await Cron.query().insertAndFetch({
+        ...common,
+        code: 'test.minute-replace',
+        name: 'Replace overlapping work',
+        concurrency_policy: 'replace',
+      });
+      const existingForbidden = await Job.query().insertAndFetch({
+        handler: common.handler,
+        payload: common.payload,
+        cron_id: forbid.id,
+        status: 'queued',
+        available_at: now.toISOString(),
+        max_attempts: 5,
+      });
+      const existingRunning = await Job.query().insertAndFetch({
+        handler: common.handler,
+        payload: common.payload,
+        cron_id: replace.id,
+        status: 'running',
+        available_at: now.toISOString(),
+        lease_owner: 'worker-current',
+        lease_until: new Date(now.getTime() + 60_000).toISOString(),
+        max_attempts: 5,
+      });
+      const existingQueued = await Job.query().insertAndFetch({
+        handler: common.handler,
+        payload: common.payload,
+        cron_id: replace.id,
+        status: 'queued',
+        available_at: now.toISOString(),
+        max_attempts: 5,
+      });
+
+      expect(await enqueueDueCrons({ now })).toBe(1);
+      expect(await Job.query().findById(existingForbidden.id)).toMatchObject({ status: 'queued' });
+      expect(await Job.query().where({ cron_id: forbid.id })).toHaveLength(1);
+      expect(await Job.query().findById(existingRunning.id)).toMatchObject({
+        status: 'running',
+        cancel_requested: true,
+      });
+      expect(await Job.query().findById(existingQueued.id)).toMatchObject({ status: 'cancelled' });
+      expect(
+        await Job.query().where({ cron_id: replace.id, status: 'queued' }).first()
+      ).toMatchObject({ schedule_key: `cron:${replace.id}:2026-10-03T12:03:00.000Z` });
+    } finally {
+      unregister();
+    }
+  });
+
   it('fences and retries durable outbox delivery with a stable event id', async () => {
     const delivered: number[] = [];
     const unregister = registerOutboxConsumer('record.created', async (_payload, eventId) => {

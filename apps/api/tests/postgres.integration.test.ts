@@ -27,7 +27,9 @@ import {
   Job,
   JobRun,
   OutboxEvent,
+  Cron,
   enqueueJob,
+  enqueueDueCrons,
   jobsManifest,
   dispatchOneOutboxEvent,
   registerJobHandler,
@@ -275,6 +277,51 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
           .where({ id: 'base.user_superadmin', model: 'base.user' })
           .first('record_id')
       ).resolves.toEqual(seededSuperadmin);
+
+      const handlerName = `test.pg-scheduler-${randomUUID()}`;
+      const unregister = registerJobHandler({
+        name: handlerName,
+        version: 1,
+        parse(payload: unknown): { run: true } {
+          if (typeof payload !== 'object' || payload === null || !('run' in payload))
+            throw new Error('invalid payload');
+          return { run: true };
+        },
+        async run() {
+          return null;
+        },
+      });
+      try {
+        const company = await concurrentDb('companies').where({ name: 'MoonWitness' }).first('id');
+        expect(company).toBeDefined();
+        const now = new Date('2026-10-03T12:03:00.000Z');
+        const cron = await Cron.query().insertAndFetch({
+          code: `test.pg-scheduler-${randomUUID()}`,
+          name: 'Concurrent scheduler claim',
+          handler: handlerName,
+          payload: '{"run":true}',
+          company_id: Number(company?.id),
+          cron_expression: '* * * * *',
+          timezone: 'UTC',
+          enabled: true,
+          next_run_at: now.toISOString(),
+          misfire_policy: 'coalesce',
+          concurrency_policy: 'allow',
+          max_catch_up: 1,
+        });
+        const schedulerResults = await Promise.all([
+          enqueueDueCrons({ now }),
+          enqueueDueCrons({ now }),
+        ]);
+        expect(schedulerResults.reduce((total, count) => total + count, 0)).toBe(1);
+        const jobs = await Job.query().where({ cron_id: cron.id });
+        expect(jobs).toHaveLength(1);
+        expect(jobs[0]?.schedule_key).toBe(`cron:${cron.id}:${now.toISOString()}`);
+        const advanced = await Cron.query().findById(cron.id).throwIfNotFound();
+        expect(Date.parse(advanced.next_run_at)).toBeGreaterThan(now.getTime());
+      } finally {
+        unregister();
+      }
     } finally {
       await concurrentDb.destroy();
       await adminDb.raw('drop schema if exists ?? cascade', [concurrentSchema]);
