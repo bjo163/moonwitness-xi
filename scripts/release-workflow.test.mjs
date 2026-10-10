@@ -18,6 +18,10 @@ const imagePublisher = await readFile(
   new globalThis.URL('./publish-release-image.mjs', import.meta.url),
   'utf8'
 );
+const assetReconciler = await readFile(
+  new globalThis.URL('./reconcile-release-assets.mjs', import.meta.url),
+  'utf8'
+);
 const releasePlanner = await readFile(
   new globalThis.URL('./release-plan.mjs', import.meta.url),
   'utf8'
@@ -167,9 +171,9 @@ test('critical candidates fail verification and latest only advances for a newer
   assert.match(publish, /--draft=false/u);
   assert.match(publish, /gh release verify-asset/u);
   assert.doesNotMatch(publish, /gh release upload .*--clobber/u);
-  assert.match(publish, /\.digest \/\/ empty/u);
-  assert.match(publish, /IS_DRAFT: \$\{\{ steps\.draft_release\.outputs\.is_draft \}\}/u);
-  assert.match(publish, /test "\$IS_DRAFT" = 'true'/u);
+  assert.match(assetReconciler, /actual\?\.digest === expected\.digest/u);
+  assert.match(assetReconciler, /isDraft: release\.draft/u);
+  assert.match(assetReconciler, /if \(!existing && !isDraft\)/u);
 });
 
 test('publish revalidates the source tag after verification before any image write', () => {
@@ -193,6 +197,15 @@ test('release fault recovery preserves no-op plans and explicitly models hostile
   assert.match(publish, /remote_tag_sha/u);
   assert.match(publish, /gh release view "\$TAG"/u);
   assert.match(publish, /sha256sum --check release-artifacts\.sha256/u);
+  assert.match(publish, /node scripts\/reconcile-release-assets\.mjs/u);
+  assert.match(assetReconciler, /adapter\.listAssets\(releaseId\)/u);
+  assert.match(
+    assetReconciler,
+    /afterUpload = assetMap\(await adapter\.listAssets\(releaseId\)\)/u
+  );
+  assert.match(assetReconciler, /Cannot add missing asset .* to a published release/u);
+  assert.match(assetReconciler, /Duplicate expected release asset/u);
+  assert.doesNotMatch(publish, /gh release upload .*--clobber/u);
 });
 
 test('container smoke reports the failing phase and preserves failures through cleanup', async (t) => {

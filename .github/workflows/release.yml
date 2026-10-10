@@ -417,32 +417,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPOSITORY: ${{ github.repository }}
-          TAG: ${{ github.ref_name }}
-          IS_DRAFT: ${{ steps.draft_release.outputs.is_draft }}
-        run: |
-          set -euo pipefail
-          release_id="$(gh api "repos/$GH_REPOSITORY/releases/tags/$TAG" --jq '.id')"
-          assets="$(gh api --paginate "repos/$GH_REPOSITORY/releases/$release_id/assets?per_page=100")"
-          for file in release-images/release-api.spdx.json release-images/release-board.spdx.json release-images/release-assets.sha256; do
-            name="$(basename "$file")"
-            expected="sha256:$(sha256sum "$file" | awk '{print $1}')"
-            asset="$(jq -c --arg name "$name" '[.[] | select(.name == $name)] | first // empty' <<< "$assets")"
-            if [[ -n "$asset" ]]; then
-              actual="$(jq -r '.digest // empty' <<< "$asset")"
-              test "$actual" = "$expected"
-              test "$(jq -r '.size' <<< "$asset")" = "$(wc -c < "$file" | tr -d ' ')"
-              echo "Reusing exact immutable release asset $name ($actual)."
-            else
-              test "$IS_DRAFT" = 'true'
-              if ! gh release upload "$TAG" "$file"; then
-                assets="$(gh api --paginate "repos/$GH_REPOSITORY/releases/$release_id/assets?per_page=100")"
-                asset="$(jq -c --arg name "$name" '[.[] | select(.name == $name)] | first // empty' <<< "$assets")"
-                test -n "$asset"
-                test "$(jq -r '.digest // empty' <<< "$asset")" = "$expected"
-                test "$(jq -r '.size' <<< "$asset")" = "$(wc -c < "$file" | tr -d ' ')"
-              fi
-            fi
-          done
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: node scripts/reconcile-release-assets.mjs
       - name: Verify release assets before completing release
         env:
           GH_TOKEN: ${{ github.token }}

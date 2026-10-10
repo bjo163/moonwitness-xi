@@ -234,7 +234,7 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ## M7.13 — Retry release yang sama melanjutkan aset kurang tanpa bump/tag/release duplikat atau overwrite aset berbeda.
 
-Publisher OCI melakukan read-before-write dan hanya reuse existing tag bila image ID, source SHA, versi, dan registry digest cocok; konflik ditolak tanpa mutasi. Workflow juga memeriksa ulang remote tag SHA sesudah verify serta memakai kembali GitHub Release published yang bertipe sesuai. Bukti lokal ada di [M7.13](evidence/M7.13.md); simulasi hosted retry/race masih pending.
+Publisher OCI melakukan read-before-write dan hanya reuse existing tag bila image ID, source SHA, versi, dan registry digest cocok; konflik ditolak tanpa mutasi. Workflow juga memeriksa ulang remote tag SHA sesudah verify serta memakai kembali GitHub Release published yang bertipe sesuai. Reconciler aset GitHub mem-preflight semua immutable-name conflict, mengunggah hanya aset yang kurang pada draft, lalu membaca ulang dan memverifikasi digest serta size; retry setelah respons upload hilang akan reuse aset yang diterima server. Bukti lokal ada di [M7.13](evidence/M7.13.md); simulasi hosted retry/race masih pending.
 
 - **Prasyarat:** M7.10
 - **Baca/periksa:** Release manifest; GitHub/GHCR APIs.
@@ -254,7 +254,7 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ## M7.14 — Uji race, partial publish, upload gagal, token expired, tidak ada perubahan releasable, dan kegagalan sinkronisasi branch.
 
-Local fault-injection covers ambiguous GHCR push recovery, auth/network fail-closed behavior, immutable image conflicts, no-release plans, and an actual stale expected-ref race against temporary bare Git remotes. Checksums, source tag SHA and existing-release reconciliation have workflow contract assertions. Hosted credential expiry and registry mutation remain pending.
+Local fault-injection covers ambiguous GHCR push and GitHub Release asset upload recovery, auth/network fail-closed behavior, immutable image/asset conflicts, published-release mutation refusal, no-release plans, and an actual stale expected-ref race against temporary bare Git remotes. Checksums and source tag SHA have workflow contract assertions. Hosted credential expiry and registry/API mutation remain pending.
 
 - **Prasyarat:** M7.13, M7.08
 - **Baca/periksa:** Planner/publisher tests; fake GitHub/registry adapters.
