@@ -110,7 +110,7 @@ async function canReadResource(
     !canAccess(auth.role, resourceModel, 'read', auth.groupPermissions)
   )
     return false;
-  const Model = req.env.get(resourceModel) as { fields?: Record<string, unknown> };
+  const Model = req.env.get(resourceModel);
   const fields = Model.fields;
   const hasCompany = fields && ('company' in fields || 'company_id' in fields);
   const query = req.env.get(resourceModel).query().where({ id: resourceId, active: true });

@@ -49,7 +49,7 @@ export async function getRecordRuleDomain(req: FastifyRequest, modelName: string
 
   // Company scope is additive, so extension rules cannot accidentally remove tenant isolation.
   const Model = req.env.get(modelName);
-  const fields = (Model as unknown as { fields?: Record<string, unknown> })?.fields;
+  const fields = Model.fields;
   const companyDomain: Domain =
     fields && ('company' in fields || 'company_id' in fields)
       ? context.companyId !== undefined

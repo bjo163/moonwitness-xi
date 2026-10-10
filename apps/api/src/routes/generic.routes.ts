@@ -33,9 +33,6 @@ import type {
 } from '@moonwitness/types';
 
 type JsonObject = { [key: string]: JsonValue };
-type AuditableModel = typeof BaseModel & {
-  fields?: Readonly<Record<string, { kind?: string }>>;
-};
 type RpcEnvelope = {
   jsonrpc?: unknown;
   method?: unknown;
@@ -151,7 +148,7 @@ async function findReference(
   trx?: Transaction
 ): Promise<string | null> {
   for (const [modelName, RegisteredModel] of Registry.getAll()) {
-    const fields = (RegisteredModel as typeof BaseModel & { fields?: FieldMap }).fields ?? {};
+    const fields = RegisteredModel.fields ?? {};
     const references = Object.entries(fields).flatMap(([fieldName, field]) => {
       if (field.kind !== 'belongsTo') return [];
       const target = resolveFieldTarget(field);
@@ -197,8 +194,7 @@ async function hasCompanyAccess(
   trx?: Transaction
 ): Promise<boolean> {
   const companyId = req.auth?.companyId;
-  const modelFields =
-    (Registry.get(modelName) as typeof BaseModel & { fields?: FieldMap }).fields ?? {};
+  const modelFields = Registry.get(modelName).fields ?? {};
   const targetCompany = Object.hasOwn(values, 'company_id')
     ? values.company_id
     : property(current, 'company_id');
@@ -230,7 +226,7 @@ async function hasCompanyAccess(
     if (!targetModel) continue;
     const target = await req.env.get(targetModel.modelName).query(trx).findById(relationId);
     if (!target) return false;
-    const targetFields = (targetModel as typeof BaseModel & { fields?: FieldMap }).fields ?? {};
+    const targetFields = targetModel.fields ?? {};
     if ('company' in targetFields || 'company_id' in targetFields) {
       const relatedCompany = property(target, 'company_id');
       if (relatedCompany !== undefined && relatedCompany !== null && relatedCompany !== companyId)
@@ -253,7 +249,7 @@ function relationConflict(reply: FastifyReply, modelName: string, reference: str
 
 const AUDIT_SECRET_KEY = /password|token|secret|credential|hash/i;
 
-function auditSnapshot(model: AuditableModel, record: unknown): JsonObject {
+function auditSnapshot(model: typeof BaseModel, record: unknown): JsonObject {
   const source = record instanceof BaseModel ? record.toJSON() : record;
   if (!isObject(source)) return {};
   const fields = model.fields;
@@ -288,7 +284,7 @@ async function recordAudit(
   trx?: Transaction
 ): Promise<void> {
   if (modelName === 'base.audit_log') return;
-  const Model = resolveModel(req, modelName) as AuditableModel | null;
+  const Model = resolveModel(req, modelName);
   if (!Model) return;
   const previous = auditSnapshot(Model, before);
   const current = auditSnapshot(Model, after);
@@ -376,7 +372,7 @@ async function hasValidResourceReference(
   current?: BaseModel,
   trx?: Transaction
 ): Promise<boolean> {
-  const Model = Registry.get(modelName) as typeof BaseModel & { fields?: FieldMap };
+  const Model = Registry.get(modelName);
   if (!hasPolymorphicResourceFields(Model.fields ?? {})) return true;
   const resourceModel = Object.hasOwn(values, 'resource_model')
     ? values.resource_model

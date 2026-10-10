@@ -7,6 +7,7 @@ import {
 } from 'objection';
 import { applyDomain } from './domain.js';
 import { Environment } from './environment.js';
+import type { FieldMap } from './model-definition.js';
 import type {
   Domain,
   GroupCountOptions,
@@ -36,6 +37,8 @@ export class BaseModel extends Model {
   static exposedActions: readonly string[] = ['action_archive', 'action_unarchive'];
   static hiddenFields: readonly string[] = [];
   static uniqueConstraints: readonly (readonly string[])[] = [];
+  /** Declarative addon fields, when the model is defined through `defineModel`. */
+  static fields?: FieldMap;
 
   /**
    * The Environment associated with this model class execution.
