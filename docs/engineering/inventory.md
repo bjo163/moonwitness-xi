@@ -79,6 +79,6 @@ ORM addon installation uses programmatic model metadata and database operations;
 
 - Audit all model × role × company/action combinations using the feature matrix and negative-access cases; a source inventory alone cannot prove authorization.
 - Review demo seed records and attachment examples for privacy before public documentation captures or reusable fixtures.
-- Re-audit current GitHub rulesets, Pages, required checks, Actions permissions and default-branch discovery before external activation; the old capability audit is only historical evidence.
+- Latest read-only GitHub audit (2026-10-11) confirms exactly `main`/`dev`, active branch/tag rulesets, repository-level auto-merge and Pages capability, and the main-required `ci-gate`; classic branch-protection endpoints return 403 to the connected integration. See [GitHub capability baseline](github-capabilities.md). Default-branch activation and sensitive promotion remain separate hosted gates.
 - Capture repeatable coverage and performance baselines without replacing the route-aware Board bundle budgets with a single total-bundle number.
 - Run PostgreSQL integration/browser and container runtime lanes on the supported hosted runner; local `pnpm verify` intentionally does not claim them.
