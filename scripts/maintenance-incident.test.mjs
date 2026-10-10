@@ -162,6 +162,47 @@ test('platform audit failures deduplicate independently and recovery closes only
   assert.equal(docsIssue.state, 'open');
 });
 
+test('scheduled browser and deep-regression incidents deduplicate and recover independently', () => {
+  for (const [category, label, description] of [
+    ['browser-regression', 'browser-regression', 'cross-browser Board end-to-end'],
+    ['deep-regression', 'deep-regression', 'PostgreSQL upgrade, jobs recovery'],
+  ]) {
+    const input = (id, status = 'failed', issues = []) => ({
+      category,
+      issues,
+      ...incidentInput(id, status),
+    });
+    const first = planMaintenanceIncident(input(70));
+    assert.equal(first.operation, 'create');
+    assert.deepEqual(first.labels, [label]);
+    assert.match(first.body, new RegExp(description, 'u'));
+
+    let current = {
+      number: 71,
+      title: first.title,
+      body: `Human context remains.\n\n${first.body}`,
+      state: 'open',
+      labels: [{ name: label }, { name: 'triaged-by-human' }],
+    };
+    for (const id of [72, 73, 74, 75]) {
+      const update = planMaintenanceIncident(input(id, 'failed', [current]));
+      assert.equal(update.operation, 'update');
+      current = { ...current, ...update };
+    }
+    assert.match(current.body, /^Human context remains\./u);
+    assert.equal(
+      (current.body.match(new RegExp(`moonwitness:${category}-run:`, 'gu')) ?? []).length,
+      5
+    );
+
+    const recovery = planMaintenanceIncident(input(76, 'recovered', [current]));
+    assert.equal(recovery.operation, 'update');
+    assert.equal(recovery.state, 'closed');
+    assert.match(recovery.body, /RECOVERED/u);
+    assert.deepEqual(recovery.labels, [label, 'triaged-by-human']);
+  }
+});
+
 test('duplicate docs incidents and malformed managed blocks fail closed', () => {
   const duplicate = planDocumentationIncident({
     issues: [incident(1), incident(2)],

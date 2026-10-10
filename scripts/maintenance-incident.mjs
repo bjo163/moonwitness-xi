@@ -27,6 +27,31 @@ const CATEGORIES = {
       'A successful audit with its baseline artifact updates this issue and resolves only this `platform-audit` incident.',
     ],
   },
+  'browser-regression': {
+    label: 'browser-regression',
+    marker: 'browser-regression',
+    title: 'Scheduled browser regression incident',
+    subject: 'Scheduled browser regression',
+    description: 'scheduled cross-browser Board end-to-end regression suite',
+    steps: [
+      'Inspect the linked workflow run and identify the failing browser and test category.',
+      'Reproduce the failure on the current trusted `main` source before changing browser baselines.',
+      'A successful scheduled browser matrix updates this incident and resolves only this category.',
+    ],
+  },
+  'deep-regression': {
+    label: 'deep-regression',
+    marker: 'deep-regression',
+    title: 'Deep regression incident',
+    subject: 'Deep regression',
+    description:
+      'scheduled PostgreSQL upgrade, jobs recovery, and application restore regression suite',
+    steps: [
+      'Inspect the linked workflow run and identify the failing database, recovery, or restore phase.',
+      'Reproduce the failure using an isolated database and preserve the failed-run evidence.',
+      'A complete successful scheduled regression updates this incident and resolves only this category.',
+    ],
+  },
 };
 const MAX_RUNS = 10;
 

@@ -66,3 +66,59 @@ jobs:
             test-results/playwright/**/*.png
           if-no-files-found: ignore
           retention-days: 7
+
+  report-failure:
+    name: Report scheduled browser regression failure
+    if: always() && needs.browsers.result == 'failure' && github.ref == 'refs/heads/main'
+    needs: [browsers]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    concurrency:
+      group: repository-write-coordinator
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Upsert the browser regression incident
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          SOURCE_REF: ${{ github.ref_name }}
+          SOURCE_SHA: ${{ github.sha }}
+          INCIDENT_CATEGORY: browser-regression
+          INCIDENT_STATUS: failed
+        run: node scripts/maintenance-incident.mjs
+
+  resolve-failure:
+    name: Resolve recovered scheduled browser regression
+    if: always() && needs.browsers.result == 'success' && github.ref == 'refs/heads/main'
+    needs: [browsers]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    concurrency:
+      group: repository-write-coordinator
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Resolve the incident after a successful browser matrix
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          SOURCE_REF: ${{ github.ref_name }}
+          SOURCE_SHA: ${{ github.sha }}
+          INCIDENT_CATEGORY: browser-regression
+          INCIDENT_STATUS: recovered
+        run: node scripts/maintenance-incident.mjs

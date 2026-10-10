@@ -969,6 +969,7 @@
       "id": "M8.09",
       "title": "Jadwalkan issue pemeliharaan tanpa spam; deduplikasi failure issue, perbarui recovery, dan jangan auto-close laporan keamanan hanya karena sudah lama.",
       "milestone": "M8",
+      "status": "in_progress",
       "dependsOn": ["M2.10", "M8.01"],
       "output": "Maintenance issue reconciler",
       "detailFile": "docs/roadmap/08-security-maintenance.md"

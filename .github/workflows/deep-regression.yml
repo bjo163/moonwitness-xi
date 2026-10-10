@@ -65,3 +65,59 @@ jobs:
           path: test-results/junit/postgres.xml
           if-no-files-found: ignore
           retention-days: 14
+
+  report-failure:
+    name: Report deep regression failure
+    if: always() && needs.postgres-recovery.result == 'failure' && github.ref == 'refs/heads/main'
+    needs: [postgres-recovery]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    concurrency:
+      group: repository-write-coordinator
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Upsert the deep regression incident
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          SOURCE_REF: ${{ github.ref_name }}
+          SOURCE_SHA: ${{ github.sha }}
+          INCIDENT_CATEGORY: deep-regression
+          INCIDENT_STATUS: failed
+        run: node scripts/maintenance-incident.mjs
+
+  resolve-failure:
+    name: Resolve recovered deep regression
+    if: always() && needs.postgres-recovery.result == 'success' && github.ref == 'refs/heads/main'
+    needs: [postgres-recovery]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    concurrency:
+      group: repository-write-coordinator
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Resolve the incident after a successful deep regression
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          SOURCE_REF: ${{ github.ref_name }}
+          SOURCE_SHA: ${{ github.sha }}
+          INCIDENT_CATEGORY: deep-regression
+          INCIDENT_STATUS: recovered
+        run: node scripts/maintenance-incident.mjs

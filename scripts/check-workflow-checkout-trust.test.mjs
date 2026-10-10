@@ -147,6 +147,24 @@ test('issue intake policy rejects write scopes, unpinned checkout, and user text
   assert.ok(findings.some((finding) => finding.includes('omit user text')));
 });
 
+test('scheduled regression incidents are main-only, isolated, and narrowly scoped', async () => {
+  const [browserMatrix, deepRegression] = await Promise.all([
+    readFile(new NodeURL('../.github/workflows/browser-matrix.yml', import.meta.url), 'utf8'),
+    readFile(new NodeURL('../.github/workflows/deep-regression.yml', import.meta.url), 'utf8'),
+  ]);
+  assert.deepEqual(policies({ browserMatrix, deepRegression }), []);
+
+  const unsafe = policies({
+    browserMatrix: browserMatrix.replaceAll(
+      "github.ref == 'refs/heads/main'",
+      "github.ref == 'refs/heads/dev'"
+    ),
+    deepRegression: deepRegression.replace('      issues: write', '      contents: write'),
+  });
+  assert.ok(unsafe.some((finding) => finding.includes('limited to main runs')));
+  assert.ok(unsafe.some((finding) => finding.includes('issues-only write scope')));
+});
+
 test('rejects promotion reports without exact SHA checks or preservation of the existing PR body', () => {
   const unsafe = promote
     .replace('checks: read', 'contents: read')

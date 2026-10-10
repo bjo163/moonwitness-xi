@@ -49,6 +49,8 @@ export function inspectTrustedCheckoutPolicies({
   promote,
   issueIntake,
   issueIntakeRunner,
+  browserMatrix,
+  deepRegression,
 }) {
   const findings = [];
   for (const [name, source] of [
@@ -382,6 +384,46 @@ export function inspectTrustedCheckoutPolicies({
       );
   }
 
+  for (const [name, source, dependency, category] of [
+    ['browser-matrix.yml', browserMatrix, 'browsers', 'browser-regression'],
+    ['deep-regression.yml', deepRegression, 'postgres-recovery', 'deep-regression'],
+  ]) {
+    if (!source) continue;
+    const expectedFailure = `if: always() && needs.${dependency}.result == 'failure' && github.ref == 'refs/heads/main'`;
+    const expectedRecovery = `if: always() && needs.${dependency}.result == 'success' && github.ref == 'refs/heads/main'`;
+    if (!source.includes(expectedFailure) || !source.includes(expectedRecovery))
+      findings.push(`${name} incident reporting and recovery must be limited to main runs.`);
+    if (
+      (source.match(/group: repository-write-coordinator/gu) ?? []).length !== 2 ||
+      (source.match(/issues: write/gu) ?? []).length !== 2
+    )
+      findings.push(
+        `${name} incident writes must use the shared coordinator and issues-only write scope.`
+      );
+    const checkouts = checkoutSteps(source);
+    if (
+      checkouts.length < 3 ||
+      checkouts
+        .slice(-2)
+        .some(
+          (checkout) =>
+            !checkout.includes('ref: ${{ github.sha }}') ||
+            !checkout.includes('persist-credentials: false')
+        )
+    )
+      findings.push(
+        `${name} incident handlers must check out the event SHA without persisted credentials.`
+      );
+    if (
+      (source.match(new RegExp(`INCIDENT_CATEGORY: ${category}`, 'gu')) ?? []).length !== 2 ||
+      (source.match(/INCIDENT_STATUS: (?:failed|recovered)/gu) ?? []).length !== 2 ||
+      /INCIDENT_CATEGORY: security/u.test(source)
+    )
+      findings.push(
+        `${name} must reconcile only its fixed non-security category for failure and recovery.`
+      );
+  }
+
   return findings;
 }
 
@@ -396,6 +438,8 @@ async function main() {
     promote,
     issueIntake,
     issueIntakeRunner,
+    browserMatrix,
+    deepRegression,
   ] = await Promise.all([
     readFile(path.join(repositoryRoot, '.github/workflows/pages.yml'), 'utf8'),
     readFile(path.join(repositoryRoot, '.github/workflows/visual-review.yml'), 'utf8'),
@@ -406,6 +450,8 @@ async function main() {
     readFile(path.join(repositoryRoot, '.github/workflows/promote.yml'), 'utf8'),
     readFile(path.join(repositoryRoot, '.github/workflows/roadmap-issue-intake.yml'), 'utf8'),
     readFile(path.join(repositoryRoot, 'scripts/roadmap/run-issue-intake.mjs'), 'utf8'),
+    readFile(path.join(repositoryRoot, '.github/workflows/browser-matrix.yml'), 'utf8'),
+    readFile(path.join(repositoryRoot, '.github/workflows/deep-regression.yml'), 'utf8'),
   ]);
   const findings = inspectTrustedCheckoutPolicies({
     pages,
@@ -417,6 +463,8 @@ async function main() {
     promote,
     issueIntake,
     issueIntakeRunner,
+    browserMatrix,
+    deepRegression,
   });
   if (findings.length) {
     for (const finding of findings) process.stderr.write(`${finding}\n`);
