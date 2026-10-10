@@ -10,9 +10,11 @@ const verificationPhases = new Set([
 export function extractPackageVerificationErrorCode(error) {
   if (typeof error !== 'object' || error === null) return undefined;
 
-  const stderr = 'stderr' in error ? error.stderr : undefined;
-  if (typeof stderr === 'string') {
-    const packageManagerCode = stderr.match(/\bERR_PNPM_[A-Z0-9_]+\b/u)?.[0];
+  for (const outputName of ['stdout', 'stderr']) {
+    const output = outputName in error ? error[outputName] : undefined;
+    if (typeof output !== 'string') continue;
+
+    const packageManagerCode = output.match(/\bERR_PNPM_[A-Z0-9_]+\b/u)?.[0];
     if (packageManagerCode) return packageManagerCode;
   }
 

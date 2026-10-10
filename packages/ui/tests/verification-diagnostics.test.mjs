@@ -34,3 +34,14 @@ test('extracts only a pnpm error identifier from package-manager stderr', () => 
   assert.equal(extractPackageVerificationErrorCode({ code: 1, stderr: 'other failure detail' }), 1);
   assert.equal(extractPackageVerificationErrorCode('untrusted error'), undefined);
 });
+
+test('extracts safe pnpm identifiers written to stdout without exposing adjacent content', () => {
+  assert.equal(
+    extractPackageVerificationErrorCode({
+      code: 1,
+      stdout: 'ERR_PNPM_NO_OFFLINE_META: authorization=secret-value',
+      stderr: 'registry token=secret-value',
+    }),
+    'ERR_PNPM_NO_OFFLINE_META'
+  );
+});
