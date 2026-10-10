@@ -7,7 +7,20 @@ import {
 } from 'objection';
 import { applyDomain } from './domain.js';
 import { Environment } from './environment.js';
-import type { Domain, ModelContext, SearchOptions, SearchReadOptions } from './types.js';
+import type {
+  Domain,
+  GroupCountOptions,
+  GroupCountPage,
+  GroupCountRow,
+  JsonValue,
+  ModelContext,
+  SearchOptions,
+  SearchReadOptions,
+} from './types.js';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 export class BaseModel extends Model {
   /**
@@ -326,6 +339,87 @@ export class BaseModel extends Model {
         ? countResult.count
         : undefined;
     return typeof count === 'string' ? parseInt(count, 10) : Number(count || 0);
+  }
+
+  /** Returns bounded grouped counts for scalar columns declared by the model. */
+  static async search_group_count<M extends BaseModel>(
+    this: { new (): M } & typeof BaseModel,
+    domain: Domain = [],
+    groupBy: readonly string[] = [],
+    options: GroupCountOptions = {}
+  ): Promise<GroupCountPage> {
+    const maxGroups = 500;
+    const limit = options.limit ?? 100;
+    const offset = options.offset ?? 0;
+    const properties = this.jsonSchema.properties ?? {};
+    if (
+      groupBy.length === 0 ||
+      groupBy.length > 3 ||
+      new Set(groupBy).size !== groupBy.length ||
+      groupBy.some(
+        (field) =>
+          !/^[a-z_][a-z0-9_]*$/i.test(field) ||
+          !Object.hasOwn(properties, field) ||
+          this.hiddenFields.includes(field)
+      )
+    ) {
+      throw Object.assign(new Error('Invalid or private group-by field'), { statusCode: 400 });
+    }
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > maxGroups) {
+      throw Object.assign(new Error(`Group count limit must be 1–${maxGroups}`), {
+        statusCode: 400,
+      });
+    }
+    if (!Number.isSafeInteger(offset) || offset < 0 || offset > 10_000) {
+      throw Object.assign(new Error('Group count offset must be 0–10000'), { statusCode: 400 });
+    }
+
+    const rows: BaseModel[] = await this.buildSearchQuery(domain, {
+      activeTest: options.activeTest,
+      context: options.context,
+      transaction: options.transaction,
+      order: '',
+    })
+      .clearSelect()
+      .select([...groupBy])
+      .count({ __group_count: '*' })
+      .groupBy([...groupBy])
+      .orderBy([...groupBy])
+      .offset(offset)
+      .limit(limit + 1);
+
+    const hasMore = rows.length > limit;
+    const groups: GroupCountRow[] = rows.slice(0, limit).map((row) => {
+      const record: unknown = row.toJSON();
+      if (!isRecord(record)) {
+        throw new Error('Database returned an invalid grouped-count row');
+      }
+      const rawCount = record.__group_count;
+      const count =
+        typeof rawCount === 'number'
+          ? rawCount
+          : typeof rawCount === 'string' && /^\d+$/u.test(rawCount)
+            ? Number(rawCount)
+            : Number.NaN;
+      if (!Number.isSafeInteger(count) || count < 0) {
+        throw new Error('Database returned an invalid grouped-count value');
+      }
+      const values: Record<string, JsonValue> = {};
+      for (const field of groupBy) {
+        const value = record[field];
+        if (
+          value !== null &&
+          typeof value !== 'string' &&
+          typeof value !== 'number' &&
+          typeof value !== 'boolean'
+        ) {
+          throw new Error('Database returned an invalid grouped-count key');
+        }
+        values[field] = value;
+      }
+      return { values, count };
+    });
+    return { groups, limit, offset, hasMore };
   }
 
   /**

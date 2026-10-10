@@ -98,6 +98,42 @@ describe('MoonWitnessClient', () => {
     expect(params.get('count')).toBe('true');
   });
 
+  it('builds a typed grouped-count request with encoded model path and scoped domain', async () => {
+    let seenPath = '';
+    let seenQuery = '';
+    const { client } = makeClient((url) => {
+      if (url.pathname === '/auth/login') return json(tokens('group-token'));
+      seenPath = url.pathname;
+      seenQuery = url.search;
+      return json({
+        success: true,
+        model: 'base.partner',
+        groupBy: ['company_id'],
+        groups: [{ values: { company_id: 1 }, count: 4 }],
+        limit: 25,
+        offset: 2,
+        hasMore: true,
+      });
+    });
+
+    await client.login({ login: 'alice', password: 'pw' });
+    const result = await client.model('base.partner').groupCount({
+      domain: [['active', '=', true]],
+      groupBy: ['company_id'],
+      limit: 25,
+      offset: 2,
+    });
+
+    expect(seenPath).toBe('/api/base.partner/group-count');
+    const params = new URLSearchParams(seenQuery);
+    expect(params.get('domain')).toBe('[["active","=",true]]');
+    expect(params.get('group_by')).toBe('company_id');
+    expect(params.get('limit')).toBe('25');
+    expect(params.get('offset')).toBe('2');
+    expect(result.groups).toEqual([{ values: { company_id: 1 }, count: 4 }]);
+    expect(result.hasMore).toBe(true);
+  });
+
   it('shares one refresh across concurrent 401s and retries each request', async () => {
     let refreshes = 0;
     const { client } = makeClient((url, init) => {

@@ -6,19 +6,27 @@ jalankan `pnpm --filter @moonwitness/api test`; suite API lokal saat ini melapor
 
 ## Endpoint penemuan
 
-| Endpoint                 | Kegunaan                                                     |
-| ------------------------ | ------------------------------------------------------------ |
-| `GET /livez`             | Liveness proses HTTP; tidak membuktikan database siap.       |
-| `GET /readyz`            | Readiness API dan koneksi PostgreSQL terbatas.               |
-| `GET /health`            | Alias kompatibilitas untuk readiness.                        |
-| `GET /api/models`        | Daftar model yang terlihat oleh actor saat ini.              |
-| `GET /api/:model/fields` | Metadata field untuk model yang diizinkan.                   |
-| `GET /api/:model/views`  | Metadata list/form/search view.                              |
-| `/auth/*`                | Login, refresh, logout, perubahan password, dan profil sesi. |
+| Endpoint                      | Kegunaan                                                                                                      |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `GET /livez`                  | Liveness proses HTTP; tidak membuktikan database siap.                                                        |
+| `GET /readyz`                 | Readiness API dan koneksi PostgreSQL terbatas.                                                                |
+| `GET /health`                 | Alias kompatibilitas untuk readiness.                                                                         |
+| `GET /api/models`             | Daftar model yang terlihat oleh actor saat ini.                                                               |
+| `GET /api/:model/fields`      | Metadata field untuk model yang diizinkan.                                                                    |
+| `GET /api/:model/views`       | Metadata list/form/search view.                                                                               |
+| `GET /api/:model/group-count` | Hitungan terbatas menurut kolom scalar dengan domain dan row/company scope yang sama seperti pencarian model. |
+| `/auth/*`                     | Login, refresh, logout, perubahan password, dan profil sesi.                                                  |
 
 Route `/api/:model` menyediakan search/read, create, update, archive, dan action sesuai permission.
 Filter `domain`, `fields`, pagination (`offset`, `limit`), `order`, eager relation (`with`), serta
 `count` didokumentasikan sebagai bagian kontrak SDK.
+
+Gunakan `GET /api/base.partner/group-count?group_by=company_id,is_customer` untuk hitungan per
+kombinasi kolom; `domain` menerima JSON domain seperti endpoint list. Gunakan `limit` (default 100,
+maksimum 500) dan `offset` (default 0, maksimum 10.000) untuk pagination deterministik; respons
+menyertakan `hasMore`. Satu sampai tiga kolom scalar yang memang dideklarasikan pada model diizinkan.
+Kolom tersembunyi atau relasi ditolak, dan record/company scope server selalu ditambahkan ke domain
+sebelum agregasi.
 
 ## Client dan kompatibilitas
 

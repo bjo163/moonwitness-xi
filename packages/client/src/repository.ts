@@ -1,5 +1,7 @@
 import type {
   FieldMeta,
+  GroupCountOptions,
+  GroupCountResult,
   ModelFields,
   ResolvedViews,
   SearchReadOptions,
@@ -58,6 +60,18 @@ export class ModelRepository<TRecord = Record<string, unknown>> {
       },
     });
     return { records: res.data, ...(res.total !== undefined ? { total: res.total } : {}) };
+  }
+
+  /** Returns bounded counts grouped by one to three public scalar model fields. */
+  async groupCount(options: GroupCountOptions): Promise<GroupCountResult> {
+    return this.http.request<GroupCountResult>(this.path('group-count'), {
+      query: {
+        domain: options.domain?.length ? JSON.stringify(options.domain) : undefined,
+        group_by: options.groupBy.join(','),
+        limit: options.limit,
+        offset: options.offset,
+      },
+    });
   }
 
   async read(id: number, options: { with?: string } = {}): Promise<TRecord> {

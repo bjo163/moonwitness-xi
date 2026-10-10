@@ -545,6 +545,66 @@ describe('authentication and authorization', () => {
         ownPartner.id,
       ]);
       expect(scopedOrExport.payload).not.toContain('Foreign Partner');
+      const scopedGroups = await as(alice.access_token, {
+        method: 'GET',
+        url: `/api/base.partner/group-count?group_by=company_id&domain=${mixedCompanyDomain}`,
+      });
+      expect(scopedGroups.statusCode, scopedGroups.payload).toBe(200);
+      expect(
+        scopedGroups.json<{
+          groups: { values: { company_id: number }; count: number }[];
+          hasMore: boolean;
+        }>().groups
+      ).toEqual([{ values: { company_id: 1 }, count: 1 }]);
+      const groupedFixtures = [
+        await Partner.query().insert({ name: 'Grouped Count Probe A', is_company: false }),
+        await Partner.query().insert({ name: 'Grouped Count Probe B', is_company: true }),
+      ];
+      const groupedFixtureDomain = encodeURIComponent(
+        JSON.stringify([['id', 'in', groupedFixtures.map(({ id }) => id)]])
+      );
+      const firstGroupPage = await as(admin.access_token, {
+        method: 'GET',
+        url: `/api/base.partner/group-count?group_by=is_company&domain=${groupedFixtureDomain}&limit=1`,
+      });
+      expect(firstGroupPage.statusCode).toBe(200);
+      expect(firstGroupPage.json()).toMatchObject({
+        limit: 1,
+        offset: 0,
+        hasMore: true,
+        groups: [{ values: { is_company: false }, count: 1 }],
+      });
+      const secondGroupPage = await as(admin.access_token, {
+        method: 'GET',
+        url: `/api/base.partner/group-count?group_by=is_company&domain=${groupedFixtureDomain}&limit=1&offset=1`,
+      });
+      expect(secondGroupPage.statusCode).toBe(200);
+      expect(secondGroupPage.json()).toMatchObject({
+        limit: 1,
+        offset: 1,
+        hasMore: false,
+        groups: [{ values: { is_company: true }, count: 1 }],
+      });
+      const hiddenGroup = await as(admin.access_token, {
+        method: 'GET',
+        url: '/api/base.user/group-count?group_by=password',
+      });
+      expect(hiddenGroup.statusCode).toBe(400);
+      const malformedGroup = await as(alice.access_token, {
+        method: 'GET',
+        url: '/api/base.partner/group-count?group_by=company_id%20desc',
+      });
+      expect(malformedGroup.statusCode).toBe(400);
+      const excessiveLimit = await as(alice.access_token, {
+        method: 'GET',
+        url: '/api/base.partner/group-count?group_by=company_id&limit=501',
+      });
+      expect(excessiveLimit.statusCode).toBe(400);
+      const excessiveOffset = await as(alice.access_token, {
+        method: 'GET',
+        url: '/api/base.partner/group-count?group_by=company_id&offset=10001',
+      });
+      expect(excessiveOffset.statusCode).toBe(400);
       await ModelAccess.query().findById(partnerGrant.id).patch({ write: false, create: false });
       expect(
         (

@@ -71,3 +71,7 @@ M10.01 remains open: the current exact-head hosted database, browser, container,
 ## Targeted cross-company count/export regression — 2026-10-11
 
 The API count/export isolation case now includes an adversarial `OR` domain joining an own-company and foreign-company partner. It passes in the SQLite API suite and in PostgreSQL integration/restore on exact PR head `bdcb4972cda5a9a8d2990d5d69def87c1ae68f18` (CI run [38074311488](https://github.com/bjo163/moonwitness-xi/actions/runs/38074311488)). The `ci-gate` correctly remains blocked on fresh CODEOWNER review, which does not invalidate the technical lane result. This closes only this specific negative case: grouped-count API semantics and the other row-level gaps above remain open.
+
+## Grouped-count API implementation — local acceptance in progress
+
+`GET /api/:model/group-count` now uses the same validated domain and row/company scope as normal model reads. It accepts one to three declared scalar columns, rejects hidden/unknown/unsafe fields, supports bounded deterministic pagination (`limit` ≤500, `offset` ≤10,000), and reports `hasMore`. `ModelRepository.groupCount()` exposes a typed client contract. Local API tests cover cross-company counts, hidden fields, invalid columns, and a two-page boolean group; PostgreSQL/hosted execution for this implementation is pending. This does not close broader model combinations or M10.01.

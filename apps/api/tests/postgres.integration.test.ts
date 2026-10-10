@@ -567,6 +567,16 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     ]);
     expect(scopedOrExport.payload).not.toContain('PostgreSQL Foreign Contact');
 
+    const groupedCount = await app.inject({
+      method: 'GET',
+      url: `/api/base.partner/group-count?group_by=company_id&domain=${mixedCompanyDomain}`,
+      headers,
+    });
+    expect(groupedCount.statusCode).toBe(200);
+    expect(
+      groupedCount.json<{ groups: { values: { company_id: number }; count: number }[] }>().groups
+    ).toEqual([{ values: { company_id: localCompany.id }, count: 1 }]);
+
     const deniedForeignCreate = await app.inject({
       method: 'POST',
       url: '/api/base.partner',

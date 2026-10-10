@@ -21,6 +21,7 @@ import { getRecordRuleDomain } from '../auth/rules.js';
 import type {
   ActionRequestBody,
   DeleteQueryParams,
+  GroupCountQueryParams,
   ModelActionParam,
   ModelIdParam,
   ModelListResponse,
@@ -74,6 +75,18 @@ function parseInteger(value: string | undefined, fallback?: number): number | un
 /** Resolves a model bound to the request's Environment so audit fields use the caller. */
 function resolveModel(req: FastifyRequest, name: string) {
   return Registry.has(name) ? req.env.get(name) : null;
+}
+
+function parseModelDomain(raw: string | undefined, Model: typeof BaseModel): Domain | null {
+  if (!raw) return [];
+  try {
+    return validateDomain(
+      JSON.parse(raw) as unknown,
+      new Set(Object.keys(Model.jsonSchema.properties ?? {}))
+    );
+  } catch {
+    return null;
+  }
 }
 
 function requireId(value: string, reply: FastifyReply): number | null {
@@ -910,24 +923,59 @@ export const genericRoutes: FastifyPluginAsync<GenericRoutesOptions> = async (fa
     };
   });
 
+  fastify.get<{ Params: ModelParam; Querystring: GroupCountQueryParams }>(
+    '/api/:model/group-count',
+    async (req, reply) => {
+      const Model = resolveModel(req, req.params.model);
+      if (!Model) return reply.status(404).send(modelNotFound(req.params.model));
+      const domain = parseModelDomain(req.query.domain, Model);
+      if (!domain) {
+        return reply
+          .code(400)
+          .send({ success: false, error: 'Invalid domain; expected a JSON domain array' });
+      }
+      if (!req.query.group_by || req.query.group_by.length > 512) {
+        return reply.code(400).send({ success: false, error: 'group_by is required' });
+      }
+      const groupBy = req.query.group_by.split(',').map((field) => field.trim());
+      const limit = parseInteger(req.query.limit, 100);
+      const offset = parseInteger(req.query.offset, 0);
+      if (limit === undefined || limit < 1 || limit > 500) {
+        return reply.code(400).send({ success: false, error: 'limit must be 1–500' });
+      }
+      if (offset === undefined || offset < 0 || offset > 10_000) {
+        return reply.code(400).send({ success: false, error: 'offset must be 0–10000' });
+      }
+      try {
+        const scope = await userReadScope(req, req.params.model);
+        const page = await Model.search_group_count([...domain, ...scope], groupBy, {
+          limit,
+          offset,
+        });
+        return { success: true, model: req.params.model, groupBy, ...page };
+      } catch (error) {
+        const validationError = isObject(error) && error.statusCode === 400;
+        return reply.code(validationError ? 400 : 500).send({
+          success: false,
+          error: validationError
+            ? errorMessage(error, 'Invalid grouped-count request')
+            : errorMessage(error, 'Unable to group records'),
+        });
+      }
+    }
+  );
+
   fastify.get<{ Params: ModelParam; Querystring: SearchQueryParams }>(
     '/api/:model',
     async (req, reply) => {
       const Model = resolveModel(req, req.params.model);
       if (!Model) return reply.status(404).send(modelNotFound(req.params.model));
 
-      let domain: Domain = [];
-      if (req.query.domain) {
-        try {
-          domain = validateDomain(
-            JSON.parse(req.query.domain) as unknown,
-            new Set(Object.keys(Model.jsonSchema.properties ?? {}))
-          );
-        } catch {
-          return reply
-            .status(400)
-            .send({ success: false, error: 'Invalid domain; expected a JSON domain array' });
-        }
+      const domain = parseModelDomain(req.query.domain, Model);
+      if (!domain) {
+        return reply
+          .status(400)
+          .send({ success: false, error: 'Invalid domain; expected a JSON domain array' });
       }
 
       const limit = parseInteger(req.query.limit, 80);

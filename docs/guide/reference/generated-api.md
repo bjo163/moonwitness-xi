@@ -1,6 +1,6 @@
 # Generated API route reference
 
-Extracted from literal Fastify route declarations. Source fingerprint: `1d4eb7be7fcd88d12deb98de3be462f432e3cb2cfda23385dee9633e06f4e703`. Generic handler request payloads are not inferred where the source does not declare a static schema.
+Extracted from literal Fastify route declarations. Source fingerprint: `d58884f627fa199ca885ce6935298c995fcf62b9e22f705b96229e96fc1d4285`. Generic handler request payloads are not inferred where the source does not declare a static schema.
 
 | Method | Path                                  |
 | ------ | ------------------------------------- |
@@ -24,6 +24,7 @@ Extracted from literal Fastify route declarations. Source fingerprint: `1d4eb7be
 | PUT    | `/api/:model/:id`                     |
 | POST   | `/api/:model/:id/action/:method`      |
 | GET    | `/api/:model/fields`                  |
+| GET    | `/api/:model/group-count`             |
 | GET    | `/api/:model/views`                   |
 | GET    | `/api/base.attachment/:id/download`   |
 | POST   | `/api/base.attachment/upload`         |
