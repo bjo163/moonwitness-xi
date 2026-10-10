@@ -67,3 +67,7 @@ This report expands the initial [feature-to-test matrix](feature-matrix.md) with
 6. **P1 integrations:** controlled GitHub issue sync pilot and maintainer-owned status intake remain outstanding; planner tests do not prove live issue apply. The available local GitHub CLI credential is invalid, and the scoped write workflow is the approved apply path. Owner: repository maintainer / Delivery + Workflow.
 
 M10.01 remains open: the current exact-head hosted database, browser, container, security, UI, and quality suites passed, but feature-specific gaps in the table remain and no promotion/release/issue-apply cycle has been executed. Do not upgrade a row to fully covered until its required positive and negative scenarios run on the stated environment and source SHA.
+
+## Targeted cross-company count/export regression — 2026-10-11
+
+The API count/export isolation case now includes an adversarial `OR` domain joining an own-company and foreign-company partner. It passes in the SQLite API suite and in PostgreSQL integration/restore on exact PR head `bdcb4972cda5a9a8d2990d5d69def87c1ae68f18` (CI run [38074311488](https://github.com/bjo163/moonwitness-xi/actions/runs/38074311488)). The `ci-gate` correctly remains blocked on fresh CODEOWNER review, which does not invalidate the technical lane result. This closes only this specific negative case: grouped-count API semantics and the other row-level gaps above remain open.
