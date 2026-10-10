@@ -767,6 +767,21 @@ test('all indexed tasks render implementation steps and acceptance from their ro
         operation.body.includes('Source SHA:')
     )
   );
+  for (const task of index.tasks) {
+    const operation = generated.operations.find(({ taskId }) => taskId === task.id);
+    assert.ok(operation, `${task.id} has a generated issue`);
+    if (task.evidence) {
+      assert.ok(
+        operation.body.includes(`Evidence: [${task.evidence}](`),
+        `${task.id} evidence link`
+      );
+    } else {
+      assert.ok(
+        operation.body.includes('Evidence: not recorded yet'),
+        `${task.id} missing evidence`
+      );
+    }
+  }
 });
 
 test('issue descriptions link dependencies to existing issues and create labels/milestones idempotently', async () => {

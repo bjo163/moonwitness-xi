@@ -69,6 +69,15 @@ function evidenceLabelCoversTask(label, id) {
   );
 }
 
+function linkedEvidenceForTask(roadmap, id, documents) {
+  const checkbox = new RegExp(`^\\s*-\\s*\\[[ xX]\\]\\s+${id}\\b`, 'u');
+  const line = roadmap.split(/\r?\n/u).find((candidate) => checkbox.test(candidate));
+  if (line === undefined) return [];
+  return evidenceLinksFromLine(line)
+    .filter(({ label, filePath }) => evidenceLabelCoversTask(label, id) && documents.has(filePath))
+    .map(({ filePath }) => filePath);
+}
+
 /**
  * @param {unknown} input
  * @param {string} roadmap
@@ -171,11 +180,19 @@ export function validateRoadmapIndex(input, roadmap, documents) {
     ) {
       problems.push(`${id}.status is not a supported source status.`);
     }
+    const expectedEvidence = `docs/roadmap/evidence/${id}.md`;
+    const availableEvidence = [
+      ...(documents.has(expectedEvidence) ? [expectedEvidence] : []),
+      ...linkedEvidenceForTask(roadmap, id, documents),
+    ];
     if (candidate.evidence !== undefined) {
-      const expectedEvidence = `docs/roadmap/evidence/${id}.md`;
-      if (candidate.evidence !== expectedEvidence || !documents.has(candidate.evidence)) {
-        problems.push(`${id}.evidence must resolve to its existing ${expectedEvidence} file.`);
+      if (!documents.has(candidate.evidence) || !availableEvidence.includes(candidate.evidence)) {
+        problems.push(
+          `${id}.evidence must reference an existing evidence file linked to this task.`
+        );
       }
+    } else if (availableEvidence.length > 0) {
+      problems.push(`${id}.evidence must reference an existing evidence file linked to this task.`);
     }
     tasks.push(/** @type {RoadmapTask} */ (candidate));
   }

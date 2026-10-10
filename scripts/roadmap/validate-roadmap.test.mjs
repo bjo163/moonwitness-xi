@@ -98,6 +98,43 @@ test('rejects checkbox/evidence drift, missing detail headings, and malformed op
   );
 });
 
+test('requires the issue index to reference an existing per-task evidence document', () => {
+  const { index, roadmap, documents } = fixture();
+  delete index.tasks[0].evidence;
+  const problems = validateRoadmapIndex(index, roadmap, documents);
+  assert.ok(
+    problems.some((problem) =>
+      problem.includes(
+        'M11.01.evidence must reference an existing evidence file linked to this task'
+      )
+    )
+  );
+});
+
+test('accepts a shared evidence file only when its roadmap range covers the task', () => {
+  const { index, roadmap, documents } = fixture();
+  const sharedEvidence = 'docs/roadmap/evidence/M11.01-02.md';
+  index.tasks[0].evidence = sharedEvidence;
+  const linkedRoadmap = roadmap.replace(
+    '[M11.01](docs/roadmap/evidence/M11.01.md)',
+    '[M11.01–M11.02](docs/roadmap/evidence/M11.01-02.md)'
+  );
+  const linkedDocuments = new Map(documents);
+  linkedDocuments.set(sharedEvidence, '# Evidence M11.01–M11.02');
+  assert.deepEqual(validateRoadmapIndex(index, linkedRoadmap, linkedDocuments), []);
+
+  index.tasks[0].evidence = 'docs/roadmap/evidence/M11.03-04.md';
+  const unrelatedEvidence = new Map(linkedDocuments);
+  unrelatedEvidence.set(index.tasks[0].evidence, '# Unrelated range');
+  assert.ok(
+    validateRoadmapIndex(index, linkedRoadmap, unrelatedEvidence).some((problem) =>
+      problem.includes(
+        'M11.01.evidence must reference an existing evidence file linked to this task'
+      )
+    )
+  );
+});
+
 test('rejects a roadmap checkbox without an index record or a duplicate checkbox', () => {
   const { index, roadmap, documents } = fixture();
   const broken = `${roadmap}\n- [ ] M99.01 Orphan.\n- [ ] M11.02 Duplicate.`;
