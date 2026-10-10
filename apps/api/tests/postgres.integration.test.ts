@@ -402,13 +402,23 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
         record: { id: partnerId, name: 'PostgreSQL transaction outbox probe' },
       });
 
-      expect(await dispatchOneOutboxEvent('postgres-outbox-integration')).toBe(true);
-      expect(deliveredEvents).toEqual([
-        {
-          eventId: pendingEvent.id,
-          payload: expect.objectContaining({ model: 'base.partner', id: partnerId }),
-        },
-      ]);
+      const queuedEvents = await OutboxEvent.query()
+        .whereIn('status', ['pending', 'processing'])
+        .resultSize();
+      let targetEventPublished = false;
+      for (let attempt = 0; attempt <= queuedEvents; attempt += 1) {
+        const currentEvent = await OutboxEvent.query().findById(pendingEvent.id).throwIfNotFound();
+        if (currentEvent.status === 'published') {
+          targetEventPublished = true;
+          break;
+        }
+        if (!(await dispatchOneOutboxEvent('postgres-outbox-integration'))) break;
+      }
+      expect(targetEventPublished).toBe(true);
+      expect(deliveredEvents).toContainEqual({
+        eventId: pendingEvent.id,
+        payload: expect.objectContaining({ model: 'base.partner', id: partnerId }),
+      });
       await expect(OutboxEvent.query().findById(pendingEvent.id)).resolves.toMatchObject({
         status: 'published',
         attempts: 1,

@@ -424,6 +424,44 @@ describe('durable job runtime', () => {
     }
   });
 
+  it('dispatches a matching event after deferring an older event without a consumer', async () => {
+    const delivered: number[] = [];
+    const unregister = registerOutboxConsumer('record.created', async (_payload, eventId) => {
+      delivered.push(eventId);
+    });
+    try {
+      const unavailable = await OutboxEvent.query().insertAndFetch({
+        event_type: 'unregistered.event',
+        aggregate_model: 'base.partner',
+        aggregate_id: 122,
+        payload: '{}',
+        created_at: new Date(0).toISOString(),
+        available_at: new Date(0).toISOString(),
+      });
+      const target = await OutboxEvent.query().insertAndFetch({
+        event_type: 'record.created',
+        aggregate_model: 'base.partner',
+        aggregate_id: 123,
+        payload: '{"record":{"id":123}}',
+        available_at: new Date().toISOString(),
+      });
+
+      expect(await dispatchOneOutboxEvent('outbox-missing-consumer')).toBe(true);
+      expect(await OutboxEvent.query().findById(unavailable.id)).toMatchObject({
+        status: 'pending',
+        last_error: expect.stringContaining('OUTBOX_CONSUMER_UNAVAILABLE'),
+      });
+      expect(await dispatchOneOutboxEvent('outbox-missing-consumer')).toBe(true);
+      expect(delivered).toEqual([target.id]);
+      expect(await OutboxEvent.query().findById(target.id)).toMatchObject({
+        status: 'published',
+        attempts: 1,
+      });
+    } finally {
+      unregister();
+    }
+  });
+
   it('retries after a successful receiver effect and lets an idempotent receiver deduplicate it', async () => {
     const deliveries: number[] = [];
     const appliedEffects = new Set<number>();
