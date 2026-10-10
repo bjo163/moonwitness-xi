@@ -17,6 +17,7 @@ import {
 } from '@moonwitness/orm-base';
 import { buildApp } from '../src/app.js';
 import { OutboxEvent } from '@moonwitness/jobs';
+import { canAccess } from '../src/auth/policy.js';
 
 const ADMIN_PASSWORD = 'admin-test-password';
 const USER_PASSWORD = 'alice-test-password';
@@ -721,6 +722,60 @@ describe('authentication and authorization', () => {
       ]);
       expect(rpcWrite.statusCode).toBe(403);
       expect(rpcWrite.json()).toMatchObject({ error: { code: -32003 } });
+    });
+
+    it('keeps model discovery, permission metadata and direct reads aligned for every registered model', async () => {
+      const models = app.models.getNames();
+      const roleCases = [
+        { token: alice.access_token, role: 'user', userId: alice.user.id },
+        { token: admin.access_token, role: 'superadmin', userId: admin.user.id },
+      ] as const;
+
+      for (const { token, role, userId } of roleCases) {
+        const groupIds =
+          role === 'user'
+            ? (await GroupMembership.query().where({ user_id: userId, active: true })).map(
+                ({ group_id }) => group_id
+              )
+            : [];
+        const grants =
+          groupIds.length === 0
+            ? []
+            : await ModelAccess.query().whereIn('group_id', groupIds).where({ active: true });
+        const listed = await as(token, { method: 'GET', url: '/api/models' });
+        expect(listed.statusCode).toBe(200);
+        const visible = new Set(
+          listed.json<{ models: { model: string }[] }>().models.map(({ model }) => model)
+        );
+
+        for (const model of models) {
+          const expected = {
+            read: canAccess(role, model, 'read', grants),
+            create: canAccess(role, model, 'create', grants),
+            write: canAccess(role, model, 'write', grants),
+            unlink: canAccess(role, model, 'unlink', grants),
+          };
+          expect(visible.has(model), `${role} discovery permission for ${model}`).toBe(
+            expected.read
+          );
+
+          const metadata = await as(token, { method: 'GET', url: `/api/${model}/fields` });
+          expect(metadata.statusCode, `${role} metadata access for ${model}`).toBe(
+            expected.read ? 200 : 403
+          );
+          if (expected.read) {
+            expect(
+              metadata.json<{ permissions: typeof expected }>().permissions,
+              `${role} permission metadata for ${model}`
+            ).toEqual(expected);
+          }
+
+          const read = await as(token, { method: 'GET', url: `/api/${model}?limit=1` });
+          expect(read.statusCode === 403, `${role} direct read authorization for ${model}`).toBe(
+            !expected.read
+          );
+        }
+      }
     });
 
     it('allows model-specific user writes granted through an access group', async () => {
