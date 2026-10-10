@@ -186,10 +186,10 @@ export class BaseModel extends Model {
    *
    * @example
    * ```ts
-   * await record.write({ name: 'Updated' });
+   * await record.update({ name: 'Updated' });
    * ```
    */
-  async write(
+  async update(
     vals: Partial<this> | Record<string, unknown>,
     options: { context?: ModelContext; transaction?: Transaction } = {}
   ): Promise<this> {
@@ -234,7 +234,7 @@ export class BaseModel extends Model {
    * Instance method to delete (soft-delete / archive by default).
    * If hardDelete is true, permanently deletes the record from DB.
    */
-  async unlink(hardDelete = false, options: { transaction?: Transaction } = {}): Promise<boolean> {
+  async remove(hardDelete = false, options: { transaction?: Transaction } = {}): Promise<boolean> {
     const ModelClass = this.$modelClass as unknown as typeof BaseModel;
     const trx = ModelClass.resolveTrx(options.transaction);
 
@@ -242,7 +242,7 @@ export class BaseModel extends Model {
       const rows = await this.$query(trx).delete();
       return rows > 0;
     } else {
-      await this.write({ active: false }, options);
+      await this.update({ active: false }, options);
       return true;
     }
   }
@@ -452,14 +452,14 @@ export class BaseModel extends Model {
    * Archive record (soft delete).
    */
   async action_archive(): Promise<this> {
-    return this.write({ active: false });
+    return this.update({ active: false });
   }
 
   /**
    * Unarchive record.
    */
   async action_unarchive(): Promise<this> {
-    return this.write({ active: true });
+    return this.update({ active: true });
   }
 
   /**

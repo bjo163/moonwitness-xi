@@ -31,15 +31,15 @@ class TestItem extends BaseModel {
   }
 
   async action_toggle_company(): Promise<this> {
-    return this.write({ is_company: !this.is_company });
+    return this.update({ is_company: !this.is_company });
   }
 
   async action_confirm(): Promise<this> {
-    return this.write({ state: 'confirmed' });
+    return this.update({ state: 'confirmed' });
   }
 
   async action_cancel(): Promise<this> {
-    return this.write({ state: 'cancelled' });
+    return this.update({ state: 'cancelled' });
   }
 
   static override jsonSchema = {
@@ -594,11 +594,11 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
     const temp = await TestItem.create({ name: 'Temp Item' });
     expect(temp.active).toBe(true);
 
-    await temp.write({ city: 'Jakarta' });
+    await temp.update({ city: 'Jakarta' });
     expect(temp.city).toBe('Jakarta');
 
     // Soft delete (archive)
-    await temp.unlink();
+    await temp.remove();
     expect(temp.active).toBe(false);
 
     // Filtered by active_test by default
@@ -615,7 +615,7 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
     expect(temp.active).toBe(true);
 
     // Hard delete
-    const hardDeleted = await temp.unlink(true);
+    const hardDeleted = await temp.remove(true);
     expect(hardDeleted).toBe(true);
     const notFound = await TestItem.browse(temp.id);
     expect(notFound).toBeNull();

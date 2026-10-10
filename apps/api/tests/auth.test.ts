@@ -13,6 +13,7 @@ import {
   PartnerCategory,
   PartnerCategoryLink,
   Partner,
+  Tag,
   User,
 } from '@moonwitness/orm-base';
 import { buildApp } from '../src/app.js';
@@ -813,17 +814,56 @@ describe('authentication and authorization', () => {
       await GroupMembership.query().insert({ user_id: alice.user.id, group_id: group.id });
       await ModelAccess.query().insert({
         group_id: group.id,
-        model_name: 'base.partner',
+        model_name: 'base.tag',
         create: true,
         write: true,
+        unlink: true,
       });
+      expect(
+        await ModelAccess.query().findOne({ group_id: group.id, model_name: 'base.tag' })
+      ).toMatchObject({ create: true, write: true, unlink: true });
 
       const created = await as(alice.access_token, {
         method: 'POST',
-        url: '/api/base.partner',
-        payload: { name: 'Group-created partner' },
+        url: '/api/base.tag',
+        payload: { name: 'Group-created tag' },
       });
       expect(created.statusCode).toBe(201);
+      const tagId = created.json<{ data: { id: number } }>().data.id;
+      const tagPermissions = await as(alice.access_token, {
+        method: 'GET',
+        url: '/api/base.tag/fields',
+      });
+      expect(tagPermissions.statusCode, tagPermissions.payload).toBe(200);
+      expect(tagPermissions.json<{ permissions: { write: boolean } }>().permissions.write).toBe(
+        true
+      );
+      const updated = await as(alice.access_token, {
+        method: 'PATCH',
+        url: `/api/base.tag/${tagId}`,
+        payload: { name: 'Group-updated tag' },
+      });
+      expect(updated.statusCode, updated.payload).toBe(200);
+      expect(updated.json<{ data: { name: string } }>().data.name).toBe('Group-updated tag');
+
+      const archived = await as(alice.access_token, {
+        method: 'POST',
+        url: `/api/base.tag/${tagId}/action/action_archive`,
+      });
+      expect(archived.statusCode).toBe(200);
+      const restored = await as(alice.access_token, {
+        method: 'POST',
+        url: `/api/base.tag/${tagId}/action/action_unarchive`,
+      });
+      expect(restored.statusCode).toBe(200);
+
+      const deleted = await as(alice.access_token, {
+        method: 'DELETE',
+        url: `/api/base.tag/${tagId}`,
+      });
+      expect(deleted.statusCode).toBe(200);
+      expect(await Tag.query().findById(tagId)).toMatchObject({ active: false });
+
       const protectedGrant = await as(admin.access_token, {
         method: 'POST',
         url: '/api/base.model_access',

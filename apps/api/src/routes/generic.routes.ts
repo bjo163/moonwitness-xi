@@ -1275,7 +1275,7 @@ export const genericRoutes: FastifyPluginAsync<GenericRoutesOptions> = async (fa
           trx
         );
         if (reference) return { reference };
-        await locked.unlink(hardDelete, { transaction: trx });
+        await locked.remove(hardDelete, { transaction: trx });
         await recordAudit(
           req,
           req.params.model,

@@ -22,6 +22,17 @@ dan nilai user yang ada. Perubahan backfill wajib menjadi explicit forward upgra
 yang teruji. Sistem tidak menjanjikan downgrade otomatis atau tebakan aman untuk drop/rename/type
 change. Bila hook gagal, transaksi harus rollback dan issue diselesaikan sebelum dicoba kembali.
 
+### ORM instance method compatibility for 1.0.0-rc
+
+Addon code that calls mutations on a model instance must use `record.update(values)` and
+`record.remove(hardDelete?)`. The old instance methods `record.write(...)` and
+`record.unlink(...)` were renamed because they collide with addon fields named `write` or
+`unlink`, which could silently discard values such as access-grant flags. Static calls
+`Model.write(ids, values)` and `Model.unlink(ids, hardDelete)`, plus client repository
+methods, are unchanged. `defineModel` now fails early if a field conflicts with any
+inherited ORM instance member. This is a source-level addon change and requires no SQL
+migration or stored-record rewrite.
+
 ## Branch dan publikasi
 
 `dev` menjadi integrasi; `main` menerima promosi melalui pull request dan required CI. Perubahan

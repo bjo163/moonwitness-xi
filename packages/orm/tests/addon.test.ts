@@ -28,6 +28,12 @@ describe('programmatic addon installer', () => {
       useNullAsDefault: true,
     }));
 
+  it('rejects fields that collide with inherited ORM instance members', () => {
+    expect(() => defineModel('test.colliding', { fields: { update: fields.boolean() } })).toThrow(
+      'Invalid or duplicate field: test.colliding.update'
+    );
+  });
+
   it('installs dependency-ordered models and idempotent referenced seed data', async () => {
     const connection = database();
     await installAddons(connection, [

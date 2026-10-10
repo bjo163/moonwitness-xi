@@ -22,6 +22,24 @@ An addon uses the public `@moonwitness/orm` primitives and a manifest with a sta
 
 Consumers must not import package internals such as `@moonwitness/orm/dist/...` or `packages/orm/src/...`. Public exports can be removed or renamed only through the deprecation process below.
 
+### ORM instance mutation method rename (1.0.0-rc)
+
+`BaseModel` instance mutation methods are named `update(values, options)` and
+`remove(hardDelete, options)`. In the 1.0.0-rc line, the former instance methods
+`write(values, options)` and `unlink(hardDelete, options)` were renamed because
+addon fields with those names shadowed the methods and could silently lose access
+grant values. Update addon code that calls these methods on a record instance:
+
+```ts
+await record.update({ name: 'Updated' });
+await record.remove();
+```
+
+Static bulk methods (`Model.write(ids, values)` and `Model.unlink(ids, hardDelete)`) and
+client repository methods (`repository.write` / `repository.unlink`) are unchanged. Fields
+may not use names inherited from `BaseModel` instance members; `defineModel` now rejects
+those collisions at addon definition time.
+
 ## Version and deprecation rules
 
 - Before the first stable `1.0.0` release, a breaking contract adjustment may still be made, but the release notes and upgrade guide must call it out. The first stable release must publish this policy alongside its changelog.

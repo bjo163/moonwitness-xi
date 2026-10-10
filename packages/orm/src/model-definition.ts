@@ -126,6 +126,15 @@ export function columnName(name: string, field: Field): string {
   return field.kind === 'belongsTo' ? `${name}_id` : name;
 }
 
+function conflictsWithInstanceMember(name: string): boolean {
+  let prototype: object | null = BaseModel.prototype;
+  while (prototype !== null) {
+    if (Object.hasOwn(prototype, name)) return true;
+    prototype = Object.getPrototypeOf(prototype) as object | null;
+  }
+  return false;
+}
+
 function fieldSchema(field: Field): JSONSchema {
   const type =
     field.kind === 'belongsTo'
@@ -164,7 +173,11 @@ export function defineModel<const F extends FieldMap>(
   const required: string[] = [];
   for (const [key, field] of Object.entries(definition.fields)) {
     const column = columnName(key, field);
-    if (!/^[a-z][a-z0-9_]*$/.test(key) || column in properties) {
+    if (
+      !/^[a-z][a-z0-9_]*$/.test(key) ||
+      column in properties ||
+      conflictsWithInstanceMember(key)
+    ) {
       throw new Error(`Invalid or duplicate field: ${name}.${key}`);
     }
     if (field.kind === 'hasMany') {
