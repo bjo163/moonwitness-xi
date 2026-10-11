@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { isRecord } from '@moonwitness/types';
 import { CompanyMembership, User } from '@moonwitness/orm-base';
 import { OutboxEvent, PermanentJobError, registerOutboxConsumer } from '@moonwitness/jobs';
 import { Notification, NotificationPreference, NotificationTemplate } from './models.js';
@@ -24,10 +25,10 @@ function isPositiveId(value: unknown): value is number {
 }
 
 function parsePayload(value: unknown): NotificationPayload {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+  if (!isRecord(value)) {
     throw new PermanentJobError('Notification payload must be an object', 'INVALID_NOTIFICATION');
   }
-  const payload = value as Record<string, unknown>;
+  const payload = value;
   if (
     !isPositiveId(payload.recipientId) ||
     typeof payload.templateCode !== 'string' ||
@@ -37,10 +38,10 @@ function parsePayload(value: unknown): NotificationPayload {
   }
   let resource: NotificationPayload['resource'];
   if (payload.resource !== undefined) {
-    if (typeof payload.resource !== 'object' || payload.resource === null) {
+    if (!isRecord(payload.resource)) {
       throw new PermanentJobError('Notification resource is invalid', 'INVALID_NOTIFICATION');
     }
-    const candidate = payload.resource as Record<string, unknown>;
+    const candidate = payload.resource;
     if (
       typeof candidate.model !== 'string' ||
       !/^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+$/.test(candidate.model) ||

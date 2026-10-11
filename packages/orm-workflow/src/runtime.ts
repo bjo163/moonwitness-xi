@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
+import { isRecord } from '@moonwitness/types';
 import { registerJobHandler } from '@moonwitness/jobs';
 import { enqueueNotification } from '@moonwitness/orm-notification';
 import { WorkflowApproval, WorkflowDefinition, WorkflowEvent, WorkflowInstance } from './models.js';
@@ -74,10 +75,6 @@ export class WorkflowError extends Error {
     super(message);
     this.name = 'WorkflowError';
   }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function isRole(value: unknown): value is WorkflowRole {

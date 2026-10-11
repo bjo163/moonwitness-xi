@@ -16,9 +16,10 @@
     "test": "tsc -p tsconfig.check.json && vitest run"
   },
   "dependencies": {
+    "@moonwitness/jobs": "workspace:*",
     "@moonwitness/orm": "workspace:*",
     "@moonwitness/orm-base": "workspace:*",
-    "@moonwitness/jobs": "workspace:*"
+    "@moonwitness/types": "workspace:*"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "5.0.3",

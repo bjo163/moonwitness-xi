@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
+import { isRecord } from '@moonwitness/types';
 import { Notification, NotificationPreference } from '@moonwitness/orm-notification';
 
 interface InboxQuery {
@@ -12,12 +13,6 @@ interface IdParams {
 
 interface ChannelParams {
   channel: string;
-}
-
-function bodyObject(value: unknown): Record<string, unknown> | null {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
 }
 
 function parseId(value: string): number | null {
@@ -132,7 +127,7 @@ export const notificationRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.code(403).send({ success: false, error: 'Active company is required' });
       if (req.params.channel !== 'in_app' && req.params.channel !== 'email')
         return reply.code(400).send({ success: false, error: 'Invalid notification channel' });
-      const body = bodyObject(req.body);
+      const body = isRecord(req.body) ? req.body : null;
       if (!body || Object.keys(body).length !== 1 || typeof body.enabled !== 'boolean')
         return reply
           .code(400)

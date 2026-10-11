@@ -17,7 +17,13 @@ import {
 } from '@moonwitness/orm';
 import { assignDefaultCompanyMembership, assignDefaultUserGroup } from '@moonwitness/orm-base';
 import { isValidOrganizationMutation } from '@moonwitness/orm-organization';
-import type { JsonValue } from '@moonwitness/types';
+import {
+  asJsonObject,
+  isJsonValue,
+  isRecord as isObject,
+  type JsonObject,
+  type JsonValue,
+} from '@moonwitness/types';
 import type { Transaction } from 'objection';
 import { canAccess, canManageBaseUser, operationFor, rpcOperation } from '../auth/policy.js';
 import { getRecordRuleDomain } from '../auth/rules.js';
@@ -38,7 +44,6 @@ import {
   userGraphAllowed,
 } from './generic-query-graph.js';
 
-type JsonObject = { [key: string]: JsonValue };
 type RpcEnvelope = {
   jsonrpc?: unknown;
   method?: unknown;
@@ -54,28 +59,8 @@ const SERVER_MANAGED_FIELDS = new Set([
   'write_uid',
 ]);
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function asJsonObject(value: unknown): JsonObject | null {
-  return isObject(value) && Object.values(value).every(isJsonValue) ? (value as JsonObject) : null;
-}
-
 function hasServerManagedFields(value: JsonObject): boolean {
   return Object.keys(value).some((key) => SERVER_MANAGED_FIELDS.has(key));
-}
-
-function isJsonValue(value: unknown): value is JsonValue {
-  if (
-    value === null ||
-    typeof value === 'string' ||
-    typeof value === 'number' ||
-    typeof value === 'boolean'
-  )
-    return true;
-  if (Array.isArray(value)) return value.every(isJsonValue);
-  return isObject(value) && Object.values(value).every(isJsonValue);
 }
 
 function errorMessage(error: unknown, fallback: string): string {

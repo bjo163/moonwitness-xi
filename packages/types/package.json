@@ -12,7 +12,8 @@
     }
   },
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "test": "pnpm build && node --test tests/*.test.mjs"
   },
   "devDependencies": {
     "typescript": "~5.7.3"

@@ -1,6 +1,6 @@
 # Generated platform reference
 
-Source fingerprint: `77792d1f3bb8fce17c0941280a6e50f56714001cd716f3d8f66d57d402a55250`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
+Source fingerprint: `2877b394845faf26559b67ebe81612fcd8af14d47f2d53f16ad04e725357c77c`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
 
 ## Workspace packages and apps
 
@@ -24,7 +24,7 @@ Source fingerprint: `77792d1f3bb8fce17c0941280a6e50f56714001cd716f3d8f66d57d402a
 | `@moonwitness/orm-request`      | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/orm-storage`      | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/orm-workflow`     | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
-| `@moonwitness/types`            | Package | 1.0.0-rc.1 | `build`                                                                                                                                                                              |
+| `@moonwitness/types`            | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/ui`               | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
 
 ## Environment variable names

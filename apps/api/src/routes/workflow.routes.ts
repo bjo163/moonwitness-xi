@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
+import { isRecord } from '@moonwitness/types';
 import { Registry, applyDomain } from '@moonwitness/orm';
 import {
   listAvailableWorkflowDefinitions,
@@ -28,14 +29,8 @@ interface IdParams {
   id: string;
 }
 
-function record(value: unknown): Record<string, unknown> | null {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
-}
-
 function parseStart(value: unknown): StartBody | null {
-  const body = record(value);
+  const body = isRecord(value) ? value : null;
   if (
     !body ||
     Object.keys(body).some(
@@ -57,7 +52,7 @@ function parseStart(value: unknown): StartBody | null {
 }
 
 function parseTransition(value: unknown): TransitionBody | null {
-  const body = record(value);
+  const body = isRecord(value) ? value : null;
   if (
     !body ||
     Object.keys(body).some(

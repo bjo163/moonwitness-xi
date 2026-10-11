@@ -482,6 +482,9 @@ importers:
       '@moonwitness/orm-base':
         specifier: workspace:*
         version: link:../orm-base
+      '@moonwitness/types':
+        specifier: workspace:*
+        version: link:../types
     devDependencies:
       '@types/better-sqlite3':
         specifier: ^9.6.0
@@ -516,6 +519,9 @@ importers:
       '@moonwitness/orm-base':
         specifier: workspace:*
         version: link:../orm-base
+      '@moonwitness/types':
+        specifier: workspace:*
+        version: link:../types
     devDependencies:
       '@vitest/coverage-v8':
         specifier: 5.0.3
@@ -634,6 +640,9 @@ importers:
       '@moonwitness/orm-notification':
         specifier: workspace:*
         version: link:../orm-notification
+      '@moonwitness/types':
+        specifier: workspace:*
+        version: link:../types
     devDependencies:
       '@types/better-sqlite3':
         specifier: ^9.6.0
