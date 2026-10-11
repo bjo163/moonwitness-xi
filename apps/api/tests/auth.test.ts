@@ -20,6 +20,7 @@ import {
 import { buildApp } from '../src/app.js';
 import { OutboxEvent } from '@moonwitness/jobs';
 import { canAccess } from '../src/auth/policy.js';
+import { OrganizationDepartment } from '@moonwitness/orm-organization';
 
 const ADMIN_PASSWORD = 'admin-test-password';
 const USER_PASSWORD = 'alice-test-password';
@@ -1160,6 +1161,76 @@ describe('authentication and authorization', () => {
       });
       expect(unlinked.statusCode).toBe(200);
       expect(await PartnerCategory.query().findById(categoryId)).toMatchObject({ active: false });
+
+      await GroupMembership.query().findById(membership.id).patch({ active: false });
+    });
+
+    it('keeps group-granted organization mutations inside the user company', async () => {
+      const company = await Company.query().findOne({ name: 'MoonWitness' }).throwIfNotFound();
+      const foreignCompany = await Company.query().insert({ name: 'Organization Foreign Tenant' });
+      const foreignDepartment = await OrganizationDepartment.query().insert({
+        company_id: foreignCompany.id,
+        code: 'foreign_ops',
+        name: 'Foreign Operations',
+      });
+      const group = await AccessGroup.query().insert({
+        code: 'organization_maintainers',
+        name: 'Organization Maintainers',
+      });
+      const membership = await GroupMembership.query().insert({
+        user_id: alice.user.id,
+        group_id: group.id,
+      });
+      await ModelAccess.query().insert({
+        group_id: group.id,
+        model_name: 'organization.department',
+        create: true,
+        write: true,
+      });
+
+      const created = await as(alice.access_token, {
+        method: 'POST',
+        url: '/api/organization.department',
+        payload: { company_id: company.id, code: 'alice_ops', name: 'Alice Operations' },
+      });
+      expect(created.statusCode, created.payload).toBe(201);
+      const departmentId = created.json<{ data: { id: number } }>().data.id;
+      expect(await OrganizationDepartment.query().findById(departmentId)).toMatchObject({
+        company_id: company.id,
+        name: 'Alice Operations',
+      });
+
+      const updated = await as(alice.access_token, {
+        method: 'PATCH',
+        url: `/api/organization.department/${departmentId}`,
+        payload: { name: 'Alice Operations Updated' },
+      });
+      expect(updated.statusCode, updated.payload).toBe(200);
+      expect(await OrganizationDepartment.query().findById(departmentId)).toMatchObject({
+        company_id: company.id,
+        name: 'Alice Operations Updated',
+      });
+
+      const foreignRead = await as(alice.access_token, {
+        method: 'GET',
+        url: `/api/organization.department/${foreignDepartment.id}`,
+      });
+      expect(foreignRead.statusCode).toBe(404);
+      const foreignCreate = await as(alice.access_token, {
+        method: 'POST',
+        url: '/api/organization.department',
+        payload: {
+          company_id: foreignCompany.id,
+          code: 'alice_foreign',
+          name: 'Unauthorized Department',
+        },
+      });
+      expect(foreignCreate.statusCode).toBe(403);
+      expect(foreignCreate.payload).not.toContain('Organization Foreign Tenant');
+      expect(await OrganizationDepartment.query().findById(foreignDepartment.id)).toMatchObject({
+        company_id: foreignCompany.id,
+        name: 'Foreign Operations',
+      });
 
       await GroupMembership.query().findById(membership.id).patch({ active: false });
     });
