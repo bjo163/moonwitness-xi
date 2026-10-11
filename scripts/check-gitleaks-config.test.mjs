@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { randomBytes } from 'node:crypto';
 import test from 'node:test';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -69,4 +70,32 @@ test('rejects workflow trust-boundary and allowlist regressions', () => {
       (issue) => /built-in secret detection rules/u.test(issue)
     )
   );
+});
+
+test('MoonWitness custom rule catches random runtime credentials but not weak placeholders', () => {
+  const rule = config.match(
+    /\[\[rules\]\]\s*id\s*=\s*"moonwitness-runtime-secret"([\s\S]*?)(?=\n\[\[|\s*$)/u
+  )?.[1];
+  const source = rule?.match(/regex\s*=\s*'''(.*?)'''/su)?.[1];
+  assert.ok(source, 'custom rule must define a detector expression');
+  const regex = new RegExp(source.replace(/^\(\?i\)/u, ''), 'iu');
+  const entropy = (value) => {
+    const counts = new Map();
+    for (const character of value) counts.set(character, (counts.get(character) ?? 0) + 1);
+    return [...counts.values()].reduce((total, count) => {
+      const probability = count / value.length;
+      return total - probability * Math.log2(probability);
+    }, 0);
+  };
+  const syntheticSecret = randomBytes(48).toString('base64url');
+  const match = `JWT_SECRET=${syntheticSecret}`.match(regex);
+  assert.equal(match?.[1], syntheticSecret);
+  assert.ok(entropy(syntheticSecret) >= 4.2);
+
+  const placeholder = 'ci-only-secret-that-is-at-least-32-characters-long';
+  const placeholderMatch = `JWT_SECRET=${placeholder}`.match(regex);
+  assert.equal(placeholderMatch?.[1], placeholder);
+  assert.ok(entropy(placeholder) < 4.2);
+  assert.equal(`DATABASE_URL=${syntheticSecret}`.match(regex), null);
+  assert.equal(`const fixture = /^JWT_SECRET=${syntheticSecret}$/u;`.match(regex), null);
 });

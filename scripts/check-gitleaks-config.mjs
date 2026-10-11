@@ -89,7 +89,23 @@ export function validateGitleaksSetup(workflow, config) {
   if (!/regexTarget\s*=\s*"line"/.test(config))
     problems.push('Allowlist must match exact lines, not whole files or commits.');
 
-  const configuredLines = [...config.matchAll(/'''(.*?)'''/gs)].map((match) => match[1]);
+  if (
+    !/\[\[rules\]\][\s\S]*?id\s*=\s*"moonwitness-runtime-secret"[\s\S]*?secretGroup\s*=\s*1[\s\S]*?entropy\s*=\s*4\.2[\s\S]*?keywords\s*=\s*\["JWT_SECRET",\s*"METRICS_TOKEN"\]/u.test(
+      config
+    )
+  ) {
+    problems.push(
+      'MoonWitness runtime secret detection must cover high-entropy JWT and metrics secrets.'
+    );
+  }
+
+  const allowlistStart = config.indexOf('[allowlist]');
+  const customRulesStart = config.indexOf('[[rules]]', allowlistStart);
+  const allowlistConfig =
+    allowlistStart < 0
+      ? ''
+      : config.slice(allowlistStart, customRulesStart < 0 ? undefined : customRulesStart);
+  const configuredLines = [...allowlistConfig.matchAll(/'''(.*?)'''/gs)].map((match) => match[1]);
   if (configuredLines.length !== expectedAllowlistExpressions.length) {
     problems.push(
       'Allowlist must contain exactly the reviewed synthetic fixture and historical false-positive lines.'

@@ -18,3 +18,11 @@ regexes = [
   '''^\s*"\^\\\\s\*idempotencyKey: 'reject-decision-0001',\$",$''',
   '''^\s*- Add adapter fixtures for API pagination, missing[/]duplicate checks, stale snapshots, revoked permissions, and malformed/untrusted webhook or issue events\.$''',
 ]
+
+[[rules]]
+id = "moonwitness-runtime-secret"
+description = "High-entropy MoonWitness runtime authentication or metrics secret"
+regex = '''(?i)^[ \t]*(?:export[ \t]+)?(?:JWT_SECRET|METRICS_TOKEN)[ \t]*[:=][ \t]*["']?([A-Za-z0-9_-]{32,})["']?[ \t]*(?:#.*)?$'''
+secretGroup = 1
+entropy = 4.2
+keywords = ["JWT_SECRET", "METRICS_TOKEN"]
