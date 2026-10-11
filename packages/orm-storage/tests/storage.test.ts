@@ -86,11 +86,7 @@ describe('LocalFileAttachmentStorage', () => {
     );
     expect(integrityReport.corrupt).toContain(keyA);
 
-    const entries = [];
-    for await (const object of storage.list()) entries.push(object.key);
-    const staleKey = entries.find((key) => key === keyA || key === keyB);
-    if (!staleKey) throw new Error('Expected one legacy object in test storage');
-    await utimes(path.join(storage.directory, staleKey), new Date(0), new Date(0));
+    const staleKey = keyB;
     await expect(
       reconcileLocalAttachmentStorage(storage, references([]), {
         apply: true,
@@ -99,10 +95,7 @@ describe('LocalFileAttachmentStorage', () => {
       })
     ).resolves.toMatchObject({ checked: 1, deleted: [staleKey], orphaned: [staleKey] });
     await expect(storage.get(staleKey)).resolves.toBeNull();
-    const retainedKey = staleKey === keyA ? keyB : keyA;
-    await expect(storage.get(retainedKey)).resolves.toEqual(
-      retainedKey === keyA ? referenced : Buffer.from('unreferenced object')
-    );
+    await expect(storage.get(keyA)).resolves.toEqual(Buffer.from('damaged bytes'));
   });
 
   it('ignores temporary and unknown files when enumerating legacy directory contents', async () => {
