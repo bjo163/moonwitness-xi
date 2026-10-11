@@ -9,6 +9,7 @@ import {
   evaluateRuntimeSupportReviews,
   fetchScheduledWorkflowRuns,
   fetchPublicGitHubPages,
+  readApiInventory,
   planArtifactCleanup,
 } from './platform-audit.mjs';
 import { renderPlatformAuditSummary } from './write-platform-audit-summary.mjs';
@@ -102,6 +103,36 @@ test('public audit fallback reports GitHub rate-limit reset without leaking requ
     })),
     /rate limit exhausted; resets at 2026-10-11T03:10:22\.000Z/u
   );
+});
+
+test('required API inventories retain explicit unknown coverage on rate-limit and malformed responses', async () => {
+  const pages = await readApiInventory(
+    'repos/owner/project/actions/artifacts',
+    'artifacts',
+    async () => [{ artifacts: [{ id: 1 }] }, { artifacts: [{ id: 2 }] }]
+  );
+  assert.deepEqual(pages, { status: 'available', items: [{ id: 1 }, { id: 2 }] });
+
+  const limited = await readApiInventory(
+    'repos/owner/project/actions/runs',
+    'workflow_runs',
+    async () => {
+      throw new Error('GitHub API rate limit exceeded. HTTP 403');
+    }
+  );
+  assert.deepEqual(limited, {
+    status: 'unknown',
+    reason: 'GitHub API rate limit exhausted.',
+    items: [],
+  });
+
+  const malformed = await readApiInventory(
+    'repos/owner/project/actions/runs',
+    'workflow_runs',
+    async () => [{ message: 'unexpected response' }]
+  );
+  assert.equal(malformed.status, 'unknown');
+  assert.match(malformed.reason, /did not contain a workflow_runs collection/u);
 });
 
 test('audit summarizes paginated inventory and compares a prior baseline', () => {
@@ -477,10 +508,75 @@ test('audit rejects invalid provenance and never presents missing values as zero
   });
   assert.equal(report.inventory.packages.status, 'unknown');
   assert.equal(report.inventory.billing.status, 'unknown');
+  assert.equal(report.status, 'partial');
   assert.match(report.limitations.join(' '), /read:packages/u);
   assert.match(report.limitations.join(' '), /billing administrator/u);
   assert.equal(report.inventory.permissions.artifactAndLogRetentionDays, null);
   assert.equal(report.coverage.workflowRunHistoryMayBeTruncated, false);
+});
+
+test('partial audit marks unavailable inventories unknown instead of reporting zero', () => {
+  const report = buildPlatformAudit({
+    repo: 'owner/project',
+    sourceSha: 'd'.repeat(40),
+    generatedAt,
+    repository: null,
+    artifacts: { status: 'unknown', reason: 'GitHub API rate limit exhausted.', items: [] },
+    workflowRuns: { status: 'unknown', reason: 'GitHub API rate limit exhausted.', items: [] },
+    scheduledWorkflowRuns: {
+      'browser-matrix.yml': {
+        status: 'unknown',
+        reason: 'GitHub API rate limit exhausted.',
+        runs: [],
+      },
+    },
+    packages: { status: 'unknown', reason: 'GitHub API rate limit exhausted.' },
+    billing: { status: 'unknown', reason: 'GitHub API rate limit exhausted.' },
+    supportReviewPolicy,
+  });
+
+  assert.equal(report.status, 'partial');
+  assert.equal(report.inventory.artifacts.count, null);
+  assert.equal(report.inventory.artifacts.bytes, null);
+  assert.equal(report.inventory.workflowRuns.count, null);
+  assert.equal(report.coverage.workflowRunsScanned, null);
+  assert.equal(report.coverage.scheduledWorkflowRunsScanned, null);
+  assert.equal(report.coverage.scheduledWorkflowRunInventoryStatus, 'unknown');
+  assert.equal(report.coverage.workflowRunHistoryMayBeTruncated, null);
+  assert.equal(report.trends.artifactCountDelta, null);
+  assert.equal(report.trends.workflowRunCountDelta, null);
+  assert.equal(report.cleanupPlan.status, 'unknown');
+  assert.equal(report.cleanupPlan.candidates, null);
+  assert.equal(report.cleanupPlan.deletionSupported, false);
+  assert.equal(report.inventory.permissions.workflowStatus, 'unknown');
+  assert.equal(report.inventory.permissions.actionsStatus, 'unknown');
+  assert.equal(report.inventory.permissions.retentionStatus, 'unknown');
+  assert.match(report.limitations.join(' '), /Artifact inventory unknown/u);
+  assert.match(report.limitations.join(' '), /Workflow run inventory unknown/u);
+});
+
+test('artifact byte totals stay unknown when returned rows omit size metadata', () => {
+  const report = buildPlatformAudit({
+    repo: 'owner/project',
+    sourceSha: 'f'.repeat(40),
+    generatedAt,
+    repository: { artifact_and_log_retention_days: 90 },
+    workflowPermissions: {},
+    actionPermissions: {},
+    artifacts: [{ id: 1, name: 'manual-upload', expired: false }],
+    workflowRuns: [],
+    packages: { status: 'available', count: 0 },
+    billing: { status: 'available', minutes_used: 0 },
+    nodeSchedule: { v22: { end: '2027-04-30' } },
+    supportReviewPolicy,
+  });
+
+  assert.equal(report.inventory.artifacts.count, 1);
+  assert.equal(report.inventory.artifacts.bytes, null);
+  assert.equal(report.inventory.artifacts.bytesStatus, 'partial');
+  assert.equal(report.inventory.artifacts.unknownSizeCount, 1);
+  assert.equal(report.status, 'partial');
+  assert.equal(report.trends.artifactBytesDelta, null);
 });
 
 test('summary reports unknown capabilities and never implies cleanup executed', () => {
@@ -513,7 +609,7 @@ test('summary reports unknown capabilities and never implies cleanup executed', 
         },
       ],
     },
-    cleanupPlan: { candidates: [] },
+    cleanupPlan: { status: 'available', candidates: [] },
     limitations: ['Billing API unavailable.'],
   };
   const summary = renderPlatformAuditSummary(report);
@@ -522,4 +618,71 @@ test('summary reports unknown capabilities and never implies cleanup executed', 
   assert.match(summary, /Schedule Deep scheduled regression: missing-success/u);
   assert.match(summary, /Runtime review PostgreSQL \(16-alpine\): overdue/u);
   assert.match(summary, /Limitation: Billing API unavailable\./u);
+});
+
+test('summary distinguishes partial inventories from zero and unavailable cleanup candidates', () => {
+  const report = {
+    status: 'partial',
+    source: { sha: 'e'.repeat(40) },
+    inventory: {
+      artifacts: {
+        status: 'unknown',
+        reason: 'rate limit exhausted',
+        bytesStatus: 'unknown',
+      },
+      workflowRuns: { status: 'unknown', reason: 'rate limit exhausted', scheduledWorkflows: [] },
+      packages: { status: 'unknown' },
+      billing: { status: 'unknown' },
+    },
+    runtimeSupport: { reviews: [] },
+    cleanupPlan: { status: 'unknown', reason: 'rate limit exhausted' },
+    limitations: [],
+  };
+  const summary = renderPlatformAuditSummary(report);
+  assert.match(summary, /Audit status: partial/u);
+  assert.match(summary, /Active artifacts: unknown \(rate limit exhausted\)/u);
+  assert.match(summary, /Workflow runs inspected \(90 days\): unknown/u);
+  assert.match(summary, /candidates unknown \(rate limit exhausted\)/u);
+  assert.doesNotMatch(summary, /0 allowlisted candidates/u);
+
+  const incompleteSizes = renderPlatformAuditSummary({
+    ...report,
+    inventory: {
+      ...report.inventory,
+      artifacts: {
+        status: 'available',
+        count: 1,
+        bytes: null,
+        bytesStatus: 'partial',
+        unknownSizeCount: 1,
+        expiringWithinSevenDays: 0,
+      },
+    },
+  });
+  assert.match(incompleteSizes, /1 \(size unknown for 1 artifact\(s\)\)/u);
+  assert.doesNotMatch(incompleteSizes, /null bytes/u);
+});
+
+test('scheduled audit reports partial coverage but recovers incidents only after a complete report', async () => {
+  const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const workflow = await readFile(
+    path.join(repositoryRoot, '.github/workflows/platform-audit.yml'),
+    'utf8'
+  );
+  assert.match(workflow, /outputs:\s+status:\s+\$\{\{\s*steps\.generate\.outputs\.status\s*\}\}/u);
+  assert.match(workflow, /echo "status=\$status" >> "\$GITHUB_OUTPUT"/u);
+  assert.match(workflow, /steps\.generate\.outputs\.status != 'complete'/u);
+  assert.ok(
+    workflow.indexOf('name: Upload audit baseline') <
+      workflow.indexOf('name: Require complete coverage for a successful audit'),
+    'partial reports must be retained before the audit fails closed'
+  );
+  assert.match(
+    workflow,
+    /needs\.audit\.result == 'failure' \|\| needs\.audit\.outputs\.status == 'partial'/u
+  );
+  assert.match(
+    workflow,
+    /needs\.audit\.result == 'success' && needs\.audit\.outputs\.status == 'complete'/u
+  );
 });

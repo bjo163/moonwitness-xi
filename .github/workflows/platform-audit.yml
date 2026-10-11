@@ -18,6 +18,8 @@ jobs:
     name: inventory platform and retention
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    outputs:
+      status: ${{ steps.generate.outputs.status }}
     permissions:
       contents: read
       actions: read
@@ -39,6 +41,7 @@ jobs:
             echo 'Previous run had no retained baseline artifact; current report will start a new trend.'
           fi
       - name: Generate read-only platform audit
+        id: generate
         env:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_SHA: ${{ github.sha }}
@@ -48,6 +51,8 @@ jobs:
           else
             node scripts/platform-audit.mjs --output platform-audit-baseline.json
           fi
+          status="$(node --input-type=module -e "import { readFile } from 'node:fs/promises'; const report = JSON.parse(await readFile('platform-audit-baseline.json', 'utf8')); process.stdout.write(report.status);")"
+          echo "status=$status" >> "$GITHUB_OUTPUT"
       - name: Write concise audit summary
         run: node scripts/write-platform-audit-summary.mjs platform-audit-baseline.json
       - name: Upload audit baseline
@@ -57,10 +62,15 @@ jobs:
           path: platform-audit-baseline.json
           if-no-files-found: error
           retention-days: 90
+      - name: Require complete coverage for a successful audit
+        if: steps.generate.outputs.status != 'complete'
+        run: |
+          echo 'The monthly audit is partial; its report was uploaded and a maintenance incident will be recorded.' >&2
+          exit 1
 
   report-failure:
     name: Report monthly platform audit failure
-    if: always() && needs.audit.result == 'failure' && github.ref == 'refs/heads/main'
+    if: always() && (needs.audit.result == 'failure' || needs.audit.outputs.status == 'partial') && github.ref == 'refs/heads/main'
     needs: [audit]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -93,7 +103,7 @@ jobs:
 
   resolve-failure:
     name: Resolve recovered monthly platform audit incident
-    if: always() && needs.audit.result == 'success' && github.ref == 'refs/heads/main'
+    if: always() && needs.audit.result == 'success' && needs.audit.outputs.status == 'complete' && github.ref == 'refs/heads/main'
     needs: [audit]
     runs-on: ubuntu-24.04
     timeout-minutes: 5

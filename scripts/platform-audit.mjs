@@ -20,6 +20,19 @@ const scheduledWorkflowExpectations = [
 
 function knownApiFailure(error) {
   const output = `${error.stderr ?? ''} ${error.message ?? ''}`;
+  const invalidCollection = /GitHub API response did not contain a ([a-z_]+) collection\./u.exec(
+    output
+  )?.[1];
+  if (invalidCollection) {
+    return `GitHub API response did not contain a ${invalidCollection} collection.`;
+  }
+  const resetAt = /rate limit exhausted; resets at (\d{4}-\d{2}-\d{2}T[^\s]+)\.?/iu.exec(
+    output
+  )?.[1];
+  if (resetAt) return `Public GitHub API rate limit exhausted; resets at ${resetAt}.`;
+  if (/API rate limit exceeded|rate limit exhausted/iu.test(output)) {
+    return 'GitHub API rate limit exhausted.';
+  }
   const status = /HTTP (\d{3})/u.exec(output)?.[1];
   return status ? `GitHub API returned HTTP ${status}.` : 'GitHub API request unavailable.';
 }
@@ -232,7 +245,26 @@ export function buildPlatformAudit(input) {
   if (!repo || !/^[a-f0-9]{40}$/u.test(sourceSha) || !Number.isFinite(generatedTime)) {
     throw new Error('Audit metadata requires a repository, full source SHA, and timestamp.');
   }
-  const activeArtifacts = artifacts.filter((artifact) => artifact.expired !== true);
+  const artifactInventory = Array.isArray(artifacts)
+    ? { status: 'available', items: artifacts }
+    : (artifacts ?? {
+        status: 'unknown',
+        reason: 'Artifact inventory was not supplied.',
+        items: [],
+      });
+  const artifactRows = artifactInventory.items ?? [];
+  const workflowInventory = Array.isArray(workflowRuns)
+    ? { status: 'available', items: workflowRuns }
+    : (workflowRuns ?? {
+        status: 'unknown',
+        reason: 'Workflow inventory was not supplied.',
+        items: [],
+      });
+  const workflowRows = workflowInventory.items ?? [];
+  const activeArtifacts = artifactRows.filter((artifact) => artifact.expired !== true);
+  const unknownArtifactSizeCount = activeArtifacts.filter(
+    (artifact) => !Number.isSafeInteger(artifact.size_in_bytes) || artifact.size_in_bytes < 0
+  ).length;
   const artifactBytes = activeArtifacts.reduce(
     (total, artifact) =>
       total + (Number.isSafeInteger(artifact.size_in_bytes) ? artifact.size_in_bytes : 0),
@@ -243,58 +275,134 @@ export function buildPlatformAudit(input) {
     return Number.isFinite(expiresAt) && expiresAt <= generatedTime + 7 * 24 * 60 * 60 * 1000;
   });
   const conclusions = {};
-  for (const run of workflowRuns) {
+  for (const run of workflowRows) {
     const conclusion = run.conclusion ?? run.status ?? 'unknown';
     conclusions[conclusion] = (conclusions[conclusion] ?? 0) + 1;
   }
   const nodeMajor = 'v22';
   const nodeSupport = nodeSchedule?.[nodeMajor];
+  const workflowPermissionStatus =
+    workflowPermissions?.status ?? (workflowPermissions ? 'available' : 'unknown');
+  const actionPermissionStatus =
+    actionPermissions?.status ?? (actionPermissions ? 'available' : 'unknown');
   const nodeEnd = nodeSupport?.end ? Date.parse(`${nodeSupport.end}T00:00:00Z`) : NaN;
-  const cleanup = planArtifactCleanup(artifacts, generatedAt);
+  const cleanup =
+    artifactInventory.status === 'available'
+      ? { status: 'available', ...planArtifactCleanup(artifactRows, generatedAt) }
+      : {
+          status: 'unknown',
+          mode: 'dry-run-only',
+          deletionSupported: false,
+          minimumAgeDays: 90,
+          candidates: null,
+          protectedArtifacts: null,
+          unclassified: null,
+          reason: artifactInventory.reason ?? 'Artifact inventory is unavailable.',
+        };
   const previousArtifacts = previous?.inventory?.artifacts;
   const previousRuns = previous?.inventory?.workflowRuns;
   const scheduledWorkflows = auditScheduledWorkflows(scheduledWorkflowRuns, generatedAt);
+  const scheduledWorkflowSources = Array.isArray(scheduledWorkflowRuns)
+    ? []
+    : Object.values(scheduledWorkflowRuns);
+  const scheduledWorkflowInventoryUnknown = scheduledWorkflowSources.some(
+    (source) => source && !Array.isArray(source) && source.status === 'unknown'
+  );
+  const scheduledWorkflowRunsScanned = Array.isArray(scheduledWorkflowRuns)
+    ? null
+    : scheduledWorkflowInventoryUnknown
+      ? null
+      : scheduledWorkflowSources.reduce(
+          (count, source) =>
+            count + (Array.isArray(source) ? source.length : (source?.runs?.length ?? 0)),
+          0
+        );
   const supportReviews = evaluateRuntimeSupportReviews(supportReviewPolicy, generatedAt);
 
   return {
     schemaVersion: 1,
     mode: 'read-only-monthly-audit',
+    status:
+      repository &&
+      artifactInventory.status === 'available' &&
+      unknownArtifactSizeCount === 0 &&
+      workflowInventory.status === 'available' &&
+      !scheduledWorkflowInventoryUnknown &&
+      workflowPermissionStatus === 'available' &&
+      actionPermissionStatus === 'available' &&
+      packages?.status === 'available' &&
+      billing?.status === 'available' &&
+      nodeSupport?.end
+        ? 'complete'
+        : 'partial',
     generatedAt,
     source: { repository: repo, sha: sourceSha, dirty: sourceDirty },
     coverage: {
       workflowRunWindowDays: 90,
-      workflowRunsScanned: workflowRuns.length,
+      artifactInventoryStatus: artifactInventory.status,
+      workflowRunInventoryStatus: workflowInventory.status,
+      repositoryMetadataStatus: repository ? 'available' : 'unknown',
+      workflowRunsScanned: workflowInventory.status === 'available' ? workflowRows.length : null,
+      scheduledWorkflowRunInventoryStatus: scheduledWorkflowInventoryUnknown
+        ? 'unknown'
+        : 'available',
       workflowRunResultLimit: 1000,
-      workflowRunHistoryMayBeTruncated: workflowRuns.length >= 1000,
-      scheduledWorkflowRunsScanned: Array.isArray(scheduledWorkflowRuns)
-        ? null
-        : Object.values(scheduledWorkflowRuns).reduce(
-            (count, source) =>
-              count + (Array.isArray(source) ? source.length : (source?.runs?.length ?? 0)),
-            0
-          ),
+      workflowRunHistoryMayBeTruncated:
+        workflowInventory.status === 'available' ? workflowRows.length >= 1000 : null,
+      scheduledWorkflowRunsScanned,
     },
     inventory: {
       artifacts: {
-        count: activeArtifacts.length,
-        bytes: artifactBytes,
-        expiredCount: artifacts.filter((artifact) => artifact.expired === true).length,
-        expiringWithinSevenDays: nearExpiry.length,
+        status: artifactInventory.status,
+        reason: artifactInventory.status === 'unknown' ? artifactInventory.reason : null,
+        count: artifactInventory.status === 'available' ? activeArtifacts.length : null,
+        bytesStatus:
+          artifactInventory.status !== 'available'
+            ? 'unknown'
+            : unknownArtifactSizeCount > 0
+              ? 'partial'
+              : 'available',
+        bytes:
+          artifactInventory.status === 'available' && unknownArtifactSizeCount === 0
+            ? artifactBytes
+            : null,
+        unknownSizeCount:
+          artifactInventory.status === 'available' ? unknownArtifactSizeCount : null,
+        expiredCount:
+          artifactInventory.status === 'available'
+            ? artifactRows.filter((artifact) => artifact.expired === true).length
+            : null,
+        expiringWithinSevenDays:
+          artifactInventory.status === 'available' ? nearExpiry.length : null,
         earliestExpiry:
-          activeArtifacts
-            .map((artifact) => artifact.expires_at)
-            .filter((value) => typeof value === 'string')
-            .sort()[0] ?? null,
+          artifactInventory.status === 'available'
+            ? (activeArtifacts
+                .map((artifact) => artifact.expires_at)
+                .filter((value) => typeof value === 'string')
+                .sort()[0] ?? null)
+            : null,
       },
-      workflowRuns: { count: workflowRuns.length, conclusions, scheduledWorkflows },
+      workflowRuns: {
+        status: workflowInventory.status,
+        reason: workflowInventory.status === 'unknown' ? workflowInventory.reason : null,
+        count: workflowInventory.status === 'available' ? workflowRows.length : null,
+        conclusions: workflowInventory.status === 'available' ? conclusions : null,
+        scheduledWorkflows,
+      },
       packages,
       billing,
       permissions: {
+        workflowStatus: workflowPermissionStatus,
+        workflowReason:
+          workflowPermissions?.status === 'unknown' ? workflowPermissions.reason : null,
         defaultWorkflowPermissions: workflowPermissions?.default_workflow_permissions ?? null,
         canApprovePullRequestReviews: workflowPermissions?.can_approve_pull_request_reviews ?? null,
+        actionsStatus: actionPermissionStatus,
+        actionsReason: actionPermissions?.status === 'unknown' ? actionPermissions.reason : null,
         actionsEnabled: actionPermissions?.enabled ?? null,
         allowedActions: actionPermissions?.allowed_actions ?? null,
         shaPinningRequired: actionPermissions?.sha_pinning_required ?? null,
+        retentionStatus: repository ? 'available' : 'unknown',
         artifactAndLogRetentionDays: repository?.artifact_and_log_retention_days ?? null,
       },
     },
@@ -316,9 +424,20 @@ export function buildPlatformAudit(input) {
     },
     trends: {
       previousGeneratedAt: previous?.generatedAt ?? null,
-      artifactCountDelta: compareCounts(activeArtifacts.length, previousArtifacts?.count),
-      artifactBytesDelta: compareCounts(artifactBytes, previousArtifacts?.bytes),
-      workflowRunCountDelta: compareCounts(workflowRuns.length, previousRuns?.count),
+      artifactCountDelta: compareCounts(
+        artifactInventory.status === 'available' ? activeArtifacts.length : null,
+        previousArtifacts?.count
+      ),
+      artifactBytesDelta: compareCounts(
+        artifactInventory.status === 'available' && unknownArtifactSizeCount === 0
+          ? artifactBytes
+          : null,
+        previousArtifacts?.bytes
+      ),
+      workflowRunCountDelta: compareCounts(
+        workflowInventory.status === 'available' ? workflowRows.length : null,
+        previousRuns?.count
+      ),
     },
     cleanupPlan: cleanup,
     limitations: [
@@ -332,7 +451,32 @@ export function buildPlatformAudit(input) {
             `Actions billing unknown: ${billing.reason} Owner: organization/repository billing administrator; follow-up: review billing through the account UI or grant an authorized billing read capability.`,
           ]
         : []),
-      ...(workflowRuns.length >= 1000
+      ...(artifactInventory.status === 'unknown'
+        ? [
+            `Artifact inventory unknown: ${artifactInventory.reason ?? 'GitHub API access unavailable.'}`,
+          ]
+        : []),
+      ...(artifactInventory.status === 'available' && unknownArtifactSizeCount > 0
+        ? [
+            `Artifact byte total is partial: ${unknownArtifactSizeCount} active artifact row(s) have no valid size_in_bytes.`,
+          ]
+        : []),
+      ...(workflowInventory.status === 'unknown'
+        ? [
+            `Workflow run inventory unknown: ${workflowInventory.reason ?? 'GitHub API access unavailable.'}`,
+          ]
+        : []),
+      ...(workflowPermissions?.status === 'unknown' || actionPermissions?.status === 'unknown'
+        ? [
+            'Actions permission settings are unknown because one or more settings endpoints were unavailable.',
+          ]
+        : []),
+      ...(!repository
+        ? [
+            'Repository metadata and retention settings are unknown because the repository API was unavailable.',
+          ]
+        : []),
+      ...(workflowInventory.status === 'available' && workflowRows.length >= 1000
         ? ['Workflow run inventory reached the GitHub API result limit.']
         : []),
       ...scheduledWorkflows
@@ -441,6 +585,21 @@ async function readOptionalApi(endpoint, mapPages = (pages) => pages[0]) {
   }
 }
 
+export async function readApiInventory(endpoint, collection, requestPages = runGitHubApi) {
+  try {
+    const pages = await requestPages(endpoint);
+    const items = pages.flatMap((page) => {
+      if (!page || !Array.isArray(page[collection])) {
+        throw new Error(`GitHub API response did not contain a ${collection} collection.`);
+      }
+      return page[collection];
+    });
+    return { status: 'available', items };
+  } catch (error) {
+    return { status: 'unknown', reason: knownApiFailure(error), items: [] };
+  }
+}
+
 export async function fetchScheduledWorkflowRuns(repo, windowStart, requestPages = runGitHubApi) {
   const entries = await Promise.all(
     scheduledWorkflowExpectations.map(async ({ workflowFile }) => {
@@ -458,6 +617,28 @@ export async function fetchScheduledWorkflowRuns(repo, windowStart, requestPages
     })
   );
   return Object.fromEntries(entries);
+}
+
+function unavailableScheduledWorkflowRuns(reason) {
+  return Object.fromEntries(
+    scheduledWorkflowExpectations.map(({ workflowFile }) => [
+      workflowFile,
+      { status: 'unknown', reason, runs: [] },
+    ])
+  );
+}
+
+function findRateLimitReason(...sources) {
+  return sources
+    .flatMap((source) =>
+      source && typeof source === 'object'
+        ? Array.isArray(source)
+          ? source
+          : Object.values(source)
+        : []
+    )
+    .find((source) => source?.status === 'unknown' && /rate limit/iu.test(source.reason ?? ''))
+    ?.reason;
 }
 
 async function fetchNodeSchedule() {
@@ -489,28 +670,50 @@ async function main() {
   const encodedWindowStart = new Date(Date.parse(generatedAt) - 90 * 24 * 60 * 60 * 1000)
     .toISOString()
     .slice(0, 10);
-  const repository = (await runGitHubApi(`repos/${repo}`))[0];
+  const repositoryResult = await readOptionalApi(`repos/${repo}`);
+  const repository = repositoryResult.status === 'available' ? repositoryResult : null;
   const supportReviewPolicy = JSON.parse(
     await readFile(
       path.join(repositoryRoot, 'docs/engineering/runtime-support-review.json'),
       'utf8'
     )
   );
-  const artifacts = (await runGitHubApi(`repos/${repo}/actions/artifacts?per_page=100`)).flatMap(
-    (page) => page.artifacts ?? []
-  );
-  const runPages = await runGitHubApi(
-    `repos/${repo}/actions/runs?per_page=100&created=%3E%3D${encodedWindowStart}`
-  );
-  const workflowRuns = runPages.flatMap((page) => page.workflow_runs ?? []);
-  const scheduledWorkflowRuns = await fetchScheduledWorkflowRuns(repo, encodedWindowStart);
-  const workflowPermissions = await readOptionalApi(`repos/${repo}/actions/permissions/workflow`);
-  const actionPermissions = await readOptionalApi(`repos/${repo}/actions/permissions`);
-  const packages = await readOptionalApi(
-    `${repository.owner?.type === 'Organization' ? 'orgs' : 'users'}/${repoParts[0]}/packages?package_type=container&per_page=100`,
-    (pages) => pages.flatMap((page) => (Array.isArray(page) ? page : []))
-  );
-  const billing = await readOptionalApi(`repos/${repo}/actions/billing/usage`);
+  const [artifacts, workflowRuns] = await Promise.all([
+    readApiInventory(`repos/${repo}/actions/artifacts?per_page=100`, 'artifacts'),
+    readApiInventory(
+      `repos/${repo}/actions/runs?per_page=100&created=%3E%3D${encodedWindowStart}`,
+      'workflow_runs'
+    ),
+  ]);
+  let scheduledWorkflowRuns;
+  let workflowPermissions;
+  let actionPermissions;
+  let packages;
+  let billing;
+  let apiRateLimitReason = findRateLimitReason(repositoryResult, artifacts, workflowRuns);
+  if (apiRateLimitReason) {
+    scheduledWorkflowRuns = unavailableScheduledWorkflowRuns(apiRateLimitReason);
+  } else {
+    scheduledWorkflowRuns = await fetchScheduledWorkflowRuns(repo, encodedWindowStart);
+    apiRateLimitReason = findRateLimitReason(scheduledWorkflowRuns);
+  }
+  if (apiRateLimitReason) {
+    const unavailable = { status: 'unknown', reason: apiRateLimitReason };
+    workflowPermissions = unavailable;
+    actionPermissions = unavailable;
+    packages = unavailable;
+    billing = unavailable;
+  } else {
+    workflowPermissions = await readOptionalApi(`repos/${repo}/actions/permissions/workflow`);
+    actionPermissions = await readOptionalApi(`repos/${repo}/actions/permissions`);
+    packages = repository
+      ? await readOptionalApi(
+          `${repository.owner?.type === 'Organization' ? 'orgs' : 'users'}/${repoParts[0]}/packages?package_type=container&per_page=100`,
+          (pages) => pages.flatMap((page) => (Array.isArray(page) ? page : []))
+        )
+      : { status: 'unknown', reason: 'Repository owner type is unavailable.' };
+    billing = await readOptionalApi(`repos/${repo}/actions/billing/usage`);
+  }
   const nodeSchedule = await fetchNodeSchedule().catch(() => null);
   const previousPath = argumentValue('--previous');
   const outputPath = argumentValue('--output');
@@ -523,8 +726,8 @@ async function main() {
     sourceDirty,
     generatedAt,
     repository,
-    workflowPermissions: workflowPermissions.status === 'available' ? workflowPermissions : null,
-    actionPermissions: actionPermissions.status === 'available' ? actionPermissions : null,
+    workflowPermissions,
+    actionPermissions,
     artifacts,
     workflowRuns,
     scheduledWorkflowRuns,
