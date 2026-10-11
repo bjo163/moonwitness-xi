@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -78,11 +78,13 @@ test('non-force push preserves a human update racing after expected-head validat
 
     const hooks = join(repos.root, 'bot-hooks');
     mkdirSync(hooks);
+    const hookPath = join(hooks, 'pre-push');
     writeFileSync(
-      join(hooks, 'pre-push'),
+      hookPath,
       `#!/bin/sh\ngit -C '${repos.human.replaceAll("'", "'\\''")}' push origin HEAD:refs/heads/dev\n`,
       'utf8'
     );
+    chmodSync(hookPath, 0o755);
     git(repos.bot, ['config', 'core.hooksPath', hooks]);
 
     assert.throws(
