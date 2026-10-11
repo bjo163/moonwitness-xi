@@ -38,6 +38,9 @@ import {
 } from '@moonwitness/jobs';
 import { manifest as baseManifest } from '@moonwitness/orm-base';
 import { manifest as notificationManifest } from '@moonwitness/orm-notification';
+import { manifest as organizationManifest } from '@moonwitness/orm-organization';
+import { manifest as requestManifest } from '@moonwitness/orm-request';
+import { manifest as integrationManifest } from '@moonwitness/orm-integration';
 import {
   manifest as workflowManifest,
   startWorkflow,
@@ -54,6 +57,16 @@ if (process.env.REQUIRE_POSTGRES_TESTS === 'true' && !connectionString) {
   throw new Error('POSTGRES_TEST_URL is required when REQUIRE_POSTGRES_TESTS=true');
 }
 const postgresDescribe = connectionString ? describe : describe.skip;
+const runtimeManifests = [
+  baseManifest,
+  authManifest,
+  jobsManifest,
+  integrationManifest,
+  requestManifest,
+  notificationManifest,
+  organizationManifest,
+  workflowManifest,
+];
 
 postgresDescribe('PostgreSQL addon upgrade integration', () => {
   let adminDb: Knex;
@@ -93,6 +106,79 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     const result = await db.raw('SHOW statement_timeout');
     expect(result.rows[0]?.statement_timeout).toBe('30s');
   });
+
+  it('installs every seeded addon on a fresh PostgreSQL schema and preserves sample edits on reinstall', async () => {
+    const seedSchema = `mw_seed_test_${randomUUID().replaceAll('-', '')}`;
+    await adminDb.raw('create schema ??', [seedSchema]);
+    const seedDb = knex(
+      createPostgresKnexConfig(
+        connectionString!,
+        { poolMin: 0, poolMax: 4, acquireTimeoutMs: 5000, statementTimeoutMs: 30_000 },
+        { searchPath: [seedSchema] }
+      )
+    );
+    const editedExamples = [
+      { externalId: 'base.partner_acme', table: 'partners', field: 'name' },
+      { externalId: 'jobs.cron_example_disabled', table: 'crons', field: 'name' },
+      {
+        externalId: 'notification.template_example_in_app',
+        table: 'notification_templates',
+        field: 'body',
+      },
+      {
+        externalId: 'organization.department_operations',
+        table: 'organization_departments',
+        field: 'description',
+      },
+      {
+        externalId: 'workflow.definition_sample_request_v1',
+        table: 'workflow_definitions',
+        field: 'name',
+      },
+      { externalId: 'request.example_laptop', table: 'purchase_requests', field: 'description' },
+      {
+        externalId: 'orm-integration.endpoint_example_disabled',
+        table: 'integration_webhook_endpoints',
+        field: 'name',
+      },
+    ];
+    try {
+      await installAddons(seedDb, [...runtimeManifests].reverse());
+      const expectedSeedCount = runtimeManifests.reduce(
+        (total, addon) => total + (addon.data?.length ?? 0),
+        0
+      );
+      expect(Number((await seedDb('_orm_data').count({ count: '*' }).first())?.count)).toBe(
+        expectedSeedCount
+      );
+      expect(Number((await seedDb('users').count({ count: '*' }).first())?.count)).toBe(2);
+
+      for (const [index, example] of editedExamples.entries()) {
+        const identity = await seedDb('_orm_data').where({ id: example.externalId }).first();
+        if (!identity) throw new Error(`Missing seed identity ${example.externalId}`);
+        await seedDb(example.table)
+          .where({ id: identity.record_id })
+          .update({ [example.field]: `PostgreSQL maintainer edit ${index + 1}` });
+      }
+
+      await installAddons(seedDb, runtimeManifests);
+      expect(Number((await seedDb('_orm_data').count({ count: '*' }).first())?.count)).toBe(
+        expectedSeedCount
+      );
+      expect(Number((await seedDb('users').count({ count: '*' }).first())?.count)).toBe(2);
+      for (const [index, example] of editedExamples.entries()) {
+        const identity = await seedDb('_orm_data').where({ id: example.externalId }).first();
+        if (!identity) throw new Error(`Missing seed identity ${example.externalId}`);
+        const persisted = await seedDb(example.table)
+          .where({ id: identity.record_id })
+          .first(example.field);
+        expect(persisted?.[example.field]).toBe(`PostgreSQL maintainer edit ${index + 1}`);
+      }
+    } finally {
+      await seedDb.destroy();
+      await adminDb.raw('drop schema if exists ?? cascade', [seedSchema]);
+    }
+  }, 30000);
 
   it('upgrades populated legacy tables, restores references and enforces PostgreSQL foreign keys', async () => {
     const {

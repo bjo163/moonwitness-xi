@@ -107,9 +107,10 @@ describe('workspace addon conformance', () => {
     // orm-storage is deliberately a provider-only package: it owns no ORM models or demo rows.
     assert.deepEqual(storage.manifest.models, []);
     assert.equal(storage.manifest.data, undefined);
+    assert.equal(auth.manifest.data, undefined, 'auth sessions must never be seeded as demo data');
   });
 
-  it('installs the complete runtime addon set repeatedly without duplicating or overwriting seeds', async () => {
+  it('reinstalls all runtime addons without duplicating seeds or overwriting example edits', async () => {
     const db = knex({
       client: 'better-sqlite3',
       connection: { filename: ':memory:' },
@@ -159,9 +160,41 @@ describe('workspace addon conformance', () => {
       2
     );
 
-    const acme = await db('_orm_data').where({ id: 'base.partner_acme' }).first();
-    assert.ok(acme);
-    await db('partners').where({ id: acme.record_id }).update({ notes: 'Maintainer edit' });
+    const editedSeeds = [
+      { id: 'base.partner_acme', field: 'name' },
+      { id: 'jobs.cron_example_disabled', field: 'name' },
+      { id: 'notification.template_example_in_app', field: 'body' },
+      { id: 'organization.department_operations', field: 'description' },
+      { id: 'workflow.definition_sample_request_v1', field: 'name' },
+      { id: 'request.example_laptop', field: 'description' },
+      { id: 'orm-integration.endpoint_example_disabled', field: 'name' },
+    ];
+    const dataAddonNames = addonPackages
+      .filter(({ manifest }) => (manifest.data?.length ?? 0) > 0)
+      .map(({ manifest }) => manifest.name)
+      .sort();
+    const sampledAddonNames = [
+      ...new Set(editedSeeds.map(({ id }) => id.slice(0, id.lastIndexOf('.')))),
+    ].sort();
+    assert.deepEqual(
+      sampledAddonNames,
+      dataAddonNames,
+      'every addon with seeds must have a representative edit-preservation check'
+    );
+    const allSeeds = addonManifests.flatMap((addon) => addon.data ?? []);
+    const expectedEdits = new Map();
+    for (const [index, { id, field }] of editedSeeds.entries()) {
+      const record = allSeeds.find((candidate) => candidate.id === id);
+      assert.ok(record, `missing representative seed ${id}`);
+      assert.equal(typeof record.values[field], 'string', `${id}.${field} must be a text example`);
+      const identity = await db('_orm_data').where({ id }).first();
+      assert.ok(identity, `installer must track seed ${id}`);
+      const value = `Maintainer edit ${index + 1}`;
+      await db(record.model.tableName)
+        .where({ id: identity.record_id })
+        .update({ [field]: value });
+      expectedEdits.set(id, { model: record.model, recordId: identity.record_id, field, value });
+    }
     await installAddons(db, addonManifests);
 
     assert.equal(
@@ -169,10 +202,10 @@ describe('workspace addon conformance', () => {
       expectedSeedCount
     );
     assert.equal(Number((await db('users').count({ count: '*' }).first())?.count), 2);
-    assert.equal(
-      (await db('partners').where({ id: acme.record_id }).first('notes'))?.notes,
-      'Maintainer edit'
-    );
+    for (const { model, recordId, field, value } of expectedEdits.values()) {
+      const persisted = await db(model.tableName).where({ id: recordId }).first(field);
+      assert.equal(persisted?.[field], value, `${model.modelName}.${field} must preserve edits`);
+    }
     assert.equal(
       Number((await db('_orm_addons').count({ count: '*' }).first())?.count),
       addonManifests.length
