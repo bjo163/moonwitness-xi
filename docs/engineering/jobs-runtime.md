@@ -18,7 +18,7 @@ Each claim increments both `attempts` and `fencing_token`, assigns `lease_owner`
 
 Transient failures use capped exponential backoff: `min(retryMaxSeconds, retryBaseSeconds × 2^(attempts−1))`; defaults are 2 seconds and 3600 seconds. `max_attempts` bounds retries. Permanent handler failures and unavailable handler versions become dead letters. Run history keeps each attempt outcome and a sanitized, bounded error message.
 
-Cancellation is cooperative. A running handler receives an `AbortSignal`; the worker observes a cancellation request on heartbeat and commits the cancelled state when the handler returns or responds to abort. A handler that ignores cancellation can continue running until it settles, but its expired/fenced claim cannot overwrite a newer owner.
+Cancellation is cooperative. A running handler receives an `AbortSignal`; the worker observes a cancellation request on heartbeat and commits the cancelled state when the handler returns or responds to abort. The request and terminal transition use conditional status updates: if cancellation is recorded before the success transaction commits, cancellation wins and the `JobRun` records `JOB_CANCELLED`; a request made after a terminal transition returns `false`. A handler that ignores cancellation can continue running until it settles, but its expired/fenced claim cannot overwrite a newer owner.
 
 ## Scheduler lifecycle
 

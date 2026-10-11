@@ -318,6 +318,53 @@ describe('durable job runtime', () => {
     }
   });
 
+  it('commits a late cancellation instead of overwriting it with worker success', async () => {
+    let signalStarted: (() => void) | undefined;
+    let releaseHandler: (() => void) | undefined;
+    const started = new Promise<void>((resolve) => {
+      signalStarted = resolve;
+    });
+    const hold = new Promise<void>((resolve) => {
+      releaseHandler = resolve;
+    });
+    const unregister = registerJobHandler({
+      name: 'test.cancel-at-commit',
+      version: 1,
+      parse(payload: unknown): { run: true } {
+        if (typeof payload !== 'object' || payload === null || !('run' in payload))
+          throw new Error('invalid payload');
+        return { run: true };
+      },
+      async run() {
+        signalStarted?.();
+        await hold;
+        return { completed: true };
+      },
+    });
+    try {
+      const jobId = await enqueueJob('test.cancel-at-commit', { run: true });
+      const worker = runOneJob({ workerId: 'worker-cancel-at-commit' });
+      await started;
+
+      expect(await cancelJob(jobId)).toBe(true);
+      releaseHandler?.();
+      expect(await worker).toBe(true);
+      expect(await Job.query().findById(jobId)).toMatchObject({
+        status: 'cancelled',
+        cancel_requested: false,
+        lease_owner: null,
+      });
+      expect(await JobRun.query().where({ job_id: jobId }).first()).toMatchObject({
+        status: 'cancelled',
+        error_code: 'JOB_CANCELLED',
+        result: null,
+      });
+    } finally {
+      releaseHandler?.();
+      unregister();
+    }
+  });
+
   it('coalesces missed cron occurrences, deduplicates them, and advances the schedule', async () => {
     const unregister = registerJobHandler({
       name: 'test.cron',
