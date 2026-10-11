@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -61,6 +61,46 @@ test('expected-head push preserves remote changes made before publication', () =
       }
     );
     assert.equal(git(repos.remote, ['rev-parse', 'refs/heads/dev']), humanSha);
+  } finally {
+    rmSync(repos.root, { recursive: true, force: true });
+  }
+});
+
+test('non-force push preserves a human update racing after expected-head validation', () => {
+  const repos = createRepositories();
+  try {
+    git(repos.bot, ['commit', '--allow-empty', '-m', 'candidate update']);
+    const candidateSha = git(repos.bot, ['rev-parse', 'HEAD']);
+    git(repos.root, ['clone', '--branch', 'dev', repos.remote, repos.human]);
+    configureIdentity(repos.human, 'human');
+    git(repos.human, ['commit', '--allow-empty', '-m', 'racing human update']);
+    const humanSha = git(repos.human, ['rev-parse', 'HEAD']);
+
+    const hooks = join(repos.root, 'bot-hooks');
+    mkdirSync(hooks);
+    writeFileSync(
+      join(hooks, 'pre-push'),
+      `#!/bin/sh\ngit -C '${repos.human.replaceAll("'", "'\\''")}' push origin HEAD:refs/heads/dev\n`,
+      'utf8'
+    );
+    git(repos.bot, ['config', 'core.hooksPath', hooks]);
+
+    assert.throws(
+      () =>
+        execFileSync(
+          process.execPath,
+          [helperPath, 'origin', 'HEAD', 'refs/heads/dev', repos.expectedSha],
+          { cwd: repos.bot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }
+        ),
+      (error) => {
+        assert.equal(error.status, 1);
+        assert.match(error.stderr, /Push rejected/u);
+        return true;
+      }
+    );
+
+    assert.equal(git(repos.remote, ['rev-parse', 'refs/heads/dev']), humanSha);
+    assert.notEqual(git(repos.remote, ['rev-parse', 'refs/heads/dev']), candidateSha);
   } finally {
     rmSync(repos.root, { recursive: true, force: true });
   }
