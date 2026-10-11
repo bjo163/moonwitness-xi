@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { URL, fileURLToPath, pathToFileURL } from 'node:url';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const protectedArtifactName =
@@ -329,9 +329,63 @@ function runGhApi(endpoint) {
   return pages;
 }
 
-function readOptionalApi(endpoint, mapPages = (pages) => pages[0]) {
+function authenticationUnavailable(error) {
+  const output = `${error.stderr ?? ''} ${error.message ?? ''}`;
+  return /HTTP 401|bad credentials|invalid token|not logged in|ENOENT|command not found/iu.test(
+    output
+  );
+}
+
+function nextPublicPage(linkHeader, currentUrl) {
+  if (!linkHeader) return null;
+  const nextLink = /<([^>]+)>;\s*rel="next"/u.exec(linkHeader)?.[1];
+  if (!nextLink) return null;
+  const nextUrl = new URL(nextLink, currentUrl);
+  if (nextUrl.origin !== 'https://api.github.com') {
+    throw new Error('Public GitHub API pagination returned an unexpected host.');
+  }
+  return nextUrl.toString();
+}
+
+export async function fetchPublicGitHubPages(
+  endpoint,
+  fetchImpl = globalThis.fetch,
+  maximumPages = 100
+) {
+  let nextUrl = new URL(endpoint, 'https://api.github.com/').toString();
+  if (!nextUrl.startsWith('https://api.github.com/')) {
+    throw new Error('Public GitHub API requests must use the official API host.');
+  }
+  const pages = [];
+  while (nextUrl && pages.length < maximumPages) {
+    const response = await fetchImpl(nextUrl, {
+      headers: {
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`Public GitHub API returned HTTP ${response.status}.`);
+    }
+    pages.push(await response.json());
+    nextUrl = nextPublicPage(response.headers.get('link'), nextUrl);
+  }
+  return pages;
+}
+
+async function runGitHubApi(endpoint) {
   try {
-    const value = mapPages(runGhApi(endpoint));
+    return runGhApi(endpoint);
+  } catch (error) {
+    if (!authenticationUnavailable(error)) throw error;
+    const maximumPages = /\/actions\/runs\?/u.test(endpoint) ? 10 : 100;
+    return fetchPublicGitHubPages(endpoint, globalThis.fetch, maximumPages);
+  }
+}
+
+async function readOptionalApi(endpoint, mapPages = (pages) => pages[0]) {
+  try {
+    const value = mapPages(await runGitHubApi(endpoint));
     if (Array.isArray(value)) return { status: 'available', count: value.length };
     if (value && typeof value === 'object') return { status: 'available', ...value };
     return { status: 'available', value };
@@ -369,35 +423,36 @@ async function main() {
   const encodedWindowStart = new Date(Date.parse(generatedAt) - 90 * 24 * 60 * 60 * 1000)
     .toISOString()
     .slice(0, 10);
-  const repository = runGhApi(`repos/${repo}`)[0];
+  const repository = (await runGitHubApi(`repos/${repo}`))[0];
   const supportReviewPolicy = JSON.parse(
     await readFile(
       path.join(repositoryRoot, 'docs/engineering/runtime-support-review.json'),
       'utf8'
     )
   );
-  const artifacts = runGhApi(`repos/${repo}/actions/artifacts?per_page=100`).flatMap(
+  const artifacts = (await runGitHubApi(`repos/${repo}/actions/artifacts?per_page=100`)).flatMap(
     (page) => page.artifacts ?? []
   );
-  const runPages = runGhApi(
+  const runPages = await runGitHubApi(
     `repos/${repo}/actions/runs?per_page=100&created=%3E%3D${encodedWindowStart}`
   );
   const workflowRuns = runPages.flatMap((page) => page.workflow_runs ?? []);
-  const scheduledWorkflowRuns = Object.fromEntries(
-    scheduledWorkflowExpectations.map(({ workflowFile }) => {
-      const pages = runGhApi(
+  const scheduledEntries = await Promise.all(
+    scheduledWorkflowExpectations.map(async ({ workflowFile }) => {
+      const pages = await runGitHubApi(
         `repos/${repo}/actions/workflows/${workflowFile}/runs?per_page=100&event=schedule&created=%3E%3D${encodedWindowStart}`
       );
       return [workflowFile, pages.flatMap((page) => page.workflow_runs ?? [])];
     })
   );
-  const workflowPermissions = readOptionalApi(`repos/${repo}/actions/permissions/workflow`);
-  const actionPermissions = readOptionalApi(`repos/${repo}/actions/permissions`);
-  const packages = readOptionalApi(
+  const scheduledWorkflowRuns = Object.fromEntries(scheduledEntries);
+  const workflowPermissions = await readOptionalApi(`repos/${repo}/actions/permissions/workflow`);
+  const actionPermissions = await readOptionalApi(`repos/${repo}/actions/permissions`);
+  const packages = await readOptionalApi(
     `${repository.owner?.type === 'Organization' ? 'orgs' : 'users'}/${repoParts[0]}/packages?package_type=container&per_page=100`,
     (pages) => pages.flatMap((page) => (Array.isArray(page) ? page : []))
   );
-  const billing = readOptionalApi(`repos/${repo}/actions/billing/usage`);
+  const billing = await readOptionalApi(`repos/${repo}/actions/billing/usage`);
   const nodeSchedule = await fetchNodeSchedule().catch(() => null);
   const previousPath = argumentValue('--previous');
   const outputPath = argumentValue('--output');

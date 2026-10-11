@@ -2,7 +2,7 @@
 
 The monthly audit is a read-only inventory. It records Actions artifacts and 90-day workflow outcomes, repository/workflow permissions, available package registry and billing data, the Node.js release schedule, and dated upstream support reviews for Node.js, pnpm, PostgreSQL, Playwright and the Actions runner image. It compares the result to the previous successful baseline artifact when that artifact is still available.
 
-Run locally with an authenticated GitHub CLI:
+Run locally with the GitHub CLI when it has repository-read access:
 
 ```powershell
 pnpm platform:audit -- --repo bjo163/moonwitness-xi --output platform-audit-baseline.json
@@ -15,6 +15,8 @@ The monthly report checks scheduled-event freshness separately from manual dispa
 The general 90-day workflow inventory is limited to GitHub's 1,000-run API window. To keep that cap from hiding a scheduled run, the audit also queries each required scheduled workflow by its workflow file and `event=schedule`, then computes freshness from those targeted results. These requests use the same read-only Actions permission. API rate-limit or access errors stop the audit rather than silently treating a schedule as missing.
 
 The workflow token needs only `contents: read` and `actions: read`. Repository package inventory or billing APIs can return `403`/`404` when the repository/account plan or token does not expose those capabilities. Such fields remain `unknown`; they must not be interpreted as zero. Record the missing capability and owner in the next review.
+
+For a public repository, if the local GitHub CLI is missing or reports an invalid credential, the audit retries its read-only inventory calls anonymously against `api.github.com`. The general workflow inventory remains bounded to GitHub's 1,000-run window; artifact inventory and targeted scheduled-workflow checks follow pagination. Repository settings, package registry, and billing endpoints that are not publicly readable remain `unknown`. Private repositories still require valid CLI authentication. The anonymous fallback never forwards credentials or performs writes.
 
 The cleanup section is a plan only. It classifies only known ephemeral report names and only after 90 days; release, provenance, evidence, backup, restore, migration and unknown names are never candidates. The audit has no deletion implementation or write permission. Review retention settings and published release assets separately before proposing any cleanup change.
 

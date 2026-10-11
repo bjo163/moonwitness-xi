@@ -7,6 +7,7 @@ import {
   auditScheduledWorkflows,
   buildPlatformAudit,
   evaluateRuntimeSupportReviews,
+  fetchPublicGitHubPages,
   planArtifactCleanup,
 } from './platform-audit.mjs';
 import { renderPlatformAuditSummary } from './write-platform-audit-summary.mjs';
@@ -43,6 +44,47 @@ test('checked-in support ledger covers every declared platform runtime', async (
   );
   assert.ok(reviews.every(({ owner, source, reviewStatus }) => owner && source && reviewStatus));
   assert.equal(reviews.find(({ id }) => id === 'ubuntu-runner')?.reviewBy, '2026-10-15');
+});
+
+test('public audit fallback follows paginated GitHub API links without credentials', async () => {
+  const requested = [];
+  const pages = await fetchPublicGitHubPages(
+    'repos/owner/project/actions/artifacts?per_page=1',
+    async (url, options) => {
+      requested.push({ url: String(url), options });
+      const firstPage = requested.length === 1;
+      return {
+        ok: true,
+        headers: {
+          get: (name) =>
+            name.toLowerCase() === 'link' && firstPage
+              ? '<https://api.github.com/repos/owner/project/actions/artifacts?per_page=1&page=2>; rel="next"'
+              : null,
+        },
+        json: async () => ({ artifacts: [{ id: requested.length }] }),
+      };
+    }
+  );
+
+  assert.deepEqual(pages, [{ artifacts: [{ id: 1 }] }, { artifacts: [{ id: 2 }] }]);
+  assert.equal(requested.length, 2);
+  assert.ok(requested.every(({ url }) => url.startsWith('https://api.github.com/')));
+  assert.ok(
+    requested.every(
+      ({ options }) => !Object.keys(options.headers).some((key) => /authorization/iu.test(key))
+    )
+  );
+});
+
+test('public audit fallback rejects pagination links outside GitHub API', async () => {
+  await assert.rejects(
+    fetchPublicGitHubPages('repos/owner/project/actions/artifacts', async () => ({
+      ok: true,
+      headers: { get: () => '<https://attacker.example/collect>; rel="next"' },
+      json: async () => ({ artifacts: [] }),
+    })),
+    /unexpected host/u
+  );
 });
 
 test('audit summarizes paginated inventory and compares a prior baseline', () => {
