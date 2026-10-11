@@ -1,12 +1,17 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { client } from '@/lib/client';
+import { readPreferences } from '@/lib/preferences';
 import { AuthContext, type AuthValue } from './auth-context';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState(client.currentUser);
   const queryClient = useQueryClient();
   const userId = useRef(client.currentUser?.id ?? null);
+
+  useEffect(() => {
+    document.documentElement.lang = readPreferences().language;
+  }, []);
 
   useEffect(
     () =>

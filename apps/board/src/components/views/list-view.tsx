@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import type { Domain, ResolvedViews } from '@moonwitness/client';
 import { client } from '@/lib/client';
+import { formatDateTime } from '@/lib/date-format';
 import { scopedQueryKey } from '@/lib/query-scope';
 import { useRecordMutations, useRecords } from '@/hooks/use-model';
 import { Button } from '@moonwitness/ui/components/button';
@@ -1107,9 +1108,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                     {/* Card Footer */}
                     <div className="mt-4 flex items-center justify-between border-t border-ink/15 pt-2.5">
                       <span className="font-mono text-[10px] text-ink-faint">
-                        {row.write_date
-                          ? new Date(String(row.write_date)).toLocaleDateString()
-                          : '—'}
+                        {row.write_date ? formatDateTime(String(row.write_date), 'date') : '—'}
                       </span>
                       <Button
                         variant="ghost"

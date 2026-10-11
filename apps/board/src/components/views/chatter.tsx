@@ -23,6 +23,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { client } from '@/lib/client';
+import { formatDateTime } from '@/lib/date-format';
 import { scopedQueryKey } from '@/lib/query-scope';
 import { useAuth } from '@/hooks/use-auth-context';
 import { Button } from '@moonwitness/ui/components/button';
@@ -762,7 +763,7 @@ export function Chatter({ model, recordId }: ChatterProps) {
                       </div>
                       <span className="text-[10px] text-ink-faint">
                         {entry.create_date
-                          ? new Date(String(entry.create_date)).toLocaleString()
+                          ? formatDateTime(String(entry.create_date))
                           : `#${entry.id}`}
                       </span>
                     </div>

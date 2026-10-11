@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Archive, ArrowLeft, Check, Loader2, Save, Trash2, Zap } from 'lucide-react';
 import { evalDomain, type FieldMeta, type ResolvedViews } from '@moonwitness/client';
 import { useRecord, useRecordMutations } from '@/hooks/use-model';
+import { formatDateTime } from '@/lib/date-format';
 import { Button } from '@moonwitness/ui/components/button';
 import { Label } from '@moonwitness/ui/components/label';
 import { Skeleton } from '@moonwitness/ui/components/skeleton';
@@ -455,7 +456,7 @@ function FormEditor({
                 </span>
                 <span>
                   {initialRecord.create_date
-                    ? new Date(String(initialRecord.create_date)).toLocaleString()
+                    ? formatDateTime(String(initialRecord.create_date))
                     : '—'}
                 </span>
               </div>
@@ -465,7 +466,7 @@ function FormEditor({
                 </span>
                 <span>
                   {initialRecord.write_date
-                    ? new Date(String(initialRecord.write_date)).toLocaleString()
+                    ? formatDateTime(String(initialRecord.write_date))
                     : '—'}
                 </span>
               </div>

@@ -12,6 +12,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { client } from '@/lib/client';
+import { formatDateTime } from '@/lib/date-format';
 import { scopedQueryKey } from '@/lib/query-scope';
 import { Button } from '@moonwitness/ui/components/button';
 import { Input } from '@moonwitness/ui/components/input';
@@ -263,7 +264,7 @@ export function CronSchedulerPanel({ onOpenFailureTriage }: CronSchedulerPanelPr
                     </td>
                     <td className="p-3 border-r border-ink/20 text-ink-faint">{cron.timezone}</td>
                     <td className="p-3 border-r border-ink/20 text-ink">
-                      {cron.next_run_at ? new Date(cron.next_run_at).toLocaleString() : '—'}
+                      {cron.next_run_at ? formatDateTime(cron.next_run_at) : '—'}
                     </td>
                     <td className="p-3 border-r border-ink/20">
                       {cron.enabled ? (
@@ -390,7 +391,7 @@ export function CronSchedulerPanel({ onOpenFailureTriage }: CronSchedulerPanelPr
                       {job.lease_owner || '—'}
                     </td>
                     <td className="p-3 text-right text-ink-faint">
-                      {job.create_date ? new Date(job.create_date).toLocaleTimeString() : '—'}
+                      {job.create_date ? formatDateTime(job.create_date, 'time') : '—'}
                     </td>
                   </tr>
                 ))}

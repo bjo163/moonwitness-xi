@@ -19,6 +19,8 @@ import {
   Zap,
 } from 'lucide-react';
 import { client } from '@/lib/client';
+import { formatDateTime } from '@/lib/date-format';
+import { readPreferences } from '@/lib/preferences';
 import { scopedQueryKey } from '@/lib/query-scope';
 import { useAuth } from '@/hooks/use-auth-context';
 import { useModels } from '@/hooks/use-model';
@@ -513,10 +515,7 @@ export function DashboardPage() {
                           </span>
                           <span className="min-w-0 truncate text-right text-[10px] text-ink-faint">
                             {audit.create_date
-                              ? new Date(audit.create_date).toLocaleTimeString([], {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })
+                              ? formatDateTime(audit.create_date, 'time')
                               : `#${audit.id}`}
                           </span>
                         </div>
@@ -693,7 +692,7 @@ export function DashboardPage() {
 
               <BarChart
                 title="Background job status distribution"
-                locale={navigator.language}
+                locale={readPreferences().language}
                 valueLabel="Jobs"
                 loading={jobsHealthLoading}
                 data={[
@@ -747,11 +746,7 @@ export function DashboardPage() {
                               <>
                                 <span>•</span>
                                 <span>
-                                  Next:{' '}
-                                  {new Date(cron.next_run_at).toLocaleString([], {
-                                    dateStyle: 'short',
-                                    timeStyle: 'short',
-                                  })}
+                                  Next: {formatDateTime(cron.next_run_at, 'shortDateTime')}
                                 </span>
                               </>
                             )}
@@ -909,7 +904,7 @@ export function DashboardPage() {
                         Handler: <span className="font-bold text-ink">{job.handler}</span>
                       </p>
                       <p className="text-ink-faint text-[10px] mt-0.5">
-                        Created: {new Date(job.create_date).toLocaleString()}
+                        Created: {formatDateTime(job.create_date)}
                       </p>
                     </div>
 

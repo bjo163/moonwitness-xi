@@ -4,6 +4,7 @@ import { Check, ChevronsUpDown, X } from 'lucide-react';
 import type { Domain, FieldMeta } from '@moonwitness/client';
 import { displayName, relationKey, type Row } from './field-utils';
 import { client } from '@/lib/client';
+import { formatDateTime } from '@/lib/date-format';
 import { scopedQueryKey } from '@/lib/query-scope';
 import { cn } from '@/lib/utils';
 import { Input } from '@moonwitness/ui/components/input';
@@ -24,8 +25,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@moonwitness/ui/components/select';
-
-const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
 /* ─────────────────────────────── Read-only cell ─────────────────────────────── */
 
@@ -68,9 +67,7 @@ export function FieldCell({ field, row }: { field: FieldMeta; row: Row }) {
       );
     }
     case 'datetime':
-      return (
-        <span className="font-mono text-xs">{dateFormat.format(new Date(String(value)))}</span>
-      );
+      return <span className="font-mono text-xs">{formatDateTime(String(value))}</span>;
     case 'integer':
       return <span className="font-mono tabular-nums">{String(value)}</span>;
     case 'password':
@@ -166,12 +163,7 @@ export function FieldWidget({
       );
     case 'datetime':
       return (
-        <Input
-          {...common}
-          disabled
-          value={value ? dateFormat.format(new Date(String(value))) : ''}
-          readOnly
-        />
+        <Input {...common} disabled value={value ? formatDateTime(String(value)) : ''} readOnly />
       );
     default:
       return (

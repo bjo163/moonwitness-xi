@@ -106,6 +106,35 @@ test('users can edit only their profile, persist preferences, and change passwor
   await page.reload();
   await expect(page.getByRole('combobox', { name: 'Language' })).toContainText('English (US)');
   await expect(page.getByRole('combobox', { name: 'Time zone' })).toContainText('Asia/Jakarta');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en-US');
+
+  const partnerDetailResponse = await page.request.get('/api/base.partner', {
+    headers: ordinaryHeaders,
+    params: {
+      domain: JSON.stringify([['id', '=', partnerPayload.data.id]]),
+      fields: 'id,create_date',
+    },
+  });
+  expect(partnerDetailResponse.status()).toBe(200);
+  const partnerDetail = (await partnerDetailResponse.json()) as {
+    data: Array<{ id: number; create_date: string }>;
+  };
+  const createdPartner = partnerDetail.data[0];
+  expect(createdPartner).toBeDefined();
+  const localizedCreateTime = await page.evaluate(
+    ({ value, locale, timeZone }) =>
+      new Intl.DateTimeFormat(locale, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+        timeZone,
+      }).format(new Date(value)),
+    { value: createdPartner!.create_date, locale: 'en-US', timeZone: 'Asia/Jakarta' }
+  );
+  await page.goto(`/m/base.partner/${partnerPayload.data.id}`);
+  await expect(page.getByText('Created At', { exact: true })).toBeVisible();
+  await expect(page.getByText('Created At', { exact: true }).locator('..')).toContainText(
+    localizedCreateTime
+  );
 
   const wrongCurrentPassword = await page.request.post('/auth/me/password', {
     headers: ordinaryHeaders,
