@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import test from 'node:test';
 import { URL as NodeURL } from 'node:url';
-import { inspectTrustedCheckoutPolicies } from './check-workflow-checkout-trust.mjs';
+import {
+  inspectRepositoryWriteCoordination,
+  inspectTrustedCheckoutPolicies,
+} from './check-workflow-checkout-trust.mjs';
 
 const expressionStart = '$' + '{';
 const pages = `
@@ -117,6 +120,62 @@ function policies(overrides = {}) {
 
 test('accepts immutable event-SHA checkout and trusted dispatch restrictions', () => {
   assert.deepEqual(policies(), []);
+});
+
+test('all repository-writing workflow jobs share the non-cancelling write coordinator', async () => {
+  const workflowDirectory = new NodeURL('../.github/workflows/', import.meta.url);
+  const files = (await readdir(workflowDirectory))
+    .filter((file) => file.endsWith('.yml') || file.endsWith('.yaml'))
+    .sort();
+  const workflows = await Promise.all(
+    files.map(async (name) => ({
+      name,
+      source: await readFile(new NodeURL(`../.github/workflows/${name}`, import.meta.url), 'utf8'),
+    }))
+  );
+  assert.deepEqual(inspectRepositoryWriteCoordination(workflows), []);
+
+  const unsafeWorkflows = workflows.map(({ name, source }) => ({
+    name,
+    source:
+      name === 'dependency-candidate.yml'
+        ? source.replace(
+            '      group: repository-write-coordinator\n      cancel-in-progress: false\n',
+            '      group: dependency-candidate-publish\n      cancel-in-progress: true\n'
+          )
+        : source,
+  }));
+  assert.ok(
+    inspectRepositoryWriteCoordination(unsafeWorkflows).some((finding) =>
+      finding.includes('dependency-candidate.yml job "publish"')
+    )
+  );
+});
+
+test('repository write coordination includes inherited and broad permissions', () => {
+  const inherited = `
+permissions:
+  contents: write
+jobs:
+  publish:
+    steps: []
+`;
+  const broad = `
+permissions:
+  contents: read
+jobs:
+  publish:
+    permissions: write-all
+    steps: []
+`;
+  assert.match(
+    inspectRepositoryWriteCoordination([{ name: 'inherited.yml', source: inherited }])[0],
+    /inherited\.yml job "publish"/u
+  );
+  assert.match(
+    inspectRepositoryWriteCoordination([{ name: 'broad.yml', source: broad }])[0],
+    /broad\.yml job "publish"/u
+  );
 });
 
 test('promotion report refresh is trusted, dev-scoped, and read-only outside the PR body', async () => {

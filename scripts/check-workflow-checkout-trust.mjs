@@ -1,9 +1,79 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+const repositoryWriteScopes = new Set([
+  'contents',
+  'deployments',
+  'issues',
+  'packages',
+  'pages',
+  'pull-requests',
+]);
+
+function workflowJobBlocks(source) {
+  const jobsIndex = source.search(/^jobs:\s*$/mu);
+  if (jobsIndex < 0) return [];
+  const jobsSource = source.slice(jobsIndex);
+  const starts = [...jobsSource.matchAll(/^(?: ){2}(?<name>[a-zA-Z0-9_-]+):\s*$/gmu)];
+  return starts.map((match, index) => {
+    const start = match.index;
+    const end = starts[index + 1]?.index ?? jobsSource.length;
+    return { name: match.groups.name, source: jobsSource.slice(start, end) };
+  });
+}
+
+export function inspectRepositoryWriteCoordination(workflows) {
+  const findings = [];
+  for (const { name, source } of workflows) {
+    const workflowHeader = source.split(/^jobs:\s*$/mu, 1)[0];
+    const workflowWritePermissions = [
+      ...workflowHeader.matchAll(/^(?: ){2}(?<scope>[a-z-]+):\s*write\s*$/gmu),
+    ]
+      .map((match) => match.groups.scope)
+      .filter((scope) => repositoryWriteScopes.has(scope));
+    const workflowGrantsWriteAll = /^permissions:\s*write-all\s*$/mu.test(workflowHeader);
+    const workflowCoordinatesWrites =
+      /^concurrency:\s*\r?\n\s+group:\s*repository-write-coordinator\s*\r?\n\s+cancel-in-progress:\s*false\s*$/mu.test(
+        workflowHeader
+      );
+
+    for (const job of workflowJobBlocks(source)) {
+      const hasJobPermissions = /^(?: ){4}permissions:(?:\s+write-all)?\s*$/mu.test(job.source);
+      const writePermissions = [...job.source.matchAll(/^\s{6}(?<scope>[a-z-]+):\s*write\s*$/gmu)]
+        .map((match) => match.groups.scope)
+        .filter((scope) => repositoryWriteScopes.has(scope));
+      const inheritedWritePermissions =
+        !hasJobPermissions && (workflowWritePermissions.length > 0 || workflowGrantsWriteAll);
+      const jobGrantsWriteAll = /^(?: ){4}permissions:\s*write-all\s*$/mu.test(job.source);
+      const publishesOrMutates =
+        /\b(?:git push|gh (?:pr (?:create|edit|merge|close)|release (?:create|edit|upload|delete))|actions\/deploy-pages@|maintenance-incident\.mjs)\b/u.test(
+          job.source
+        );
+      if (
+        writePermissions.length === 0 &&
+        !inheritedWritePermissions &&
+        !jobGrantsWriteAll &&
+        !publishesOrMutates
+      )
+        continue;
+
+      const jobCoordinatesWrites =
+        /^(?: ){4}concurrency:\s*\r?\n\s{6}group:\s*repository-write-coordinator\s*\r?\n\s{6}cancel-in-progress:\s*false\s*$/mu.test(
+          job.source
+        );
+      if (!workflowCoordinatesWrites && !jobCoordinatesWrites) {
+        findings.push(
+          `${name} job "${job.name}" can write repository state but does not use the shared non-cancelling write coordinator.`
+        );
+      }
+    }
+  }
+  return findings;
+}
 
 function checkoutSteps(source) {
   const starts = [
@@ -529,6 +599,16 @@ async function main() {
     browserMatrix,
     deepRegression,
   });
+  const workflowFiles = (await readdir(path.join(repositoryRoot, '.github/workflows')))
+    .filter((file) => file.endsWith('.yml') || file.endsWith('.yaml'))
+    .sort();
+  const repositoryWriteWorkflows = await Promise.all(
+    workflowFiles.map(async (file) => ({
+      name: file,
+      source: await readFile(path.join(repositoryRoot, '.github/workflows', file), 'utf8'),
+    }))
+  );
+  findings.push(...inspectRepositoryWriteCoordination(repositoryWriteWorkflows));
   if (findings.length) {
     for (const finding of findings) process.stderr.write(`${finding}\n`);
     process.exitCode = 1;
