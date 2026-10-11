@@ -59,12 +59,46 @@ export function classifyCompatibility(current, latest) {
   return 'same';
 }
 
+function isNewerVersion(current, target) {
+  const from = parseVersion(current);
+  const to = parseVersion(target);
+  if (!from || !to) return false;
+  for (let index = 0; index < from.length; index += 1) {
+    if (to[index] !== from[index]) return to[index] > from[index];
+  }
+  return false;
+}
+
 function groupFor(dependencyType) {
   if (dependencyType === 'githubAction') return 'actions';
   if (dependencyType === 'dependencies' || dependencyType === 'optionalDependencies') {
     return 'runtime';
   }
   if (dependencyType === 'devDependencies') return 'development';
+  return null;
+}
+
+function safeTarget(current, wanted, latest) {
+  const wantedCompatibility = classifyCompatibility(current, wanted);
+  if (
+    typeof wanted === 'string' &&
+    !wanted.includes('-') &&
+    isNewerVersion(current, wanted) &&
+    ['patch', 'minor'].includes(wantedCompatibility)
+  ) {
+    return { version: wanted, compatibility: wantedCompatibility, source: 'wanted' };
+  }
+
+  const latestCompatibility = classifyCompatibility(current, latest);
+  if (
+    wantedCompatibility === 'same' &&
+    typeof latest === 'string' &&
+    !latest.includes('-') &&
+    isNewerVersion(current, latest) &&
+    ['patch', 'minor'].includes(latestCompatibility)
+  ) {
+    return { version: latest, compatibility: latestCompatibility, source: 'latest' };
+  }
   return null;
 }
 
@@ -98,6 +132,7 @@ export function buildDependencyPlan(outdated, sourceSha, generatedAt) {
       latest,
       compatibility: classifyCompatibility(current, latest),
       wantedCompatibility: classifyCompatibility(current, entry.wanted ?? latest),
+      safeTarget: safeTarget(current, entry.wanted, latest),
       dependents: Array.isArray(entry.dependentPackages)
         ? entry.dependentPackages
             .map((dependent) => dependent.name)
@@ -135,20 +170,21 @@ export function selectUpdateCandidate(plan, packageName) {
     );
   }
   const [candidate] = matches;
-  if (typeof candidate.wanted !== 'string' || candidate.wanted.includes('-')) {
-    throw new Error(`Candidate ${packageName} is a prerelease or has no exact wanted version.`);
-  }
-  if (!['patch', 'minor', 'major'].includes(candidate.wantedCompatibility)) {
-    throw new Error(`Candidate ${packageName} has unknown compatibility and cannot be applied.`);
-  }
-  if (candidate.wantedCompatibility === 'major') {
-    throw new Error(`Major candidate ${packageName} is report-only and cannot be auto-applied.`);
+  if (!candidate.safeTarget) {
+    if (typeof candidate.wanted === 'string' && candidate.wanted.includes('-')) {
+      throw new Error(`Candidate ${packageName} is a prerelease and cannot be auto-applied.`);
+    }
+    if (candidate.compatibility === 'major' || candidate.wantedCompatibility === 'major') {
+      throw new Error(`Major candidate ${packageName} is report-only and cannot be auto-applied.`);
+    }
+    throw new Error(`Candidate ${packageName} has no safe patch/minor target.`);
   }
   return {
     packageName: candidate.name,
-    version: candidate.wanted,
+    version: candidate.safeTarget.version,
     sourceSha: plan.sourceSha,
-    compatibility: candidate.wantedCompatibility,
+    compatibility: candidate.safeTarget.compatibility,
+    targetSource: candidate.safeTarget.source,
   };
 }
 
@@ -167,8 +203,8 @@ export function renderSummary(plan) {
       continue;
     }
     lines.push(
-      '| Package/action | Current | Wanted | Wanted class | Latest | Latest class | Dependents | Release notes |',
-      '| --- | --- | --- | --- | --- | --- | --- | --- |'
+      '| Package/action | Current | Wanted | Wanted class | Safe target | Latest | Latest class | Dependents | Release notes |',
+      '| --- | --- | --- | --- | --- | --- | --- | --- | --- |'
     );
     for (const item of candidates) {
       const cells = [
@@ -176,6 +212,7 @@ export function renderSummary(plan) {
         item.current,
         item.wanted ?? '—',
         item.wantedCompatibility,
+        item.safeTarget ? `${item.safeTarget.version} (${item.safeTarget.source})` : '—',
         item.latest,
         item.compatibility,
         item.dependents.join(', ') || '—',

@@ -57,6 +57,7 @@ test('groups exact outdated runtime, development, and action candidates determin
       latest: '2.0.0',
       compatibility: 'major',
       wantedCompatibility: 'same',
+      safeTarget: null,
       dependents: ['@moonwitness/api'],
       releaseNotes: 'https://github.com/acme/zeta',
     }
@@ -92,7 +93,7 @@ test('rejects non-GitHub repository URLs and missing dependency metadata safely'
   assert.deepEqual(plan.groups.runtime[0].dependents, []);
 });
 
-test('selects exactly one wanted non-major package and keeps major candidates report-only', () => {
+test('selects exactly one safe non-major package and keeps major candidates report-only', () => {
   const plan = buildDependencyPlan(
     {
       safe: { current: '2.1.0', wanted: '2.1.2', latest: '3.0.0', dependencyType: 'dependencies' },
@@ -111,6 +112,7 @@ test('selects exactly one wanted non-major package and keeps major candidates re
     version: '2.1.2',
     sourceSha: 'a'.repeat(40),
     compatibility: 'patch',
+    targetSource: 'wanted',
   });
   assert.throws(() => selectUpdateCandidate(plan, 'major'), /report-only/);
   assert.throws(() => selectUpdateCandidate(plan, 'missing'), /found 0/);
@@ -127,4 +129,78 @@ test('selects exactly one wanted non-major package and keeps major candidates re
     '2026-10-05T00:00:00.000Z'
   );
   assert.throws(() => selectUpdateCandidate(prereleasePlan, 'prerelease'), /prerelease/);
+});
+
+test('chooses wanted-range updates first and falls back only to stable latest patch/minor targets', () => {
+  const plan = buildDependencyPlan(
+    {
+      wanted: {
+        current: '3.4.0',
+        wanted: '3.4.2',
+        latest: '4.0.0',
+        dependencyType: 'dependencies',
+      },
+      latestPatch: {
+        current: '5.1.0',
+        wanted: '5.1.0',
+        latest: '5.1.2',
+        dependencyType: 'dependencies',
+      },
+      latestMinor: {
+        current: '2.8.0',
+        wanted: '2.8.0',
+        latest: '2.9.0',
+        dependencyType: 'devDependencies',
+      },
+      latestMajor: {
+        current: '1.9.0',
+        wanted: '1.9.0',
+        latest: '2.0.0',
+        dependencyType: 'dependencies',
+      },
+      latestPrerelease: {
+        current: '1.0.0',
+        wanted: '1.0.0',
+        latest: '1.1.0-beta.1',
+        dependencyType: 'dependencies',
+      },
+      olderOnly: {
+        current: '1.2.3',
+        wanted: '1.2.2',
+        latest: '1.2.1',
+        dependencyType: 'dependencies',
+      },
+    },
+    'c'.repeat(40),
+    '2026-10-11T00:00:00.000Z'
+  );
+
+  assert.deepEqual(selectUpdateCandidate(plan, 'wanted'), {
+    packageName: 'wanted',
+    version: '3.4.2',
+    sourceSha: 'c'.repeat(40),
+    compatibility: 'patch',
+    targetSource: 'wanted',
+  });
+  assert.deepEqual(selectUpdateCandidate(plan, 'latestPatch'), {
+    packageName: 'latestPatch',
+    version: '5.1.2',
+    sourceSha: 'c'.repeat(40),
+    compatibility: 'patch',
+    targetSource: 'latest',
+  });
+  assert.deepEqual(selectUpdateCandidate(plan, 'latestMinor'), {
+    packageName: 'latestMinor',
+    version: '2.9.0',
+    sourceSha: 'c'.repeat(40),
+    compatibility: 'minor',
+    targetSource: 'latest',
+  });
+  assert.throws(() => selectUpdateCandidate(plan, 'latestMajor'), /Major candidate .* report-only/);
+  assert.throws(
+    () => selectUpdateCandidate(plan, 'latestPrerelease'),
+    /no safe patch\/minor target/
+  );
+  assert.throws(() => selectUpdateCandidate(plan, 'olderOnly'), /no safe patch\/minor target/);
+  assert.match(renderSummary(plan), /Safe target \| Latest/);
 });
