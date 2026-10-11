@@ -30,6 +30,7 @@ import {
   Cron,
   enqueueJob,
   enqueueDueCrons,
+  cancelJob,
   jobsManifest,
   dispatchOneOutboxEvent,
   registerJobHandler,
@@ -1057,6 +1058,53 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
         fencing_token: 1,
       });
       expect(await JobRun.query().where({ job_id: jobId })).toHaveLength(1);
+    } finally {
+      releaseHandler?.();
+      unregister();
+    }
+  }, 30000);
+
+  it('commits a PostgreSQL cancellation that wins the race with worker success', async () => {
+    let signalStarted: (() => void) | undefined;
+    let releaseHandler: (() => void) | undefined;
+    const started = new Promise<void>((resolve) => {
+      signalStarted = resolve;
+    });
+    const hold = new Promise<void>((resolve) => {
+      releaseHandler = resolve;
+    });
+    const unregister = registerJobHandler({
+      name: 'test.postgres-cancel-at-commit',
+      version: 1,
+      parse(payload: unknown): { run: true } {
+        if (typeof payload !== 'object' || payload === null || !('run' in payload))
+          throw new Error('invalid payload');
+        return { run: true };
+      },
+      async run() {
+        signalStarted?.();
+        await hold;
+        return { completed: true };
+      },
+    });
+    try {
+      const jobId = await enqueueJob('test.postgres-cancel-at-commit', { run: true });
+      const worker = runOneJob({ workerId: 'postgres-cancel-at-commit-worker' });
+      await started;
+
+      expect(await cancelJob(jobId)).toBe(true);
+      releaseHandler?.();
+      expect(await worker).toBe(true);
+      await expect(Job.query().findById(jobId)).resolves.toMatchObject({
+        status: 'cancelled',
+        cancel_requested: false,
+        lease_owner: null,
+      });
+      await expect(JobRun.query().where({ job_id: jobId }).first()).resolves.toMatchObject({
+        status: 'cancelled',
+        error_code: 'JOB_CANCELLED',
+        result: null,
+      });
     } finally {
       releaseHandler?.();
       unregister();
