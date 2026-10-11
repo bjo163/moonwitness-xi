@@ -3,6 +3,7 @@ import { config } from './config/env.js';
 import { Registry } from '@moonwitness/orm';
 import { databaseErrorContext } from './database/errors.js';
 import { verifyDefaultBaseAccounts, verifyRequiredModels } from './startup-checks.js';
+import { gracefulShutdown } from './lifecycle/graceful-shutdown.js';
 
 function startupErrorContext(error: unknown): Record<string, string> {
   const name =
@@ -49,20 +50,21 @@ async function main() {
     const shutdown = async (signal: NodeJS.Signals) => {
       if (shutdownInProgress) return;
       shutdownInProgress = true;
-      app.log.info({ signal }, 'Shutting down gracefully');
-      const forceClose = setTimeout(() => {
-        app.log.error('Graceful shutdown exceeded 30 seconds; forcing connection close');
-        app.server.closeAllConnections();
-      }, 30_000);
-      forceClose.unref();
       try {
-        await app.close();
-        app.log.info('API server shutdown complete');
+        await gracefulShutdown(
+          {
+            close: () => app.close(),
+            closeConnections: () => app.server.closeAllConnections(),
+            log: (level, message) => {
+              if (level === 'info') app.log.info({ signal }, message);
+              else app.log.error({ signal }, message);
+            },
+          },
+          signal
+        );
       } catch (error) {
         app.log.error({ err: startupErrorContext(error) }, 'API shutdown failed');
         process.exitCode = 1;
-      } finally {
-        clearTimeout(forceClose);
       }
     };
 

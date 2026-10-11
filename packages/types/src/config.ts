@@ -1,12 +1,17 @@
 export interface EnvConfig {
   superadminPassword?: string;
   metricsToken?: string;
+  attachmentStorageDirectory: string;
   env: string;
   host: string;
   port: number;
   db: {
     client: string;
     connection: string;
+    poolMin: number;
+    poolMax: number;
+    acquireTimeoutMs: number;
+    statementTimeoutMs: number;
   };
   log?: {
     level?: string;

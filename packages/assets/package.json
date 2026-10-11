@@ -1,0 +1,22 @@
+{
+  "name": "@moonwitness/assets",
+  "version": "1.0.0-rc.1",
+  "description": "Framework-independent MoonWitness brand and visual assets",
+  "type": "module",
+  "license": "ISC",
+  "files": [
+    "brand",
+    "icons",
+    "illustrations",
+    "manifest.json",
+    "licenses.json",
+    "README.md"
+  ],
+  "exports": {
+    "./brand/*": "./brand/*",
+    "./icons/*": "./icons/*",
+    "./illustrations/*": "./illustrations/*",
+    "./manifest.json": "./manifest.json",
+    "./licenses.json": "./licenses.json"
+  }
+}

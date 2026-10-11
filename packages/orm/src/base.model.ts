@@ -7,7 +7,21 @@ import {
 } from 'objection';
 import { applyDomain } from './domain.js';
 import { Environment } from './environment.js';
-import type { Domain, ModelContext, SearchOptions, SearchReadOptions } from './types.js';
+import type { FieldMap } from './model-definition.js';
+import type {
+  Domain,
+  GroupCountOptions,
+  GroupCountPage,
+  GroupCountRow,
+  JsonValue,
+  ModelContext,
+  SearchOptions,
+  SearchReadOptions,
+} from './types.js';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 export class BaseModel extends Model {
   /**
@@ -23,6 +37,8 @@ export class BaseModel extends Model {
   static exposedActions: readonly string[] = ['action_archive', 'action_unarchive'];
   static hiddenFields: readonly string[] = [];
   static uniqueConstraints: readonly (readonly string[])[] = [];
+  /** Declarative addon fields, when the model is defined through `defineModel`. */
+  static fields?: FieldMap;
 
   /**
    * The Environment associated with this model class execution.
@@ -173,10 +189,10 @@ export class BaseModel extends Model {
    *
    * @example
    * ```ts
-   * await record.write({ name: 'Updated' });
+   * await record.update({ name: 'Updated' });
    * ```
    */
-  async write(
+  async update(
     vals: Partial<this> | Record<string, unknown>,
     options: { context?: ModelContext; transaction?: Transaction } = {}
   ): Promise<this> {
@@ -221,7 +237,7 @@ export class BaseModel extends Model {
    * Instance method to delete (soft-delete / archive by default).
    * If hardDelete is true, permanently deletes the record from DB.
    */
-  async unlink(hardDelete = false, options: { transaction?: Transaction } = {}): Promise<boolean> {
+  async remove(hardDelete = false, options: { transaction?: Transaction } = {}): Promise<boolean> {
     const ModelClass = this.$modelClass as unknown as typeof BaseModel;
     const trx = ModelClass.resolveTrx(options.transaction);
 
@@ -229,7 +245,7 @@ export class BaseModel extends Model {
       const rows = await this.$query(trx).delete();
       return rows > 0;
     } else {
-      await this.write({ active: false }, options);
+      await this.update({ active: false }, options);
       return true;
     }
   }
@@ -328,6 +344,87 @@ export class BaseModel extends Model {
     return typeof count === 'string' ? parseInt(count, 10) : Number(count || 0);
   }
 
+  /** Returns bounded grouped counts for scalar columns declared by the model. */
+  static async search_group_count<M extends BaseModel>(
+    this: { new (): M } & typeof BaseModel,
+    domain: Domain = [],
+    groupBy: readonly string[] = [],
+    options: GroupCountOptions = {}
+  ): Promise<GroupCountPage> {
+    const maxGroups = 500;
+    const limit = options.limit ?? 100;
+    const offset = options.offset ?? 0;
+    const properties = this.jsonSchema.properties ?? {};
+    if (
+      groupBy.length === 0 ||
+      groupBy.length > 3 ||
+      new Set(groupBy).size !== groupBy.length ||
+      groupBy.some(
+        (field) =>
+          !/^[a-z_][a-z0-9_]*$/i.test(field) ||
+          !Object.hasOwn(properties, field) ||
+          this.hiddenFields.includes(field)
+      )
+    ) {
+      throw Object.assign(new Error('Invalid or private group-by field'), { statusCode: 400 });
+    }
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > maxGroups) {
+      throw Object.assign(new Error(`Group count limit must be 1–${maxGroups}`), {
+        statusCode: 400,
+      });
+    }
+    if (!Number.isSafeInteger(offset) || offset < 0 || offset > 10_000) {
+      throw Object.assign(new Error('Group count offset must be 0–10000'), { statusCode: 400 });
+    }
+
+    const rows: BaseModel[] = await this.buildSearchQuery(domain, {
+      activeTest: options.activeTest,
+      context: options.context,
+      transaction: options.transaction,
+      order: '',
+    })
+      .clearSelect()
+      .select([...groupBy])
+      .count({ __group_count: '*' })
+      .groupBy([...groupBy])
+      .orderBy([...groupBy])
+      .offset(offset)
+      .limit(limit + 1);
+
+    const hasMore = rows.length > limit;
+    const groups: GroupCountRow[] = rows.slice(0, limit).map((row) => {
+      const record: unknown = row.toJSON();
+      if (!isRecord(record)) {
+        throw new Error('Database returned an invalid grouped-count row');
+      }
+      const rawCount = record.__group_count;
+      const count =
+        typeof rawCount === 'number'
+          ? rawCount
+          : typeof rawCount === 'string' && /^\d+$/u.test(rawCount)
+            ? Number(rawCount)
+            : Number.NaN;
+      if (!Number.isSafeInteger(count) || count < 0) {
+        throw new Error('Database returned an invalid grouped-count value');
+      }
+      const values: Record<string, JsonValue> = {};
+      for (const field of groupBy) {
+        const value = record[field];
+        if (
+          value !== null &&
+          typeof value !== 'string' &&
+          typeof value !== 'number' &&
+          typeof value !== 'boolean'
+        ) {
+          throw new Error('Database returned an invalid grouped-count key');
+        }
+        values[field] = value;
+      }
+      return { values, count };
+    });
+    return { groups, limit, offset, hasMore };
+  }
+
   /**
    * Loads record(s) by ID(s).
    */
@@ -358,14 +455,14 @@ export class BaseModel extends Model {
    * Archive record (soft delete).
    */
   async action_archive(): Promise<this> {
-    return this.write({ active: false });
+    return this.update({ active: false });
   }
 
   /**
    * Unarchive record.
    */
   async action_unarchive(): Promise<this> {
-    return this.write({ active: true });
+    return this.update({ active: true });
   }
 
   /**

@@ -46,6 +46,10 @@ interface InternalRequestOptions extends RequestOptions {
   isRetry?: boolean;
 }
 
+function isBinaryBody(value: unknown): value is Blob | string {
+  return typeof value === 'string' || (typeof Blob !== 'undefined' && value instanceof Blob);
+}
+
 interface ErrorBody {
   error?: string;
   message?: string;
@@ -54,6 +58,12 @@ interface ErrorBody {
 }
 
 type SessionListener = (user: UserProfile | null) => void;
+
+function trimTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47) end -= 1;
+  return value.slice(0, end);
+}
 
 export class MoonWitnessClient implements HttpClient {
   readonly baseUrl: string;
@@ -70,7 +80,7 @@ export class MoonWitnessClient implements HttpClient {
   private readonly hydrated: Promise<void>;
 
   constructor(options: MoonWitnessClientOptions) {
-    this.baseUrl = options.baseUrl.replace(/\/+$/, '');
+    this.baseUrl = trimTrailingSlashes(options.baseUrl);
     this.storage = options.storage ?? defaultStorage();
     this.storageKey = options.storageKey ?? 'moonwitness_auth';
     this.fetchImpl = options.fetch ?? globalThis.fetch.bind(globalThis);
@@ -288,8 +298,15 @@ export class MoonWitnessClient implements HttpClient {
       if (value !== undefined) url.searchParams.append(key, String(value));
     }
 
-    const headers: Record<string, string> = { Accept: 'application/json' };
-    if (options.body !== undefined) headers['Content-Type'] = 'application/json';
+    const headers: Record<string, string> = { Accept: 'application/json', ...options.headers };
+    let requestBody: Blob | string | undefined;
+    if (options.body !== undefined) {
+      if (isBinaryBody(options.body)) requestBody = options.body;
+      else {
+        headers['Content-Type'] = 'application/json';
+        requestBody = JSON.stringify(options.body);
+      }
+    }
     const sentToken = options.skipAuth ? undefined : this.tokens?.access_token;
     if (sentToken) headers.Authorization = `Bearer ${sentToken}`;
     const effectiveCompanyId = this.getCompanyId();
@@ -298,7 +315,7 @@ export class MoonWitnessClient implements HttpClient {
     const res = await this.fetchImpl(url.toString(), {
       method: options.method?.toUpperCase() ?? 'GET',
       headers,
-      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      body: requestBody,
     });
 
     if (res.status === 401 && !options.skipAuth && !options.isRetry && this.tokens?.refresh_token) {
@@ -314,6 +331,7 @@ export class MoonWitnessClient implements HttpClient {
       return this.request<T>(path, { ...options, isRetry: true });
     }
 
+    if (res.ok && options.responseType === 'blob') return (await res.blob()) as T;
     const text = await res.text();
     let json: unknown = null;
     if (text) {

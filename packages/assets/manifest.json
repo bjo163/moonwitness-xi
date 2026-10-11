@@ -1,0 +1,457 @@
+{
+  "name": "@moonwitness/assets",
+  "schemaVersion": 1,
+  "source": "scripts/generate.mjs",
+  "licenseManifest": "licenses.json",
+  "assets": [
+    {
+      "path": "brand/favicon.svg",
+      "kind": "favicon",
+      "variant": "dark-surface",
+      "format": "svg",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "path": "brand/moonwitness-lockup-dark.svg",
+      "kind": "lockup",
+      "variant": "dark",
+      "format": "svg",
+      "width": 500,
+      "height": 80
+    },
+    {
+      "path": "brand/moonwitness-lockup-light.svg",
+      "kind": "lockup",
+      "variant": "light",
+      "format": "svg",
+      "width": 500,
+      "height": 80
+    },
+    {
+      "path": "brand/moonwitness-lockup-mono-dark.svg",
+      "kind": "lockup",
+      "variant": "mono-dark",
+      "format": "svg",
+      "width": 500,
+      "height": 80
+    },
+    {
+      "path": "brand/moonwitness-lockup-mono-light.svg",
+      "kind": "lockup",
+      "variant": "mono-light",
+      "format": "svg",
+      "width": 500,
+      "height": 80
+    },
+    {
+      "path": "brand/moonwitness-symbol-dark.svg",
+      "kind": "symbol",
+      "variant": "dark",
+      "format": "svg",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "path": "brand/moonwitness-symbol-light.svg",
+      "kind": "symbol",
+      "variant": "light",
+      "format": "svg",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "path": "brand/moonwitness-symbol-mono-dark.svg",
+      "kind": "symbol",
+      "variant": "mono-dark",
+      "format": "svg",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "path": "brand/moonwitness-symbol-mono-light.svg",
+      "kind": "symbol",
+      "variant": "mono-light",
+      "format": "svg",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "path": "brand/moonwitness-wordmark-dark.svg",
+      "kind": "wordmark",
+      "variant": "dark",
+      "format": "svg",
+      "width": 440,
+      "height": 80
+    },
+    {
+      "path": "brand/moonwitness-wordmark-light.svg",
+      "kind": "wordmark",
+      "variant": "light",
+      "format": "svg",
+      "width": 440,
+      "height": 80
+    },
+    {
+      "path": "brand/moonwitness-wordmark-mono-dark.svg",
+      "kind": "wordmark",
+      "variant": "mono-dark",
+      "format": "svg",
+      "width": 440,
+      "height": 80
+    },
+    {
+      "path": "brand/moonwitness-wordmark-mono-light.svg",
+      "kind": "wordmark",
+      "variant": "mono-light",
+      "format": "svg",
+      "width": 440,
+      "height": 80
+    },
+    {
+      "path": "brand/readme-banner.svg",
+      "kind": "readme-banner",
+      "variant": "light",
+      "format": "svg",
+      "width": 1280,
+      "height": 320
+    },
+    {
+      "path": "brand/social-card.png",
+      "source": "brand/social-card.svg",
+      "kind": "social-card",
+      "variant": "light",
+      "format": "png",
+      "width": 1200,
+      "height": 630
+    },
+    {
+      "path": "brand/social-card.svg",
+      "kind": "social-card",
+      "variant": "light",
+      "format": "svg",
+      "width": 1200,
+      "height": 630
+    },
+    {
+      "path": "icons/activity.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/add.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/addon.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/attachment.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/calendar.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/company.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/delete.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/edit.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/external-link.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/field.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/filter.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/jobs.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/menu.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/model.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/notification.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/partner.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/refresh.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/relation.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/search.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/security.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/settings.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/team.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/user.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/workflow.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "illustrations/access-denied-dark.svg",
+      "kind": "illustration",
+      "variant": "dark",
+      "format": "svg",
+      "width": 164,
+      "height": 152
+    },
+    {
+      "path": "illustrations/access-denied-light.svg",
+      "kind": "illustration",
+      "variant": "light",
+      "format": "svg",
+      "width": 164,
+      "height": 152
+    },
+    {
+      "path": "illustrations/empty-dark.svg",
+      "kind": "illustration",
+      "variant": "dark",
+      "format": "svg",
+      "width": 164,
+      "height": 152
+    },
+    {
+      "path": "illustrations/empty-light.svg",
+      "kind": "illustration",
+      "variant": "light",
+      "format": "svg",
+      "width": 164,
+      "height": 152
+    },
+    {
+      "path": "illustrations/no-activity-dark.svg",
+      "kind": "illustration",
+      "variant": "dark",
+      "format": "svg",
+      "width": 164,
+      "height": 152
+    },
+    {
+      "path": "illustrations/no-activity-light.svg",
+      "kind": "illustration",
+      "variant": "light",
+      "format": "svg",
+      "width": 164,
+      "height": 152
+    },
+    {
+      "path": "illustrations/no-results-dark.svg",
+      "kind": "illustration",
+      "variant": "dark",
+      "format": "svg",
+      "width": 164,
+      "height": 152
+    },
+    {
+      "path": "illustrations/no-results-light.svg",
+      "kind": "illustration",
+      "variant": "light",
+      "format": "svg",
+      "width": 164,
+      "height": 152
+    },
+    {
+      "path": "illustrations/not-found-dark.svg",
+      "kind": "illustration",
+      "variant": "dark",
+      "format": "svg",
+      "width": 164,
+      "height": 152
+    },
+    {
+      "path": "illustrations/not-found-light.svg",
+      "kind": "illustration",
+      "variant": "light",
+      "format": "svg",
+      "width": 164,
+      "height": 152
+    },
+    {
+      "path": "illustrations/offline-dark.svg",
+      "kind": "illustration",
+      "variant": "dark",
+      "format": "svg",
+      "width": 164,
+      "height": 152
+    },
+    {
+      "path": "illustrations/offline-light.svg",
+      "kind": "illustration",
+      "variant": "light",
+      "format": "svg",
+      "width": 164,
+      "height": 152
+    },
+    {
+      "path": "illustrations/onboarding-dark.svg",
+      "kind": "illustration",
+      "variant": "dark",
+      "format": "svg",
+      "width": 164,
+      "height": 152
+    },
+    {
+      "path": "illustrations/onboarding-light.svg",
+      "kind": "illustration",
+      "variant": "light",
+      "format": "svg",
+      "width": 164,
+      "height": 152
+    },
+    {
+      "path": "illustrations/orbit-pattern-dark.svg",
+      "kind": "pattern",
+      "variant": "dark",
+      "format": "svg",
+      "width": 160,
+      "height": 160
+    },
+    {
+      "path": "illustrations/orbit-pattern-light.svg",
+      "kind": "pattern",
+      "variant": "light",
+      "format": "svg",
+      "width": 160,
+      "height": 160
+    }
+  ]
+}

@@ -2,11 +2,14 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Check, ChevronsUpDown, X } from 'lucide-react';
 import type { Domain, FieldMeta } from '@moonwitness/client';
+import { displayName, relationKey, type Row } from './field-utils';
 import { client } from '@/lib/client';
+import { formatDateTime } from '@/lib/date-format';
+import { scopedQueryKey } from '@/lib/query-scope';
 import { cn } from '@/lib/utils';
-import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Input } from '@moonwitness/ui/components/input';
+import { Switch } from '@moonwitness/ui/components/switch';
+import { Popover, PopoverContent, PopoverTrigger } from '@moonwitness/ui/components/popover';
 import {
   Command,
   CommandEmpty,
@@ -14,38 +17,14 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from '@/components/ui/command';
+} from '@moonwitness/ui/components/command';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-
-type Row = Record<string, unknown>;
-
-/** Relation key Objection uses for a many2one column: `partner_id` → `partner`. */
-export const relationKey = (field: FieldMeta) => field.name.replace(/_id$/, '');
-
-/** Best human label for a related record. */
-export function displayName(record: Row | null | undefined): string {
-  if (!record) return '';
-  if (
-    record.name &&
-    record.code &&
-    typeof record.name === 'string' &&
-    typeof record.code === 'string'
-  ) {
-    return `${record.name} [${record.code}]`;
-  }
-  for (const key of ['name', 'display_name', 'login', 'code', 'email']) {
-    if (typeof record[key] === 'string' && record[key]) return record[key] as string;
-  }
-  return `#${String(record.id)}`;
-}
-
-const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+} from '@moonwitness/ui/components/select';
 
 /* ─────────────────────────────── Read-only cell ─────────────────────────────── */
 
@@ -88,9 +67,7 @@ export function FieldCell({ field, row }: { field: FieldMeta; row: Row }) {
       );
     }
     case 'datetime':
-      return (
-        <span className="font-mono text-xs">{dateFormat.format(new Date(String(value)))}</span>
-      );
+      return <span className="font-mono text-xs">{formatDateTime(String(value))}</span>;
     case 'integer':
       return <span className="font-mono tabular-nums">{String(value)}</span>;
     case 'password':
@@ -146,7 +123,7 @@ export function FieldWidget({
     case 'selection':
       return (
         <Select
-          value={value ? String(value) : undefined}
+          value={value === null || value === undefined ? '' : String(value)}
           onValueChange={onChange}
           disabled={field.readonly}
         >
@@ -186,12 +163,7 @@ export function FieldWidget({
       );
     case 'datetime':
       return (
-        <Input
-          {...common}
-          disabled
-          value={value ? dateFormat.format(new Date(String(value))) : ''}
-          readOnly
-        />
+        <Input {...common} disabled value={value ? formatDateTime(String(value)) : ''} readOnly />
       );
     default:
       return (
@@ -230,7 +202,7 @@ function Many2oneWidget({
   const target = field.relation!;
 
   const { data, isFetching, error } = useQuery({
-    queryKey: ['m2o', target, term, contextDomain],
+    queryKey: scopedQueryKey(['m2o', target, term, contextDomain]),
     queryFn: () => {
       const baseDomain: Domain = contextDomain ? [...contextDomain] : [];
       if (term) {

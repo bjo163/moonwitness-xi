@@ -1,4 +1,4 @@
-import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import type { Transaction } from 'objection';
 import { hashPassword, verifyPassword } from '@moonwitness/orm';
 import {
@@ -53,9 +53,10 @@ export interface AuthSession {
 export interface AuthServiceOptions {
   /** Refresh token lifetime in seconds. Defaults to 14 days. */
   refreshTtlSeconds?: number;
+  /** Stable server-side key used to index opaque refresh tokens. */
+  refreshTokenSecret: string;
 }
 
-const hashToken = (token: string) => createHash('sha256').update(token).digest('hex');
 const REFRESH_REUSE_GRACE_MS = 5_000;
 
 function isUniqueViolation(error: unknown): boolean {
@@ -74,11 +75,21 @@ function isUniqueViolation(error: unknown): boolean {
   );
 }
 
-export function createAuthService(options: AuthServiceOptions = {}) {
+export function createAuthService(options: AuthServiceOptions) {
+  const refreshTokenSecret = options.refreshTokenSecret;
+  if (!refreshTokenSecret || refreshTokenSecret.length < 32) {
+    throw new Error('refreshTokenSecret must be at least 32 characters');
+  }
+  const fingerprintToken = (token: string) =>
+    createHmac('sha256', refreshTokenSecret)
+      .update('moonwitness.refresh-token.v1:')
+      .update(token)
+      .digest('hex');
   const ttlMs = (options.refreshTtlSeconds ?? 14 * 24 * 60 * 60) * 1000;
   // Verified against when the login is unknown, so response time does not reveal which
   // logins exist. Computed once, up front, to keep the first miss as slow as a hit.
-  const dummyHash = hashPassword('moonwitness-timing-equaliser');
+  // Use the same scrypt work factor for unknown logins without a fixed dummy password.
+  const dummyHash = hashPassword(randomBytes(32).toString('base64url'));
 
   async function revokeFamily(family: string, trx?: Transaction) {
     await RefreshToken.query(trx)
@@ -96,7 +107,7 @@ export function createAuthService(options: AuthServiceOptions = {}) {
     const refreshExpiresAt = new Date(Date.now() + ttlMs).toISOString();
     await RefreshToken.query(trx).insert({
       user_id: user.id,
-      token_hash: hashToken(refreshToken),
+      token_hash: fingerprintToken(refreshToken),
       family,
       expires_at: refreshExpiresAt,
       user_agent: meta.userAgent?.slice(0, 255),
@@ -112,6 +123,7 @@ export function createAuthService(options: AuthServiceOptions = {}) {
   }
 
   return {
+    fingerprintRefreshToken: fingerprintToken,
     /** Self-service sign-up. Always creates role 'user'; partner and user are atomic. */
     async register(input: RegisterInput, meta: RequestMeta = {}): Promise<AuthSession> {
       if (await User.query().findOne({ login: input.login })) {
@@ -193,7 +205,7 @@ export function createAuthService(options: AuthServiceOptions = {}) {
 
     /** Rotates the token. Presenting an already-used token revokes its whole family. */
     async refresh(token: string, meta: RequestMeta = {}): Promise<AuthSession> {
-      const hash = hashToken(token);
+      const hash = fingerprintToken(token);
       const row = await RefreshToken.query().findOne({ token_hash: hash });
       if (!row) throw new AuthError('Invalid refresh token');
       if (row.expires_at <= new Date().toISOString()) throw new AuthError('Refresh token expired');
@@ -253,7 +265,7 @@ export function createAuthService(options: AuthServiceOptions = {}) {
 
     /** Idempotent: unknown tokens are ignored so callers cannot probe token validity. */
     async logout(token: string): Promise<void> {
-      const row = await RefreshToken.query().findOne({ token_hash: hashToken(token) });
+      const row = await RefreshToken.query().findOne({ token_hash: fingerprintToken(token) });
       if (row) await revokeFamily(row.family);
     },
 
@@ -261,6 +273,13 @@ export function createAuthService(options: AuthServiceOptions = {}) {
       await RefreshToken.query()
         .patch({ revoked: true, rotated_at: null, rotation_lease_until: null })
         .where({ user_id: userId });
+    },
+
+    /** Revokes every outstanding refresh session after a signing-secret incident. */
+    async revokeAllSessions(): Promise<number> {
+      return RefreshToken.query()
+        .patch({ revoked: true, rotated_at: null, rotation_lease_until: null })
+        .where({ revoked: false });
     },
   };
 }

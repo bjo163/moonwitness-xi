@@ -110,6 +110,13 @@ Nested URL reload, search keyboard dan 404 bekerja pada static preview.
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M6.06.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
+### Catatan implementasi
+
+Portal saat ini berada di `apps/docs`, memakai guide bundle deterministik, React Router basename
+`/moonwitness-xi/`, Markdown renderer tanpa raw HTML, pencarian keyboard, dan fallback `404.html`.
+CI wajib menjalankan `pnpm test:docs-portal`. Publikasi Pages dan build source ref stable tetap
+menjadi acceptance terpisah M6.07/M6.08.
+
 ## M6.07 — Gunakan Actions artifact untuk Pages tanpa branch tambahan; dev hanya menghasilkan preview artifact.
 
 - **Prasyarat:** M6.06, M0.04
@@ -118,17 +125,19 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ### Langkah pelaksanaan
 
-1. Konfigurasi Pages source GitHub Actions dan workflow upload/deploy artifact dengan permissions sempit.
-2. Dev build artifact saja; trusted main/release mempublikasikan.
-3. Atur concurrency Pages agar publish lama tidak menimpa lebih baru; tidak create gh-pages.
+1. Konfigurasi Pages source GitHub Actions (repository sekarang: `build_type=workflow`) dan workflow upload/deploy artifact dengan permissions sempit.
+2. Dev build preview artifact saja; trusted main/release mempublikasikan setelah perubahan workflow dipromosikan.
+3. Gunakan concurrency group tunggal Pages agar publish tidak balapan; jangan create gh-pages.
 
 ### Verifikasi dan syarat selesai
 
-Workflow artifact memiliki index dan base paths benar; published source SHA sesuai yang dipilih.
+Workflow artifact memiliki index dan base paths benar; `build-info.json` merekam SHA checkout. Hosted preview M6.07 pada `0ce59ed` lulus dan mengunggah artifact. Published source SHA tetap harus dibuktikan dari deployment pertama pada trusted main/release.
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M6.07.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
 ## M6.08 — Publikasikan dokumentasi stable yang sesuai release; tentukan retensi versi dokumentasi dan URL latest.
+
+Stable docs disimpan sebagai arsip deterministik `docs-site-vX.Y.Z.tar.gz` pada GitHub Release immutable, lalu Pages merakit `/vX.Y.Z/` untuk lima stable release terbaru. `/latest/` hanya mengarah ke stable release paling baru apabila arsip docs-nya tersedia; `/` adalah selector, `/next/` memuat main, dan dev tetap hanya menghasilkan preview artifact. Arsip lama tetap berada di Release walau keluar dari lima path aktif Pages. Hosted acceptance masih pending karena belum ada stable release yang dipublikasikan pada repo.
 
 - **Prasyarat:** M7.02, M6.06
 - **Baca/periksa:** Release version contract; docs portal.
@@ -136,13 +145,15 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ### Langkah pelaksanaan
 
-1. Tetapkan URL stable/latest dan versioned docs; tentukan versi yang disimpan sesuai ukuran.
-2. Build dari tag/source SHA tertentu dan tampilkan versi+link source.
-3. Jangan mengklaim dev docs sebagai stable; preserve older version paths yang didukung.
+1. Gunakan URL `/vX.Y.Z/`, alias `/latest/`, selector root, dan lima snapshot stable terbaru pada Pages.
+2. Build dari tag stable Release yang sudah published, pastikan tag reachable dari main, serta tampilkan kanal, versi aplikasi dan link source.
+3. Buat arsip USTAR/gzip reproducible, canonicalize metadata run-specific, validasi checksum/path saat extract, dan simpan arsip ke Release tanpa overwrite.
+4. Compose Pages dari inventory GitHub Release aktual; asset reuse harus cocok digest dan ukuran. Dokumen main ditempatkan di `/next/`; dev tidak memperoleh publish permission.
+5. Scan gabungan seluruh output sebelum artifact Pages diunggah; catat manifest `docs-versions.json` beserta SHA source dan retensi.
 
 ### Verifikasi dan syarat selesai
 
-Memilih versi membawa reference sesuai schema versi itu; latest hanya stable published.
+Retensi semver dan archive/extract/compose diuji lokal termasuk corrupt archive dan missing latest; browser build/test berjalan pada root repo dan nested stable base path. Deploy mensyaratkan Pages artifact hasil compose; belum menyatakan milestone hosted-complete sampai ada stable release dan publish berhasil.
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M6.08.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
@@ -162,7 +173,7 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 Injected secret fixture menyebabkan publish check fail; output public allowlist terverifikasi.
 
-Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M6.09.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
+Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M6.09.md` sesuai template. Scan bersifat pattern-based, maka tetap sertakan review konten; jika pemeriksaan external belum tersedia, pisahkan implementasi lokal dari aktivasi yang terblokir. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
 ## M6.10 — Docs-only changes dapat dipublikasikan setelah verifikasi tanpa memaksa release aplikasi; source SHA harus terlacak.
 
@@ -172,17 +183,19 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ### Langkah pelaksanaan
 
-1. Klasifikasikan docs-only tanpa memperlakukan perubahan executable generator sebagai konten saja.
-2. Uji docs updates dan publish dari verified main SHA tanpa app version bump.
-3. Catat source SHA pada site metadata walau version sama.
+1. Klasifikasikan hanya `docs/**/*.md`, `README.md`, dan `ROADMAP.md` sebagai konten docs-only; generator, script, app source, workflow, manifest, lockfile, JSON dan assets adalah executable/config/code changes.
+2. Jalur branch main menunggu check run terbaru `ci-gate` untuk SHA yang persis sama sebelum upload atau deploy. Perubahan generator tetap menjalani required CI dan tidak diberi label docs-only.
+3. Pastikan release classifier menghasilkan `none` untuk docs-only commit; jangan jalankan release/tag/version bump. Tulis application version dan source SHA/ref terpisah di `build-info.json`.
 
 ### Verifikasi dan syarat selesai
 
-Docs typo fix tidak membuat tag aplikasi; code change tetap full gate.
+Docs typo fix tidak membuat tag aplikasi dan hanya publish setelah full `ci-gate` success pada SHA tersebut; executable/code change tidak lolos docs-only classifier dan tetap memerlukan full validation.
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M6.10.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
 ## M6.11 — Pisahkan retry Pages dari release aplikasi; kegagalan docs tercatat dan tidak menghasilkan tag/version baru.
+
+Pages dapat di-dispatch ulang dengan full main commit SHA dari incident report. Workflow mengecek source sebagai commit lengkap, mewajibkan ancestry terhadap `main` dan `ci-gate` sukses pada exact SHA, lalu rebuild dari checkout detached SHA tersebut. Jalur ini hanya menjalankan Pages, tanpa tag/version/release atau image publication. Workflow contract tests pass lokal; deploy gagal lalu retry hosted masih acceptance pending.
 
 - **Prasyarat:** M6.07, M7.13
 - **Baca/periksa:** Pages workflow; release state manifest.

@@ -19,21 +19,25 @@ import {
   Zap,
 } from 'lucide-react';
 import { client } from '@/lib/client';
-import { useAuth } from '@/hooks/use-auth';
+import { formatDateTime } from '@/lib/date-format';
+import { readPreferences } from '@/lib/preferences';
+import { scopedQueryKey } from '@/lib/query-scope';
+import { useAuth } from '@/hooks/use-auth-context';
 import { useModels } from '@/hooks/use-model';
 import { modelIcon, modelLabel } from '@/lib/models';
 import { DEVELOPMENT_MODE_EVENT, readDevelopmentMode } from '@/lib/navigation';
 import { Doodle, SpeedLines } from '@/components/manga/effects';
-import { Button } from '@/components/ui/button';
+import { Button } from '@moonwitness/ui/components/button';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@/components/ui/dialog';
+} from '@moonwitness/ui/components/dialog';
 import { CronSchedulerPanel } from '@/components/layout/cron-scheduler-panel';
 import { cn } from '@/lib/utils';
+import { BarChart } from '@moonwitness/ui/components/chart';
 
 export function DashboardPage() {
   const { user } = useAuth();
@@ -55,12 +59,12 @@ export function DashboardPage() {
 
   // Live KPI Queries
   const { data: partnerStats, isLoading: partnerLoading } = useQuery({
-    queryKey: ['kpi', 'base.partner'],
+    queryKey: scopedQueryKey(['kpi', 'base.partner']),
     queryFn: () => client.model('base.partner').searchRead({ count: true, limit: 1 }),
   });
 
   const { data: userStats, isLoading: userLoading } = useQuery({
-    queryKey: ['kpi', 'base.user'],
+    queryKey: scopedQueryKey(['kpi', 'base.user']),
     queryFn: () =>
       client.model('base.user').searchRead({
         domain: [['active', '=', true]],
@@ -70,12 +74,12 @@ export function DashboardPage() {
   });
 
   const { data: companyStats, isLoading: companyLoading } = useQuery({
-    queryKey: ['kpi', 'base.company'],
+    queryKey: scopedQueryKey(['kpi', 'base.company']),
     queryFn: () => client.model('base.company').searchRead({ count: true, limit: 1 }),
   });
 
   const { data: activityStats, isLoading: activityLoading } = useQuery({
-    queryKey: ['kpi', 'base.activity'],
+    queryKey: scopedQueryKey(['kpi', 'base.activity']),
     queryFn: () =>
       client.model('base.activity').searchRead({
         domain: [['state', '=', 'planned']],
@@ -86,7 +90,7 @@ export function DashboardPage() {
 
   // Live Recent Audit Events (Admins)
   const { data: recentAudits, isLoading: auditsLoading } = useQuery({
-    queryKey: ['kpi', 'recent_audits'],
+    queryKey: scopedQueryKey(['kpi', 'recent_audits']),
     queryFn: () =>
       client
         .model<{
@@ -111,7 +115,7 @@ export function DashboardPage() {
     isLoading: jobsHealthLoading,
     refetch: refetchJobsHealth,
   } = useQuery({
-    queryKey: ['admin', 'jobs', 'health'],
+    queryKey: scopedQueryKey(['admin', 'jobs', 'health']),
     queryFn: () =>
       client.request<{
         success: boolean;
@@ -129,7 +133,7 @@ export function DashboardPage() {
   });
 
   const { data: adminCrons, isLoading: cronsLoading } = useQuery({
-    queryKey: ['admin', 'crons'],
+    queryKey: scopedQueryKey(['admin', 'crons']),
     queryFn: () =>
       client.request<{
         success: boolean;
@@ -167,7 +171,7 @@ export function DashboardPage() {
 
   // Dead Letter Jobs & Outbox Event Queries (Admins)
   const { data: deadJobs, isLoading: deadJobsLoading } = useQuery({
-    queryKey: ['admin', 'jobs', 'dead'],
+    queryKey: scopedQueryKey(['admin', 'jobs', 'dead']),
     queryFn: () =>
       client.request<{
         success: boolean;
@@ -185,7 +189,7 @@ export function DashboardPage() {
   });
 
   const { data: deadOutbox, isLoading: deadOutboxLoading } = useQuery({
-    queryKey: ['admin', 'outbox', 'dead'],
+    queryKey: scopedQueryKey(['admin', 'outbox', 'dead']),
     queryFn: () =>
       client.request<{
         success: boolean;
@@ -254,7 +258,7 @@ export function DashboardPage() {
 
   // Recent Planned Activities (Fallback for non-admins)
   const { data: recentActivities, isLoading: activitiesLoading } = useQuery({
-    queryKey: ['kpi', 'recent_activities'],
+    queryKey: scopedQueryKey(['kpi', 'recent_activities']),
     queryFn: () =>
       client
         .model<{
@@ -276,13 +280,13 @@ export function DashboardPage() {
   return (
     <div className="space-y-8">
       {/* Hero Welcome Banner with Speedlines */}
-      <div className="relative overflow-hidden border-4 border-ink bg-paper p-8 lg:p-12 shadow-ink-lg">
+      <div className="relative overflow-hidden border-4 border-ink bg-paper p-5 sm:p-8 lg:p-12 shadow-ink-lg">
         <SpeedLines className="opacity-20" origin={[0.85, 0.4]} inner={0.15} count={60} />
         <div className="relative max-w-2xl space-y-4">
           <div className="inline-flex items-center gap-2 border-2 border-ink bg-lime px-3 py-1 font-mono text-xs font-bold uppercase tracking-wider text-on-accent">
             <Sparkles className="size-3.5" /> MoonWitness Mission Control
           </div>
-          <h1 className="ink-title text-4xl sm:text-6xl">
+          <h1 className="ink-title text-3xl leading-tight sm:text-6xl sm:leading-none">
             Welcome, <span className="marker">{user?.login}</span>!
           </h1>
           <p className="text-base sm:text-lg text-ink-soft">
@@ -433,7 +437,7 @@ export function DashboardPage() {
                 <span className="font-mono text-xs uppercase tracking-wider text-ink-faint">
                   Pending Tasks
                 </span>
-                <div className="size-8 border-2 border-ink bg-pink/20 flex items-center justify-center group-hover:bg-pink group-hover:text-white transition-colors">
+                <div className="size-8 border-2 border-ink bg-pink/20 flex items-center justify-center group-hover:bg-pink group-hover:text-on-pink transition-colors">
                   <CheckCircle2 className="size-4" />
                 </div>
               </div>
@@ -450,7 +454,7 @@ export function DashboardPage() {
           </div>
 
           {/* Live System Activity / Audit Pulse Feed */}
-          <div className="border-4 border-ink bg-paper p-6 shadow-ink space-y-4">
+          <div className="min-w-0 border-4 border-ink bg-paper p-4 shadow-ink space-y-4 sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-ink pb-3">
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1.5 border-2 border-ink bg-lime px-2.5 py-0.5 font-mono text-xs font-bold uppercase tracking-wider text-on-accent">
@@ -476,7 +480,7 @@ export function DashboardPage() {
                   No recent audit records available.
                 </p>
               ) : (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {recentAudits.records.map((audit) => {
                     let parsedChanges: Record<string, unknown> | null = null;
                     if (audit.changes) {
@@ -494,7 +498,7 @@ export function DashboardPage() {
                       <Link
                         key={audit.id}
                         to={`/m/${audit.model}/${audit.record_id}`}
-                        className="group border-2 border-ink bg-card p-3 font-mono text-xs transition-transform hover:-translate-y-0.5 hover:shadow-ink flex flex-col justify-between"
+                        className="group min-w-0 overflow-hidden border-2 border-ink bg-card p-3 font-mono text-xs transition-transform hover:-translate-y-0.5 hover:shadow-ink flex flex-col justify-between"
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span
@@ -504,26 +508,23 @@ export function DashboardPage() {
                                 ? 'border-lime bg-lime text-on-accent'
                                 : audit.operation === 'write'
                                   ? 'border-ink bg-ink text-paper'
-                                  : 'border-pink bg-pink text-white'
+                                  : 'border-pink bg-pink text-on-pink'
                             )}
                           >
                             {audit.operation}
                           </span>
-                          <span className="text-[10px] text-ink-faint">
+                          <span className="min-w-0 truncate text-right text-[10px] text-ink-faint">
                             {audit.create_date
-                              ? new Date(audit.create_date).toLocaleTimeString([], {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })
+                              ? formatDateTime(audit.create_date, 'time')
                               : `#${audit.id}`}
                           </span>
                         </div>
 
-                        <div className="my-2">
+                        <div className="my-2 min-w-0">
                           <p className="font-bold text-ink truncate group-hover:text-lime-600 transition-colors">
                             {audit.model} #{audit.record_id}
                           </p>
-                          <p className="text-[11px] text-ink-faint truncate">
+                          <p className="break-words text-[11px] text-ink-faint">
                             {changedFields ? `Modified: ${changedFields}` : 'System operation'}
                           </p>
                         </div>
@@ -591,7 +592,7 @@ export function DashboardPage() {
                     <Button
                       size="sm"
                       onClick={() => setFailuresModalOpen(true)}
-                      className="gap-1.5 font-mono text-xs border-2 border-pink bg-pink text-white shadow-ink hover:bg-pink/90"
+                      className="gap-1.5 font-mono text-xs border-2 border-pink bg-pink text-on-pink shadow-ink hover:bg-pink/90"
                     >
                       <AlertTriangle className="size-3.5" />
                       Triage Failures (
@@ -689,6 +690,21 @@ export function DashboardPage() {
                 </div>
               </div>
 
+              <BarChart
+                title="Background job status distribution"
+                locale={readPreferences().language}
+                valueLabel="Jobs"
+                loading={jobsHealthLoading}
+                data={[
+                  { label: 'Queued', value: jobsHealth?.data?.queued ?? 0 },
+                  { label: 'Running', value: jobsHealth?.data?.running ?? 0 },
+                  { label: 'Dead', value: jobsHealth?.data?.dead ?? 0 },
+                  { label: 'Outbox pending', value: jobsHealth?.data?.outboxPending ?? 0 },
+                  { label: 'Outbox dead', value: jobsHealth?.data?.outboxDead ?? 0 },
+                ]}
+                className="border-2 border-ink bg-card p-4 font-mono"
+              />
+
               {/* Scheduled Cron Tasks Section */}
               <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between">
@@ -730,11 +746,7 @@ export function DashboardPage() {
                               <>
                                 <span>•</span>
                                 <span>
-                                  Next:{' '}
-                                  {new Date(cron.next_run_at).toLocaleString([], {
-                                    dateStyle: 'short',
-                                    timeStyle: 'short',
-                                  })}
+                                  Next: {formatDateTime(cron.next_run_at, 'shortDateTime')}
                                 </span>
                               </>
                             )}
@@ -821,7 +833,7 @@ export function DashboardPage() {
         <DialogContent className="max-w-2xl font-sans">
           <DialogHeader>
             <div className="flex items-center gap-2">
-              <span className="border-2 border-ink bg-pink p-1 text-white shadow-[1px_1px_0_0_var(--ink)]">
+              <span className="border-2 border-ink bg-pink p-1 text-on-pink shadow-[1px_1px_0_0_var(--ink)]">
                 <AlertTriangle className="size-4" />
               </span>
               <DialogTitle className="font-display text-xl uppercase tracking-wider text-ink">
@@ -892,7 +904,7 @@ export function DashboardPage() {
                         Handler: <span className="font-bold text-ink">{job.handler}</span>
                       </p>
                       <p className="text-ink-faint text-[10px] mt-0.5">
-                        Created: {new Date(job.create_date).toLocaleString()}
+                        Created: {formatDateTime(job.create_date)}
                       </p>
                     </div>
 

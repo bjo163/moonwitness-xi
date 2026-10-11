@@ -1,0 +1,19 @@
+title = "MoonWitness secret scanning"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Exact synthetic fixtures and historical copies of their test patterns; credential findings are not allowlisted"
+regexTarget = "line"
+regexes = [
+  '''^\s*"tokensSha256": "269a6e000da6fa288380cf36ec127df09cc86d6a38a1d4613a975b54d3664d5a"$''',
+  '''^\s*idempotencyKey: 'duplicate-vote-0001',$''',
+  '''^\s*idempotencyKey: 'reject-decision-0001',$''',
+  '''^\s*\/\^\\s\*"tokensSha256": "269a6e000da6fa288380cf36ec127df09cc86d6a38a1d4613a975b54d3664d5a"\$\/u,$''',
+  '''^\s*\/\^\\s\*idempotencyKey: 'duplicate-vote-0001',\$\/u,$''',
+  '''^\s*\/\^\\s\*idempotencyKey: 'reject-decision-0001',\$\/u,$''',
+  '''^\s*'\^\\\\s\*"tokensSha256": "269a6e000da6fa288380cf36ec127df09cc86d6a38a1d4613a975b54d3664d5a"\$',$''',
+  '''^\s*"\^\\\\s\*idempotencyKey: 'duplicate-vote-0001',\$",$''',
+  '''^\s*"\^\\\\s\*idempotencyKey: 'reject-decision-0001',\$",$''',
+]

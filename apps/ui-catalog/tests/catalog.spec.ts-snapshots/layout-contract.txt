@@ -1,0 +1,20 @@
+{
+  "desktop": {
+    "sidebarWidth": 256,
+    "topbarHeight": 68,
+    "exampleWidth": 922,
+    "exampleColumnCount": 2,
+    "primaryButtonMinHeight": "40px",
+    "lightBackground": "#f3efe4",
+    "lightForeground": "#0d0d0d"
+  },
+  "darkTokens": {
+    "background": "#0e0e10",
+    "foreground": "#f3efe4"
+  },
+  "mobile": {
+    "sidebarPosition": "static",
+    "mainMarginLeft": "0px",
+    "exampleColumnCount": 1
+  }
+}

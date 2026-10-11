@@ -1,6 +1,6 @@
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { useViews } from '@/hooks/use-model';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@moonwitness/ui/components/skeleton';
 import { Doodle } from '@/components/manga/effects';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 import { ListView } from '@/components/views/list-view';

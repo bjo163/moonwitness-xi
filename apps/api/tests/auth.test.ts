@@ -8,18 +8,22 @@ import {
   CompanyMembership,
   Country,
   GroupMembership,
+  Language,
   ModelAccess,
   PartnerAddress,
   PartnerCategory,
   PartnerCategoryLink,
   Partner,
+  Tag,
   User,
 } from '@moonwitness/orm-base';
 import { buildApp } from '../src/app.js';
 import { OutboxEvent } from '@moonwitness/jobs';
+import { canAccess } from '../src/auth/policy.js';
 
 const ADMIN_PASSWORD = 'admin-test-password';
 const USER_PASSWORD = 'alice-test-password';
+const TEST_JWT_SECRET = 'test-secret-test-secret-test-secret-123';
 
 interface TokenBody {
   success: boolean;
@@ -37,6 +41,7 @@ describe('authentication and authorization', () => {
   let app: FastifyInstance;
   let admin: TokenBody['data'];
   let alice: TokenBody['data'];
+  let system: TokenBody['data'];
 
   const login = (loginName: string, password: string) =>
     app.inject({ method: 'POST', url: '/auth/login', payload: { login: loginName, password } });
@@ -64,7 +69,7 @@ describe('authentication and authorization', () => {
     app = await buildApp({
       db,
       superadminPassword: ADMIN_PASSWORD,
-      jwtSecret: 'test-secret-test-secret-test-secret-123',
+      jwtSecret: TEST_JWT_SECRET,
       loginRateMax: 1000,
     });
     await app.ready();
@@ -84,6 +89,9 @@ describe('authentication and authorization', () => {
     });
     admin = (await login('superadmin', ADMIN_PASSWORD)).json<TokenBody>().data;
     alice = (await login('alice', USER_PASSWORD)).json<TokenBody>().data;
+    const systemUser = await User.query().findOne({ login: 'system' }).throwIfNotFound();
+    await User.query().findById(systemUser.id).patch({ password: 'system-test-password' });
+    system = (await login('system', 'system-test-password')).json<TokenBody>().data;
   }, 30000);
 
   afterAll(async () => {
@@ -157,6 +165,15 @@ describe('authentication and authorization', () => {
       });
       expect(admin.access_token.split('.')).toHaveLength(3);
       expect(JSON.stringify(admin)).not.toContain('scrypt$');
+      const tokenBytes = Buffer.from(admin.refresh_token, 'base64url');
+      expect(tokenBytes).toHaveLength(32);
+      expect(tokenBytes.toString('base64url')).toBe(admin.refresh_token);
+      const storedToken = await db<{ token_hash: string }>('auth_refresh_tokens')
+        .select('token_hash')
+        .where({ user_id: admin.user.id })
+        .first();
+      expect(storedToken?.token_hash).toMatch(/^[a-f0-9]{64}$/u);
+      expect(storedToken?.token_hash).not.toBe(admin.refresh_token);
     });
 
     it('answers wrong password and unknown login identically', async () => {
@@ -202,7 +219,7 @@ describe('authentication and authorization', () => {
       expect(response.statusCode).toBe(401);
     });
 
-    it('rejects garbage, wrongly-claimed and expired tokens', async () => {
+    it('rejects garbage and wrongly-claimed tokens', async () => {
       const garbage = await as('not.a.jwt', { method: 'GET', url: '/api/models' });
       expect(garbage.statusCode).toBe(401);
       expect(garbage.headers['www-authenticate']).toBe('Bearer');
@@ -211,10 +228,24 @@ describe('authentication and authorization', () => {
       expect((await as(badSubject, { method: 'GET', url: '/api/models' })).statusCode).toBe(401);
       const badRole = app.jwt.sign({ role: 'root' }, { sub: '1' });
       expect((await as(badRole, { method: 'GET', url: '/api/models' })).statusCode).toBe(401);
+    });
 
-      const shortLived = app.jwt.sign({ role: 'superadmin' }, { sub: '1', expiresIn: 1 });
-      await new Promise((resolve) => setTimeout(resolve, 1200));
-      expect((await as(shortLived, { method: 'GET', url: '/api/models' })).statusCode).toBe(401);
+    it('accepts a live access token and rejects tokens at or beyond their expiry boundary', async () => {
+      const live = app.jwt.sign({ role: 'superadmin' }, { sub: '1', expiresIn: '1 minute' });
+      expect((await as(live, { method: 'GET', url: '/api/models' })).statusCode).toBe(200);
+
+      const atExpiry = app.jwt.sign({ role: 'superadmin' }, { sub: '1', expiresIn: '-1 ms' });
+      const expiredAtBoundary = await as(atExpiry, { method: 'GET', url: '/api/models' });
+      expect(expiredAtBoundary.statusCode).toBe(401);
+      expect(expiredAtBoundary.headers['www-authenticate']).toBe('Bearer');
+
+      const alreadyExpired = app.jwt.sign(
+        { role: 'superadmin' },
+        { sub: '1', expiresIn: '-1 second' }
+      );
+      expect((await as(alreadyExpired, { method: 'GET', url: '/api/models' })).statusCode).toBe(
+        401
+      );
     });
 
     it('returns the current user from /auth/me', async () => {
@@ -258,18 +289,34 @@ describe('authentication and authorization', () => {
       });
       expect(invalid.statusCode).toBe(400);
 
+      const unknownLanguage = await as(alice.access_token, {
+        method: 'PATCH',
+        url: '/auth/me/preferences',
+        payload: { language_id: Number.MAX_SAFE_INTEGER, timezone: 'Asia/Jakarta' },
+      });
+      expect(unknownLanguage.statusCode).toBe(400);
+      expect(unknownLanguage.json()).toMatchObject({ error: 'Unknown language' });
+      await expect(User.query().findById(alice.user.id)).resolves.toMatchObject({
+        language_id: null,
+        timezone: null,
+      });
+
+      const english = await Language.query().findOne({ code: 'en-US' }).throwIfNotFound();
+
       const updated = await as(alice.access_token, {
         method: 'PATCH',
         url: '/auth/me/preferences',
-        payload: { language_id: null, timezone: 'Asia/Jakarta' },
+        payload: { language_id: english.id, timezone: 'Asia/Jakarta' },
       });
       expect(updated.statusCode).toBe(200);
       await expect(User.query().findById(alice.user.id)).resolves.toMatchObject({
+        language_id: english.id,
         timezone: 'Asia/Jakarta',
       });
     });
 
     it('updates only the contact linked to the authenticated user profile', async () => {
+      const adminBefore = await User.query().findById(admin.user.id).throwIfNotFound();
       const response = await as(alice.access_token, {
         method: 'PATCH',
         url: '/auth/me/profile',
@@ -277,7 +324,12 @@ describe('authentication and authorization', () => {
           name: 'Alice Regular',
           email: 'alice.updated@example.com',
           phone: '+62-555-0199',
+          id: admin.user.id,
+          login: admin.user.login,
           role: 'superadmin',
+          partner_id: admin.user.partner_id,
+          active: false,
+          company_id: 999999,
         },
       });
       expect(response.statusCode).toBe(200);
@@ -288,11 +340,25 @@ describe('authentication and authorization', () => {
         email: 'alice.updated@example.com',
         phone: '+62-555-0199',
       });
-      expect(aliceRecord.role).toBe('user');
+      expect(aliceRecord).toMatchObject({
+        id: alice.user.id,
+        login: 'alice',
+        role: 'user',
+        partner_id: alicePartner.id,
+        active: true,
+      });
+      await expect(User.query().findById(admin.user.id)).resolves.toMatchObject({
+        id: adminBefore.id,
+        login: adminBefore.login,
+        role: adminBefore.role,
+        partner_id: adminBefore.partner_id,
+        active: adminBefore.active,
+      });
     });
 
     it('changes password only with the current password and revokes refresh sessions', async () => {
       const oldSession = (await login('alice', USER_PASSWORD)).json<TokenBody>().data;
+      const anotherSession = (await login('alice', USER_PASSWORD)).json<TokenBody>().data;
       try {
         const wrongCurrentPassword = await as(alice.access_token, {
           method: 'POST',
@@ -304,19 +370,29 @@ describe('authentication and authorization', () => {
         });
         expect(wrongCurrentPassword.statusCode).toBe(400);
 
-        const tooShort = await as(alice.access_token, {
+        const belowMinimum = await as(alice.access_token, {
           method: 'POST',
           url: '/auth/me/password',
-          payload: { current_password: USER_PASSWORD, new_password: 'short' },
+          payload: { current_password: USER_PASSWORD, new_password: 'a'.repeat(11) },
         });
-        expect(tooShort.statusCode).toBe(400);
+        expect(belowMinimum.statusCode).toBe(400);
+
+        const tooLong = await as(alice.access_token, {
+          method: 'POST',
+          url: '/auth/me/password',
+          payload: {
+            current_password: USER_PASSWORD,
+            new_password: 'a'.repeat(1025),
+          },
+        });
+        expect(tooLong.statusCode).toBe(400);
 
         const changed = await as(alice.access_token, {
           method: 'POST',
           url: '/auth/me/password',
           payload: {
             current_password: USER_PASSWORD,
-            new_password: 'new-strong-password-123',
+            new_password: 'twelve-chars',
           },
         });
         expect(changed.statusCode).toBe(200);
@@ -328,12 +404,27 @@ describe('authentication and authorization', () => {
           payload: { refresh_token: oldSession.refresh_token },
         });
         expect(oldRefresh.statusCode).toBe(401);
+        const otherRefresh = await app.inject({
+          method: 'POST',
+          url: '/auth/refresh',
+          payload: { refresh_token: anotherSession.refresh_token },
+        });
+        expect(otherRefresh.statusCode).toBe(401);
         expect((await login('alice', USER_PASSWORD)).statusCode).toBe(401);
-        expect((await login('alice', 'new-strong-password-123')).statusCode).toBe(200);
+        expect((await login('alice', 'twelve-chars')).statusCode).toBe(200);
+
+        const maximumLengthPassword = 'a'.repeat(1024);
+        const changedToMaximumLength = await as(alice.access_token, {
+          method: 'POST',
+          url: '/auth/me/password',
+          payload: { current_password: 'twelve-chars', new_password: maximumLengthPassword },
+        });
+        expect(changedToMaximumLength.statusCode).toBe(200);
+        expect((await login('alice', maximumLengthPassword)).statusCode).toBe(200);
       } finally {
         await User.query().findById(alice.user.id).patch({ password: USER_PASSWORD });
       }
-    });
+    }, 15000);
   });
 
   describe('refresh and logout', () => {
@@ -432,16 +523,111 @@ describe('authentication and authorization', () => {
           })
         ).statusCode
       ).toBe(403);
-      await ModelAccess.query().findById(partnerGrant.id).patch({ write: false, create: false });
+      const deniedCreate = await as(alice.access_token, {
+        method: 'POST',
+        url: '/api/base.partner',
+        payload: { name: 'Cross-company write', company_id: foreignCompany.id },
+      });
+      expect(deniedCreate.statusCode).toBe(403);
+      expect(deniedCreate.payload).not.toContain('Foreign Tenant');
+      const count = await as(alice.access_token, {
+        method: 'GET',
+        url: '/api/base.partner?count=true&limit=500',
+      });
+      expect(count.statusCode).toBe(200);
+      expect(count.json<{ total: number }>().total).toBe(1);
+      const exportRows = await as(alice.access_token, {
+        method: 'GET',
+        url: '/api/base.partner?limit=500',
+      });
+      expect(JSON.stringify(exportRows.json())).not.toContain('Foreign Partner');
+      const ownPartner = await Partner.query().findOne({ name: 'Alice Regular' }).throwIfNotFound();
+      const mixedCompanyDomain = encodeURIComponent(
+        JSON.stringify(['|', ['id', '=', ownPartner.id], ['id', '=', foreignPartner.id]])
+      );
+      const scopedOrCount = await as(alice.access_token, {
+        method: 'GET',
+        url: `/api/base.partner?domain=${mixedCompanyDomain}&count=true&limit=1`,
+      });
+      expect(scopedOrCount.statusCode).toBe(200);
+      const scopedOrCountBody = scopedOrCount.json<{ total: number; data: { id: number }[] }>();
+      expect(scopedOrCountBody).toMatchObject({
+        success: true,
+        model: 'base.partner',
+        count: 1,
+        total: 1,
+      });
+      expect(scopedOrCountBody.data.map(({ id }) => id)).toEqual([ownPartner.id]);
+      const scopedOrExport = await as(alice.access_token, {
+        method: 'GET',
+        url: `/api/base.partner?domain=${mixedCompanyDomain}&limit=500`,
+      });
+      expect(scopedOrExport.statusCode).toBe(200);
+      expect(scopedOrExport.json<{ data: { id: number }[] }>().data.map(({ id }) => id)).toEqual([
+        ownPartner.id,
+      ]);
+      expect(scopedOrExport.payload).not.toContain('Foreign Partner');
+      const scopedGroups = await as(alice.access_token, {
+        method: 'GET',
+        url: `/api/base.partner/group-count?group_by=company_id&domain=${mixedCompanyDomain}`,
+      });
+      expect(scopedGroups.statusCode, scopedGroups.payload).toBe(200);
       expect(
-        (
-          await as(alice.access_token, {
-            method: 'POST',
-            url: '/api/base.partner',
-            payload: { name: 'Cross-company write', company_id: foreignCompany.id },
-          })
-        ).statusCode
-      ).toBe(403);
+        scopedGroups.json<{
+          groups: { values: { company_id: number }; count: number }[];
+          hasMore: boolean;
+        }>().groups
+      ).toEqual([{ values: { company_id: 1 }, count: 1 }]);
+      const groupedFixtures = [
+        await Partner.query().insert({ name: 'Grouped Count Probe A', is_company: false }),
+        await Partner.query().insert({ name: 'Grouped Count Probe B', is_company: true }),
+      ];
+      const groupedFixtureDomain = encodeURIComponent(
+        JSON.stringify([['id', 'in', groupedFixtures.map(({ id }) => id)]])
+      );
+      const firstGroupPage = await as(admin.access_token, {
+        method: 'GET',
+        url: `/api/base.partner/group-count?group_by=is_company&domain=${groupedFixtureDomain}&limit=1`,
+      });
+      expect(firstGroupPage.statusCode).toBe(200);
+      expect(firstGroupPage.json()).toMatchObject({
+        limit: 1,
+        offset: 0,
+        hasMore: true,
+        groups: [{ values: { is_company: false }, count: 1 }],
+      });
+      const secondGroupPage = await as(admin.access_token, {
+        method: 'GET',
+        url: `/api/base.partner/group-count?group_by=is_company&domain=${groupedFixtureDomain}&limit=1&offset=1`,
+      });
+      expect(secondGroupPage.statusCode).toBe(200);
+      expect(secondGroupPage.json()).toMatchObject({
+        limit: 1,
+        offset: 1,
+        hasMore: false,
+        groups: [{ values: { is_company: true }, count: 1 }],
+      });
+      const hiddenGroup = await as(admin.access_token, {
+        method: 'GET',
+        url: '/api/base.user/group-count?group_by=password',
+      });
+      expect(hiddenGroup.statusCode).toBe(400);
+      const malformedGroup = await as(alice.access_token, {
+        method: 'GET',
+        url: '/api/base.partner/group-count?group_by=company_id%20desc',
+      });
+      expect(malformedGroup.statusCode).toBe(400);
+      const excessiveLimit = await as(alice.access_token, {
+        method: 'GET',
+        url: '/api/base.partner/group-count?group_by=company_id&limit=501',
+      });
+      expect(excessiveLimit.statusCode).toBe(400);
+      const excessiveOffset = await as(alice.access_token, {
+        method: 'GET',
+        url: '/api/base.partner/group-count?group_by=company_id&offset=10001',
+      });
+      expect(excessiveOffset.statusCode).toBe(400);
+      await ModelAccess.query().findById(partnerGrant.id).patch({ write: false, create: false });
       expect(
         (
           await as(alice.access_token, {
@@ -559,31 +745,423 @@ describe('authentication and authorization', () => {
       expect(rpcWrite.json()).toMatchObject({ error: { code: -32003 } });
     });
 
+    it('keeps model discovery, permission metadata and direct reads aligned for every registered model', async () => {
+      const models = app.models.getNames();
+      const roleCases = [
+        { token: alice.access_token, role: 'user', userId: alice.user.id },
+        { token: admin.access_token, role: 'superadmin', userId: admin.user.id },
+        { token: system.access_token, role: 'system', userId: system.user.id },
+      ] as const;
+
+      for (const { token, role, userId } of roleCases) {
+        const groupIds =
+          role === 'user'
+            ? (await GroupMembership.query().where({ user_id: userId, active: true })).map(
+                ({ group_id }) => group_id
+              )
+            : [];
+        const activeGroups =
+          groupIds.length === 0
+            ? []
+            : await AccessGroup.query()
+                .whereIn('id', groupIds)
+                .where({ active: true })
+                .select('id');
+        const activeGroupIds = activeGroups.map(({ id }) => id);
+        const grants =
+          activeGroupIds.length === 0
+            ? []
+            : await ModelAccess.query().whereIn('group_id', activeGroupIds).where({ active: true });
+        const listed = await as(token, { method: 'GET', url: '/api/models' });
+        expect(listed.statusCode).toBe(200);
+        const visible = new Set(
+          listed.json<{ models: { model: string }[] }>().models.map(({ model }) => model)
+        );
+
+        for (const model of models) {
+          const expected = {
+            read: canAccess(role, model, 'read', grants),
+            create: canAccess(role, model, 'create', grants),
+            write: canAccess(role, model, 'write', grants),
+            unlink: canAccess(role, model, 'unlink', grants),
+          };
+          expect(visible.has(model), `${role} discovery permission for ${model}`).toBe(
+            expected.read
+          );
+
+          const metadata = await as(token, { method: 'GET', url: `/api/${model}/fields` });
+          expect(metadata.statusCode, `${role} metadata access for ${model}`).toBe(
+            expected.read ? 200 : 403
+          );
+          if (expected.read) {
+            expect(
+              metadata.json<{ permissions: typeof expected }>().permissions,
+              `${role} permission metadata for ${model}`
+            ).toEqual(expected);
+          }
+
+          const read = await as(token, { method: 'GET', url: `/api/${model}?limit=1` });
+          expect(read.statusCode, `${role} direct read authorization for ${model}`).toBe(
+            expected.read ? 200 : 403
+          );
+
+          const deniedOperations: InjectOptions[] = [];
+          if (!expected.create)
+            deniedOperations.push({ method: 'POST', url: `/api/${model}`, payload: {} });
+          if (!expected.write)
+            deniedOperations.push({ method: 'PUT', url: `/api/${model}/1`, payload: {} });
+          if (!expected.unlink) deniedOperations.push({ method: 'DELETE', url: `/api/${model}/1` });
+          if (!canAccess(role, model, 'action', grants))
+            deniedOperations.push({
+              method: 'POST',
+              url: `/api/${model}/1/action/action_archive`,
+            });
+
+          for (const operation of deniedOperations) {
+            const response = await as(token, operation);
+            expect(response.statusCode, `${role} denied ${operation.method} ${operation.url}`).toBe(
+              403
+            );
+          }
+        }
+      }
+    });
+
+    it('reports active group grants consistently across every registered model', async () => {
+      const models = app.models.getNames();
+      const group = await AccessGroup.query().insert({
+        code: 'registry_grants',
+        name: 'Registry Grants',
+      });
+      const membership = await GroupMembership.query().insert({
+        user_id: alice.user.id,
+        group_id: group.id,
+      });
+      for (const model_name of models) {
+        await ModelAccess.query().insert({
+          group_id: group.id,
+          model_name,
+          read: true,
+          create: true,
+          write: true,
+          unlink: true,
+        });
+      }
+      const grants = await ModelAccess.query().where({ group_id: group.id, active: true });
+      const listed = await as(alice.access_token, { method: 'GET', url: '/api/models' });
+      expect(listed.statusCode).toBe(200);
+      const visible = new Set(
+        listed.json<{ models: { model: string }[] }>().models.map(({ model }) => model)
+      );
+
+      for (const model of models) {
+        const expected = {
+          read: canAccess('user', model, 'read', grants),
+          create: canAccess('user', model, 'create', grants),
+          write: canAccess('user', model, 'write', grants),
+          unlink: canAccess('user', model, 'unlink', grants),
+        };
+        expect(visible.has(model), `granted discovery permission for ${model}`).toBe(expected.read);
+
+        const metadata = await as(alice.access_token, {
+          method: 'GET',
+          url: `/api/${model}/fields`,
+        });
+        expect(metadata.statusCode, `granted metadata access for ${model}`).toBe(
+          expected.read ? 200 : 403
+        );
+        if (expected.read) {
+          expect(
+            metadata.json<{ permissions: typeof expected }>().permissions,
+            `granted permission metadata for ${model}`
+          ).toEqual(expected);
+        }
+
+        // Exercise every allowed HTTP authorization branch without changing data:
+        // managed identity fields fail create validation, while absent IDs stop
+        // write/unlink/action handlers before any record can be mutated.
+        const allowedOperations: {
+          operation: string;
+          request: InjectOptions;
+          statuses: number[];
+        }[] = [];
+        if (expected.create) {
+          allowedOperations.push({
+            operation: 'create',
+            request: { method: 'POST', url: `/api/${model}`, payload: { id: 1 } },
+            statuses: [400],
+          });
+        }
+        if (expected.write) {
+          allowedOperations.push({
+            operation: 'write',
+            request: {
+              method: 'PATCH',
+              url: `/api/${model}/2147483647`,
+              payload: {},
+            },
+            statuses: [400, 404],
+          });
+        }
+        if (expected.unlink) {
+          allowedOperations.push({
+            operation: 'unlink',
+            request: { method: 'DELETE', url: `/api/${model}/2147483647` },
+            statuses: [404],
+          });
+        }
+        if (canAccess('user', model, 'action', grants)) {
+          allowedOperations.push({
+            operation: 'action',
+            request: {
+              method: 'POST',
+              url: `/api/${model}/2147483647/action/action_archive`,
+            },
+            statuses: [404],
+          });
+        }
+        for (const { operation, request, statuses } of allowedOperations) {
+          const response = await as(alice.access_token, request);
+          expect(
+            statuses,
+            `granted ${operation} authorization for ${model} should reach its safe validation boundary (got ${response.statusCode})`
+          ).toContain(response.statusCode);
+        }
+      }
+
+      await GroupMembership.query().findById(membership.id).patch({ active: false });
+    });
+
     it('allows model-specific user writes granted through an access group', async () => {
       const group = await AccessGroup.query().insert({
         code: 'partner_creators',
         name: 'Partner Creators',
       });
-      await GroupMembership.query().insert({ user_id: alice.user.id, group_id: group.id });
+      const membership = await GroupMembership.query().insert({
+        user_id: alice.user.id,
+        group_id: group.id,
+      });
       await ModelAccess.query().insert({
         group_id: group.id,
-        model_name: 'base.partner',
+        model_name: 'base.tag',
         create: true,
         write: true,
+        unlink: true,
       });
+      expect(
+        await ModelAccess.query().findOne({ group_id: group.id, model_name: 'base.tag' })
+      ).toMatchObject({ create: true, write: true, unlink: true });
 
       const created = await as(alice.access_token, {
         method: 'POST',
-        url: '/api/base.partner',
-        payload: { name: 'Group-created partner' },
+        url: '/api/base.tag',
+        payload: { name: 'Group-created tag' },
       });
       expect(created.statusCode).toBe(201);
+      const tagId = created.json<{ data: { id: number } }>().data.id;
+      const tagPermissions = await as(alice.access_token, {
+        method: 'GET',
+        url: '/api/base.tag/fields',
+      });
+      expect(tagPermissions.statusCode, tagPermissions.payload).toBe(200);
+      expect(tagPermissions.json<{ permissions: { write: boolean } }>().permissions.write).toBe(
+        true
+      );
+      const updated = await as(alice.access_token, {
+        method: 'PATCH',
+        url: `/api/base.tag/${tagId}`,
+        payload: { name: 'Group-updated tag' },
+      });
+      expect(updated.statusCode, updated.payload).toBe(200);
+      expect(updated.json<{ data: { name: string } }>().data.name).toBe('Group-updated tag');
+
+      const archived = await as(alice.access_token, {
+        method: 'POST',
+        url: `/api/base.tag/${tagId}/action/action_archive`,
+      });
+      expect(archived.statusCode).toBe(200);
+      const restored = await as(alice.access_token, {
+        method: 'POST',
+        url: `/api/base.tag/${tagId}/action/action_unarchive`,
+      });
+      expect(restored.statusCode).toBe(200);
+
+      const deleted = await as(alice.access_token, {
+        method: 'DELETE',
+        url: `/api/base.tag/${tagId}`,
+      });
+      expect(deleted.statusCode).toBe(200);
+      expect(await Tag.query().findById(tagId)).toMatchObject({ active: false });
+
+      const rpcCreated = await rpc(alice.access_token, [
+        'base.tag',
+        'create',
+        [{ name: 'Group-created RPC tag' }],
+      ]);
+      expect(rpcCreated.statusCode, rpcCreated.payload).toBe(200);
+      expect(rpcCreated.json()).not.toHaveProperty('error');
+      const rpcTagId = rpcCreated.json<{ result: number }>().result;
+      const rpcUpdated = await rpc(alice.access_token, [
+        'base.tag',
+        'write',
+        [[rpcTagId], { name: 'Group-updated RPC tag' }],
+      ]);
+      expect(rpcUpdated.statusCode, rpcUpdated.payload).toBe(200);
+      expect(rpcUpdated.json()).not.toHaveProperty('error');
+      expect(await Tag.query().findById(rpcTagId)).toMatchObject({
+        name: 'Group-updated RPC tag',
+      });
+      const rpcUnlinked = await rpc(alice.access_token, ['base.tag', 'unlink', [[rpcTagId]]]);
+      expect(rpcUnlinked.statusCode, rpcUnlinked.payload).toBe(200);
+      expect(rpcUnlinked.json()).not.toHaveProperty('error');
+      expect(await Tag.query().findById(rpcTagId)).toMatchObject({ active: false });
+
+      const unrelatedModelWrites = await Promise.all([
+        as(alice.access_token, {
+          method: 'POST',
+          url: '/api/base.partner',
+          payload: { name: 'Out-of-scope partner' },
+        }),
+        as(alice.access_token, {
+          method: 'PATCH',
+          url: '/api/base.partner/1',
+          payload: { name: 'Out-of-scope update' },
+        }),
+        as(alice.access_token, {
+          method: 'POST',
+          url: '/api/base.partner/1/action/action_archive',
+        }),
+        as(alice.access_token, { method: 'DELETE', url: '/api/base.partner/1' }),
+      ]);
+      expect(unrelatedModelWrites.map(({ statusCode }) => statusCode)).toEqual([
+        403, 403, 403, 403,
+      ]);
+
+      await GroupMembership.query().findById(membership.id).patch({ active: false });
+      const revoked = await as(alice.access_token, {
+        method: 'POST',
+        url: '/api/base.tag',
+        payload: { name: 'Revoked group tag' },
+      });
+      expect(revoked.statusCode).toBe(403);
+
       const protectedGrant = await as(admin.access_token, {
         method: 'POST',
         url: '/api/base.model_access',
         payload: { group_id: group.id, model_name: 'base.model_access', create: true },
       });
       expect(protectedGrant.statusCode).toBe(400);
+    });
+
+    it('persists REST mutations for both administrative roles', async () => {
+      for (const { role, token } of [
+        { role: 'superadmin', token: admin.access_token },
+        { role: 'system', token: system.access_token },
+      ] as const) {
+        const created = await as(token, {
+          method: 'POST',
+          url: '/api/base.tag',
+          payload: { name: `${role} created tag` },
+        });
+        expect(created.statusCode, `${role} create`).toBe(201);
+        const tagId = created.json<{ data: { id: number } }>().data.id;
+        expect(await Tag.query().findById(tagId)).toMatchObject({
+          name: `${role} created tag`,
+        });
+
+        const updated = await as(token, {
+          method: 'PATCH',
+          url: `/api/base.tag/${tagId}`,
+          payload: { name: `${role} updated tag` },
+        });
+        expect(updated.statusCode, `${role} write`).toBe(200);
+        expect(await Tag.query().findById(tagId)).toMatchObject({
+          name: `${role} updated tag`,
+        });
+
+        const archived = await as(token, {
+          method: 'POST',
+          url: `/api/base.tag/${tagId}/action/action_archive`,
+        });
+        expect(archived.statusCode, `${role} archive`).toBe(200);
+        expect(await Tag.query().findById(tagId)).toMatchObject({ active: false });
+
+        const restored = await as(token, {
+          method: 'POST',
+          url: `/api/base.tag/${tagId}/action/action_unarchive`,
+        });
+        expect(restored.statusCode, `${role} unarchive`).toBe(200);
+        expect(await Tag.query().findById(tagId)).toMatchObject({ active: true });
+
+        const unlinked = await as(token, {
+          method: 'DELETE',
+          url: `/api/base.tag/${tagId}`,
+        });
+        expect(unlinked.statusCode, `${role} unlink`).toBe(200);
+        expect(await Tag.query().findById(tagId)).toMatchObject({ active: false });
+      }
+    });
+
+    it('persists group-granted user mutations on an owned addon record', async () => {
+      const group = await AccessGroup.query().insert({
+        code: 'category_maintainers',
+        name: 'Category Maintainers',
+      });
+      const membership = await GroupMembership.query().insert({
+        user_id: alice.user.id,
+        group_id: group.id,
+      });
+      await ModelAccess.query().insert({
+        group_id: group.id,
+        model_name: 'base.partner_category',
+        create: true,
+        write: true,
+        unlink: true,
+      });
+
+      const created = await as(alice.access_token, {
+        method: 'POST',
+        url: '/api/base.partner_category',
+        payload: { code: `alice-category-${Date.now()}`, name: 'Alice category' },
+      });
+      expect(created.statusCode, created.payload).toBe(201);
+      const categoryId = created.json<{ data: { id: number } }>().data.id;
+      expect(await PartnerCategory.query().findById(categoryId)).toMatchObject({
+        name: 'Alice category',
+      });
+
+      const updated = await as(alice.access_token, {
+        method: 'PATCH',
+        url: `/api/base.partner_category/${categoryId}`,
+        payload: { name: 'Alice updated category' },
+      });
+      expect(updated.statusCode, updated.payload).toBe(200);
+      expect(await PartnerCategory.query().findById(categoryId)).toMatchObject({
+        name: 'Alice updated category',
+      });
+
+      const archived = await as(alice.access_token, {
+        method: 'POST',
+        url: `/api/base.partner_category/${categoryId}/action/action_archive`,
+      });
+      expect(archived.statusCode).toBe(200);
+      expect(await PartnerCategory.query().findById(categoryId)).toMatchObject({ active: false });
+
+      const restored = await as(alice.access_token, {
+        method: 'POST',
+        url: `/api/base.partner_category/${categoryId}/action/action_unarchive`,
+      });
+      expect(restored.statusCode).toBe(200);
+      expect(await PartnerCategory.query().findById(categoryId)).toMatchObject({ active: true });
+
+      const unlinked = await as(alice.access_token, {
+        method: 'DELETE',
+        url: `/api/base.partner_category/${categoryId}`,
+      });
+      expect(unlinked.statusCode).toBe(200);
+      expect(await PartnerCategory.query().findById(categoryId)).toMatchObject({ active: false });
+
+      await GroupMembership.query().findById(membership.id).patch({ active: false });
     });
 
     it('scopes structured addresses and categories to the user partner profile', async () => {
@@ -644,6 +1222,51 @@ describe('authentication and authorization', () => {
       expect(created.statusCode).toBe(201);
       const row = await Partner.query().findById(created.json<{ data: { id: number } }>().data.id);
       expect(row?.create_uid).toBe(admin.user.id);
+    });
+
+    it('rejects client writes to ORM-managed identity and audit fields over REST and RPC', async () => {
+      const partner = await Partner.query().insert({
+        name: 'Server-managed metadata probe',
+        company_id: 1,
+      });
+      const managedFields = ['id', 'create_date', 'write_date', 'create_uid', 'write_uid'] as const;
+      for (const field of managedFields) {
+        const proposedValue = field.endsWith('_date') ? new Date().toISOString() : partner.id + 1;
+        const payload = { name: 'Forged metadata', [field]: proposedValue };
+        const create = await as(admin.access_token, {
+          method: 'POST',
+          url: '/api/base.partner',
+          payload,
+        });
+        expect(create.statusCode, `REST create rejects ${field}`).toBe(400);
+
+        const update = await as(admin.access_token, {
+          method: 'PATCH',
+          url: `/api/base.partner/${partner.id}`,
+          payload: { [field]: proposedValue },
+        });
+        expect(update.statusCode, `REST update rejects ${field}`).toBe(400);
+
+        const rpcCreate = await rpc(admin.access_token, ['base.partner', 'create', [payload]]);
+        expect(
+          rpcCreate.json<{ error: { code: number } }>().error.code,
+          `RPC create rejects ${field}`
+        ).toBe(-32602);
+
+        const rpcUpdate = await rpc(admin.access_token, [
+          'base.partner',
+          'write',
+          [[partner.id], { [field]: proposedValue }],
+        ]);
+        expect(
+          rpcUpdate.json<{ error: { code: number } }>().error.code,
+          `RPC update rejects ${field}`
+        ).toBe(-32602);
+      }
+      await expect(Partner.query().findById(partner.id)).resolves.toMatchObject({
+        name: 'Server-managed metadata probe',
+      });
+      await expect(Partner.query().findOne({ name: 'Forged metadata' })).resolves.toBeUndefined();
     });
 
     it('does not let password hashes be probed through filters or sorting', async () => {
@@ -717,6 +1340,8 @@ describe('authentication and authorization', () => {
         },
       });
       expect(created.statusCode).toBe(201);
+      expect(created.payload).not.toContain('secret-audit-password');
+      expect(created.payload).not.toContain('scrypt$');
       const userId = created.json<{ data: { id: number } }>().data.id;
       const event = await AuditLog.query()
         .findOne({ model: 'base.user', record_id: userId, operation: 'create' })
@@ -734,6 +1359,39 @@ describe('authentication and authorization', () => {
         .throwIfNotFound();
       expect(outboxEvent.status).toBe('pending');
       expect(outboxEvent.payload).not.toContain('secret-audit-password');
+      expect(outboxEvent.payload).not.toContain('scrypt$');
+
+      const restUser = await as(admin.access_token, {
+        method: 'GET',
+        url: `/api/base.user/${userId}?with=partner`,
+      });
+      expect(restUser.statusCode).toBe(200);
+      expect(restUser.payload).not.toContain('secret-audit-password');
+      expect(restUser.payload).not.toContain('scrypt$');
+
+      const rpcUser = await rpc(admin.access_token, ['base.user', 'search_read', [[]], {}]);
+      expect(rpcUser.statusCode).toBe(200);
+      expect(rpcUser.payload).not.toContain('secret-audit-password');
+      expect(rpcUser.payload).not.toContain('scrypt$');
+      const ormUser = await User.query().findById(userId).throwIfNotFound();
+      expect(JSON.stringify(ormUser.toJSON())).not.toContain('scrypt$');
+      expect(
+        JSON.stringify(await User.search_read([['id', '=', userId]], { limit: 1 }))
+      ).not.toContain('scrypt$');
+
+      const sensitiveError = await as(admin.access_token, {
+        method: 'POST',
+        url: '/api/base.user',
+        payload: {
+          login: 'invalid-secret-probe',
+          partner_id: partnerId,
+          password: 'secret-validation-probe',
+          unexpected_secret: 'secret-error-probe',
+        },
+      });
+      expect(sensitiveError.statusCode).toBe(400);
+      expect(sensitiveError.payload).not.toContain('secret-validation-probe');
+      expect(sensitiveError.payload).not.toContain('secret-error-probe');
 
       expect(
         (await as(alice.access_token, { method: 'GET', url: '/api/base.audit_log' })).statusCode
@@ -749,6 +1407,40 @@ describe('authentication and authorization', () => {
           })
         ).statusCode
       ).toBe(403);
+      expect(
+        (
+          await as(admin.access_token, {
+            method: 'POST',
+            url: '/api/base.audit_log',
+            payload: { model: 'base.partner', record_id: partnerId, operation: 'create' },
+          })
+        ).statusCode
+      ).toBe(403);
+      expect(
+        (
+          await as(admin.access_token, {
+            method: 'PATCH',
+            url: `/api/base.audit_log/${event.id}`,
+            payload: { changes: '{"forged":true}' },
+          })
+        ).statusCode
+      ).toBe(403);
+
+      for (const [method, args] of [
+        ['create', [[{ model: 'base.partner', record_id: partnerId, operation: 'create' }]]],
+        ['write', [[event.id], { changes: '{"forged":true}' }]],
+        ['unlink', [[event.id]]],
+      ] as const) {
+        const rpcMutation = await rpc(admin.access_token, ['base.audit_log', method, args]);
+        expect(rpcMutation.statusCode).toBe(403);
+        expect(rpcMutation.json<{ error: { code: number } }>().error.code).toBe(-32003);
+      }
+      await expect(AuditLog.query().findById(event.id)).resolves.toMatchObject({
+        id: event.id,
+        model: 'base.user',
+        record_id: userId,
+        operation: 'create',
+      });
 
       const rpcWrite = await rpc(admin.access_token, [
         'base.partner',
@@ -801,6 +1493,25 @@ describe('authentication and authorization', () => {
         ).toBe(403);
       } finally {
         await User.query().findById(admin.user.id).patch({ role: 'superadmin' });
+      }
+    });
+
+    it('applies role and active-state changes immediately to existing access tokens', async () => {
+      await User.query().findById(admin.user.id).patch({ role: 'user' });
+      try {
+        const demoted = await as(admin.access_token, {
+          method: 'GET',
+          url: '/api/base.user',
+        });
+        expect(demoted.statusCode).toBe(403);
+        await User.query().findById(admin.user.id).patch({ active: false });
+        const disabled = await as(admin.access_token, {
+          method: 'GET',
+          url: '/api/base.user',
+        });
+        expect(disabled.statusCode).toBe(401);
+      } finally {
+        await User.query().findById(admin.user.id).patch({ role: 'superadmin', active: true });
       }
     });
   });

@@ -1,0 +1,12 @@
+sequenceDiagram
+  participant api as API request
+  participant database as PostgreSQL
+  participant worker as Outbox worker
+  participant handler as Idempotent handler
+  api->>database: Write domain state and outbox event in one transaction
+  database-->>api: Commit both records atomically
+  worker->>database: Claim due rows using a lease and SKIP LOCKED
+  database-->>worker: Return claimed event IDs and payloads
+  worker->>handler: Dispatch event with stable event ID
+  handler-->>worker: Acknowledge success or retryable failure
+  worker->>database: Mark delivered, schedule retry, or move exhausted event to dead state

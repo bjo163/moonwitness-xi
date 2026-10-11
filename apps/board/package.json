@@ -12,9 +12,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@moonwitness/ui": "workspace:*",
     "@moonwitness/client": "workspace:*",
     "@tanstack/react-query": "^5.104.0",
-    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "lucide-react": "^1.49.0",
@@ -23,10 +23,10 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router": "^8.4.0",
-    "sonner": "^2.0.8",
     "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^26.6.4",
     "@types/react": "^19.2.18",

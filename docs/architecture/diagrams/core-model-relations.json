@@ -1,0 +1,636 @@
+{
+  "schemaVersion": 1,
+  "addons": ["auth", "base", "jobs", "notification"],
+  "generatedFrom": "core addon manifests and model field metadata; no seed values included",
+  "sourceSha256": "ccb700e9a67bf3f7942f97d5bb3fd473be39c3e928f453c212f992dad0761bfe",
+  "models": [
+    {
+      "name": "auth.refresh_token",
+      "table": "auth_refresh_tokens"
+    },
+    {
+      "name": "base.access_group",
+      "table": "access_groups"
+    },
+    {
+      "name": "base.activity",
+      "table": "activities"
+    },
+    {
+      "name": "base.attachment",
+      "table": "attachments"
+    },
+    {
+      "name": "base.audit_log",
+      "table": "audit_logs"
+    },
+    {
+      "name": "base.bank",
+      "table": "banks"
+    },
+    {
+      "name": "base.company",
+      "table": "companies"
+    },
+    {
+      "name": "base.company_membership",
+      "table": "company_memberships"
+    },
+    {
+      "name": "base.country",
+      "table": "countries"
+    },
+    {
+      "name": "base.country_state",
+      "table": "country_states"
+    },
+    {
+      "name": "base.cron",
+      "table": "crons"
+    },
+    {
+      "name": "base.currency",
+      "table": "currencies"
+    },
+    {
+      "name": "base.group_membership",
+      "table": "group_memberships"
+    },
+    {
+      "name": "base.job",
+      "table": "jobs"
+    },
+    {
+      "name": "base.job_run",
+      "table": "job_runs"
+    },
+    {
+      "name": "base.language",
+      "table": "languages"
+    },
+    {
+      "name": "base.model_access",
+      "table": "model_access"
+    },
+    {
+      "name": "base.outbox_event",
+      "table": "outbox_events"
+    },
+    {
+      "name": "base.partner",
+      "table": "partners"
+    },
+    {
+      "name": "base.partner_address",
+      "table": "partner_addresses"
+    },
+    {
+      "name": "base.partner_bank",
+      "table": "partner_banks"
+    },
+    {
+      "name": "base.partner_category",
+      "table": "partner_categories"
+    },
+    {
+      "name": "base.partner_category_link",
+      "table": "partner_category_links"
+    },
+    {
+      "name": "base.sequence",
+      "table": "sequences"
+    },
+    {
+      "name": "base.tag",
+      "table": "tags"
+    },
+    {
+      "name": "base.tag_link",
+      "table": "tag_links"
+    },
+    {
+      "name": "base.user",
+      "table": "users"
+    },
+    {
+      "name": "integration.webhook_delivery",
+      "table": "integration_webhook_deliveries"
+    },
+    {
+      "name": "integration.webhook_endpoint",
+      "table": "integration_webhook_endpoints"
+    },
+    {
+      "name": "notification.notification",
+      "table": "notifications"
+    },
+    {
+      "name": "notification.preference",
+      "table": "notification_preferences"
+    },
+    {
+      "name": "notification.template",
+      "table": "notification_templates"
+    },
+    {
+      "name": "organization.department",
+      "table": "organization_departments"
+    },
+    {
+      "name": "organization.membership",
+      "table": "organization_memberships"
+    },
+    {
+      "name": "organization.position",
+      "table": "organization_positions"
+    },
+    {
+      "name": "organization.team",
+      "table": "organization_teams"
+    },
+    {
+      "name": "request.purchase",
+      "table": "purchase_requests"
+    },
+    {
+      "name": "workflow.approval",
+      "table": "workflow_approvals"
+    },
+    {
+      "name": "workflow.definition",
+      "table": "workflow_definitions"
+    },
+    {
+      "name": "workflow.event",
+      "table": "workflow_events"
+    },
+    {
+      "name": "workflow.instance",
+      "table": "workflow_instances"
+    }
+  ],
+  "relations": [
+    {
+      "from": "auth.refresh_token",
+      "field": "user",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.activity",
+      "field": "assigned_to",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.bank",
+      "field": "country",
+      "to": "base.country",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.company",
+      "field": "country",
+      "to": "base.country",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.company",
+      "field": "currency",
+      "to": "base.currency",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.company",
+      "field": "language",
+      "to": "base.language",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.company_membership",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.company_membership",
+      "field": "user",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.country_state",
+      "field": "country",
+      "to": "base.country",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.cron",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.cron",
+      "field": "requested_by",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.group_membership",
+      "field": "group",
+      "to": "base.access_group",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.group_membership",
+      "field": "user",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.job",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.job",
+      "field": "requested_by",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.job_run",
+      "field": "job",
+      "to": "base.job",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.model_access",
+      "field": "group",
+      "to": "base.access_group",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.outbox_event",
+      "field": "actor",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.outbox_event",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.partner",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.partner",
+      "field": "country",
+      "to": "base.country",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.partner",
+      "field": "parent",
+      "to": "base.partner",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.partner",
+      "field": "state",
+      "to": "base.country_state",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.partner_address",
+      "field": "country",
+      "to": "base.country",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.partner_address",
+      "field": "partner",
+      "to": "base.partner",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.partner_address",
+      "field": "state",
+      "to": "base.country_state",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.partner_bank",
+      "field": "bank",
+      "to": "base.bank",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.partner_bank",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.partner_bank",
+      "field": "currency",
+      "to": "base.currency",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.partner_bank",
+      "field": "partner",
+      "to": "base.partner",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.partner_category_link",
+      "field": "category",
+      "to": "base.partner_category",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.partner_category_link",
+      "field": "partner",
+      "to": "base.partner",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.tag_link",
+      "field": "tag",
+      "to": "base.tag",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.user",
+      "field": "language",
+      "to": "base.language",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "base.user",
+      "field": "partner",
+      "to": "base.partner",
+      "cardinality": "1:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "integration.webhook_delivery",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "integration.webhook_delivery",
+      "field": "endpoint",
+      "to": "integration.webhook_endpoint",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "integration.webhook_endpoint",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "notification.notification",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "notification.notification",
+      "field": "recipient",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "notification.notification",
+      "field": "template",
+      "to": "notification.template",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "notification.preference",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "notification.preference",
+      "field": "user",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "organization.department",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "organization.department",
+      "field": "parent",
+      "to": "organization.department",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "organization.membership",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "organization.membership",
+      "field": "department",
+      "to": "organization.department",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "organization.membership",
+      "field": "manager",
+      "to": "organization.membership",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "organization.membership",
+      "field": "position",
+      "to": "organization.position",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "organization.membership",
+      "field": "team",
+      "to": "organization.team",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "organization.membership",
+      "field": "user",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "organization.position",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "organization.position",
+      "field": "department",
+      "to": "organization.department",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "organization.team",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "organization.team",
+      "field": "department",
+      "to": "organization.department",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "organization.team",
+      "field": "parent",
+      "to": "organization.team",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "request.purchase",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "request.purchase",
+      "field": "currency",
+      "to": "base.currency",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "request.purchase",
+      "field": "vendor",
+      "to": "base.partner",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "workflow.approval",
+      "field": "actor",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "workflow.approval",
+      "field": "instance",
+      "to": "workflow.instance",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "workflow.event",
+      "field": "actor",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "workflow.event",
+      "field": "instance",
+      "to": "workflow.instance",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "workflow.instance",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "workflow.instance",
+      "field": "definition",
+      "to": "workflow.definition",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "workflow.instance",
+      "field": "started_by",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    }
+  ]
+}

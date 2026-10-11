@@ -1,0 +1,97 @@
+/* MoonWitness design token source. Keep framework adapters value-free. */
+:root {
+  color-scheme: light;
+
+  /* Brand palette */
+  --mw-paper: #f3efe4;
+  --mw-paper-raised: #fffdf6;
+  --mw-ink: #0d0d0d;
+  --mw-ink-soft: #3a3a36;
+  --mw-ink-faint: #6b695f;
+  --mw-lime: #e6ff00;
+  --mw-pink: #ff2e88;
+  --mw-on-accent: #0d0d0d;
+  --mw-on-pink: #0d0d0d;
+  --mw-halftone-dot: rgb(13 13 13 / 13%);
+
+  /* Semantic colors */
+  --mw-background: var(--mw-paper);
+  --mw-foreground: var(--mw-ink);
+  --mw-surface: var(--mw-paper-raised);
+  --mw-surface-foreground: var(--mw-ink);
+  --mw-popover: var(--mw-paper-raised);
+  --mw-popover-foreground: var(--mw-ink);
+  --mw-primary: var(--mw-lime);
+  --mw-primary-foreground: var(--mw-on-accent);
+  --mw-secondary: var(--mw-paper);
+  --mw-secondary-foreground: var(--mw-ink);
+  --mw-muted: #e7e2d4;
+  --mw-muted-foreground: var(--mw-ink-soft);
+  --mw-accent: var(--mw-lime);
+  --mw-accent-foreground: var(--mw-on-accent);
+  --mw-destructive: var(--mw-pink);
+  --mw-destructive-foreground: var(--mw-on-pink);
+  --mw-border: var(--mw-ink);
+  --mw-input: var(--mw-ink);
+  --mw-focus: var(--mw-ink);
+  --mw-success: #166534;
+  --mw-on-success: #fffdf6;
+  --mw-warning: #facc15;
+  --mw-on-warning: #0d0d0d;
+  --mw-info: #175cd3;
+  --mw-on-info: #fffdf6;
+
+  /* Charts use color plus labels, shape, or line style; color is never the sole cue. */
+  --mw-chart-1: #476a2a;
+  --mw-chart-2: #ff2e88;
+  --mw-chart-3: #176b87;
+  --mw-chart-4: #936a22;
+  --mw-chart-5: #76519b;
+
+  /* Typography: applications may self-host fonts and override these stacks. */
+  --mw-font-display: 'Anton', Impact, 'Arial Narrow', sans-serif;
+  --mw-font-sans: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --mw-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  --mw-font-size-xs: 0.75rem;
+  --mw-font-size-sm: 0.875rem;
+  --mw-font-size-md: 1rem;
+  --mw-font-size-lg: 1.125rem;
+  --mw-font-size-xl: 1.25rem;
+  --mw-font-size-2xl: 1.5rem;
+  --mw-line-height-tight: 1.2;
+  --mw-line-height-normal: 1.5;
+
+  /* Spacing, shape, depth and motion */
+  --mw-space-1: 0.25rem;
+  --mw-space-2: 0.5rem;
+  --mw-space-3: 0.75rem;
+  --mw-space-4: 1rem;
+  --mw-space-6: 1.5rem;
+  --mw-space-8: 2rem;
+  --mw-radius-sm: 0.125rem;
+  --mw-radius-md: 0.25rem;
+  --mw-radius-lg: 0.5rem;
+  --mw-shadow-ink: 3px 3px 0 0 var(--mw-ink);
+  --mw-shadow-ink-lg: 6px 6px 0 0 var(--mw-ink);
+  --mw-motion-fast: 120ms;
+  --mw-motion-normal: 160ms;
+  --mw-motion-ease: ease;
+}
+
+.dark {
+  color-scheme: dark;
+  --mw-paper: #0e0e10;
+  --mw-paper-raised: #17171a;
+  --mw-ink: #f3efe4;
+  --mw-ink-soft: #c9c5b8;
+  --mw-ink-faint: #9b988f;
+  --mw-halftone-dot: rgb(243 239 228 / 9%);
+  --mw-muted: #232327;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --mw-motion-fast: 0ms;
+    --mw-motion-normal: 0ms;
+  }
+}

@@ -32,6 +32,8 @@ Simpan bukti aktual di `docs/roadmap/evidence/M11.01.md`. Jangan menandai aktiva
 2. Gunakan marker machine-readable repo+task ID pada issue; nomor issue dicari dari remote, bukan hardcoded source utama.
 3. Validasi unique ID, missing card, dependency cycle, checkbox/evidence mismatch serta paths aman.
 
+Implementasi minimum: `docs/roadmap/task.schema.json` mendefinisikan task index versioned dan property yang diperbolehkan. `pnpm automation:check:roadmap` memeriksa index aktual terhadap master checklist, card heading dan evidence link; `pnpm test:roadmap` menguji fixture valid, duplicate ID, dependency missing/cycle, path traversal, checkbox drift, malformed metadata dan evidence yang hilang. Marker remote memakai repository ID yang diperoleh dari GitHub API saat apply, bersama Task ID; jangan menyimpan nomor issue atau repository ID fork di tasks.json.
+
 ### Verifikasi dan syarat selesai
 
 Task invalid menolak sync sebelum API write; rename title tidak membuat issue baru.
@@ -46,13 +48,16 @@ Simpan bukti aktual di `docs/roadmap/evidence/M11.02.md`. Jangan menandai aktiva
 
 ### Langkah pelaksanaan
 
-1. Enumerasi semua managed issues open/closed memakai pagination dan filter PR entries.
-2. Hitung operations create/update/no-op berdasarkan stable ID dan normalized generated block.
-3. Sediakan plan-only default, apply eksplisit, source SHA report dan no-delete behavior.
+1. Enumerasi issues open dan closed dengan pagination 100 per halaman; buang pull request entries dan batasi identity ke repository numeric ID yang sedang diproses.
+2. Hitung create/update/no-op/conflict berdasarkan marker repo ID + task ID dan konten generated; judul tidak menjadi identity. Duplicate marker atau generated-block yang rusak harus menjadi conflict tanpa mutasi.
+3. Pertahankan seluruh isi body di luar managed block (termasuk catatan maintainer), jangan menghapus issue, label manusia atau komentar, dan jangan pernah menjalankan shell berdasarkan issue content.
+4. Dry-run menjadi default. Tampilkan source SHA, hash input plan dan daftar operasi; pada repository publik, read-only planning dapat berjalan tanpa credential menggunakan akses anonim. Repository privat memerlukan token read yang sesuai. Mutasi hanya melalui `--apply` eksplisit dengan token scoped dari environment.
+5. Sebelum apply, ambil ulang remote state dan tolak plan jika hash berubah. Jalankan API write serial. Jika create timeout, baca ulang marker sebelum mempertimbangkan retry agar create yang sebenarnya sukses tidak menjadi duplikat.
+6. Validasi seluruh task/index sebelum remote read/write; fail closed pada autentikasi, rate limit, response invalid, duplicate identity atau malformed generated boundaries.
 
 ### Verifikasi dan syarat selesai
 
-Dua apply identik hanya membuat satu issue per ID; timeout create lalu retry menemukan issue yang sudah terbuat.
+Dua apply identik hanya membuat satu issue per ID; timeout create lalu retry menemukan issue yang sudah terbuat. Fixture tests menutup open/closed pagination, pull request filtering, repo scoping, duplicate markers, managed-block preservation yang idempotent meskipun ada catatan maintainer, strict marker validation, stale-plan rejection, no-op idempotence dan ambiguous create recovery. Acceptance remote apply tetap milik pilot/bootstrap M11.14; M11.03 sendiri tidak mengimpor seluruh roadmap.
 
 Simpan bukti aktual di `docs/roadmap/evidence/M11.03.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.
 
@@ -65,7 +70,7 @@ Simpan bukti aktual di `docs/roadmap/evidence/M11.03.md`. Jangan menandai aktiva
 ### Langkah pelaksanaan
 
 1. Render title [Mxx.yy], tujuan, source SHA/card link, langkah, acceptance, dependencies dan evidence link.
-2. Upsert milestone/managed labels yang diperlukan tanpa menghapus label manusia; resolve assignee hanya akun valid.
+2. Render label `roadmap`, `milestone:<id>`, priority dan label task; buat label/milestone yang belum ada hanya pada apply. Jangan mengubah definisi label atau menghapus label issue yang sudah ada. Resolve assignee melalui GitHub Users API dan gagalkan sync jika akun tidak valid.
 3. Gunakan parent/sub-issue/dependency API jika didukung; fallback references/link list jika tidak tanpa memblokir core sync.
 
 ### Verifikasi dan syarat selesai
@@ -126,6 +131,8 @@ Simpan bukti aktual di `docs/roadmap/evidence/M11.06.md`. Jangan menandai aktiva
 
 Task code verified di dev tidak diklaim released; task aktivasi remote tidak closed sebelum remote evidence.
 
+Evaluator lokal memisahkan work status dari delivery stage, menolak status complete tanpa acceptance evidence dan source SHA penuh, mensyaratkan ancestry dev dan `ci-gate` sukses pada head SHA dev terbaru, serta membedakan ancestry main dari tag GitHub Release yang memuat source. Collector mengambil current refs/check runs/releases read-only dan checkout full-history membuktikan ancestry; importer memvalidasi repository ID, exact plan SHA, freshness lima menit, coverage task index, dependency, dan status issue. Complete task dengan hard dependency belum selesai tetap tercatat sebagai complete namun membawa blocker dan tidak menjadi kandidat close, sehingga satu inkonsistensi dependency tidak menggagalkan seluruh snapshot. Plan summary menyebut close candidates dan manual-close triage. Manual apply kini memakai snapshot baru dan task IDs eksplisit maksimal lima; hanya menutup issue existing yang masih open ketika evaluator memberi `shouldClose`, dan re-read menolak race/perubahan manual. Test mencakup close kandidat terverifikasi, manual close setelah planning, serta adapter yang hanya mengirim `state: closed` pada operasi eksplisit. Hosted exact-source rerun read-only `37518455456` pada SHA `2012eaa4d49bad3a8bf41159bc12983956566800` sebelumnya sukses. Implementasi adapter dan gate workflow lokal tersedia, tetapi exact-source hosted apply pilot/recovery belum dilakukan sehingga M11.07 tetap parsial.
+
 Simpan bukti aktual di `docs/roadmap/evidence/M11.07.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.
 
 ## M11.08 — Terima perubahan status dari maintainer tanpa memberikan eksekusi kode melalui issue.
@@ -144,6 +151,19 @@ Simpan bukti aktual di `docs/roadmap/evidence/M11.07.md`. Jangan menandai aktiva
 
 User tanpa write tidak dapat memicu push/publish; status update tidak menyebabkan infinite issue↔git loop.
 
+Intake planner lokal pada `scripts/roadmap/issue-intake.mjs` hanya menghasilkan proposal. Adapter `scripts/roadmap/github-issue-intake.mjs` memvalidasi raw `issue_comment.created` payload, numeric repository ID dan repository full name, satu exact managed-task marker, comment/issue numeric identities, bot/PR exclusion, serta grammar `/mw status|scope|close|reopen -- <text>`. Sebelum proposal, adapter memeriksa permission aktor saat ini lewat GitHub collaborator-permission API; hanya `write`/`admin` diterima dan kegagalan lookup menolak event. Endpoint ini perlu `Metadata: read`, yang tidak tersedia sebagai scope eksplisit `GITHUB_TOKEN`; workflow meminta repository-scoped GitHub App token dengan permission minimum tersebut. Ia berhenti jelas bila variable `ROADMAP_INTAKE_APP_CLIENT_ID` atau secret `ROADMAP_INTAKE_APP_PRIVATE_KEY` belum tersedia. Workflow `.github/workflows/roadmap-issue-intake.yml` memakai checkout `github.sha` tanpa credential persistence dan tidak meminta write scope. `run-issue-intake.mjs` melaporkan metadata proposal ke Actions summary tanpa comment/rationale/body dan tanpa mutasi.
+
+Sintaks yang dikenali (bukan berarti dieksekusi):
+
+```text
+/mw status blocked -- Menunggu review maintainer.
+/mw scope -- Usulan perubahan batas acceptance.
+/mw close -- Acceptance sudah dibuktikan; minta lifecycle review.
+/mw reopen -- Bukti perlu diperiksa ulang.
+```
+
+Workflow ini baru ada di source `dev`; aktivasi hosted menunggu konfigurasi GitHub App, promosi ke `main`, dan bukti run. Comment ID memberi kunci redelivery deterministik, tetapi Actions concurrency hanya menghindari overlap dan bukan durable deduplication store. Tidak ada issue event yang dapat menulis source atau mengubah issue.
+
 Simpan bukti aktual di `docs/roadmap/evidence/M11.08.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.
 
 ## M11.09 — Buat dashboard kemajuan dan GitHub Projects projection bila tersedia.
@@ -157,6 +177,8 @@ Simpan bukti aktual di `docs/roadmap/evidence/M11.08.md`. Jangan menandai aktiva
 1. Bangun summary per milestone: todo/running/blocked/verified/main/released dengan source timestamp.
 2. Jika Projects tersedia, petakan fields status/priority/lane/task ID dan upsert item per issue node ID.
 3. Jika Projects unavailable, publish issue/dashboard summary setara; jangan membuat branch tambahan.
+4. Tampilkan read-only summary pada GitHub Pages docs portal: work status dan delivery stage terpisah, exact source SHA/waktu terlihat, dan status delivery unknown tanpa snapshot lifecycle tepercaya.
+5. Sertakan acceptance browser untuk deep link dalam Pages base path, provenance/status label, tabel semua milestone, keyboard semantics dan overflow mobile; jangan memasukkan issue body, komentar atau data privat ke bundle publik.
 
 ### Verifikasi dan syarat selesai
 
@@ -234,6 +256,8 @@ Simpan bukti aktual di `docs/roadmap/evidence/M11.12.md`. Jangan menandai aktiva
 
 Status-only push tidak bump; retry prepare tidak bump lagi; satu code change menghasilkan satu stable version per promotion batch.
 
+Regression integration fixture pada `scripts/release-loop.test.mjs` merangkai classifier/planner dan preparer: satu feature commit menghasilkan satu RC candidate; docs/status commits dan `chore(release)` preparation commit tidak mengubah candidate; rerun pada manifests/CHANGELOG hasil prepare menjadi `already-prepared` tanpa file write. Workflow issue plan hanya memiliki read permission untuk repo content dan issue apply mengubah Issues saja; tidak ada issue mapping/status commit kembali ke Git. Hosted release preparation masih menunggu workflow default-branch/auth gate M7.05 sehingga M11.13 tetap parsial.
+
 Simpan bukti aktual di `docs/roadmap/evidence/M11.13.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.
 
 ## M11.14 — Uji seluruh siklus roadmap → issue → commit → CI → PR → merge → release → status.
@@ -252,6 +276,10 @@ Simpan bukti aktual di `docs/roadmap/evidence/M11.13.md`. Jangan menandai aktiva
 
 Semua event idempotent; no premature close/version; expected one issue/task dan one promotion PR; no third branch.
 
+Regression fixtures yang sudah berjalan menguji initial plan/no-op, update dengan catatan manusia yang berubah serentak, perubahan managed content yang menolak PATCH, stale input plan, duplicate marker, write permission dicabut sebelum metadata/update, create timeout yang pulih hanya setelah marker ditemukan, serta kegagalan create tanpa blind retry. Lifecycle fixtures menolak snapshot basi/salah SHA, required checks pada SHA lain atau gagal, dependency belum selesai, dan manual close tanpa evidence. Ini menyelesaikan fault tests lokal untuk issue projection saja; simulasi out-of-order hosted events, auth nyata, CI→PR→merge→release satu siklus dan task pilot tetap bergantung pada M11.07/M11.08/M11.11/M7.14 dan aktivasi GitHub.
+
+M11.05 follow-up: reconciliation tidak lagi memangkas whitespace pada prefix/suffix body di luar managed markers. Test membandingkan isi di kedua sisi byte-for-byte setelah update; issue legacy yang sudah memiliki identity marker tetapi belum memiliki generated block tetap mempertahankan diskusinya persis ketika block ditambahkan.
+
 Simpan bukti aktual di `docs/roadmap/evidence/M11.14.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.
 
 ## M11.15 — Sediakan runbook audit/recovery dan pemeriksaan drift issue/roadmap.
@@ -269,5 +297,7 @@ Simpan bukti aktual di `docs/roadmap/evidence/M11.14.md`. Jangan menandai aktiva
 ### Verifikasi dan syarat selesai
 
 Recovery import menjaga diskusi; stale roadmap projection terdeteksi; unresolved conflict tetap terlihat.
+
+Implementasi parsial: `scripts/roadmap/audit-issues.mjs` membaca semua managed issue open/closed, membandingkan marker ID, source SHA, milestone, managed labels, dan Card/Evidence target tanpa mengambil URL arbitrer atau mencetak body/notes. Ia melaporkan orphan sebagai `needs-triage` rekomendasi tanpa write. `Roadmap issue sync` memanggil audit read-only sebelum planner dan menghapus JSON ephemeral melalui EXIT trap; `docs/operations/roadmap-sync.md` berisi interpretasi drift dan bounded recovery. Hosted audit/pagination/failure recovery serta M11.14 write/fault pilot belum dibuktikan, maka M11.15 tetap terbuka.
 
 Simpan bukti aktual di `docs/roadmap/evidence/M11.15.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.

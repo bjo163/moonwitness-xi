@@ -23,14 +23,17 @@ import {
 } from 'lucide-react';
 import type { Domain, ResolvedViews } from '@moonwitness/client';
 import { client } from '@/lib/client';
+import { formatDateTime } from '@/lib/date-format';
+import { scopedQueryKey } from '@/lib/query-scope';
 import { useRecordMutations, useRecords } from '@/hooks/use-model';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@moonwitness/ui/components/button';
+import { Input } from '@moonwitness/ui/components/input';
+import { Skeleton } from '@moonwitness/ui/components/skeleton';
+import { Popover, PopoverContent, PopoverTrigger } from '@moonwitness/ui/components/popover';
 import { Doodle, SpeedLines } from '@/components/manga/effects';
 import { cn } from '@/lib/utils';
-import { FieldCell, relationKey } from './fields';
+import { FieldCell } from './fields';
+import { relationKey } from './field-utils';
 import { ImportWizardDialog } from './import-wizard-dialog';
 import { QueryBuilderDialog, type FilterRule } from './query-builder-dialog';
 
@@ -224,7 +227,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
   const currentOrder = sortState ? `${sortState.col} ${sortState.dir}` : views.list.order;
 
   const offset = (page - 1) * pageSize;
-  const { data, isLoading, isPlaceholderData } = useRecords(model, {
+  const { data, isLoading, isFetching, isPlaceholderData, isError, refetch } = useRecords(model, {
     domain,
     offset,
     limit: pageSize,
@@ -237,7 +240,8 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
   const columns = useMemo(() => {
     return views.list.columns
       .map((colName) => views.fields.find((f) => f.name === colName))
-      .filter((f): f is NonNullable<typeof f> => Boolean(f));
+      .filter((f): f is NonNullable<typeof f> => Boolean(f))
+      .filter((field) => !field.writeOnly);
   }, [views]);
 
   const mutations = useRecordMutations(model);
@@ -331,7 +335,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
     }
 
     return stages;
-  }, [groupingField, data?.records]);
+  }, [groupingField, data]);
 
   const handleMoveStage = async (recordId: number, newStage: string) => {
     if (!groupingField) return;
@@ -349,7 +353,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
   const [tagPopoverOpen, setTagPopoverOpen] = useState(false);
   const [isMassTagging, setIsMassTagging] = useState(false);
   const { data: availableTagsData } = useQuery({
-    queryKey: ['available_tags'],
+    queryKey: scopedQueryKey(['available_tags']),
     queryFn: () =>
       client
         .model<{ id: number; name: string; color: string }>('base.tag')
@@ -397,11 +401,12 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
       selectedIds.length > 0
         ? data.records.filter((r) => selectedIds.includes(r.id as number))
         : data.records;
+    const exportColumns = columns.filter((column) => !column.writeOnly);
 
-    const headers = ['ID', ...columns.map((c) => c.label)];
+    const headers = ['ID', ...exportColumns.map((c) => c.label)];
     const rows = recordsToExport.map((row) => [
       String(row.id),
-      ...columns.map((c) => {
+      ...exportColumns.map((c) => {
         const val = row[c.name];
         if (val === null || val === undefined) return '';
         if (typeof val === 'object') {
@@ -411,11 +416,12 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
       }),
     ]);
 
-    const escapeCsv = (val: string) => {
-      if (val.includes(',') || val.includes('"') || val.includes('\n')) {
-        return `"${val.replace(/"/g, '""')}"`;
+    const escapeCsv = (value: string) => {
+      const safeValue = /^[=+\-@]/u.test(value.trimStart()) ? `'${value}` : value;
+      if (safeValue.includes(',') || safeValue.includes('"') || safeValue.includes('\n')) {
+        return `"${safeValue.replace(/"/g, '""')}"`;
       }
-      return val;
+      return safeValue;
     };
 
     const csvContent = [
@@ -729,6 +735,24 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
           </div>
         </div>
       </div>
+
+      {isError && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 border-2 border-ink bg-pink p-3 font-bold text-on-pink shadow-ink"
+        >
+          <span>Could not load records. Check your connection and try again.</span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isFetching}
+            onClick={() => void refetch()}
+            className="border-paper text-on-pink hover:bg-white hover:text-ink"
+          >
+            {isFetching ? 'Retrying…' : 'Retry'}
+          </Button>
+        </div>
+      )}
 
       {/* Main Content: Table, Grid, or Pipeline */}
       {viewMode === 'table' && (
@@ -1084,9 +1108,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                     {/* Card Footer */}
                     <div className="mt-4 flex items-center justify-between border-t border-ink/15 pt-2.5">
                       <span className="font-mono text-[10px] text-ink-faint">
-                        {row.write_date
-                          ? new Date(String(row.write_date)).toLocaleDateString()
-                          : '—'}
+                        {row.write_date ? formatDateTime(String(row.write_date), 'date') : '—'}
                       </span>
                       <Button
                         variant="ghost"
@@ -1355,7 +1377,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
               size="sm"
               onClick={handleBulkArchive}
               disabled={isBulkArchiving}
-              className="gap-1.5 hover:bg-pink hover:text-white"
+              className="gap-1.5 hover:bg-pink hover:text-on-pink"
             >
               {isBulkArchiving ? (
                 <Loader2 className="size-3.5 animate-spin" />
@@ -1443,19 +1465,21 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
       />
 
       {/* Advanced Query Builder Dialog */}
-      <QueryBuilderDialog
-        open={queryBuilderOpen}
-        onOpenChange={setQueryBuilderOpen}
-        model={model}
-        views={views}
-        initialRules={advancedRules}
-        initialConjunction={advancedConjunction}
-        onApply={(rules, conj) => {
-          setAdvancedRules(rules);
-          setAdvancedConjunction(conj);
-          setPage(1);
-        }}
-      />
+      {queryBuilderOpen && (
+        <QueryBuilderDialog
+          open
+          onOpenChange={setQueryBuilderOpen}
+          model={model}
+          views={views}
+          initialRules={advancedRules}
+          initialConjunction={advancedConjunction}
+          onApply={(rules, conj) => {
+            setAdvancedRules(rules);
+            setAdvancedConjunction(conj);
+            setPage(1);
+          }}
+        />
+      )}
     </div>
   );
 }

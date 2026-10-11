@@ -6,18 +6,14 @@ inputs:
     required: false
     default: '22'
   pnpm-version:
-    description: pnpm major used by repository workflows
+    description: Exact pnpm version pinned by the workspace
     required: false
-    default: '11'
+    default: '11.17.0'
 runs:
   using: composite
   steps:
-    - uses: pnpm/action-setup@v4
+    - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
       with:
         version: ${{ inputs.pnpm-version }}
-    - uses: actions/setup-node@v4
-      with:
-        node-version: ${{ inputs.node-version }}
-        cache: pnpm
-    - run: pnpm install --frozen-lockfile
-      shell: bash
+        runtime: node@${{ inputs.node-version }}
+        install: false

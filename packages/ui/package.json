@@ -1,0 +1,174 @@
+{
+  "name": "@moonwitness/ui",
+  "version": "1.0.0-rc.1",
+  "description": "MoonWitness design tokens, typed icons, accessible controls and composition primitives",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "type": "module",
+  "license": "ISC",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "files": [
+    "dist",
+    "src/styles",
+    "README.md",
+    "TOKENS.md"
+  ],
+  "exports": {
+    "./components.css": "./src/styles/components.css",
+    "./components/button": {
+      "types": "./dist/components/button.d.ts",
+      "import": "./dist/components/button.js"
+    },
+    "./components/input": {
+      "types": "./dist/components/input.d.ts",
+      "import": "./dist/components/input.js"
+    },
+    "./components/checkbox": {
+      "types": "./dist/components/checkbox.d.ts",
+      "import": "./dist/components/checkbox.js"
+    },
+    "./components/badge": {
+      "types": "./dist/components/badge.d.ts",
+      "import": "./dist/components/badge.js"
+    },
+    "./components/avatar": {
+      "types": "./dist/components/avatar.d.ts",
+      "import": "./dist/components/avatar.js"
+    },
+    "./components/select-field": {
+      "types": "./dist/components/select-field.d.ts",
+      "import": "./dist/components/select-field.js"
+    },
+    "./components/dialog": {
+      "types": "./dist/components/dialog.d.ts",
+      "import": "./dist/components/dialog.js"
+    },
+    "./components/command": {
+      "types": "./dist/components/command.d.ts",
+      "import": "./dist/components/command.js"
+    },
+    "./components/label": {
+      "types": "./dist/components/label.d.ts",
+      "import": "./dist/components/label.js"
+    },
+    "./components/popover": {
+      "types": "./dist/components/popover.d.ts",
+      "import": "./dist/components/popover.js"
+    },
+    "./components/sheet": {
+      "types": "./dist/components/sheet.d.ts",
+      "import": "./dist/components/sheet.js"
+    },
+    "./components/switch": {
+      "types": "./dist/components/switch.d.ts",
+      "import": "./dist/components/switch.js"
+    },
+    "./components/textarea": {
+      "types": "./dist/components/textarea.d.ts",
+      "import": "./dist/components/textarea.js"
+    },
+    "./components/tooltip": {
+      "types": "./dist/components/tooltip.d.ts",
+      "import": "./dist/components/tooltip.js"
+    },
+    "./components/tabs": {
+      "types": "./dist/components/tabs.d.ts",
+      "import": "./dist/components/tabs.js"
+    },
+    "./components/dropdown-menu": {
+      "types": "./dist/components/dropdown-menu.d.ts",
+      "import": "./dist/components/dropdown-menu.js"
+    },
+    "./components/select": {
+      "types": "./dist/components/select.d.ts",
+      "import": "./dist/components/select.js"
+    },
+    "./components/toast": {
+      "types": "./dist/components/toast.d.ts",
+      "import": "./dist/components/toast.js"
+    },
+    "./components/field": {
+      "types": "./dist/components/field.d.ts",
+      "import": "./dist/components/field.js"
+    },
+    "./components/skeleton": {
+      "types": "./dist/components/skeleton.d.ts",
+      "import": "./dist/components/skeleton.js"
+    },
+    "./components/empty-state": {
+      "types": "./dist/components/empty-state.d.ts",
+      "import": "./dist/components/empty-state.js"
+    },
+    "./components/page-header": {
+      "types": "./dist/components/page-header.d.ts",
+      "import": "./dist/components/page-header.js"
+    },
+    "./components/panel": {
+      "types": "./dist/components/panel.d.ts",
+      "import": "./dist/components/panel.js"
+    },
+    "./components/toolbar": {
+      "types": "./dist/components/toolbar.d.ts",
+      "import": "./dist/components/toolbar.js"
+    },
+    "./components/pagination": {
+      "types": "./dist/components/pagination.d.ts",
+      "import": "./dist/components/pagination.js"
+    },
+    "./components/table": {
+      "types": "./dist/components/table.d.ts",
+      "import": "./dist/components/table.js"
+    },
+    "./components/chart": {
+      "types": "./dist/components/chart.d.ts",
+      "import": "./dist/components/chart.js"
+    },
+    "./icons": {
+      "types": "./dist/icons/index.d.ts",
+      "import": "./dist/icons/index.js"
+    },
+    "./icons/*": {
+      "types": "./dist/icons/*.d.ts",
+      "import": "./dist/icons/*.js"
+    },
+    "./styles/tokens.css": "./src/styles/tokens.css"
+  },
+  "scripts": {
+    "build": "node scripts/generate-icons.mjs && tsc",
+    "test": "pnpm build && node --test tests/*.test.mjs"
+  },
+  "peerDependencies": {
+    "cmdk": ">=1.1.1",
+    "radix-ui": ">=1.6.7",
+    "react": ">=18",
+    "sonner": ">=2"
+  },
+  "peerDependenciesMeta": {
+    "cmdk": {
+      "optional": true
+    },
+    "radix-ui": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "sonner": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "cmdk": "^1.1.1",
+    "radix-ui": "^1.6.7",
+    "react-dom": "^19.3.0",
+    "sonner": "^2.0.8"
+  }
+}

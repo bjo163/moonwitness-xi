@@ -8,7 +8,8 @@
       "milestone": "M0",
       "dependsOn": [],
       "output": "docs/engineering/inventory.md",
-      "detailFile": "docs/roadmap/00-baseline.md"
+      "detailFile": "docs/roadmap/00-baseline.md",
+      "evidence": "docs/roadmap/evidence/M0.01.md"
     },
     {
       "id": "M0.02",
@@ -16,7 +17,8 @@
       "milestone": "M0",
       "dependsOn": ["M0.01"],
       "output": "docs/engineering/feature-matrix.md",
-      "detailFile": "docs/roadmap/00-baseline.md"
+      "detailFile": "docs/roadmap/00-baseline.md",
+      "evidence": "docs/roadmap/evidence/M0.02.md"
     },
     {
       "id": "M0.03",
@@ -24,7 +26,8 @@
       "milestone": "M0",
       "dependsOn": [],
       "output": "docs/engineering/baseline.md",
-      "detailFile": "docs/roadmap/00-baseline.md"
+      "detailFile": "docs/roadmap/00-baseline.md",
+      "evidence": "docs/roadmap/evidence/M0.03.md"
     },
     {
       "id": "M0.04",
@@ -32,7 +35,8 @@
       "milestone": "M0",
       "dependsOn": [],
       "output": "docs/engineering/github-capabilities.md",
-      "detailFile": "docs/roadmap/00-baseline.md"
+      "detailFile": "docs/roadmap/00-baseline.md",
+      "evidence": "docs/roadmap/evidence/M0.04.md"
     },
     {
       "id": "M0.05",
@@ -40,7 +44,8 @@
       "milestone": "M0",
       "dependsOn": ["M0.01"],
       "output": "docs/engineering/refactor-map.md",
-      "detailFile": "docs/roadmap/00-baseline.md"
+      "detailFile": "docs/roadmap/00-baseline.md",
+      "evidence": "docs/roadmap/evidence/M0.05.md"
     },
     {
       "id": "M0.06",
@@ -48,7 +53,8 @@
       "milestone": "M0",
       "dependsOn": ["M0.03"],
       "output": "docs/engineering/support-policy.md",
-      "detailFile": "docs/roadmap/00-baseline.md"
+      "detailFile": "docs/roadmap/00-baseline.md",
+      "evidence": "docs/roadmap/evidence/M0.06.md"
     },
     {
       "id": "M0.07",
@@ -56,7 +62,8 @@
       "milestone": "M0",
       "dependsOn": ["M0.01", "M0.04"],
       "output": "docs/decisions/0001-platform-contracts.md",
-      "detailFile": "docs/roadmap/00-baseline.md"
+      "detailFile": "docs/roadmap/00-baseline.md",
+      "evidence": "docs/roadmap/evidence/M0.07.md"
     },
     {
       "id": "M0.08",
@@ -64,7 +71,8 @@
       "milestone": "M0",
       "dependsOn": ["M0.01"],
       "output": "Seed contract dan test regresi pada packages/orm-base/tests",
-      "detailFile": "docs/roadmap/00-baseline.md"
+      "detailFile": "docs/roadmap/00-baseline.md",
+      "evidence": "docs/roadmap/evidence/M0.08.md"
     },
     {
       "id": "M1.01",
@@ -72,7 +80,8 @@
       "milestone": "M1",
       "dependsOn": ["M0.04"],
       "output": "dev terinisialisasi dan catatan bootstrap",
-      "detailFile": "docs/roadmap/01-governance.md"
+      "detailFile": "docs/roadmap/01-governance.md",
+      "evidence": "docs/roadmap/evidence/M1.01.md"
     },
     {
       "id": "M1.02",
@@ -80,7 +89,8 @@
       "milestone": "M1",
       "dependsOn": ["M1.01"],
       "output": "docs/engineering/repository-policy.json dan applied ruleset evidence",
-      "detailFile": "docs/roadmap/01-governance.md"
+      "detailFile": "docs/roadmap/01-governance.md",
+      "evidence": "docs/roadmap/evidence/M1.02-06.md"
     },
     {
       "id": "M1.03",
@@ -88,7 +98,8 @@
       "milestone": "M1",
       "dependsOn": ["M1.01", "M0.04"],
       "output": "Branch protection configuration dan emergency runbook",
-      "detailFile": "docs/roadmap/01-governance.md"
+      "detailFile": "docs/roadmap/01-governance.md",
+      "evidence": "docs/roadmap/evidence/M1.02-06.md"
     },
     {
       "id": "M1.04",
@@ -96,7 +107,8 @@
       "milestone": "M1",
       "dependsOn": ["M1.01", "M2.05"],
       "output": "Promotion source check dan fixture tests",
-      "detailFile": "docs/roadmap/01-governance.md"
+      "detailFile": "docs/roadmap/01-governance.md",
+      "evidence": "docs/roadmap/evidence/M1.02-06.md"
     },
     {
       "id": "M1.05",
@@ -104,7 +116,8 @@
       "milestone": "M1",
       "dependsOn": ["M1.04", "M8.04"],
       "output": "Workflow promotion.yml idempotent",
-      "detailFile": "docs/roadmap/01-governance.md"
+      "detailFile": "docs/roadmap/01-governance.md",
+      "evidence": "docs/roadmap/evidence/M1.02-06.md"
     },
     {
       "id": "M1.06",
@@ -112,7 +125,8 @@
       "milestone": "M1",
       "dependsOn": ["M2.05", "M1.04"],
       "output": "Required checks policy",
-      "detailFile": "docs/roadmap/01-governance.md"
+      "detailFile": "docs/roadmap/01-governance.md",
+      "evidence": "docs/roadmap/evidence/M1.02-06.md"
     },
     {
       "id": "M1.07",
@@ -120,7 +134,8 @@
       "milestone": "M1",
       "dependsOn": ["M0.04"],
       "output": " .github/CODEOWNERS dan review policy",
-      "detailFile": "docs/roadmap/01-governance.md"
+      "detailFile": "docs/roadmap/01-governance.md",
+      "evidence": "docs/roadmap/evidence/M1.07.md"
     },
     {
       "id": "M1.08",
@@ -128,7 +143,8 @@
       "milestone": "M1",
       "dependsOn": ["M7.01", "M1.07"],
       "output": "Promotion risk classifier dan tests",
-      "detailFile": "docs/roadmap/01-governance.md"
+      "detailFile": "docs/roadmap/01-governance.md",
+      "evidence": "docs/roadmap/evidence/M1.08.md"
     },
     {
       "id": "M1.09",
@@ -136,7 +152,8 @@
       "milestone": "M1",
       "dependsOn": ["M1.05"],
       "output": "Sync workflow/function dan conflict report",
-      "detailFile": "docs/roadmap/01-governance.md"
+      "detailFile": "docs/roadmap/01-governance.md",
+      "evidence": "docs/roadmap/evidence/M1.09.md"
     },
     {
       "id": "M1.10",
@@ -144,7 +161,8 @@
       "milestone": "M1",
       "dependsOn": ["M0.04"],
       "output": "Tag policy dan settings audit",
-      "detailFile": "docs/roadmap/01-governance.md"
+      "detailFile": "docs/roadmap/01-governance.md",
+      "evidence": "docs/roadmap/evidence/M1.10.md"
     },
     {
       "id": "M1.11",
@@ -152,7 +170,8 @@
       "milestone": "M1",
       "dependsOn": ["M0.04"],
       "output": "Removal diff dan dokumentasi scope",
-      "detailFile": "docs/roadmap/01-governance.md"
+      "detailFile": "docs/roadmap/01-governance.md",
+      "evidence": "docs/roadmap/evidence/M1.11.md"
     },
     {
       "id": "M1.12",
@@ -160,7 +179,8 @@
       "milestone": "M1",
       "dependsOn": ["M0.07"],
       "output": "Branch creation audit",
-      "detailFile": "docs/roadmap/01-governance.md"
+      "detailFile": "docs/roadmap/01-governance.md",
+      "evidence": "docs/roadmap/evidence/M1.12.md"
     },
     {
       "id": "M2.01",
@@ -168,7 +188,8 @@
       "milestone": "M2",
       "dependsOn": ["M0.03", "M0.06"],
       "output": "Reusable setup dan verification workflow",
-      "detailFile": "docs/roadmap/02-ci.md"
+      "detailFile": "docs/roadmap/02-ci.md",
+      "evidence": "docs/roadmap/evidence/M2.01.md"
     },
     {
       "id": "M2.02",
@@ -176,7 +197,8 @@
       "milestone": "M2",
       "dependsOn": ["M0.01", "M0.03"],
       "output": "Root command contract dan scripts",
-      "detailFile": "docs/roadmap/02-ci.md"
+      "detailFile": "docs/roadmap/02-ci.md",
+      "evidence": "docs/roadmap/evidence/M2.02.md"
     },
     {
       "id": "M2.03",
@@ -184,7 +206,8 @@
       "milestone": "M2",
       "dependsOn": ["M0.03"],
       "output": "Lint config dan cleanup terukur",
-      "detailFile": "docs/roadmap/02-ci.md"
+      "detailFile": "docs/roadmap/02-ci.md",
+      "evidence": "docs/roadmap/evidence/M2.03.md"
     },
     {
       "id": "M2.04",
@@ -192,7 +215,8 @@
       "milestone": "M2",
       "dependsOn": ["M2.01", "M2.02"],
       "output": "CI job graph",
-      "detailFile": "docs/roadmap/02-ci.md"
+      "detailFile": "docs/roadmap/02-ci.md",
+      "evidence": "docs/roadmap/evidence/M2.04.md"
     },
     {
       "id": "M2.05",
@@ -200,7 +224,8 @@
       "milestone": "M2",
       "dependsOn": ["M2.04"],
       "output": "ci-gate dan decision tests",
-      "detailFile": "docs/roadmap/02-ci.md"
+      "detailFile": "docs/roadmap/02-ci.md",
+      "evidence": "docs/roadmap/evidence/M2.05.md"
     },
     {
       "id": "M2.06",
@@ -208,7 +233,8 @@
       "milestone": "M2",
       "dependsOn": ["M0.03"],
       "output": "Strict integration preflight",
-      "detailFile": "docs/roadmap/02-ci.md"
+      "detailFile": "docs/roadmap/02-ci.md",
+      "evidence": "docs/roadmap/evidence/M2.06.md"
     },
     {
       "id": "M2.07",
@@ -216,7 +242,8 @@
       "milestone": "M2",
       "dependsOn": ["M0.01"],
       "output": "Shared test environment helpers",
-      "detailFile": "docs/roadmap/02-ci.md"
+      "detailFile": "docs/roadmap/02-ci.md",
+      "evidence": "docs/roadmap/evidence/M2.07.md"
     },
     {
       "id": "M2.08",
@@ -224,7 +251,8 @@
       "milestone": "M2",
       "dependsOn": ["M2.04", "M0.01"],
       "output": "Affected selection dan cache config",
-      "detailFile": "docs/roadmap/02-ci.md"
+      "detailFile": "docs/roadmap/02-ci.md",
+      "evidence": "docs/roadmap/evidence/M2.08.md"
     },
     {
       "id": "M2.09",
@@ -232,7 +260,8 @@
       "milestone": "M2",
       "dependsOn": ["M2.04"],
       "output": "Concurrency policy dan race test",
-      "detailFile": "docs/roadmap/02-ci.md"
+      "detailFile": "docs/roadmap/02-ci.md",
+      "evidence": "docs/roadmap/evidence/M2.09.md"
     },
     {
       "id": "M2.10",
@@ -240,7 +269,8 @@
       "milestone": "M2",
       "dependsOn": ["M2.04"],
       "output": "Test artifact layout dan summary generator",
-      "detailFile": "docs/roadmap/02-ci.md"
+      "detailFile": "docs/roadmap/02-ci.md",
+      "evidence": "docs/roadmap/evidence/M2.10.md"
     },
     {
       "id": "M2.11",
@@ -248,7 +278,8 @@
       "milestone": "M2",
       "dependsOn": ["M2.01"],
       "output": "Automation lint job",
-      "detailFile": "docs/roadmap/02-ci.md"
+      "detailFile": "docs/roadmap/02-ci.md",
+      "evidence": "docs/roadmap/evidence/M2.11.md"
     },
     {
       "id": "M2.12",
@@ -256,7 +287,8 @@
       "milestone": "M2",
       "dependsOn": ["M2.10"],
       "output": "Flake policy dan tracking",
-      "detailFile": "docs/roadmap/02-ci.md"
+      "detailFile": "docs/roadmap/02-ci.md",
+      "evidence": "docs/roadmap/evidence/M2.12.md"
     },
     {
       "id": "M2.13",
@@ -264,7 +296,8 @@
       "milestone": "M2",
       "dependsOn": ["M0.03"],
       "output": "Coverage policy dan CI threshold",
-      "detailFile": "docs/roadmap/02-ci.md"
+      "detailFile": "docs/roadmap/02-ci.md",
+      "evidence": "docs/roadmap/evidence/M2.13.md"
     },
     {
       "id": "M3.01",
@@ -272,7 +305,8 @@
       "milestone": "M3",
       "dependsOn": ["M2.07"],
       "output": "E2E config, fixtures dan smoke test",
-      "detailFile": "docs/roadmap/03-board.md"
+      "detailFile": "docs/roadmap/03-board.md",
+      "evidence": "docs/roadmap/evidence/M3.01.md"
     },
     {
       "id": "M3.02",
@@ -280,7 +314,8 @@
       "milestone": "M3",
       "dependsOn": ["M3.01"],
       "output": "Visual audit report dan fixes",
-      "detailFile": "docs/roadmap/03-board.md"
+      "detailFile": "docs/roadmap/03-board.md",
+      "evidence": "docs/roadmap/evidence/M3.02.md"
     },
     {
       "id": "M3.03",
@@ -288,7 +323,8 @@
       "milestone": "M3",
       "dependsOn": ["M3.01"],
       "output": "auth-session E2E spec",
-      "detailFile": "docs/roadmap/03-board.md"
+      "detailFile": "docs/roadmap/03-board.md",
+      "evidence": "docs/roadmap/evidence/M3.03.md"
     },
     {
       "id": "M3.04",
@@ -296,7 +332,8 @@
       "milestone": "M3",
       "dependsOn": ["M3.01"],
       "output": "navigation-access E2E spec",
-      "detailFile": "docs/roadmap/03-board.md"
+      "detailFile": "docs/roadmap/03-board.md",
+      "evidence": "docs/roadmap/evidence/M3.04.md"
     },
     {
       "id": "M3.05",
@@ -304,7 +341,8 @@
       "milestone": "M3",
       "dependsOn": ["M3.01"],
       "output": "account-settings E2E spec",
-      "detailFile": "docs/roadmap/03-board.md"
+      "detailFile": "docs/roadmap/03-board.md",
+      "evidence": "docs/roadmap/evidence/M3.05.md"
     },
     {
       "id": "M3.06",
@@ -312,7 +350,8 @@
       "milestone": "M3",
       "dependsOn": ["M3.01", "M2.06"],
       "output": "data-list E2E regression",
-      "detailFile": "docs/roadmap/03-board.md"
+      "detailFile": "docs/roadmap/03-board.md",
+      "evidence": "docs/roadmap/evidence/M3.06.md"
     },
     {
       "id": "M3.07",
@@ -320,7 +359,8 @@
       "milestone": "M3",
       "dependsOn": ["M3.01"],
       "output": "record-edit E2E spec",
-      "detailFile": "docs/roadmap/03-board.md"
+      "detailFile": "docs/roadmap/03-board.md",
+      "evidence": "docs/roadmap/evidence/M3.07.md"
     },
     {
       "id": "M3.08",
@@ -328,7 +368,8 @@
       "milestone": "M3",
       "dependsOn": ["M3.01", "M0.01"],
       "output": "extended-board E2E specs",
-      "detailFile": "docs/roadmap/03-board.md"
+      "detailFile": "docs/roadmap/03-board.md",
+      "evidence": "docs/roadmap/evidence/M3.08.md"
     },
     {
       "id": "M3.09",
@@ -336,6 +377,8 @@
       "milestone": "M3",
       "dependsOn": ["M3.01"],
       "output": "resilience E2E dan cache fixes",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M3.09.md",
       "detailFile": "docs/roadmap/03-board.md"
     },
     {
@@ -344,6 +387,8 @@
       "milestone": "M3",
       "dependsOn": ["M3.02"],
       "output": "Visual regression suite",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M3.10.md",
       "detailFile": "docs/roadmap/03-board.md"
     },
     {
@@ -352,10 +397,14 @@
       "milestone": "M3",
       "dependsOn": ["M3.03", "M3.06", "M0.06"],
       "output": "Browser matrix workflow",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/M3.11.md",
       "detailFile": "docs/roadmap/03-board.md"
     },
     {
       "id": "M4.01",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M4.01.md",
       "title": "Validasi semua model/field/relasi/view/menu/access dan kebijakan seed melalui matriks metadata.",
       "milestone": "M4",
       "dependsOn": ["M0.01"],
@@ -364,6 +413,8 @@
     },
     {
       "id": "M4.02",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M4.02.md",
       "title": "Test instalasi bersih, restart idempotent, upgrade legacy, seed reference, pelestarian edit pengguna, dan startup multi-replica.",
       "milestone": "M4",
       "dependsOn": ["M2.07"],
@@ -372,6 +423,8 @@
     },
     {
       "id": "M4.03",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M4.03.md",
       "title": "Verifikasi default system/superadmin, password awal dari konfigurasi, reset CLI/root script, dan tidak menimpa password yang sudah diubah.",
       "milestone": "M4",
       "dependsOn": ["M2.07"],
@@ -380,6 +433,8 @@
     },
     {
       "id": "M4.04",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M4.04.md",
       "title": "Verifikasi company default, reference countries, states, banks, partner bank, serta provenance/update policy data referensi; jangan mengklaim states lengkap bila hanya subset.",
       "milestone": "M4",
       "dependsOn": ["M0.08"],
@@ -388,6 +443,8 @@
     },
     {
       "id": "M4.05",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M4.05.md",
       "title": "Audit autentikasi: hashing, enumeration, throttling, refresh replay/concurrency, perubahan role/password, dan batas waktu revocation access token.",
       "milestone": "M4",
       "dependsOn": ["M0.02"],
@@ -396,6 +453,8 @@
     },
     {
       "id": "M4.06",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M4.06.md",
       "title": "Test izin negatif CRUD/count/export/direct API dan isolasi company, termasuk relasi lintas-company.",
       "milestone": "M4",
       "dependsOn": ["M2.07", "M0.02"],
@@ -404,6 +463,8 @@
     },
     {
       "id": "M4.07",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M4.07.md",
       "title": "Batasi pagination, query cost, kedalaman eager relations, payload, sorting, dan filter; cegah mass assignment.",
       "milestone": "M4",
       "dependsOn": ["M0.01"],
@@ -412,6 +473,8 @@
     },
     {
       "id": "M4.08",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M4.08.md",
       "title": "Pastikan field sensitif tidak muncul dalam JSON, export, audit, error, atau log.",
       "milestone": "M4",
       "dependsOn": ["M0.01"],
@@ -420,6 +483,8 @@
     },
     {
       "id": "M4.09",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M4.09.md",
       "title": "Audit transaksi, constraint, indexes, concurrency edits, timezone, error mapping, dan rollback kegagalan upgrade programatis.",
       "milestone": "M4",
       "dependsOn": ["M4.02"],
@@ -428,6 +493,8 @@
     },
     {
       "id": "M4.10",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M4.10.md",
       "title": "Scheduler/worker: claim atomik, lease, heartbeat, retry/backoff, recovery setelah crash, cancellation, dead-letter, dan job history.",
       "milestone": "M4",
       "dependsOn": ["M0.01", "M2.07"],
@@ -436,6 +503,8 @@
     },
     {
       "id": "M4.11",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M4.11.md",
       "title": "Outbox: transactional enqueue, delivery retries, deduplication/idempotency, dan pengujian efek eksternal ganda; jangan mengklaim exactly-once tanpa bukti.",
       "milestone": "M4",
       "dependsOn": ["M4.10"],
@@ -444,114 +513,142 @@
     },
     {
       "id": "M4.12",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M4.12.md",
       "title": "Attachment: izin upload/download, size/MIME, filename/path traversal, storage ownership, dan retensi.",
       "milestone": "M4",
-      "dependsOn": ["M0.01"],
-      "output": "Attachment hardening tests",
+      "dependsOn": ["M4.06"],
+      "output": "Authenticated local-filesystem attachment storage and hardening tests",
       "detailFile": "docs/roadmap/04-backend.md"
     },
     {
       "id": "M4.13",
       "title": "Operasional: graceful shutdown, DB pools/timeouts, request ID, redaksi log, readiness/liveness API dan worker.",
+      "status": "complete",
       "milestone": "M4",
       "dependsOn": ["M0.01"],
-      "output": "Runtime lifecycle tests",
+      "output": "Bounded PostgreSQL runtime, drained API/worker lifecycle, internal probes, and operational runbook",
+      "evidence": "docs/roadmap/evidence/M4.13.md",
       "detailFile": "docs/roadmap/04-backend.md"
     },
     {
       "id": "M4.14",
       "title": "Restore drill dengan data aplikasi, relasi, akun test dan integrity checks; tetapkan target pemulihan berbasis hasil pengukuran.",
+      "status": "complete",
       "milestone": "M4",
       "dependsOn": ["M4.02", "M4.03"],
-      "output": "Application restore drill report",
+      "output": "Isolated PostgreSQL application backup/restore drill, integrity report, and measured recovery scope",
+      "evidence": "docs/roadmap/evidence/M4.14.md",
       "detailFile": "docs/roadmap/04-backend.md"
     },
     {
       "id": "M4.15",
       "title": "Tambahkan baseline load/query tests dan budget regresi realistis; ukur N+1 serta operasi yang memperbesar penggunaan memori.",
+      "status": "complete",
       "milestone": "M4",
       "dependsOn": ["M0.03", "M0.06"],
-      "output": "Performance fixtures dan report",
+      "output": "PostgreSQL query/job baseline fixtures, structural budgets, EXPLAIN output, and CI report artifact",
+      "evidence": "docs/roadmap/evidence/M4.15.md",
       "detailFile": "docs/roadmap/04-backend.md"
     },
     {
       "id": "M4.16",
       "title": "Dokumentasikan compatibility policy API/addon, deprecation, dan upgrade guidance.",
+      "status": "complete",
       "milestone": "M4",
       "dependsOn": ["M0.07"],
-      "output": "Compatibility policy dan contract tests",
+      "output": "docs/engineering/compatibility.md dan client→API/addon→ORM contract tests",
+      "evidence": "docs/roadmap/evidence/M4.16.md",
       "detailFile": "docs/roadmap/04-backend.md"
     },
     {
       "id": "M5.01",
       "title": "Inventarisasi UI Board; tentukan arah visual MoonWitness dan audit contoh halaman representatif sebelum migrasi massal.",
+      "status": "complete",
       "milestone": "M5",
       "dependsOn": ["M0.05"],
       "output": "docs/design/visual-direction.md",
+      "evidence": "docs/roadmap/evidence/M5.01.md",
       "detailFile": "docs/roadmap/05-design-system.md"
     },
     {
       "id": "M5.02",
       "title": "Buat `@moonwitness/assets`: logo simbol/wordmark/lockup, versi terang/gelap/monokrom, favicon dan social image.",
+      "status": "complete",
       "milestone": "M5",
       "dependsOn": ["M5.01"],
-      "output": "packages/assets/brand dan export manifest",
+      "output": "packages/assets, deterministic SVG source, export manifest, README banner, and social image",
+      "evidence": "docs/roadmap/evidence/M5.02.md",
       "detailFile": "docs/roadmap/05-design-system.md"
     },
     {
       "id": "M5.03",
       "title": "Buat tokens warna/semantik, tipografi, spacing, radius, shadow, motion, dan reduced-motion; dokumentasikan aturan penggunaan.",
+      "status": "complete",
       "milestone": "M5",
       "dependsOn": ["M5.01"],
       "output": "packages/ui/src/styles/tokens.css dan token guide",
+      "evidence": "docs/roadmap/evidence/M5.03.md",
       "detailFile": "docs/roadmap/05-design-system.md"
     },
     {
       "id": "M5.04",
       "title": "Buat ikon SVG konsisten untuk domain inti dan aksi umum; audit keterbacaan ukuran kecil serta identitas yang berbeda dari brand lain.",
+      "status": "complete",
       "milestone": "M5",
       "dependsOn": ["M5.01"],
       "output": "packages/assets/icons/*.svg dan icon inventory",
+      "evidence": "docs/roadmap/evidence/M5.04.md",
       "detailFile": "docs/roadmap/05-design-system.md"
     },
     {
       "id": "M5.05",
       "title": "Sediakan ikon React typed dengan currentColor, ukuran, title, dan aksesibilitas; gunakan static SVG untuk README.",
       "milestone": "M5",
+      "status": "complete",
       "dependsOn": ["M5.04", "M5.08"],
       "output": "packages/ui/src/icons",
+      "evidence": "docs/roadmap/evidence/M5.05.md",
       "detailFile": "docs/roadmap/05-design-system.md"
     },
     {
       "id": "M5.06",
       "title": "Buat ilustrasi original empty/search/error/access denied/offline/onboarding serta pola latar ringan.",
       "milestone": "M5",
+      "status": "complete",
       "dependsOn": ["M5.02", "M5.03"],
       "output": "packages/assets/illustrations dan usage guide",
+      "evidence": "docs/roadmap/evidence/M5.06.md",
       "detailFile": "docs/roadmap/05-design-system.md"
     },
     {
       "id": "M5.07",
       "title": "Catat sumber/lisensi font dan asset; optimasi SVG, validasi script/external refs, dan cegah ID collision.",
+      "status": "complete",
       "milestone": "M5",
       "dependsOn": ["M5.02"],
       "output": "Asset validation script dan licenses manifest",
+      "evidence": "docs/roadmap/evidence/M5.07.md",
       "detailFile": "docs/roadmap/05-design-system.md"
     },
     {
       "id": "M5.08",
       "title": "Buat `@moonwitness/ui` dengan exports jelas, tanpa dependency API/router/auth aplikasi dan tanpa side effect yang tidak terdokumentasi.",
+      "status": "complete",
       "milestone": "M5",
       "dependsOn": ["M0.07"],
       "output": "packages/ui scaffold dan consumer smoke test",
+      "evidence": "docs/roadmap/evidence/M5.08.md",
       "detailFile": "docs/roadmap/05-design-system.md"
     },
     {
       "id": "M5.09",
       "title": "Komponen dasar: button/input/select/checkbox/badge/avatar; interaksi: dialog/dropdown/tabs/tooltip/toast.",
       "milestone": "M5",
+      "status": "complete",
       "dependsOn": ["M5.08", "M5.03"],
       "output": "UI primitives dan interaction stories",
+      "evidence": "docs/roadmap/evidence/M5.09.md",
       "detailFile": "docs/roadmap/05-design-system.md"
     },
     {
@@ -559,7 +656,9 @@
       "title": "Komponen komposisi: field/help/error, card/skeleton/empty/error state, page header/toolbar/panel, pagination/table primitives.",
       "milestone": "M5",
       "dependsOn": ["M5.09"],
-      "output": "UI composition components",
+      "status": "complete",
+      "output": "Typed, directly exported UI composition primitives with accessible contracts and Board adoption",
+      "evidence": "docs/roadmap/evidence/M5.10.md",
       "detailFile": "docs/roadmap/05-design-system.md"
     },
     {
@@ -567,7 +666,9 @@
       "title": "Tetapkan theming dan compatibility policy komponen; hindari boolean props berlebihan dan barrel export yang membesarkan bundle.",
       "milestone": "M5",
       "dependsOn": ["M5.08"],
-      "output": "UI API contract dan export tests",
+      "output": "UI API compatibility policy, package export contract tests, CSS isolation checks, and packed-consumer smoke",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M5.11.md",
       "detailFile": "docs/roadmap/05-design-system.md"
     },
     {
@@ -575,7 +676,9 @@
       "title": "Grafik data: tema, tooltip/legend, locale/timezone, loading/empty/error, tabel alternatif, dan responsivitas. Bentuk `@moonwitness/charts` hanya ketika reuse membenarkannya.",
       "milestone": "M5",
       "dependsOn": ["M5.03", "M5.08"],
-      "output": "Chart components; ADR ekstraksi packages/charts",
+      "status": "complete",
+      "output": "Typed SVG chart primitives with accessible data table, locale formatter, loading/empty/error states, and reuse decision",
+      "evidence": "docs/roadmap/evidence/M5.12.md",
       "detailFile": "docs/roadmap/05-design-system.md"
     },
     {
@@ -584,7 +687,8 @@
       "milestone": "M5",
       "dependsOn": ["M0.07", "M4.01"],
       "output": "docs/architecture/diagrams dan static exports",
-      "detailFile": "docs/roadmap/05-design-system.md"
+      "detailFile": "docs/roadmap/05-design-system.md",
+      "evidence": "docs/roadmap/evidence/M5.13.md"
     },
     {
       "id": "M5.14",
@@ -592,7 +696,8 @@
       "milestone": "M5",
       "dependsOn": ["M5.09", "M5.10", "M3.01"],
       "output": "Board UI migration dan removal inventory",
-      "detailFile": "docs/roadmap/05-design-system.md"
+      "detailFile": "docs/roadmap/05-design-system.md",
+      "evidence": "docs/roadmap/evidence/M5.14.md"
     },
     {
       "id": "M5.15",
@@ -600,7 +705,8 @@
       "milestone": "M5",
       "dependsOn": ["M5.02", "M5.07"],
       "output": "Branded README dan Pages assets",
-      "detailFile": "docs/roadmap/05-design-system.md"
+      "detailFile": "docs/roadmap/05-design-system.md",
+      "evidence": "docs/roadmap/evidence/M5.15.md"
     },
     {
       "id": "M5.16",
@@ -608,7 +714,8 @@
       "milestone": "M5",
       "dependsOn": ["M5.09"],
       "output": "Storybook atau katalog setara yang dipilih dalam ADR",
-      "detailFile": "docs/roadmap/05-design-system.md"
+      "detailFile": "docs/roadmap/05-design-system.md",
+      "evidence": "docs/roadmap/evidence/M5.16.md"
     },
     {
       "id": "M5.17",
@@ -616,7 +723,8 @@
       "milestone": "M5",
       "dependsOn": ["M5.16", "M2.04"],
       "output": "UI CI job dan report",
-      "detailFile": "docs/roadmap/05-design-system.md"
+      "detailFile": "docs/roadmap/05-design-system.md",
+      "evidence": "docs/roadmap/evidence/M5.17.md"
     },
     {
       "id": "M6.01",
@@ -624,7 +732,8 @@
       "milestone": "M6",
       "dependsOn": ["M0.07"],
       "output": "docs content tree dan navigation config",
-      "detailFile": "docs/roadmap/06-documentation.md"
+      "detailFile": "docs/roadmap/06-documentation.md",
+      "evidence": "docs/roadmap/evidence/M6.01.md"
     },
     {
       "id": "M6.02",
@@ -632,7 +741,8 @@
       "milestone": "M6",
       "dependsOn": ["M0.01", "M4.01"],
       "output": "scripts/docs generation modules dan generated references",
-      "detailFile": "docs/roadmap/06-documentation.md"
+      "detailFile": "docs/roadmap/06-documentation.md",
+      "evidence": "docs/roadmap/evidence/M6.02.md"
     },
     {
       "id": "M6.03",
@@ -640,7 +750,8 @@
       "milestone": "M6",
       "dependsOn": ["M6.02"],
       "output": "README partial generator",
-      "detailFile": "docs/roadmap/06-documentation.md"
+      "detailFile": "docs/roadmap/06-documentation.md",
+      "evidence": "docs/roadmap/evidence/M6.03.md"
     },
     {
       "id": "M6.04",
@@ -648,7 +759,8 @@
       "milestone": "M6",
       "dependsOn": ["M6.02", "M6.03"],
       "output": "Root docs command contract",
-      "detailFile": "docs/roadmap/06-documentation.md"
+      "detailFile": "docs/roadmap/06-documentation.md",
+      "evidence": "docs/roadmap/evidence/M6.04.md"
     },
     {
       "id": "M6.05",
@@ -656,7 +768,8 @@
       "milestone": "M6",
       "dependsOn": ["M6.01"],
       "output": "Docs examples tests dan link checker",
-      "detailFile": "docs/roadmap/06-documentation.md"
+      "detailFile": "docs/roadmap/06-documentation.md",
+      "evidence": "docs/roadmap/evidence/M6.05.md"
     },
     {
       "id": "M6.06",
@@ -664,15 +777,17 @@
       "milestone": "M6",
       "dependsOn": ["M6.01", "M5.02", "M5.03"],
       "output": "Documentation portal",
-      "detailFile": "docs/roadmap/06-documentation.md"
+      "detailFile": "docs/roadmap/06-documentation.md",
+      "evidence": "docs/roadmap/evidence/M6.06.md"
     },
     {
       "id": "M6.07",
       "title": "Gunakan Actions artifact untuk Pages tanpa branch tambahan; dev hanya menghasilkan preview artifact.",
       "milestone": "M6",
       "dependsOn": ["M6.06", "M0.04"],
-      "output": "pages.yml dan verified Pages configuration",
-      "detailFile": "docs/roadmap/06-documentation.md"
+      "output": "pages.yml, verified GitHub Pages configuration, preview/publish trust separation and source provenance",
+      "detailFile": "docs/roadmap/06-documentation.md",
+      "evidence": "docs/roadmap/evidence/M6.07.md"
     },
     {
       "id": "M6.08",
@@ -680,23 +795,28 @@
       "milestone": "M6",
       "dependsOn": ["M7.02", "M6.06"],
       "output": "Docs version manifest",
-      "detailFile": "docs/roadmap/06-documentation.md"
+      "detailFile": "docs/roadmap/06-documentation.md",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/M6.08.md"
     },
     {
       "id": "M6.09",
       "title": "Scan konten publik agar tidak berisi secret, data pribadi, real environment values, atau internal artifacts.",
       "milestone": "M6",
       "dependsOn": ["M6.04", "M6.06"],
-      "output": "Docs publication safety check",
-      "detailFile": "docs/roadmap/06-documentation.md"
+      "output": "Public documentation output scanner and adversarial tests",
+      "detailFile": "docs/roadmap/06-documentation.md",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M6.09.md"
     },
     {
       "id": "M6.10",
       "title": "Docs-only changes dapat dipublikasikan setelah verifikasi tanpa memaksa release aplikasi; source SHA harus terlacak.",
       "milestone": "M6",
       "dependsOn": ["M6.07", "M7.01"],
-      "output": "Docs-only publishing path",
-      "detailFile": "docs/roadmap/06-documentation.md"
+      "output": "Verified main SHA gate, strict docs-only content classifier, app-version versus source-SHA provenance metadata, and no-release-bump checks",
+      "detailFile": "docs/roadmap/06-documentation.md",
+      "evidence": "docs/roadmap/evidence/M6.10.md"
     },
     {
       "id": "M6.11",
@@ -704,7 +824,8 @@
       "milestone": "M6",
       "dependsOn": ["M6.07", "M7.13"],
       "output": "Pages retry runbook dan test fixtures",
-      "detailFile": "docs/roadmap/06-documentation.md"
+      "detailFile": "docs/roadmap/06-documentation.md",
+      "evidence": "docs/roadmap/evidence/M6.11.md"
     },
     {
       "id": "M7.01",
@@ -712,7 +833,8 @@
       "milestone": "M7",
       "dependsOn": ["M0.07"],
       "output": "Release classification module/tests",
-      "detailFile": "docs/roadmap/07-release.md"
+      "detailFile": "docs/roadmap/07-release.md",
+      "evidence": "docs/roadmap/evidence/M7.01.md"
     },
     {
       "id": "M7.02",
@@ -720,7 +842,8 @@
       "milestone": "M7",
       "dependsOn": ["M7.01"],
       "output": "Version updater dan consistency tests",
-      "detailFile": "docs/roadmap/07-release.md"
+      "detailFile": "docs/roadmap/07-release.md",
+      "evidence": "docs/roadmap/evidence/M7.02.md"
     },
     {
       "id": "M7.03",
@@ -728,7 +851,8 @@
       "milestone": "M7",
       "dependsOn": ["M0.04", "M7.01"],
       "output": "First stable release decision record",
-      "detailFile": "docs/roadmap/07-release.md"
+      "detailFile": "docs/roadmap/07-release.md",
+      "evidence": "docs/roadmap/evidence/M7.03.md"
     },
     {
       "id": "M7.04",
@@ -736,7 +860,8 @@
       "milestone": "M7",
       "dependsOn": ["M7.01", "M7.03"],
       "output": "Deterministic release planner",
-      "detailFile": "docs/roadmap/07-release.md"
+      "detailFile": "docs/roadmap/07-release.md",
+      "evidence": "docs/roadmap/evidence/M7.04.md"
     },
     {
       "id": "M7.05",
@@ -744,7 +869,8 @@
       "milestone": "M7",
       "dependsOn": ["M7.02", "M7.04", "M6.04", "M7.08"],
       "output": "Prepare-release automation",
-      "detailFile": "docs/roadmap/07-release.md"
+      "detailFile": "docs/roadmap/07-release.md",
+      "evidence": "docs/roadmap/evidence/M7.05.md"
     },
     {
       "id": "M7.06",
@@ -752,7 +878,8 @@
       "milestone": "M7",
       "dependsOn": ["M7.04"],
       "output": "Changelog generator/templates/tests",
-      "detailFile": "docs/roadmap/07-release.md"
+      "detailFile": "docs/roadmap/07-release.md",
+      "evidence": "docs/roadmap/evidence/M7.06.md"
     },
     {
       "id": "M7.07",
@@ -760,7 +887,8 @@
       "milestone": "M7",
       "dependsOn": ["M2.05"],
       "output": "Verified source gate",
-      "detailFile": "docs/roadmap/07-release.md"
+      "detailFile": "docs/roadmap/07-release.md",
+      "evidence": "docs/roadmap/evidence/M7.07.md"
     },
     {
       "id": "M7.08",
@@ -768,7 +896,8 @@
       "milestone": "M7",
       "dependsOn": ["M2.09", "M8.04"],
       "output": "Write coordination dan race fixture",
-      "detailFile": "docs/roadmap/07-release.md"
+      "detailFile": "docs/roadmap/07-release.md",
+      "evidence": "docs/roadmap/evidence/M7.08.md"
     },
     {
       "id": "M7.09",
@@ -776,7 +905,8 @@
       "milestone": "M7",
       "dependsOn": ["M7.07", "M4.13"],
       "output": "Build-once artifact flow",
-      "detailFile": "docs/roadmap/07-release.md"
+      "detailFile": "docs/roadmap/07-release.md",
+      "evidence": "docs/roadmap/evidence/M7.09.md"
     },
     {
       "id": "M7.10",
@@ -784,7 +914,8 @@
       "milestone": "M7",
       "dependsOn": ["M7.09", "M7.06", "M8.01"],
       "output": "Release manifest, draft flow dan publishing jobs",
-      "detailFile": "docs/roadmap/07-release.md"
+      "detailFile": "docs/roadmap/07-release.md",
+      "evidence": "docs/roadmap/evidence/M7.10.md"
     },
     {
       "id": "M7.11",
@@ -792,7 +923,8 @@
       "milestone": "M7",
       "dependsOn": ["M7.10"],
       "output": "Registry promotion policy dan tests",
-      "detailFile": "docs/roadmap/07-release.md"
+      "detailFile": "docs/roadmap/07-release.md",
+      "evidence": "docs/roadmap/evidence/M7.11.md"
     },
     {
       "id": "M7.12",
@@ -800,7 +932,8 @@
       "milestone": "M7",
       "dependsOn": ["M7.10"],
       "output": "Provenance verification instructions",
-      "detailFile": "docs/roadmap/07-release.md"
+      "detailFile": "docs/roadmap/07-release.md",
+      "evidence": "docs/roadmap/evidence/M7.12.md"
     },
     {
       "id": "M7.13",
@@ -808,7 +941,8 @@
       "milestone": "M7",
       "dependsOn": ["M7.10"],
       "output": "Idempotent publication reconciler",
-      "detailFile": "docs/roadmap/07-release.md"
+      "detailFile": "docs/roadmap/07-release.md",
+      "evidence": "docs/roadmap/evidence/M7.13.md"
     },
     {
       "id": "M7.14",
@@ -816,7 +950,8 @@
       "milestone": "M7",
       "dependsOn": ["M7.13", "M7.08"],
       "output": "Release fault-injection suite",
-      "detailFile": "docs/roadmap/07-release.md"
+      "detailFile": "docs/roadmap/07-release.md",
+      "evidence": "docs/roadmap/evidence/M7.14.md"
     },
     {
       "id": "M7.15",
@@ -824,7 +959,8 @@
       "milestone": "M7",
       "dependsOn": ["M8.04", "M2.01"],
       "output": "Trigger graph dan trust validation",
-      "detailFile": "docs/roadmap/07-release.md"
+      "detailFile": "docs/roadmap/07-release.md",
+      "evidence": "docs/roadmap/evidence/M7.15.md"
     },
     {
       "id": "M7.16",
@@ -832,7 +968,8 @@
       "milestone": "M7",
       "dependsOn": ["M7.05", "M7.06", "M7.14", "M7.15", "M1.08"],
       "output": "Dry-run report dan activation checklist",
-      "detailFile": "docs/roadmap/07-release.md"
+      "detailFile": "docs/roadmap/07-release.md",
+      "evidence": "docs/roadmap/evidence/M7.16.md"
     },
     {
       "id": "M8.01",
@@ -840,7 +977,8 @@
       "milestone": "M8",
       "dependsOn": ["M0.04"],
       "output": "Workflow permission matrix",
-      "detailFile": "docs/roadmap/08-security-maintenance.md"
+      "detailFile": "docs/roadmap/08-security-maintenance.md",
+      "evidence": "docs/roadmap/evidence/M8.01.md"
     },
     {
       "id": "M8.02",
@@ -848,7 +986,8 @@
       "milestone": "M8",
       "dependsOn": ["M8.01"],
       "output": "Pinned workflows dan trust tests",
-      "detailFile": "docs/roadmap/08-security-maintenance.md"
+      "detailFile": "docs/roadmap/08-security-maintenance.md",
+      "evidence": "docs/roadmap/evidence/M8.02.md"
     },
     {
       "id": "M8.03",
@@ -856,7 +995,9 @@
       "milestone": "M8",
       "dependsOn": ["M0.04", "M2.04"],
       "output": "Security workflow dan policy",
-      "detailFile": "docs/roadmap/08-security-maintenance.md"
+      "detailFile": "docs/roadmap/08-security-maintenance.md",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/M8.03.md"
     },
     {
       "id": "M8.04",
@@ -864,7 +1005,8 @@
       "milestone": "M8",
       "dependsOn": ["M0.04", "M8.01"],
       "output": "docs/operations/github-bootstrap.md",
-      "detailFile": "docs/roadmap/08-security-maintenance.md"
+      "detailFile": "docs/roadmap/08-security-maintenance.md",
+      "evidence": "docs/roadmap/evidence/M8.04.md"
     },
     {
       "id": "M8.05",
@@ -872,7 +1014,8 @@
       "milestone": "M8",
       "dependsOn": ["M0.01", "M1.12"],
       "output": "Dependency update planner",
-      "detailFile": "docs/roadmap/08-security-maintenance.md"
+      "detailFile": "docs/roadmap/08-security-maintenance.md",
+      "evidence": "docs/roadmap/evidence/M8.05.md"
     },
     {
       "id": "M8.06",
@@ -880,7 +1023,8 @@
       "milestone": "M8",
       "dependsOn": ["M8.05", "M7.08", "M2.05"],
       "output": "Dependency candidate executor",
-      "detailFile": "docs/roadmap/08-security-maintenance.md"
+      "detailFile": "docs/roadmap/08-security-maintenance.md",
+      "evidence": "docs/roadmap/evidence/M8.06.md"
     },
     {
       "id": "M8.07",
@@ -888,7 +1032,8 @@
       "milestone": "M8",
       "dependsOn": ["M8.06", "M1.08"],
       "output": "Dependency promotion policy",
-      "detailFile": "docs/roadmap/08-security-maintenance.md"
+      "detailFile": "docs/roadmap/08-security-maintenance.md",
+      "evidence": "docs/roadmap/evidence/M8.07.md"
     },
     {
       "id": "M8.08",
@@ -896,15 +1041,18 @@
       "milestone": "M8",
       "dependsOn": ["M3.11", "M4.10", "M4.14"],
       "output": "Scheduled regression workflow",
-      "detailFile": "docs/roadmap/08-security-maintenance.md"
+      "detailFile": "docs/roadmap/08-security-maintenance.md",
+      "evidence": "docs/roadmap/evidence/M8.08.md"
     },
     {
       "id": "M8.09",
       "title": "Jadwalkan issue pemeliharaan tanpa spam; deduplikasi failure issue, perbarui recovery, dan jangan auto-close laporan keamanan hanya karena sudah lama.",
       "milestone": "M8",
+      "status": "in_progress",
       "dependsOn": ["M2.10", "M8.01"],
       "output": "Maintenance issue reconciler",
-      "detailFile": "docs/roadmap/08-security-maintenance.md"
+      "detailFile": "docs/roadmap/08-security-maintenance.md",
+      "evidence": "docs/roadmap/evidence/M8.09.md"
     },
     {
       "id": "M8.10",
@@ -912,14 +1060,17 @@
       "milestone": "M8",
       "dependsOn": ["M0.06", "M8.01"],
       "output": "Monthly platform audit",
-      "detailFile": "docs/roadmap/08-security-maintenance.md"
+      "detailFile": "docs/roadmap/08-security-maintenance.md",
+      "evidence": "docs/roadmap/evidence/M8.10.md"
     },
     {
       "id": "M8.11",
       "title": "Definisikan security reporting, incident response, credential rotation, dan release correction procedure.",
+      "status": "in_progress",
       "milestone": "M8",
       "dependsOn": ["M4.05", "M8.04"],
       "output": "SECURITY.md dan incident runbooks",
+      "evidence": "docs/roadmap/evidence/M8.11.md",
       "detailFile": "docs/roadmap/08-security-maintenance.md"
     },
     {
@@ -928,7 +1079,8 @@
       "milestone": "M9",
       "dependsOn": ["M4.11", "M4.06"],
       "output": "orm-notification minimal addon atau ADR reuse existing",
-      "detailFile": "docs/roadmap/09-addons.md"
+      "detailFile": "docs/roadmap/09-addons.md",
+      "evidence": "docs/roadmap/evidence/M9.01.md"
     },
     {
       "id": "M9.02",
@@ -936,15 +1088,18 @@
       "milestone": "M9",
       "dependsOn": ["M4.12", "M4.16"],
       "output": "orm-storage adapter contract dan migration guide",
-      "detailFile": "docs/roadmap/09-addons.md"
+      "detailFile": "docs/roadmap/09-addons.md",
+      "evidence": "docs/roadmap/evidence/M9.02.md"
     },
     {
       "id": "M9.03",
-      "title": "Evaluasi `orm-workflow`: state transition, approval policy, authorization, history, timeout, dan audit.",
+      "title": "Implementasikan `orm-workflow`: typed state/approval engine, authenticated company-scoped API, jobs expiry, audit history, dan generated docs.",
       "milestone": "M9",
       "dependsOn": ["M4.06", "M4.10"],
-      "output": "orm-workflow minimal engine dan example",
-      "detailFile": "docs/roadmap/09-addons.md"
+      "status": "in_progress",
+      "output": "Typed workflow addon, sample definition, authenticated API, expiry jobs, tests, and generated references",
+      "detailFile": "docs/roadmap/09-addons.md",
+      "evidence": "docs/roadmap/evidence/M9.03.md"
     },
     {
       "id": "M9.04",
@@ -952,7 +1107,8 @@
       "milestone": "M9",
       "dependsOn": ["M4.11", "M8.11"],
       "output": "orm-integration minimal webhook addon",
-      "detailFile": "docs/roadmap/09-addons.md"
+      "detailFile": "docs/roadmap/09-addons.md",
+      "evidence": "docs/roadmap/evidence/M9.04.md"
     },
     {
       "id": "M9.05",
@@ -960,7 +1116,8 @@
       "milestone": "M9",
       "dependsOn": ["M4.06"],
       "output": "orm-organization minimal addon",
-      "detailFile": "docs/roadmap/09-addons.md"
+      "detailFile": "docs/roadmap/09-addons.md",
+      "evidence": "docs/roadmap/evidence/M9.05.md"
     },
     {
       "id": "M9.06",
@@ -968,7 +1125,9 @@
       "milestone": "M9",
       "dependsOn": ["M9.01", "M9.03", "M9.07"],
       "output": "Sample request addon dengan demo dataset",
-      "detailFile": "docs/roadmap/09-addons.md"
+      "detailFile": "docs/roadmap/09-addons.md",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/M9.06.md"
     },
     {
       "id": "M9.07",
@@ -976,7 +1135,8 @@
       "milestone": "M9",
       "dependsOn": ["M4.01", "M4.02", "M4.16"],
       "output": "Reusable addon conformance suite",
-      "detailFile": "docs/roadmap/09-addons.md"
+      "detailFile": "docs/roadmap/09-addons.md",
+      "evidence": "docs/roadmap/evidence/M9.07.md"
     },
     {
       "id": "M9.08",
@@ -984,7 +1144,9 @@
       "milestone": "M9",
       "dependsOn": ["M0.05", "M9.06"],
       "output": "Post-extraction architecture review",
-      "detailFile": "docs/roadmap/09-addons.md"
+      "detailFile": "docs/roadmap/09-addons.md",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/M9.08.md"
     },
     {
       "id": "M10.01",
@@ -992,10 +1154,13 @@
       "milestone": "M10",
       "dependsOn": ["M0.02", "M3.08", "M4.16"],
       "output": "Final feature coverage report",
-      "detailFile": "docs/roadmap/10-acceptance.md"
+      "detailFile": "docs/roadmap/10-acceptance.md",
+      "evidence": "docs/roadmap/evidence/M10.01.md"
     },
     {
       "id": "M10.02",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M10.02.md",
       "title": "Audit visual Board selesai dan bukti screenshot tersimpan; browser E2E tidak sekadar mengecek halaman terbuka.",
       "milestone": "M10",
       "dependsOn": ["M3.10", "M5.14", "M5.17"],
@@ -1004,6 +1169,8 @@
     },
     {
       "id": "M10.03",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/M10.03.md",
       "title": "Lint/types/build/tests dan seluruh required checks lolos pada commit yang dipromosikan.",
       "milestone": "M10",
       "dependsOn": ["M2.05", "M7.07"],
@@ -1012,6 +1179,8 @@
     },
     {
       "id": "M10.04",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M10.04.md",
       "title": "PostgreSQL integration benar-benar berjalan; upgrade, relasi/count, seed, dan izin negatif teruji.",
       "milestone": "M10",
       "dependsOn": ["M2.06", "M4.02", "M4.06"],
@@ -1020,6 +1189,8 @@
     },
     {
       "id": "M10.05",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/M10.05.md",
       "title": "Image API/Board berjalan pada runner; health/readiness/shutdown dan konfigurasi container terverifikasi.",
       "milestone": "M10",
       "dependsOn": ["M7.09"],
@@ -1032,7 +1203,8 @@
       "milestone": "M10",
       "dependsOn": ["M7.14"],
       "output": "Automation failure acceptance report",
-      "detailFile": "docs/roadmap/10-acceptance.md"
+      "detailFile": "docs/roadmap/10-acceptance.md",
+      "evidence": "docs/roadmap/evidence/M10.06.md"
     },
     {
       "id": "M10.07",
@@ -1044,6 +1216,8 @@
     },
     {
       "id": "M10.08",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/M10.08.md",
       "title": "Hanya main/dev ada pada repository asal; tidak ada workflow deployment aplikasi yang aktif.",
       "milestone": "M10",
       "dependsOn": ["M1.02", "M1.11", "M1.12"],
@@ -1072,7 +1246,8 @@
       "milestone": "M11",
       "dependsOn": ["M0.02", "M0.04"],
       "output": "docs/engineering/issue-sync-policy.md",
-      "detailFile": "docs/roadmap/11-issues-delivery.md"
+      "detailFile": "docs/roadmap/11-issues-delivery.md",
+      "evidence": "docs/roadmap/evidence/M11.01.md"
     },
     {
       "id": "M11.02",
@@ -1080,7 +1255,8 @@
       "milestone": "M11",
       "dependsOn": ["M11.01"],
       "output": "Task schema, validator dan fixture tests",
-      "detailFile": "docs/roadmap/11-issues-delivery.md"
+      "detailFile": "docs/roadmap/11-issues-delivery.md",
+      "evidence": "docs/roadmap/evidence/M11.02.md"
     },
     {
       "id": "M11.03",
@@ -1088,7 +1264,8 @@
       "milestone": "M11",
       "dependsOn": ["M11.02", "M8.01"],
       "output": "scripts/roadmap sync planner/executor dan tests",
-      "detailFile": "docs/roadmap/11-issues-delivery.md"
+      "detailFile": "docs/roadmap/11-issues-delivery.md",
+      "evidence": "docs/roadmap/evidence/M11.03.md"
     },
     {
       "id": "M11.04",
@@ -1096,7 +1273,8 @@
       "milestone": "M11",
       "dependsOn": ["M11.03"],
       "output": "Issue templates dan metadata renderer",
-      "detailFile": "docs/roadmap/11-issues-delivery.md"
+      "detailFile": "docs/roadmap/11-issues-delivery.md",
+      "evidence": "docs/roadmap/evidence/M11.04.md"
     },
     {
       "id": "M11.05",
@@ -1104,7 +1282,8 @@
       "milestone": "M11",
       "dependsOn": ["M11.03", "M11.04"],
       "output": "Safe body reconciliation tests",
-      "detailFile": "docs/roadmap/11-issues-delivery.md"
+      "detailFile": "docs/roadmap/11-issues-delivery.md",
+      "evidence": "docs/roadmap/evidence/M11.05.md"
     },
     {
       "id": "M11.06",
@@ -1112,7 +1291,8 @@
       "milestone": "M11",
       "dependsOn": ["M11.03", "M11.05", "M8.04"],
       "output": "roadmap-sync workflow dan recovery report",
-      "detailFile": "docs/roadmap/11-issues-delivery.md"
+      "detailFile": "docs/roadmap/11-issues-delivery.md",
+      "evidence": "docs/roadmap/evidence/M11.06.md"
     },
     {
       "id": "M11.07",
@@ -1120,7 +1300,8 @@
       "milestone": "M11",
       "dependsOn": ["M11.01", "M11.06", "M2.10"],
       "output": "Issue lifecycle reconciler dan transition tests",
-      "detailFile": "docs/roadmap/11-issues-delivery.md"
+      "detailFile": "docs/roadmap/11-issues-delivery.md",
+      "evidence": "docs/roadmap/evidence/M11.07.md"
     },
     {
       "id": "M11.08",
@@ -1128,7 +1309,8 @@
       "milestone": "M11",
       "dependsOn": ["M11.01", "M11.05", "M8.04"],
       "output": "Trusted issue intake dan anti-loop tests",
-      "detailFile": "docs/roadmap/11-issues-delivery.md"
+      "detailFile": "docs/roadmap/11-issues-delivery.md",
+      "evidence": "docs/roadmap/evidence/M11.08.md"
     },
     {
       "id": "M11.09",
@@ -1136,7 +1318,8 @@
       "milestone": "M11",
       "dependsOn": ["M11.04", "M11.07", "M0.04"],
       "output": "Progress summary dan optional Projects sync",
-      "detailFile": "docs/roadmap/11-issues-delivery.md"
+      "detailFile": "docs/roadmap/11-issues-delivery.md",
+      "evidence": "docs/roadmap/evidence/M11.09.md"
     },
     {
       "id": "M11.10",
@@ -1144,7 +1327,8 @@
       "milestone": "M11",
       "dependsOn": ["M1.05", "M11.04", "M7.06"],
       "output": "Promotion PR report renderer",
-      "detailFile": "docs/roadmap/11-issues-delivery.md"
+      "detailFile": "docs/roadmap/11-issues-delivery.md",
+      "evidence": "docs/roadmap/evidence/M11.10.md"
     },
     {
       "id": "M11.11",
@@ -1152,7 +1336,8 @@
       "milestone": "M11",
       "dependsOn": ["M1.06", "M1.08", "M11.10", "M7.07"],
       "output": "Auto-merge coordinator dan negative tests",
-      "detailFile": "docs/roadmap/11-issues-delivery.md"
+      "detailFile": "docs/roadmap/11-issues-delivery.md",
+      "evidence": "docs/roadmap/evidence/M11.11.md"
     },
     {
       "id": "M11.12",
@@ -1160,7 +1345,8 @@
       "milestone": "M11",
       "dependsOn": ["M1.01", "M2.02"],
       "output": "Delivery protocol dan handoff fields",
-      "detailFile": "docs/roadmap/11-issues-delivery.md"
+      "detailFile": "docs/roadmap/11-issues-delivery.md",
+      "evidence": "docs/roadmap/evidence/M11.12.md"
     },
     {
       "id": "M11.13",
@@ -1168,7 +1354,8 @@
       "milestone": "M11",
       "dependsOn": ["M11.06", "M11.12", "M7.04", "M7.15"],
       "output": "Unified event graph dan loop regression tests",
-      "detailFile": "docs/roadmap/11-issues-delivery.md"
+      "detailFile": "docs/roadmap/11-issues-delivery.md",
+      "evidence": "docs/roadmap/evidence/M11.13.md"
     },
     {
       "id": "M11.14",
@@ -1176,7 +1363,8 @@
       "milestone": "M11",
       "dependsOn": ["M11.07", "M11.08", "M11.11", "M11.13", "M7.14"],
       "output": "Issue/PR lifecycle fault-injection report",
-      "detailFile": "docs/roadmap/11-issues-delivery.md"
+      "detailFile": "docs/roadmap/11-issues-delivery.md",
+      "evidence": "docs/roadmap/evidence/M11.14.md"
     },
     {
       "id": "M11.15",
@@ -1184,7 +1372,8 @@
       "milestone": "M11",
       "dependsOn": ["M11.14", "M8.09"],
       "output": "docs/operations/roadmap-sync.md dan recurring audit",
-      "detailFile": "docs/roadmap/11-issues-delivery.md"
+      "detailFile": "docs/roadmap/11-issues-delivery.md",
+      "evidence": "docs/roadmap/evidence/M11.15.md"
     }
   ]
 }

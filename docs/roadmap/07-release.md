@@ -74,6 +74,8 @@ Prepare ulang sebelum release tidak bump dua kali; no releasable change menghasi
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M7.04.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
+Planner read-only tersedia melalui `pnpm release:plan`; output JSON menyertakan tag/SHA baseline, head SHA, klasifikasi, next prerelease version, commit yang dihitung/diabaikan, serta status `no-release` atau `invalid`. Planner default tidak membuat tag dan selalu menghasilkan kandidat `-rc.1`; keputusan mengaktifkan stable tetap menunggu M7.03. Tag/SHA baseline dapat dipilih secara eksplisit untuk reproduksi.
+
 ## M7.05 — Siapkan version/changelog/docs pada dev tanpa release branch; persiapan berulang harus idempotent.
 
 - **Prasyarat:** M7.02, M7.04, M6.04, M7.08
@@ -110,7 +112,11 @@ Missing breaking guide memblokir promotion; generated section tidak duplikat.
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M7.06.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
+Renderer read-only menerima file output `release:plan` dan tanggal eksplisit: `pnpm release:changelog <plan.json> <YYYY-MM-DD>`. Hasil ditulis ke stdout agar release preparation dapat meninjau diff sebelum memasukkan ke `CHANGELOG.md`. Commit PR bertaut ke `/pull/<number>` hanya jika subject memakai akhiran Conventional `(#number)`; commit selalu ditautkan ke SHA. Breaking commit memerlukan trailer `UPGRADE:` yang berisi langkah konkret. Detail commit keamanan diringkas menjadi label umum; body commit selain trailer upgrade tidak disalin ke changelog.
+
 ## M7.07 — Jalankan CI lengkap pada commit hasil persiapan; verifikasi lagi main merge SHA sebelum publikasi.
+
+Release workflow pada tag memeriksa ancestor `main` dan `ci-gate` sukses pada run `push` di exact source SHA. Bukti unit ada di [M7.07](evidence/M7.07.md); hosted dispatch dan publication belum diverifikasi.
 
 - **Prasyarat:** M2.05
 - **Baca/periksa:** Prepared dev SHA; PR merge SHA; ci-gate.
@@ -148,6 +154,8 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ## M7.09 — Bangun sekali artefak release dari SHA tervalidasi lalu promosikan artefak yang sama; jangan rebuild tanpa verifikasi identitas.
 
+Image artifact handoff, source labels, same-image smoke/CRITICAL scan, dan publish tanpa rebuild sudah dikontrak di [M7.09](evidence/M7.09.md). Hosted artifact digest equality/push verification tetap acceptance work.
+
 - **Prasyarat:** M7.07, M4.13
 - **Baca/periksa:** Dockerfile; build outputs; verification jobs.
 - **Deliverable:** Build-once artifact flow.
@@ -165,6 +173,8 @@ Digest yang dicatat pada test sama dengan yang dirilis; source revision label te
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M7.09.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
 ## M7.10 — Buat tag immutable, draft/release completion flow, changelog, checksums, GHCR API/Board, SBOM dan provenance attestations.
+
+Workflow lokal kini membangun SPDX SBOM untuk kedua image, membuat checksums bundle dan asset, membuat artifact + OCI image provenance/SBOM attestations, menahan GitHub Release sebagai draft sampai assets cocok dengan nama/digest/ukuran yang diharapkan, lalu verifikasi asset sebelum publish. Implementasi kontrak telah dites lokal; full hosted GHCR/GitHub Release run masih acceptance wajib. Lihat [runbook release artifact](../operations/release-artifact-flow.md).
 
 - **Prasyarat:** M7.09, M7.06, M8.01
 - **Baca/periksa:** Release candidate manifest; GHCR; GITHUB_TOKEN/App permissions.
@@ -184,6 +194,8 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ## M7.11 — Tag image memakai versi/SHA; update latest hanya setelah seluruh artefak wajib berhasil. Tidak deploy aplikasi.
 
+Stable `latest` hanya dimajukan bila tag candidate secara semver lebih baru dari stable GitHub Release lain yang sudah dipublikasikan. Retry untuk tag candidate yang sama tetap menerapkan ulang alias dengan digest yang sama; prerelease dan kandidat lebih lama tidak menurunkan alias. Detail dan hasil test ada di [M7.11](evidence/M7.11.md). Hosted release masih perlu membuktikan policy berjalan dengan token repository.
+
 - **Prasyarat:** M7.10
 - **Baca/periksa:** Candidate digests; semver/prerelease state.
 - **Deliverable:** Registry promotion policy dan tests.
@@ -201,6 +213,8 @@ Retry older release tidak menurunkan latest; prerelease tidak mengganti stable l
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M7.11.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
 ## M7.12 — Verifikasi provenance/digest dan dokumentasikan cara konsumen memeriksanya.
+
+CLI `pnpm release:verify-attestations` memeriksa checksum, source SHA dan version, lalu memverifikasi bundle/SBOM/image attestations dengan repository dan signer workflow yang eksplisit. Fixture lokal menolak data terubah serta workflow repository salah. Hosted attestation identity/digest belum dibuktikan sampai release workflow dijalankan di GitHub; lihat [consumer verification runbook](../operations/release-artifact-flow.md#consumer-verification).
 
 - **Prasyarat:** M7.10
 - **Baca/periksa:** Attestation outputs; checksums; docs release guide.
@@ -220,6 +234,8 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ## M7.13 — Retry release yang sama melanjutkan aset kurang tanpa bump/tag/release duplikat atau overwrite aset berbeda.
 
+Publisher OCI melakukan read-before-write dan hanya reuse existing tag bila image ID, source SHA, versi, dan registry digest cocok; konflik ditolak tanpa mutasi. Workflow juga memeriksa ulang remote tag SHA sesudah verify serta memakai kembali GitHub Release published yang bertipe sesuai. Reconciler aset GitHub mem-preflight semua immutable-name conflict, mengunggah hanya aset yang kurang pada draft, lalu membaca ulang dan memverifikasi digest serta size; retry setelah respons upload hilang akan reuse aset yang diterima server. Bukti lokal ada di [M7.13](evidence/M7.13.md); simulasi hosted retry/race masih pending.
+
 - **Prasyarat:** M7.10
 - **Baca/periksa:** Release manifest; GitHub/GHCR APIs.
 - **Deliverable:** Idempotent publication reconciler.
@@ -237,6 +253,8 @@ Rerun setelah timeout tidak membuat release/tag ganda; conflict digest tidak dit
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M7.13.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
 ## M7.14 — Uji race, partial publish, upload gagal, token expired, tidak ada perubahan releasable, dan kegagalan sinkronisasi branch.
+
+Local fault-injection covers ambiguous GHCR push and GitHub Release asset upload recovery, auth/network fail-closed behavior, immutable image/asset conflicts, published-release mutation refusal, no-release plans, and an actual stale expected-ref race against temporary bare Git remotes. Checksums and source tag SHA have workflow contract assertions. Hosted credential expiry and registry/API mutation remain pending.
 
 - **Prasyarat:** M7.13, M7.08
 - **Baca/periksa:** Planner/publisher tests; fake GitHub/registry adapters.
@@ -256,6 +274,8 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ## M7.15 — Rancang trigger eksplisit melalui reusable workflow/dispatch; jangan mengandalkan event GITHUB_TOKEN yang tidak memicu workflow berikutnya.
 
+Local workflow trust validation now pins the trigger contract for release publishing, release preparation, and dependency automation. See [the workflow trigger and trust map](../operations/workflow-triggers.md) and [M7.15 evidence](evidence/M7.15.md). Hosted dispatch runs still need to verify the configured repository permissions and actual downstream run behavior.
+
 - **Prasyarat:** M8.04, M2.01
 - **Baca/periksa:** Workflow graph; token behavior; App permissions.
 - **Deliverable:** Trigger graph dan trust validation.
@@ -273,6 +293,8 @@ Bot prepare memicu checks yang diperlukan tanpa recursion; arbitrary dispatch SH
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M7.15.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
 ## M7.16 — Sediakan dry-run/release-plan artifact sebelum publikasi pertama dan tautkan seluruh bukti ke release.
+
+`pnpm release:dry-run` composes the release preparation preview with exact source/baseline SHAs, proposed version, changelog/version diffs, file hashes, 25 phase-specific gates explicitly marked `not-run`, and 11 correctly named release/workflow assets. It identifies the actual public SBOM/checksum asset names and reports six hosted acceptance findings for SBOMs/checksum/provenance; local workflow implementation is not presented as hosted proof. The command requires a clean checkout so its report matches the source SHA. The manual [release-plan workflow](../../.github/workflows/release-plan.yml) is restricted to `dev`, uses read-only repository permission, and uploads the JSON plan for review. Current local output and limitations are recorded in [M7.16 evidence](evidence/M7.16.md).
 
 - **Prasyarat:** M7.05, M7.06, M7.14, M7.15, M1.08
 - **Baca/periksa:** Release pipeline lengkap; first stable decision.

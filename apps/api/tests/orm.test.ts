@@ -2,7 +2,12 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import knex, { type Knex } from 'knex';
 import { Model } from 'objection';
 import type { QueryContext } from 'objection';
+import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { BaseModel, Registry, Environment } from '@moonwitness/orm';
+import { Company, Language, User } from '@moonwitness/orm-base';
+import { OrganizationDepartment } from '@moonwitness/orm-organization';
 import { buildApp } from '../src/app.js';
 import type { FastifyInstance, InjectOptions } from 'fastify';
 
@@ -26,15 +31,15 @@ class TestItem extends BaseModel {
   }
 
   async action_toggle_company(): Promise<this> {
-    return this.write({ is_company: !this.is_company });
+    return this.update({ is_company: !this.is_company });
   }
 
   async action_confirm(): Promise<this> {
-    return this.write({ state: 'confirmed' });
+    return this.update({ state: 'confirmed' });
   }
 
   async action_cancel(): Promise<this> {
-    return this.write({ state: 'cancelled' });
+    return this.update({ state: 'cancelled' });
   }
 
   static override jsonSchema = {
@@ -55,6 +60,7 @@ Registry.register(TestItem);
 describe('Enterprise BaseModel & Fastify Integration', () => {
   let testDb: Knex;
   let app: FastifyInstance;
+  let attachmentStorageDirectory: string;
   let accessToken = '';
   /** Injects a request authenticated as the seeded superadmin. */
   const send = (options: InjectOptions) =>
@@ -90,10 +96,12 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
     });
 
     process.env.NODE_ENV = 'test';
+    attachmentStorageDirectory = await mkdtemp(path.join(tmpdir(), 'moonwitness-attachments-'));
     app = await buildApp({
       db: testDb,
       superadminPassword: 'api-test-password',
       jwtSecret: 'test-secret-test-secret-test-secret-123',
+      attachmentStorageDirectory,
     });
     await app.ready();
     const login = await app.inject({
@@ -107,6 +115,7 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
   afterAll(async () => {
     await app.close();
     await testDb.destroy();
+    await rm(attachmentStorageDirectory, { recursive: true, force: true });
   });
 
   it('should register models in Registry', () => {
@@ -164,7 +173,7 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
       method: 'GET',
       url: '/api/base.partner?domain=%5B%5B%22name%22%2C%22%3D%22%2C%22Acme%20Studio%22%5D%5D&with=[addresses.country,category_links.category]',
     });
-    expect(partner.statusCode).toBe(200);
+    expect(partner.statusCode, partner.payload).toBe(200);
     expect(
       partner.json<{
         data: {
@@ -177,14 +186,200 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
       category_links: [{ category: { code: 'customer' } }],
     });
     expect(response.payload).not.toContain('scrypt$');
-    const commaRelations = await send({
-      method: 'GET',
-      url: '/api/base.user?with=partner%2Clanguage&count=true&order=login%20asc',
-    });
-    expect(commaRelations.statusCode).toBe(200);
-    expect(commaRelations.json<{ total: number }>().total).toBe(2);
+    const english = await Language.query().findOne({ code: 'en-US' }).throwIfNotFound();
+    const superadmin = await User.query().findOne({ login: 'superadmin' }).throwIfNotFound();
+    await testDb('users').where({ id: superadmin.id }).update({ language_id: english.id });
+    try {
+      const commaRelations = await send({
+        method: 'GET',
+        url: '/api/base.user?with=partner%2Clanguage&count=true&order=login%20asc',
+      });
+      expect(commaRelations.statusCode, commaRelations.payload).toBe(200);
+      const commaRelationBody = commaRelations.json<{
+        total: number;
+        data: {
+          login: string;
+          partner: { name: string };
+          language: { code: string } | null;
+        }[];
+      }>();
+      expect(commaRelationBody.total).toBe(2);
+      expect(commaRelationBody.data).toHaveLength(2);
+      expect(commaRelationBody.data.find((user) => user.login === 'superadmin')).toMatchObject({
+        partner: { name: 'Super Administrator' },
+        language: { code: 'en-US' },
+      });
+    } finally {
+      await testDb('users').where({ id: superadmin.id }).update({ language_id: null });
+    }
     const privateField = await send({ method: 'GET', url: '/api/base.user?fields=password' });
     expect(privateField.statusCode).toBe(400);
+  });
+
+  it('serves seeded organization records and rejects a hierarchy cycle through the generic API', async () => {
+    const list = await send({
+      method: 'GET',
+      url: '/api/organization.department?order=name%20asc',
+    });
+    expect(list.statusCode, list.payload).toBe(200);
+    expect(list.json<{ data: { code: string }[] }>().data.map(({ code }) => code)).toEqual([
+      'operations',
+      'product',
+    ]);
+
+    const department = await OrganizationDepartment.query()
+      .findOne({ code: 'product' })
+      .throwIfNotFound();
+    const cycle = await send({
+      method: 'PATCH',
+      url: `/api/organization.department/${department.id}`,
+      payload: { parent_id: department.id },
+    });
+    expect(cycle.statusCode, cycle.payload).toBe(403);
+    expect((await OrganizationDepartment.query().findById(department.id))?.parent_id).toBeNull();
+
+    const foreignCompany = await Company.query().insertAndFetch({ name: 'Foreign Organization' });
+    const foreignDepartment = await OrganizationDepartment.query().insertAndFetch({
+      company_id: foreignCompany.id,
+      code: 'foreign',
+      name: 'Foreign Department',
+    });
+    const crossCompany = await send({
+      method: 'POST',
+      url: '/api/organization.team',
+      payload: {
+        company_id: department.company_id,
+        department_id: foreignDepartment.id,
+        code: 'cross_company',
+        name: 'Cross Company Team',
+      },
+    });
+    expect(crossCompany.statusCode, crossCompany.payload).toBe(403);
+    expect(await testDb('organization_teams').count({ count: '*' }).first()).toMatchObject({
+      count: 2,
+    });
+  });
+
+  it('bounds generic query cost and rejects unknown fields through mass assignment', async () => {
+    const malformedDomains: unknown[][] = [
+      [['name', 'contains', 'value']],
+      [['name', '=', { nested: 'value' }]],
+      [['name', '=', ['not', 'a', 'scalar']]],
+      [['bad field', '=', 'value']],
+      [...Array<string>(33).fill('!'), ['active', '=', true]],
+    ];
+    for (const domain of malformedDomains) {
+      const response = await send({
+        method: 'GET',
+        url: `/api/base.partner?domain=${encodeURIComponent(JSON.stringify(domain))}`,
+      });
+      expect(response.statusCode, response.payload).toBe(400);
+    }
+
+    const malformedRpcDomain = await send({
+      method: 'POST',
+      url: '/jsonrpc',
+      payload: {
+        jsonrpc: '2.0',
+        method: 'call',
+        params: {
+          service: 'object',
+          method: 'execute_kw',
+          args: ['base.partner', 'search_read', [[['name', 'contains', 'value']]], {}],
+        },
+        id: 3,
+      },
+    });
+    expect(malformedRpcDomain.statusCode).toBe(200);
+    expect(malformedRpcDomain.json<{ error: { code: number } }>().error.code).toBe(-32602);
+
+    const tooManyTerms = await send({
+      method: 'GET',
+      url: `/api/base.partner?domain=${encodeURIComponent(JSON.stringify(Array.from({ length: 101 }, (_, index) => ['id', '=', index])))}`,
+    });
+    expect(tooManyTerms.statusCode).toBe(400);
+
+    const tooManyFields = await send({
+      method: 'GET',
+      url: `/api/base.partner?fields=${Array.from({ length: 101 }, (_, index) => `field_${index}`).join(',')}`,
+    });
+    expect(tooManyFields.statusCode).toBe(400);
+
+    const oversizedOrder = await send({
+      method: 'GET',
+      url: `/api/base.partner?order=${'id asc,'.repeat(80)}`,
+    });
+    expect(oversizedOrder.statusCode).toBe(400);
+
+    const oversizedRelation = await send({
+      method: 'GET',
+      url: `/api/base.partner?with=${'addresses,'.repeat(65)}`,
+    });
+    expect(oversizedRelation.statusCode).toBe(400);
+
+    const overNestedRelation = await send({
+      method: 'GET',
+      url: '/api/base.user?with=partner.company.country.currency',
+    });
+    expect(overNestedRelation.statusCode).toBe(400);
+
+    const oversizedRpcGraph = await send({
+      method: 'POST',
+      url: '/jsonrpc',
+      payload: {
+        jsonrpc: '2.0',
+        method: 'call',
+        params: {
+          service: 'object',
+          method: 'execute_kw',
+          args: ['base.user', 'search_read', [[]], { with: 'partner.company.country.currency' }],
+        },
+        id: 1,
+      },
+    });
+    expect(oversizedRpcGraph.statusCode).toBe(200);
+    expect(oversizedRpcGraph.json<{ error: { code: number } }>().error.code).toBe(-32602);
+
+    const oversizedRpcFields = await send({
+      method: 'POST',
+      url: '/jsonrpc',
+      payload: {
+        jsonrpc: '2.0',
+        method: 'call',
+        params: {
+          service: 'object',
+          method: 'execute_kw',
+          args: [
+            'base.partner',
+            'search_read',
+            [[]],
+            { fields: Array.from({ length: 101 }, (_, index) => `field_${index}`) },
+          ],
+        },
+        id: 2,
+      },
+    });
+    expect(oversizedRpcFields.json<{ error: { code: number } }>().error.code).toBe(-32602);
+
+    const unknownField = await send({
+      method: 'POST',
+      url: '/api/base.partner',
+      payload: { name: 'Mass assignment probe', is_admin: true },
+    });
+    expect(unknownField.statusCode).toBe(400);
+    expect(
+      await testDb('partners').where({ name: 'Mass assignment probe' }).first()
+    ).toBeUndefined();
+  });
+
+  it('rejects JSON request bodies above the configured one-megabyte limit', async () => {
+    const oversizedBody = await send({
+      method: 'POST',
+      url: '/jsonrpc',
+      headers: { 'content-type': 'application/json' },
+      payload: JSON.stringify({ payload: 'x'.repeat(1024 * 1024) }),
+    });
+    expect(oversizedBody.statusCode).toBe(413);
   });
 
   it('validates polymorphic resource references for base extensions', async () => {
@@ -234,7 +429,7 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
       },
     });
     expect(activity.statusCode).toBe(201);
-    const attachment = await send({
+    const forgedAttachment = await send({
       method: 'POST',
       url: '/api/base.attachment',
       payload: {
@@ -246,14 +441,120 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
         storage_key: 'partners/acme/proposal.pdf',
       },
     });
+    expect(forgedAttachment.statusCode).toBe(400);
+    const traversalFilename = await send({
+      method: 'POST',
+      url: `/api/base.attachment/upload?resource_model=base.partner&resource_id=${partner?.id}&name=..%2Fsecret.txt`,
+      headers: {
+        'content-type': 'application/octet-stream',
+        'x-file-mime': 'text/plain',
+      },
+      payload: Buffer.from('not stored'),
+    });
+    expect(traversalFilename.statusCode).toBe(400);
+    const unsupportedMime = await send({
+      method: 'POST',
+      url: `/api/base.attachment/upload?resource_model=base.partner&resource_id=${partner?.id}&name=payload.svg`,
+      headers: {
+        'content-type': 'application/octet-stream',
+        'x-file-mime': 'image/svg+xml',
+      },
+      payload: Buffer.from('<svg/>'),
+    });
+    expect(unsupportedMime.statusCode).toBe(400);
+    const oversized = await send({
+      method: 'POST',
+      url: `/api/base.attachment/upload?resource_model=base.partner&resource_id=${partner?.id}&name=large.txt`,
+      headers: {
+        'content-type': 'application/octet-stream',
+        'x-file-mime': 'text/plain',
+      },
+      payload: Buffer.alloc(10 * 1024 * 1024 + 1),
+    });
+    expect(oversized.statusCode).toBe(413);
+
+    const attachment = await send({
+      method: 'POST',
+      url:
+        '/api/base.attachment/upload?resource_model=base.partner&resource_id=' +
+        partner?.id +
+        '&name=proposal.pdf',
+      headers: {
+        'content-type': 'application/octet-stream',
+        'x-file-mime': 'application/pdf',
+      },
+      payload: Buffer.from('%PDF attachment content'),
+    });
     expect(attachment.statusCode).toBe(201);
+    expect(attachment.json<{ data: Record<string, unknown> }>().data).not.toHaveProperty(
+      'storage_key'
+    );
     const attachmentId = attachment.json<{ data: { id: number } }>().data.id;
+    const downloaded = await send({
+      method: 'GET',
+      url: `/api/base.attachment/${attachmentId}/download`,
+    });
+    expect(downloaded.statusCode).toBe(200);
+    expect(downloaded.headers['content-disposition']).toContain('proposal.pdf');
+    expect(downloaded.payload).toBe('%PDF attachment content');
+    expect(downloaded.headers['x-content-type-options']).toBe('nosniff');
+    const storageFiles = await readdir(attachmentStorageDirectory);
+    expect(storageFiles).toHaveLength(1);
+    const preexistingKey = storageFiles[0];
+    if (!preexistingKey) throw new Error('Expected uploaded attachment file');
+    await writeFile(
+      path.join(attachmentStorageDirectory, preexistingKey),
+      Buffer.from('legacy bytes')
+    );
     const invalidAttachmentUpdate = await send({
       method: 'PATCH',
       url: `/api/base.attachment/${attachmentId}`,
       payload: { resource_id: null },
     });
     expect(invalidAttachmentUpdate.statusCode).toBe(400);
+    const archivedAttachment = await send({
+      method: 'DELETE',
+      url: `/api/base.attachment/${attachmentId}`,
+    });
+    expect(archivedAttachment.statusCode).toBe(200);
+    expect(await readdir(attachmentStorageDirectory)).toHaveLength(1);
+    const restoreAttachment = await send({
+      method: 'POST',
+      url: `/api/base.attachment/${attachmentId}/action/action_unarchive`,
+      payload: {},
+    });
+    expect(restoreAttachment.statusCode).toBe(200);
+    const restoredDownload = await send({
+      method: 'GET',
+      url: `/api/base.attachment/${attachmentId}/download`,
+    });
+    expect(restoredDownload.payload).toBe('legacy bytes');
+    const deletedAttachment = await send({
+      method: 'DELETE',
+      url: `/api/base.attachment/${attachmentId}?hard=true`,
+    });
+    expect(deletedAttachment.statusCode).toBe(200);
+    expect(await readdir(attachmentStorageDirectory)).toHaveLength(0);
+    await testDb.raw(`
+      CREATE TRIGGER reject_outbox_insert
+      BEFORE INSERT ON outbox_events
+      BEGIN SELECT RAISE(ABORT, 'outbox unavailable'); END;
+    `);
+    const rolledBackAttachment = await send({
+      method: 'POST',
+      url:
+        '/api/base.attachment/upload?resource_model=base.partner&resource_id=' +
+        partner?.id +
+        '&name=rollback.txt',
+      headers: {
+        'content-type': 'application/octet-stream',
+        'x-file-mime': 'text/plain',
+      },
+      payload: Buffer.from('rollback bytes'),
+    });
+    await testDb.raw('DROP TRIGGER reject_outbox_insert');
+    expect(rolledBackAttachment.statusCode).toBe(500);
+    expect(await readdir(attachmentStorageDirectory)).toHaveLength(0);
 
     const referencedPartnerDelete = await send({
       method: 'DELETE',
@@ -313,11 +614,11 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
     const temp = await TestItem.create({ name: 'Temp Item' });
     expect(temp.active).toBe(true);
 
-    await temp.write({ city: 'Jakarta' });
+    await temp.update({ city: 'Jakarta' });
     expect(temp.city).toBe('Jakarta');
 
     // Soft delete (archive)
-    await temp.unlink();
+    await temp.remove();
     expect(temp.active).toBe(false);
 
     // Filtered by active_test by default
@@ -334,7 +635,7 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
     expect(temp.active).toBe(true);
 
     // Hard delete
-    const hardDeleted = await temp.unlink(true);
+    const hardDeleted = await temp.remove(true);
     expect(hardDeleted).toBe(true);
     const notFound = await TestItem.browse(temp.id);
     expect(notFound).toBeNull();
@@ -382,7 +683,7 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
       method: 'GET',
       url: `/api/test.item?domain=${encodeURIComponent(JSON.stringify([['id', '=', itemId]]))}`,
     });
-    expect(resSearch.statusCode).toBe(200);
+    expect(resSearch.statusCode, resSearch.payload).toBe(200);
     const searchBody = JSON.parse(resSearch.payload);
     expect(searchBody.data.length).toBe(1);
     expect(searchBody.data[0].name).toBe('REST API Item');
@@ -437,7 +738,7 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
     expect(rpcRes.statusCode).toBe(200);
     const rpcBody = JSON.parse(rpcRes.payload);
     expect(rpcBody.id).toBe(42);
-    expect(Array.isArray(rpcBody.result)).toBe(true);
+    expect(Array.isArray(rpcBody.result), rpcRes.payload).toBe(true);
     expect(rpcBody.result.length).toBeGreaterThan(0);
   });
 });

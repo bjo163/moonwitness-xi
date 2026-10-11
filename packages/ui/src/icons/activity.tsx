@@ -1,0 +1,30 @@
+import { useId, type SVGProps } from 'react';
+
+export type ActivityIconProps = Omit<SVGProps<SVGSVGElement>, 'children' | 'title'> & {
+  title?: string;
+  size?: number | string;
+};
+
+export function ActivityIcon({ size = 24, title, ...props }: ActivityIconProps) {
+  const titleId = useId();
+  return (
+    <svg
+      aria-hidden={title ? undefined : true}
+      aria-labelledby={title ? titleId : undefined}
+      fill="none"
+      height={size}
+      role={title ? 'img' : undefined}
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.8"
+      viewBox="0 0 24 24"
+      width={size}
+      {...props}
+    >
+      {title ? <title id={titleId}>{title}</title> : null}
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7v5l3.5 2m-11-9 2-1.5m13 1.5-2-1.5" />
+    </svg>
+  );
+}

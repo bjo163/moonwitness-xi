@@ -1,0 +1,524 @@
+{
+  "schemaVersion": 1,
+  "basePath": "assets/moonwitness",
+  "generatedFrom": "packages/assets/manifest.json and packages/ui/src/styles/tokens.css",
+  "sources": {
+    "assetManifest": "manifest.json",
+    "assetManifestSha256": "ab598ff25d839c34ad68dfb0430433f70dbbf302ed06b1f7be9053bcbabcf227",
+    "tokens": "packages/ui/src/styles/tokens.css",
+    "tokensSha256": "269a6e000da6fa288380cf36ec127df09cc86d6a38a1d4613a975b54d3664d5a"
+  },
+  "assets": [
+    {
+      "source": "packages/assets/brand/favicon.svg",
+      "output": "docs/assets/moonwitness/brand/favicon.svg",
+      "kind": "favicon",
+      "format": "svg",
+      "width": 64,
+      "height": 64,
+      "sha256": "b530099531f5f76b3a59fa28e6df08081ef593f8f6e8f49f7550172d12f0d880"
+    },
+    {
+      "source": "packages/assets/brand/moonwitness-lockup-dark.svg",
+      "output": "docs/assets/moonwitness/brand/moonwitness-lockup-dark.svg",
+      "kind": "lockup",
+      "format": "svg",
+      "width": 500,
+      "height": 80,
+      "sha256": "0ca1b8c76837e6f973f42102f19ecbff2e600e7016422c9d805512e2c5c89e4e"
+    },
+    {
+      "source": "packages/assets/brand/moonwitness-lockup-light.svg",
+      "output": "docs/assets/moonwitness/brand/moonwitness-lockup-light.svg",
+      "kind": "lockup",
+      "format": "svg",
+      "width": 500,
+      "height": 80,
+      "sha256": "4d042b04e92b66cf8cba8e7df75e67af3c16563f0e2abfe3636d2d31a4d1417e"
+    },
+    {
+      "source": "packages/assets/brand/moonwitness-lockup-mono-dark.svg",
+      "output": "docs/assets/moonwitness/brand/moonwitness-lockup-mono-dark.svg",
+      "kind": "lockup",
+      "format": "svg",
+      "width": 500,
+      "height": 80,
+      "sha256": "2a7a88f811162635f44782eeebe047a242e09bb77331713162d3ab0d706c7e13"
+    },
+    {
+      "source": "packages/assets/brand/moonwitness-lockup-mono-light.svg",
+      "output": "docs/assets/moonwitness/brand/moonwitness-lockup-mono-light.svg",
+      "kind": "lockup",
+      "format": "svg",
+      "width": 500,
+      "height": 80,
+      "sha256": "7cd04b42699a35036e1aaf7339a3ddd544ec4af168f3cebe732b2c13fa35b1d2"
+    },
+    {
+      "source": "packages/assets/brand/moonwitness-symbol-dark.svg",
+      "output": "docs/assets/moonwitness/brand/moonwitness-symbol-dark.svg",
+      "kind": "symbol",
+      "format": "svg",
+      "width": 64,
+      "height": 64,
+      "sha256": "e8327805e457ad1d71fabdf11813e9f3f45ae704cf7fa28c8bc630148190221a"
+    },
+    {
+      "source": "packages/assets/brand/moonwitness-symbol-light.svg",
+      "output": "docs/assets/moonwitness/brand/moonwitness-symbol-light.svg",
+      "kind": "symbol",
+      "format": "svg",
+      "width": 64,
+      "height": 64,
+      "sha256": "7cb1718d549c82af76e228c01cb99e1c60a48ee72c7fbfb41dee50cd9a5dbc63"
+    },
+    {
+      "source": "packages/assets/brand/moonwitness-symbol-mono-dark.svg",
+      "output": "docs/assets/moonwitness/brand/moonwitness-symbol-mono-dark.svg",
+      "kind": "symbol",
+      "format": "svg",
+      "width": 64,
+      "height": 64,
+      "sha256": "2372f171a51ea2f9ae372c7d9e975ffecb7b765d41e1122918d6c6250fd001f3"
+    },
+    {
+      "source": "packages/assets/brand/moonwitness-symbol-mono-light.svg",
+      "output": "docs/assets/moonwitness/brand/moonwitness-symbol-mono-light.svg",
+      "kind": "symbol",
+      "format": "svg",
+      "width": 64,
+      "height": 64,
+      "sha256": "c8af9d7989292f086adff16bf952c0226260738daad5a7c8cfdbeeed0d297af8"
+    },
+    {
+      "source": "packages/assets/brand/moonwitness-wordmark-dark.svg",
+      "output": "docs/assets/moonwitness/brand/moonwitness-wordmark-dark.svg",
+      "kind": "wordmark",
+      "format": "svg",
+      "width": 440,
+      "height": 80,
+      "sha256": "a294c9401bb41e86ab21a49451d1fddc5073b2da6d4d3adbdeeaaf2cf67465b0"
+    },
+    {
+      "source": "packages/assets/brand/moonwitness-wordmark-light.svg",
+      "output": "docs/assets/moonwitness/brand/moonwitness-wordmark-light.svg",
+      "kind": "wordmark",
+      "format": "svg",
+      "width": 440,
+      "height": 80,
+      "sha256": "31034ff8f3f8443be61faab31420cc75864370ab76c7235312a8b0af9bd578c1"
+    },
+    {
+      "source": "packages/assets/brand/moonwitness-wordmark-mono-dark.svg",
+      "output": "docs/assets/moonwitness/brand/moonwitness-wordmark-mono-dark.svg",
+      "kind": "wordmark",
+      "format": "svg",
+      "width": 440,
+      "height": 80,
+      "sha256": "20010093a21cebb1881de292bee5612cabfae6dfd293eb709d65e8507b230c43"
+    },
+    {
+      "source": "packages/assets/brand/moonwitness-wordmark-mono-light.svg",
+      "output": "docs/assets/moonwitness/brand/moonwitness-wordmark-mono-light.svg",
+      "kind": "wordmark",
+      "format": "svg",
+      "width": 440,
+      "height": 80,
+      "sha256": "31034ff8f3f8443be61faab31420cc75864370ab76c7235312a8b0af9bd578c1"
+    },
+    {
+      "source": "packages/assets/brand/readme-banner.svg",
+      "output": "docs/assets/moonwitness/brand/readme-banner.svg",
+      "kind": "readme-banner",
+      "format": "svg",
+      "width": 1280,
+      "height": 320,
+      "sha256": "0ca9be142cca3f40c7c060ea5fdd636602b0a23eb22ac15424b89aaefe6ba661"
+    },
+    {
+      "source": "packages/assets/brand/social-card.png",
+      "output": "docs/assets/moonwitness/brand/social-card.png",
+      "kind": "social-card",
+      "format": "png",
+      "width": 1200,
+      "height": 630,
+      "sha256": "f85cff0fa978bbab45515d11a3e76c813352dc9e1537543dcc194dc4c3d7c05e"
+    },
+    {
+      "source": "packages/assets/brand/social-card.svg",
+      "output": "docs/assets/moonwitness/brand/social-card.svg",
+      "kind": "social-card",
+      "format": "svg",
+      "width": 1200,
+      "height": 630,
+      "sha256": "2e41475a4db6f493b319021a3daa1bd7edb75b7800297d746e6abfabe331365b"
+    },
+    {
+      "source": "packages/assets/icons/activity.svg",
+      "output": "docs/assets/moonwitness/icons/activity.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "b54859e55b1995aafb155e4c77e966f07e4bb65e989debb6f9b466da2f03a593"
+    },
+    {
+      "source": "packages/assets/icons/add.svg",
+      "output": "docs/assets/moonwitness/icons/add.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "20c55bb628e6c8c6b8420db8307297d3186c999818bda1aba53a747d5cafd792"
+    },
+    {
+      "source": "packages/assets/icons/addon.svg",
+      "output": "docs/assets/moonwitness/icons/addon.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "e21a17d465be68e30d8bba132551e2c0bb614846142d0b5612e7ddde21cf6d24"
+    },
+    {
+      "source": "packages/assets/icons/attachment.svg",
+      "output": "docs/assets/moonwitness/icons/attachment.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "bf3c56509a5c6835c6c9d2aaaa0439b635ee4f938fce7ecaacaefe8fd5610505"
+    },
+    {
+      "source": "packages/assets/icons/calendar.svg",
+      "output": "docs/assets/moonwitness/icons/calendar.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "e7f14d3d903edccd15c339d99240e0dcd0ac414b40d9b61cb7e21952749bb1b1"
+    },
+    {
+      "source": "packages/assets/icons/company.svg",
+      "output": "docs/assets/moonwitness/icons/company.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "6a140ee59887559084361f99eef380d2ebe20e4f890efd3277e20fc08b59d967"
+    },
+    {
+      "source": "packages/assets/icons/delete.svg",
+      "output": "docs/assets/moonwitness/icons/delete.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "2821698b651eb24af647669a9db815a63b1abb76e7a5f86a3311b7df8dcca652"
+    },
+    {
+      "source": "packages/assets/icons/edit.svg",
+      "output": "docs/assets/moonwitness/icons/edit.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "5ab4e0f3ce4b0cc1ec96215ecba5c00b559f9adbc9374bf4d530cf211fefd31e"
+    },
+    {
+      "source": "packages/assets/icons/external-link.svg",
+      "output": "docs/assets/moonwitness/icons/external-link.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "a826afac8c21dec00885d6654c6d92a31d65bd96f594d3007b8b4a5b796048a3"
+    },
+    {
+      "source": "packages/assets/icons/field.svg",
+      "output": "docs/assets/moonwitness/icons/field.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "6a2dc5a73ef5b683583ed8c07db722b72d4a5a9c21186dcf9263c483cbb02e85"
+    },
+    {
+      "source": "packages/assets/icons/filter.svg",
+      "output": "docs/assets/moonwitness/icons/filter.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "c4e61dd26d6fed9a32ded70681483db825830e211c46959794896e7110aadce0"
+    },
+    {
+      "source": "packages/assets/icons/jobs.svg",
+      "output": "docs/assets/moonwitness/icons/jobs.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "3fc3741cca11f758384bfe44f1f32e38f489c19ef5c5948357db227f549b5fcb"
+    },
+    {
+      "source": "packages/assets/icons/menu.svg",
+      "output": "docs/assets/moonwitness/icons/menu.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "14d70a3a9cc7722f41ccd330afcfb70b2f90535417b3c671b59ed84511a7660e"
+    },
+    {
+      "source": "packages/assets/icons/model.svg",
+      "output": "docs/assets/moonwitness/icons/model.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "4f91b30cf7beb4f055b8f12f3b01eabfe345c3b7812c8078ea6ec1e07e3ffe92"
+    },
+    {
+      "source": "packages/assets/icons/notification.svg",
+      "output": "docs/assets/moonwitness/icons/notification.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "2055c39e38921a3f0bc28d32b8c70ec3532523d379cec0dab9a674c3878af947"
+    },
+    {
+      "source": "packages/assets/icons/partner.svg",
+      "output": "docs/assets/moonwitness/icons/partner.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "4fb31f39a477e47157b7cc5158275ab5ddacea60aa131f463ba7a68330fd2fa4"
+    },
+    {
+      "source": "packages/assets/icons/refresh.svg",
+      "output": "docs/assets/moonwitness/icons/refresh.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "624c80cd2826070e04cf1ea6ec2e4b14969a534b3f14e21dcdbeb579d34dec16"
+    },
+    {
+      "source": "packages/assets/icons/relation.svg",
+      "output": "docs/assets/moonwitness/icons/relation.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "0fdcd2bf225bec8f3c9f081ba97c3508344130aa66f25bfb8401c47489664b1c"
+    },
+    {
+      "source": "packages/assets/icons/search.svg",
+      "output": "docs/assets/moonwitness/icons/search.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "0c13bfcffb53bd0e5c2004b16946d248fb39b35f0d87f5671ca8384666465487"
+    },
+    {
+      "source": "packages/assets/icons/security.svg",
+      "output": "docs/assets/moonwitness/icons/security.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "1447b34ac54496d8fa6e28913ccdc5a4f5848758f0d2ba66a1fc2025ffc29e04"
+    },
+    {
+      "source": "packages/assets/icons/settings.svg",
+      "output": "docs/assets/moonwitness/icons/settings.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "7ac88c2607f4971aff7693f55de4f19fdb64a0751f9bfda7f4688c63f1487383"
+    },
+    {
+      "source": "packages/assets/icons/team.svg",
+      "output": "docs/assets/moonwitness/icons/team.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "deef71d1d6b2b6af5f33e35f3419248e99eef6a9e4855c9c23720e1d82c1e1c2"
+    },
+    {
+      "source": "packages/assets/icons/user.svg",
+      "output": "docs/assets/moonwitness/icons/user.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "329741ec7a269279587bdbc9c65dac3fe1423eb47af97c27d1e91d56827f15ec"
+    },
+    {
+      "source": "packages/assets/icons/workflow.svg",
+      "output": "docs/assets/moonwitness/icons/workflow.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "4830fa081b4a1368f69417c4aac03d37c1ffcf5eb8a7c6ff6664731f6846b11a"
+    },
+    {
+      "source": "packages/assets/illustrations/access-denied-dark.svg",
+      "output": "docs/assets/moonwitness/illustrations/access-denied-dark.svg",
+      "kind": "illustration",
+      "format": "svg",
+      "width": 164,
+      "height": 152,
+      "sha256": "7b3be9e011214980ac63edbe0760915ae8b7807db0d89c493ddcf36956b99f3a"
+    },
+    {
+      "source": "packages/assets/illustrations/access-denied-light.svg",
+      "output": "docs/assets/moonwitness/illustrations/access-denied-light.svg",
+      "kind": "illustration",
+      "format": "svg",
+      "width": 164,
+      "height": 152,
+      "sha256": "f632b7f056d2190cff7a00ca064198cdaab0a5e7e4d79d717ee7619ca46d1273"
+    },
+    {
+      "source": "packages/assets/illustrations/empty-dark.svg",
+      "output": "docs/assets/moonwitness/illustrations/empty-dark.svg",
+      "kind": "illustration",
+      "format": "svg",
+      "width": 164,
+      "height": 152,
+      "sha256": "78e548e3b6c0fd0abd82eeadcd3af872d86298f02d0bee5952bfdcc23952b890"
+    },
+    {
+      "source": "packages/assets/illustrations/empty-light.svg",
+      "output": "docs/assets/moonwitness/illustrations/empty-light.svg",
+      "kind": "illustration",
+      "format": "svg",
+      "width": 164,
+      "height": 152,
+      "sha256": "6a77720b5c58b2d62364c8187249e0c3e0c89c511003e843c645d9e15e4dd05f"
+    },
+    {
+      "source": "packages/assets/illustrations/no-activity-dark.svg",
+      "output": "docs/assets/moonwitness/illustrations/no-activity-dark.svg",
+      "kind": "illustration",
+      "format": "svg",
+      "width": 164,
+      "height": 152,
+      "sha256": "a8970aa9339e548cc2340c26fe3d9dd3854247dcd8df50255feb078c33f7ec58"
+    },
+    {
+      "source": "packages/assets/illustrations/no-activity-light.svg",
+      "output": "docs/assets/moonwitness/illustrations/no-activity-light.svg",
+      "kind": "illustration",
+      "format": "svg",
+      "width": 164,
+      "height": 152,
+      "sha256": "ec464532d3d4e10a5b35d1705fef8e0142d715de17c746dae55b6e3ed3c78c8c"
+    },
+    {
+      "source": "packages/assets/illustrations/no-results-dark.svg",
+      "output": "docs/assets/moonwitness/illustrations/no-results-dark.svg",
+      "kind": "illustration",
+      "format": "svg",
+      "width": 164,
+      "height": 152,
+      "sha256": "a27a29ee64a28e303f05a5abac4f074bf0b9750252526829f223fcfdfebdbd81"
+    },
+    {
+      "source": "packages/assets/illustrations/no-results-light.svg",
+      "output": "docs/assets/moonwitness/illustrations/no-results-light.svg",
+      "kind": "illustration",
+      "format": "svg",
+      "width": 164,
+      "height": 152,
+      "sha256": "c7f93dab7ec249ea71b5f59a6f98f8234a36b111d51f49f0bd28c120f6012183"
+    },
+    {
+      "source": "packages/assets/illustrations/not-found-dark.svg",
+      "output": "docs/assets/moonwitness/illustrations/not-found-dark.svg",
+      "kind": "illustration",
+      "format": "svg",
+      "width": 164,
+      "height": 152,
+      "sha256": "1d3c7973f7e4d615a735e9f4fa1ad04752253baf1f5c78d18b353f0a2dab0526"
+    },
+    {
+      "source": "packages/assets/illustrations/not-found-light.svg",
+      "output": "docs/assets/moonwitness/illustrations/not-found-light.svg",
+      "kind": "illustration",
+      "format": "svg",
+      "width": 164,
+      "height": 152,
+      "sha256": "7984972063604d7d00f2fcf87cc34abb09b08081421722f351134f4422adb05e"
+    },
+    {
+      "source": "packages/assets/illustrations/offline-dark.svg",
+      "output": "docs/assets/moonwitness/illustrations/offline-dark.svg",
+      "kind": "illustration",
+      "format": "svg",
+      "width": 164,
+      "height": 152,
+      "sha256": "83e1e94e208d18ce97193c145083b40c26362e9a824fa77bc539b4a6d2e7d776"
+    },
+    {
+      "source": "packages/assets/illustrations/offline-light.svg",
+      "output": "docs/assets/moonwitness/illustrations/offline-light.svg",
+      "kind": "illustration",
+      "format": "svg",
+      "width": 164,
+      "height": 152,
+      "sha256": "3f77e94bc7fbb0e2d35660b288123c307abedb7ac490e89324ad3884e411544a"
+    },
+    {
+      "source": "packages/assets/illustrations/onboarding-dark.svg",
+      "output": "docs/assets/moonwitness/illustrations/onboarding-dark.svg",
+      "kind": "illustration",
+      "format": "svg",
+      "width": 164,
+      "height": 152,
+      "sha256": "47749e8d9606dfacac580a2a21a92fdc50b138c6a872affcfc162a80d90789e8"
+    },
+    {
+      "source": "packages/assets/illustrations/onboarding-light.svg",
+      "output": "docs/assets/moonwitness/illustrations/onboarding-light.svg",
+      "kind": "illustration",
+      "format": "svg",
+      "width": 164,
+      "height": 152,
+      "sha256": "51d2577a5fb522e983f9398239dac19ea0c56fcaafffdbf8f83e3653674e5223"
+    },
+    {
+      "source": "packages/assets/illustrations/orbit-pattern-dark.svg",
+      "output": "docs/assets/moonwitness/illustrations/orbit-pattern-dark.svg",
+      "kind": "pattern",
+      "format": "svg",
+      "width": 160,
+      "height": 160,
+      "sha256": "e432615fa17f762c311cfaf312808449febeba7ca65a454f8b94506269ecdc4c"
+    },
+    {
+      "source": "packages/assets/illustrations/orbit-pattern-light.svg",
+      "output": "docs/assets/moonwitness/illustrations/orbit-pattern-light.svg",
+      "kind": "pattern",
+      "format": "svg",
+      "width": 160,
+      "height": 160,
+      "sha256": "efeae87d4ead889767d59a3d4874d0c40e93de1edaaba2117d2c053f8e5903e9"
+    }
+  ],
+  "stylesheets": [
+    {
+      "source": "packages/ui/src/styles/tokens.css",
+      "output": "docs/assets/moonwitness/styles/tokens.css",
+      "sha256": "269a6e000da6fa288380cf36ec127df09cc86d6a38a1d4613a975b54d3664d5a"
+    }
+  ]
+}

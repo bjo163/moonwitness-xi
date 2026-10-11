@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import type { ModelInfo } from '@moonwitness/client';
+import { ToastHost } from '@moonwitness/ui/components/toast';
+import { SettingsIcon as MoonWitnessSettingsIcon } from '@moonwitness/ui/icons/settings';
+import { UserIcon as MoonWitnessUserIcon } from '@moonwitness/ui/icons/user';
 import {
   Building2,
   Calendar,
@@ -13,21 +16,21 @@ import {
   Menu,
   Moon,
   Search,
-  Settings,
   Sun,
   User,
   Users,
 } from 'lucide-react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { client } from '@/lib/client';
-import { useAuth } from '@/hooks/use-auth';
+import { scopedQueryKey } from '@/lib/query-scope';
+import { useAuth } from '@/hooks/use-auth-context';
 import { useModels } from '@/hooks/use-model';
 import { useTheme } from '@/hooks/use-theme';
 import { DashboardIcon, modelIcon, modelLabel } from '@/lib/models';
 import { readDevelopmentMode, updateDevelopmentMode } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@moonwitness/ui/components/button';
+import { Skeleton } from '@moonwitness/ui/components/skeleton';
 import {
   CommandDialog,
   CommandEmpty,
@@ -35,7 +38,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from '@/components/ui/command';
+} from '@moonwitness/ui/components/command';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,12 +46,13 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@moonwitness/ui/components/dropdown-menu';
 import { Logo } from '@/components/manga/logo';
 import { Doodle } from '@/components/manga/effects';
 import { ShortcutsDialog } from '@/components/manga/shortcuts-dialog';
 import { ActivityBell } from './activity-bell';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { NotificationBell } from './notification-bell';
+import { Sheet, SheetContent, SheetTrigger } from '@moonwitness/ui/components/sheet';
 
 function NavItem({
   to,
@@ -68,9 +72,10 @@ function NavItem({
       to={to}
       end={to === '/'}
       onClick={onNavigate}
+      title={label}
       className={({ isActive }) =>
         cn(
-          'group relative flex items-center gap-3 px-3 py-2 font-display text-lg uppercase tracking-wide text-ink/70 transition-colors hover:text-ink',
+          'group relative flex min-w-0 items-center gap-3 px-3 py-2 font-display text-lg uppercase tracking-wide text-ink/70 transition-colors hover:text-ink',
           isActive && 'text-on-accent hover:text-on-accent'
         )
       }
@@ -86,7 +91,7 @@ function NavItem({
             />
           )}
           <Icon className="relative size-5" strokeWidth={2.4} />
-          <span className="relative truncate">{label}</span>
+          <span className="relative min-w-0 whitespace-normal leading-tight">{label}</span>
         </>
       )}
     </NavLink>
@@ -141,19 +146,19 @@ export function AppShell() {
   );
   const [developmentMode, setDevelopmentMode] = useState(readDevelopmentMode);
 
-  const toggleDevelopmentMode = () => {
-    setDevelopmentMode((enabled) => {
-      updateDevelopmentMode(!enabled);
-      return !enabled;
-    });
-  };
+  const toggleDevelopmentMode = useCallback(() => {
+    setDevelopmentMode((enabled) => !enabled);
+  }, []);
 
-  const queryClient = useQueryClient();
+  useEffect(() => {
+    updateDevelopmentMode(developmentMode);
+  }, [developmentMode]);
+
   const navigate = useNavigate();
 
   // Query accessible companies for the tenant switcher
   const { data: companiesData } = useQuery({
-    queryKey: ['companies_selector'],
+    queryKey: scopedQueryKey(['companies_selector']),
     queryFn: () =>
       client.model<{ id: number; name: string }>('base.company').searchRead({
         limit: 50,
@@ -167,13 +172,12 @@ export function AppShell() {
   const handleSelectCompany = (companyId: number | undefined) => {
     client.setCompanyId(companyId);
     setActiveCompanyId(companyId);
-    // Invalidate all records queries to apply new tenant scope immediately
-    queryClient.invalidateQueries();
+    // Tenant-scoped query keys switch atomically; don't refetch old keys with the new header.
   };
 
   // Omnisearch cross-model query
   const { data: searchResults } = useQuery({
-    queryKey: ['omnisearch', paletteQuery],
+    queryKey: scopedQueryKey(['omnisearch', paletteQuery]),
     queryFn: async () => {
       const q = paletteQuery.trim();
       if (!q) return [];
@@ -272,6 +276,16 @@ export function AppShell() {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      const target = event.target;
+      const isEditableTarget =
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          target instanceof HTMLSelectElement);
+
+      if (isEditableTarget) return;
+
       if (event.key.toLowerCase() === 'k' && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
         setPaletteOpen((open) => !open);
@@ -287,6 +301,7 @@ export function AppShell() {
 
   return (
     <div className="grid min-h-dvh grid-cols-1 lg:grid-cols-[16rem_minmax(0,1fr)]">
+      <ToastHost theme={theme} />
       {/* Sidebar: scoped .dark tokens keep it ink-black with light ink in BOTH themes. */}
       <aside className="dark sticky top-0 hidden h-dvh flex-col border-r-4 border-[#0d0d0d] bg-[#0d0d0d] text-ink lg:flex">
         <div className="relative border-b-2 border-dashed border-ink/20 px-5 py-5">
@@ -384,6 +399,8 @@ export function AppShell() {
                     variant="outline"
                     size="sm"
                     className="gap-1.5 border-2 border-ink px-2 font-mono text-xs shadow-ink-sm sm:gap-2 sm:px-3"
+                    aria-label={`Switch company. Current scope: ${currentCompany?.name ?? 'Global Scope'}`}
+                    title={`Company scope: ${currentCompany?.name ?? 'Global Scope'}`}
                   >
                     <Building2 className="size-3.5 text-lime-600 dark:text-lime" />
                     <span className="hidden sm:inline">Tenant:</span>
@@ -427,6 +444,7 @@ export function AppShell() {
 
             {/* Activity Notification Center */}
             <ActivityBell />
+            <NotificationBell />
 
             {/* Keyboard Shortcuts Trigger */}
             <Button
@@ -446,6 +464,7 @@ export function AppShell() {
               id="toggle-theme"
               variant="outline"
               size="icon"
+              className="hidden sm:inline-flex"
               onClick={toggle}
               aria-label="Toggle theme"
             >
@@ -459,6 +478,8 @@ export function AppShell() {
                   id="user-menu"
                   variant="outline"
                   className="gap-1.5 px-2 normal-case sm:gap-2 sm:px-3"
+                  aria-label={`User menu for ${user?.login ?? 'current user'}`}
+                  title={`User menu for ${user?.login ?? 'current user'}`}
                 >
                   <span className="grid size-6 place-items-center border-2 border-ink bg-lime font-display text-xs text-on-accent">
                     {user?.login.slice(0, 1).toUpperCase()}
@@ -476,13 +497,17 @@ export function AppShell() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <NavLink to="/profile" className="flex cursor-pointer items-center gap-2">
-                    <User /> Profile
+                    <MoonWitnessUserIcon className="size-4" /> Profile
                   </NavLink>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <NavLink to="/settings" className="flex cursor-pointer items-center gap-2">
-                    <Settings /> Settings
+                    <MoonWitnessSettingsIcon className="size-4" /> Settings
                   </NavLink>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="sm:hidden" onSelect={toggle}>
+                  {theme === 'dark' ? <Sun /> : <Moon />}
+                  Toggle theme
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem id="logout" onSelect={() => void logout()}>
@@ -494,7 +519,7 @@ export function AppShell() {
         </header>
 
         <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-10">
-          <Outlet />
+          <Outlet key={activeCompanyId ?? 'default-company'} />
         </main>
       </div>
 

@@ -5,28 +5,68 @@ import type { FastifyInstance } from 'fastify';
 import { defineAddon, defineModel, fields, installAddons, ref, seed } from '@moonwitness/orm';
 import {
   Company,
+  AuditLog,
+  AccessGroup,
+  CompanyMembership,
   Country,
   CountryState,
   Currency,
+  ModelAccess,
   Language,
   Partner,
   Sequence,
   User,
   initializeSuperadminPassword,
   resetSuperadminPassword,
+  assignDefaultUserGroup,
   nextSequence,
   manifest,
 } from '@moonwitness/orm-base';
 import { createAuthService, manifest as authManifest } from '@moonwitness/auth';
-import { jobsManifest } from '@moonwitness/jobs';
+import {
+  Job,
+  JobRun,
+  OutboxEvent,
+  Cron,
+  enqueueJob,
+  enqueueDueCrons,
+  jobsManifest,
+  dispatchOneOutboxEvent,
+  registerJobHandler,
+  registerOutboxConsumer,
+  runOneJob,
+} from '@moonwitness/jobs';
+import { manifest as baseManifest } from '@moonwitness/orm-base';
+import { manifest as notificationManifest } from '@moonwitness/orm-notification';
+import { manifest as organizationManifest } from '@moonwitness/orm-organization';
+import { manifest as requestManifest } from '@moonwitness/orm-request';
+import { manifest as integrationManifest } from '@moonwitness/orm-integration';
+import {
+  manifest as workflowManifest,
+  startWorkflow,
+  transitionWorkflow,
+} from '@moonwitness/orm-workflow';
 import { buildApp } from '../src/app.js';
 import { verifyDefaultBaseAccounts } from '../src/startup-checks.js';
+import { createPostgresKnexConfig } from '../src/config/knexfile.js';
+
+const POSTGRES_TEST_REFRESH_SECRET = 'postgres-integration-refresh-secret-32chars';
 
 const connectionString = process.env.POSTGRES_TEST_URL;
 if (process.env.REQUIRE_POSTGRES_TESTS === 'true' && !connectionString) {
   throw new Error('POSTGRES_TEST_URL is required when REQUIRE_POSTGRES_TESTS=true');
 }
 const postgresDescribe = connectionString ? describe : describe.skip;
+const runtimeManifests = [
+  baseManifest,
+  authManifest,
+  jobsManifest,
+  integrationManifest,
+  requestManifest,
+  notificationManifest,
+  organizationManifest,
+  workflowManifest,
+];
 
 postgresDescribe('PostgreSQL addon upgrade integration', () => {
   let adminDb: Knex;
@@ -37,16 +77,18 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
   const apiSchema = `mw_api_test_${randomUUID().replaceAll('-', '')}`;
 
   beforeAll(async () => {
+    if (!connectionString) throw new Error('POSTGRES_TEST_URL is required');
     adminDb = knex({ client: 'pg', connection: connectionString, pool: { min: 0, max: 2 } });
     await adminDb.raw('select 1');
     await adminDb.raw('create schema ??', [schema]);
     await adminDb.raw('create schema ??', [apiSchema]);
-    db = knex({
-      client: 'pg',
-      connection: connectionString,
-      searchPath: [schema],
-      pool: { min: 0, max: 4 },
-    });
+    db = knex(
+      createPostgresKnexConfig(
+        connectionString,
+        { poolMin: 0, poolMax: 4, acquireTimeoutMs: 5000, statementTimeoutMs: 30_000 },
+        { searchPath: [schema] }
+      )
+    );
   }, 30000);
 
   afterAll(async () => {
@@ -59,6 +101,126 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       await adminDb.destroy();
     }
   });
+
+  it('applies the PostgreSQL statement timeout to pooled connections', async () => {
+    const result = await db.raw('SHOW statement_timeout');
+    expect(result.rows[0]?.statement_timeout).toBe('30s');
+  });
+
+  it('rolls back PostgreSQL upgrade DDL, data, and addon version when a programmatic hook fails', async () => {
+    const upgradeSchema = `mw_upgrade_test_${randomUUID().replaceAll('-', '')}`;
+    await adminDb.raw('create schema ??', [upgradeSchema]);
+    const upgradeDb = knex(
+      createPostgresKnexConfig(
+        connectionString!,
+        { poolMin: 0, poolMax: 2, acquireTimeoutMs: 5000, statementTimeoutMs: 30_000 },
+        { searchPath: [upgradeSchema] }
+      )
+    );
+    const addonName = 'test.postgres_upgrade_rollback';
+    const installed = defineAddon({ name: addonName, version: '1.0.0', models: [] });
+    const failingUpgrade = defineAddon({
+      name: addonName,
+      version: '1.1.0',
+      models: [],
+      upgrade: {
+        '1.0.0': async (transaction) => {
+          await transaction.schema.createTable('upgrade_rollback_probe', (table) => {
+            table.string('value').notNullable();
+          });
+          await transaction('upgrade_rollback_probe').insert({ value: 'must roll back' });
+          throw new Error('injected PostgreSQL upgrade failure');
+        },
+      },
+    });
+
+    try {
+      await installAddons(upgradeDb, [installed]);
+      await expect(installAddons(upgradeDb, [failingUpgrade])).rejects.toThrow(
+        'injected PostgreSQL upgrade failure'
+      );
+      expect(await upgradeDb.schema.hasTable('upgrade_rollback_probe')).toBe(false);
+      await expect(
+        upgradeDb('_orm_addons').where({ name: addonName }).first('version')
+      ).resolves.toEqual({ version: '1.0.0' });
+    } finally {
+      await upgradeDb.destroy();
+      await adminDb.raw('drop schema if exists ?? cascade', [upgradeSchema]);
+    }
+  }, 30000);
+
+  it('installs every seeded addon on a fresh PostgreSQL schema and preserves sample edits on reinstall', async () => {
+    const seedSchema = `mw_seed_test_${randomUUID().replaceAll('-', '')}`;
+    await adminDb.raw('create schema ??', [seedSchema]);
+    const seedDb = knex(
+      createPostgresKnexConfig(
+        connectionString!,
+        { poolMin: 0, poolMax: 4, acquireTimeoutMs: 5000, statementTimeoutMs: 30_000 },
+        { searchPath: [seedSchema] }
+      )
+    );
+    const editedExamples = [
+      { externalId: 'base.partner_acme', table: 'partners', field: 'name' },
+      { externalId: 'jobs.cron_example_disabled', table: 'crons', field: 'name' },
+      {
+        externalId: 'notification.template_example_in_app',
+        table: 'notification_templates',
+        field: 'body',
+      },
+      {
+        externalId: 'organization.department_operations',
+        table: 'organization_departments',
+        field: 'description',
+      },
+      {
+        externalId: 'workflow.definition_sample_request_v1',
+        table: 'workflow_definitions',
+        field: 'name',
+      },
+      { externalId: 'request.example_laptop', table: 'purchase_requests', field: 'description' },
+      {
+        externalId: 'orm-integration.endpoint_example_disabled',
+        table: 'integration_webhook_endpoints',
+        field: 'name',
+      },
+    ];
+    try {
+      await installAddons(seedDb, [...runtimeManifests].reverse());
+      const expectedSeedCount = runtimeManifests.reduce(
+        (total, addon) => total + (addon.data?.length ?? 0),
+        0
+      );
+      expect(Number((await seedDb('_orm_data').count({ count: '*' }).first())?.count)).toBe(
+        expectedSeedCount
+      );
+      expect(Number((await seedDb('users').count({ count: '*' }).first())?.count)).toBe(2);
+
+      for (const [index, example] of editedExamples.entries()) {
+        const identity = await seedDb('_orm_data').where({ id: example.externalId }).first();
+        if (!identity) throw new Error(`Missing seed identity ${example.externalId}`);
+        await seedDb(example.table)
+          .where({ id: identity.record_id })
+          .update({ [example.field]: `PostgreSQL maintainer edit ${index + 1}` });
+      }
+
+      await installAddons(seedDb, runtimeManifests);
+      expect(Number((await seedDb('_orm_data').count({ count: '*' }).first())?.count)).toBe(
+        expectedSeedCount
+      );
+      expect(Number((await seedDb('users').count({ count: '*' }).first())?.count)).toBe(2);
+      for (const [index, example] of editedExamples.entries()) {
+        const identity = await seedDb('_orm_data').where({ id: example.externalId }).first();
+        if (!identity) throw new Error(`Missing seed identity ${example.externalId}`);
+        const persisted = await seedDb(example.table)
+          .where({ id: identity.record_id })
+          .first(example.field);
+        expect(persisted?.[example.field]).toBe(`PostgreSQL maintainer edit ${index + 1}`);
+      }
+    } finally {
+      await seedDb.destroy();
+      await adminDb.raw('drop schema if exists ?? cascade', [seedSchema]);
+    }
+  }, 30000);
 
   it('upgrades populated legacy tables, restores references and enforces PostgreSQL foreign keys', async () => {
     const {
@@ -180,14 +342,22 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     ).rejects.toThrow();
 
     await initializeSuperadminPassword('postgres-integration-password');
-    const session = await createAuthService().login('superadmin', 'postgres-integration-password');
+    const session = await createAuthService({
+      refreshTokenSecret: POSTGRES_TEST_REFRESH_SECRET,
+    }).login('superadmin', 'postgres-integration-password');
     const parallelRotations = await Promise.all(
-      Array.from({ length: 6 }, () => createAuthService().refresh(session.refreshToken))
+      Array.from({ length: 6 }, () =>
+        createAuthService({ refreshTokenSecret: POSTGRES_TEST_REFRESH_SECRET }).refresh(
+          session.refreshToken
+        )
+      )
     );
     expect(parallelRotations).toHaveLength(6);
     expect(new Set(parallelRotations.map(({ refreshToken }) => refreshToken)).size).toBe(6);
     await expect(
-      createAuthService().refresh(parallelRotations[0]!.refreshToken)
+      createAuthService({ refreshTokenSecret: POSTGRES_TEST_REFRESH_SECRET }).refresh(
+        parallelRotations[0]!.refreshToken
+      )
     ).resolves.toMatchObject({
       userId: session.userId,
     });
@@ -204,13 +374,159 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     });
     try {
       await Promise.all([
-        installAddons(concurrentDb, [manifest, authManifest, jobsManifest]),
-        installAddons(concurrentDb, [manifest, authManifest, jobsManifest]),
+        installAddons(concurrentDb, [
+          manifest,
+          authManifest,
+          jobsManifest,
+          notificationManifest,
+          workflowManifest,
+        ]),
+        installAddons(concurrentDb, [
+          manifest,
+          authManifest,
+          jobsManifest,
+          notificationManifest,
+          workflowManifest,
+        ]),
       ]);
       expect(Number((await concurrentDb('_orm_addons').count({ count: '*' }).first())?.count)).toBe(
-        3
+        5
       );
       expect(Number((await concurrentDb('users').count({ count: '*' }).first())?.count)).toBe(2);
+      const seedCount = baseManifest.data?.length ?? 0;
+      expect(Number((await concurrentDb('_orm_data').count({ count: '*' }).first())?.count)).toBe(
+        seedCount +
+          (authManifest.data?.length ?? 0) +
+          (jobsManifest.data?.length ?? 0) +
+          (notificationManifest.data?.length ?? 0) +
+          (workflowManifest.data?.length ?? 0)
+      );
+      const seededSuperadmin = await concurrentDb('_orm_data')
+        .where({ id: 'base.user_superadmin', model: 'base.user' })
+        .first('record_id');
+      expect(seededSuperadmin).toBeDefined();
+
+      await installAddons(concurrentDb, [
+        manifest,
+        authManifest,
+        jobsManifest,
+        notificationManifest,
+        workflowManifest,
+      ]);
+      expect(Number((await concurrentDb('_orm_data').count({ count: '*' }).first())?.count)).toBe(
+        seedCount +
+          (authManifest.data?.length ?? 0) +
+          (jobsManifest.data?.length ?? 0) +
+          (notificationManifest.data?.length ?? 0) +
+          (workflowManifest.data?.length ?? 0)
+      );
+      await expect(
+        concurrentDb('_orm_data')
+          .where({ id: 'base.user_superadmin', model: 'base.user' })
+          .first('record_id')
+      ).resolves.toEqual(seededSuperadmin);
+
+      const system = await concurrentDb('users').where({ login: 'system' }).first('id');
+      const company = await concurrentDb('companies').where({ name: 'MoonWitness' }).first('id');
+      const partner = await concurrentDb('partners')
+        .where({ email: 'system@moonwitness.local' })
+        .first('id');
+      expect(system).toBeDefined();
+      expect(company).toBeDefined();
+      expect(partner).toBeDefined();
+      const workflowStart = {
+        code: 'sample.request_approval',
+        companyId: Number(company?.id),
+        actorId: Number(system?.id),
+        role: 'system' as const,
+        resourceModel: 'base.partner',
+        resourceId: Number(partner?.id),
+        idempotencyKey: `pg-concurrent-start-${randomUUID()}`,
+      };
+      const started = await Promise.all([
+        startWorkflow(concurrentDb, workflowStart),
+        startWorkflow(concurrentDb, workflowStart),
+      ]);
+      expect(started[0]?.id).toBe(started[1]?.id);
+      expect(
+        Number(
+          (
+            await concurrentDb('workflow_events')
+              .where({ idempotency_key: `start:${workflowStart.idempotencyKey}` })
+              .count({ count: '*' })
+              .first()
+          )?.count
+        )
+      ).toBe(1);
+      const workflowAction = {
+        instanceId: started[0]!.id,
+        companyId: workflowStart.companyId,
+        actorId: workflowStart.actorId,
+        role: workflowStart.role,
+        action: 'submit',
+        expectedRevision: 0,
+        idempotencyKey: `pg-concurrent-action-${randomUUID()}`,
+      };
+      const actions = await Promise.all([
+        transitionWorkflow(concurrentDb, workflowAction),
+        transitionWorkflow(concurrentDb, workflowAction),
+      ]);
+      expect(actions.map(({ revision }) => revision)).toEqual([1, 1]);
+      expect(
+        Number(
+          (
+            await concurrentDb('workflow_events')
+              .where({ idempotency_key: workflowAction.idempotencyKey })
+              .count({ count: '*' })
+              .first()
+          )?.count
+        )
+      ).toBe(1);
+
+      const handlerName = `test.pg-scheduler-${randomUUID()}`;
+      const unregister = registerJobHandler({
+        name: handlerName,
+        version: 1,
+        parse(payload: unknown): { run: true } {
+          if (typeof payload !== 'object' || payload === null || !('run' in payload))
+            throw new Error('invalid payload');
+          return { run: true };
+        },
+        async run() {
+          return null;
+        },
+      });
+      try {
+        const company = await concurrentDb('companies').where({ name: 'MoonWitness' }).first('id');
+        expect(company).toBeDefined();
+        const now = new Date('2026-10-03T12:03:00.000Z');
+        const cron = await Cron.query().insertAndFetch({
+          code: `test.pg-scheduler-${randomUUID()}`,
+          name: 'Concurrent scheduler claim',
+          handler: handlerName,
+          payload: '{"run":true}',
+          company_id: Number(company?.id),
+          cron_expression: '* * * * *',
+          timezone: 'UTC',
+          enabled: true,
+          next_run_at: now.toISOString(),
+          misfire_policy: 'coalesce',
+          concurrency_policy: 'allow',
+          max_catch_up: 1,
+        });
+        const schedulerResults = await Promise.all([
+          enqueueDueCrons({ now }),
+          enqueueDueCrons({ now }),
+        ]);
+        expect(schedulerResults.reduce((total, count) => total + count, 0)).toBe(1);
+        const jobs = await Job.query().where({ cron_id: cron.id });
+        expect(jobs).toHaveLength(1);
+        expect(jobs[0]?.schedule_key).toBe(`cron:${cron.id}:${now.toISOString()}`);
+        const advanced = await Cron.query().findById(cron.id).throwIfNotFound();
+        expect(Date.parse(advanced.next_run_at)).toBeGreaterThan(now.getTime());
+      } finally {
+        unregister();
+      }
     } finally {
       await concurrentDb.destroy();
       await adminDb.raw('drop schema if exists ?? cascade', [concurrentSchema]);
@@ -256,7 +572,8 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     expect(userList.total).toBe(2);
     expect(userList.data).toHaveLength(2);
     const superadmin = userList.data.find((user) => user.login === 'superadmin');
-    expect(superadmin?.partner.name).toBe('Super Administrator');
+    if (!superadmin) throw new Error('PostgreSQL seed must include a superadmin user');
+    expect(superadmin.partner.name).toBe('Super Administrator');
 
     await Sequence.query().findOne({ code: 'sales.order' }).patch({ next_number: 1 });
     const allocated = await Promise.all(
@@ -275,20 +592,530 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
 
     const update = await app.inject({
       method: 'PATCH',
-      url: `/api/base.user/${superadmin?.id}`,
+      url: `/api/base.user/${superadmin.id}`,
       headers: authorization,
       payload: { timezone: 'Pacific/Honolulu' },
     });
     expect(update.statusCode).toBe(200);
     const updated = await app.inject({
       method: 'GET',
-      url: `/api/base.user/${superadmin?.id}?with=partner`,
+      url: `/api/base.user/${superadmin.id}?with=partner`,
       headers: authorization,
     });
     expect(updated.json<{ data: { timezone: string } }>().data.timezone).toBe('Pacific/Honolulu');
 
+    const uniqueRecord = await app.inject({
+      method: 'POST',
+      url: '/api/base.partner',
+      headers: authorization,
+      payload: { name: 'PostgreSQL unique probe', email: 'postgres-unique-probe@example.test' },
+    });
+    expect(uniqueRecord.statusCode).toBe(201);
+    const duplicateRecord = await app.inject({
+      method: 'POST',
+      url: '/api/base.partner',
+      headers: authorization,
+      payload: {
+        name: 'Duplicate PostgreSQL unique probe',
+        email: 'postgres-unique-probe@example.test',
+      },
+    });
+    expect(duplicateRecord.statusCode).toBe(409);
+    expect(duplicateRecord.payload).not.toContain('postgres-unique-probe@example.test');
+    expect(duplicateRecord.payload).not.toContain('23505');
+
+    const deliveredEvents: Array<{ eventId: number; payload: unknown }> = [];
+    const unregisterConsumer = registerOutboxConsumer(
+      'record.created',
+      async (payload, eventId) => {
+        deliveredEvents.push({ eventId, payload });
+      }
+    );
+    try {
+      const outboxProbe = await app.inject({
+        method: 'POST',
+        url: '/api/base.partner',
+        headers: authorization,
+        payload: { name: 'PostgreSQL transaction outbox probe' },
+      });
+      expect(outboxProbe.statusCode).toBe(201);
+      const partnerId = outboxProbe.json<{ data: { id: number } }>().data.id;
+      const pendingEvent = await OutboxEvent.query()
+        .where({
+          aggregate_model: 'base.partner',
+          aggregate_id: partnerId,
+          event_type: 'record.created',
+        })
+        .first()
+        .throwIfNotFound();
+      expect(JSON.parse(pendingEvent.payload)).toMatchObject({
+        model: 'base.partner',
+        id: partnerId,
+        operation: 'created',
+        record: { id: partnerId, name: 'PostgreSQL transaction outbox probe' },
+      });
+
+      const queuedEvents = await OutboxEvent.query()
+        .whereIn('status', ['pending', 'processing'])
+        .resultSize();
+      let targetEventPublished = false;
+      for (let attempt = 0; attempt <= queuedEvents; attempt += 1) {
+        const currentEvent = await OutboxEvent.query().findById(pendingEvent.id).throwIfNotFound();
+        if (currentEvent.status === 'published') {
+          targetEventPublished = true;
+          break;
+        }
+        if (!(await dispatchOneOutboxEvent('postgres-outbox-integration'))) break;
+      }
+      expect(targetEventPublished).toBe(true);
+      expect(deliveredEvents).toContainEqual({
+        eventId: pendingEvent.id,
+        payload: expect.objectContaining({ model: 'base.partner', id: partnerId }),
+      });
+      await expect(OutboxEvent.query().findById(pendingEvent.id)).resolves.toMatchObject({
+        status: 'published',
+        attempts: 1,
+        fencing_token: 1,
+      });
+
+      const lifecycleRecord = await app.inject({
+        method: 'POST',
+        url: '/api/base.partner',
+        headers: authorization,
+        payload: { name: 'PostgreSQL audit lifecycle probe' },
+      });
+      expect(lifecycleRecord.statusCode).toBe(201);
+      const lifecycleId = lifecycleRecord.json<{ data: { id: number } }>().data.id;
+      for (const method of ['action_archive', 'action_unarchive']) {
+        const response = await app.inject({
+          method: 'POST',
+          url: `/api/base.partner/${lifecycleId}/action/${method}`,
+          headers: authorization,
+        });
+        expect(response.statusCode, response.payload).toBe(200);
+      }
+      const lifecycleAudit = await AuditLog.query()
+        .where({ model: 'base.partner', record_id: lifecycleId })
+        .orderBy('id', 'asc');
+      expect(lifecycleAudit.map(({ operation, actor_id }) => [operation, actor_id])).toEqual([
+        ['create', superadmin.id],
+        ['action_archive', superadmin.id],
+        ['action_unarchive', superadmin.id],
+      ]);
+      await expect(Partner.query().findById(lifecycleId)).resolves.toMatchObject({ active: true });
+
+      const rollbackRecord = await app.inject({
+        method: 'POST',
+        url: '/api/base.partner',
+        headers: authorization,
+        payload: { name: 'PostgreSQL audit rollback probe' },
+      });
+      expect(rollbackRecord.statusCode).toBe(201);
+      const rollbackId = rollbackRecord.json<{ data: { id: number } }>().data.id;
+      await apiDb.raw(`
+        CREATE FUNCTION reject_archive_outbox() RETURNS trigger
+        LANGUAGE plpgsql AS $$
+        BEGIN
+          IF NEW.event_type = 'record.action_archive' THEN
+            RAISE EXCEPTION 'injected outbox failure';
+          END IF;
+          RETURN NEW;
+        END;
+        $$;
+      `);
+      await apiDb.raw(`
+        CREATE TRIGGER reject_archive_outbox
+        BEFORE INSERT ON outbox_events
+        FOR EACH ROW EXECUTE FUNCTION reject_archive_outbox();
+      `);
+      let rejectedArchive: Awaited<ReturnType<typeof app.inject>>;
+      try {
+        rejectedArchive = await app.inject({
+          method: 'POST',
+          url: `/api/base.partner/${rollbackId}/action/action_archive`,
+          headers: authorization,
+        });
+      } finally {
+        await apiDb.raw('DROP TRIGGER IF EXISTS reject_archive_outbox ON outbox_events');
+        await apiDb.raw('DROP FUNCTION IF EXISTS reject_archive_outbox()');
+      }
+      expect(rejectedArchive.statusCode).toBe(500);
+      await expect(Partner.query().findById(rollbackId)).resolves.toMatchObject({ active: true });
+      await expect(
+        AuditLog.query().where({
+          model: 'base.partner',
+          record_id: rollbackId,
+          operation: 'action_archive',
+        })
+      ).resolves.toHaveLength(0);
+    } finally {
+      unregisterConsumer();
+    }
+
+    const concurrentRecord = await app.inject({
+      method: 'POST',
+      url: '/api/base.partner',
+      headers: authorization,
+      payload: { name: 'Concurrent update probe' },
+    });
+    const concurrentId = concurrentRecord.json<{ data: { id: number } }>().data.id;
+    const concurrentUpdates = await Promise.all([
+      app.inject({
+        method: 'PATCH',
+        url: `/api/base.partner/${concurrentId}`,
+        headers: authorization,
+        payload: { city: 'Concurrent A' },
+      }),
+      app.inject({
+        method: 'PATCH',
+        url: `/api/base.partner/${concurrentId}`,
+        headers: authorization,
+        payload: { city: 'Concurrent B' },
+      }),
+    ]);
+    expect(concurrentUpdates.map((response) => response.statusCode)).toEqual([200, 200]);
+    const finalConcurrentRecord = await Partner.query().findById(concurrentId).throwIfNotFound();
+    expect(['Concurrent A', 'Concurrent B']).toContain(finalConcurrentRecord.city);
+    expect(
+      await AuditLog.query().where({
+        model: 'base.partner',
+        record_id: concurrentId,
+        operation: 'write',
+      })
+    ).toHaveLength(2);
+
     await resetSuperadminPassword('postgres-flow-reset-password');
     expect((await login('postgres-flow-initial-password')).statusCode).toBe(401);
     expect((await login('postgres-flow-reset-password')).statusCode).toBe(200);
+
+    await app.close();
+    app = undefined;
+    apiDb = knex({
+      client: 'pg',
+      connection: connectionString,
+      searchPath: [apiSchema],
+      pool: { min: 0, max: 4 },
+    });
+    app = await buildApp({
+      db: apiDb,
+      superadminPassword: 'postgres-flow-initial-password',
+      jwtSecret: 'postgres-flow-jwt-secret-must-be-32-chars',
+    });
+    await app.ready();
+
+    const oldPasswordAfterRestart = await app.inject({
+      method: 'POST',
+      url: '/auth/login',
+      payload: { login: 'superadmin', password: 'postgres-flow-initial-password' },
+    });
+    expect(oldPasswordAfterRestart.statusCode).toBe(401);
+    const resetPasswordAfterRestart = await app.inject({
+      method: 'POST',
+      url: '/auth/login',
+      payload: { login: 'superadmin', password: 'postgres-flow-reset-password' },
+    });
+    expect(resetPasswordAfterRestart.statusCode).toBe(200);
+  }, 30000);
+
+  it('enforces PostgreSQL company isolation for partner list, count, relations and foreign references', async () => {
+    if (!app) throw new Error('PostgreSQL API app is not initialized');
+
+    const localCompany = await Company.query().findOne({ name: 'MoonWitness' }).throwIfNotFound();
+    const localPartner = await Partner.query().insertAndFetch({
+      name: 'PostgreSQL Tenant Contact',
+      company_id: localCompany.id,
+    });
+    const localUser = await User.query().insertAndFetch({
+      login: 'postgres-tenant-user',
+      password: 'postgres-tenant-password',
+      partner_id: localPartner.id,
+      role: 'user',
+    });
+    await assignDefaultUserGroup(localUser.id);
+    await CompanyMembership.query().insert({
+      user_id: localUser.id,
+      company_id: localCompany.id,
+      is_default: true,
+    });
+    const userGroup = await AccessGroup.query().findOne({ code: 'user' }).throwIfNotFound();
+    const partnerGrant = await ModelAccess.query()
+      .findOne({ group_id: userGroup.id, model_name: 'base.partner' })
+      .throwIfNotFound();
+    await apiDb('model_access')
+      .where({ id: partnerGrant.id })
+      .update({ create: true, write: true });
+
+    const foreignCompany = await Company.query().insertAndFetch({
+      name: 'PostgreSQL Foreign Tenant',
+    });
+    const foreignPartner = await Partner.query().insertAndFetch({
+      name: 'PostgreSQL Foreign Contact',
+      company_id: foreignCompany.id,
+    });
+    const login = await app.inject({
+      method: 'POST',
+      url: '/auth/login',
+      payload: { login: 'postgres-tenant-user', password: 'postgres-tenant-password' },
+    });
+    expect(login.statusCode).toBe(200);
+    const accessToken = login.json<{ data: { access_token: string } }>().data.access_token;
+    const headers = { authorization: `Bearer ${accessToken}` };
+
+    const listed = await app.inject({
+      method: 'GET',
+      url: '/api/base.partner?limit=500&count=true&with=company',
+      headers,
+    });
+    expect(listed.statusCode).toBe(200);
+    const result = listed.json<{
+      total: number;
+      data: { id: number; name: string; company: { name: string } | null }[];
+    }>();
+    expect(result.total).toBe(result.data.length);
+    expect(result.data.map(({ id }) => id)).toContain(localPartner.id);
+    expect(result.data.map(({ id }) => id)).not.toContain(foreignPartner.id);
+    expect(result.data.find(({ id }) => id === localPartner.id)?.company?.name).toBe('MoonWitness');
+
+    const directRead = await app.inject({
+      method: 'GET',
+      url: `/api/base.partner/${foreignPartner.id}`,
+      headers,
+    });
+    expect(directRead.statusCode).toBe(404);
+
+    const filteredCount = await app.inject({
+      method: 'GET',
+      url: `/api/base.partner?domain=${encodeURIComponent(JSON.stringify([['id', '=', foreignPartner.id]]))}&limit=500&count=true`,
+      headers,
+    });
+    expect(filteredCount.statusCode).toBe(200);
+    expect(filteredCount.json<{ total: number; data: { id: number }[] }>()).toMatchObject({
+      total: 0,
+      data: [],
+    });
+
+    const mixedCompanyDomain = encodeURIComponent(
+      JSON.stringify(['|', ['id', '=', localPartner.id], ['id', '=', foreignPartner.id]])
+    );
+    const scopedOrCount = await app.inject({
+      method: 'GET',
+      url: `/api/base.partner?domain=${mixedCompanyDomain}&limit=1&count=true`,
+      headers,
+    });
+    expect(scopedOrCount.statusCode).toBe(200);
+    expect(scopedOrCount.json<{ total: number; data: { id: number }[] }>()).toMatchObject({
+      total: 1,
+      data: [{ id: localPartner.id }],
+    });
+
+    const scopedOrExport = await app.inject({
+      method: 'GET',
+      url: `/api/base.partner?domain=${mixedCompanyDomain}&limit=500`,
+      headers,
+    });
+    expect(scopedOrExport.statusCode).toBe(200);
+    expect(scopedOrExport.json<{ data: { id: number; name: string }[] }>().data).toEqual([
+      expect.objectContaining({ id: localPartner.id, name: 'PostgreSQL Tenant Contact' }),
+    ]);
+    expect(scopedOrExport.payload).not.toContain('PostgreSQL Foreign Contact');
+
+    const groupedCount = await app.inject({
+      method: 'GET',
+      url: `/api/base.partner/group-count?group_by=company_id&domain=${mixedCompanyDomain}`,
+      headers,
+    });
+    expect(groupedCount.statusCode).toBe(200);
+    expect(
+      groupedCount.json<{ groups: { values: { company_id: number }; count: number }[] }>().groups
+    ).toEqual([{ values: { company_id: localCompany.id }, count: 1 }]);
+
+    const deniedForeignCreate = await app.inject({
+      method: 'POST',
+      url: '/api/base.partner',
+      headers,
+      payload: { name: 'Foreign company assignment', company_id: foreignCompany.id },
+    });
+    expect(deniedForeignCreate.statusCode).toBe(403);
+
+    const deniedForeignParent = await app.inject({
+      method: 'POST',
+      url: '/api/base.partner',
+      headers,
+      payload: {
+        name: 'Cross-company parent assignment',
+        company_id: localCompany.id,
+        parent_id: foreignPartner.id,
+      },
+    });
+    expect(deniedForeignParent.statusCode).toBe(403);
+  }, 30000);
+
+  it('matches PostgreSQL domain operator and nullable-field semantics', async () => {
+    const fixtures = await Partner.query().insert([
+      { name: 'Domain Probe Alpha', city: 'Jakarta' },
+      { name: 'DOMAIN PROBE Beta', city: 'Bandung' },
+      { name: 'Unrelated Domain Probe', city: null },
+    ]);
+    const fixtureIds = fixtures.map(({ id }) => id);
+    const fixtureDomain: [string, 'in', number[]][] = [['id', 'in', fixtureIds]];
+
+    const insensitiveMatches = await Partner.search([
+      ...fixtureDomain,
+      ['name', 'ilike', '%domain probe%'],
+    ]);
+    expect(insensitiveMatches.map(({ name }) => name).sort()).toEqual([
+      'DOMAIN PROBE Beta',
+      'Domain Probe Alpha',
+      'Unrelated Domain Probe',
+    ]);
+
+    const caseSensitiveMatches = await Partner.search([
+      ...fixtureDomain,
+      ['name', 'like', '%Domain Probe%'],
+    ]);
+    expect(caseSensitiveMatches.map(({ name }) => name).sort()).toEqual([
+      'Domain Probe Alpha',
+      'Unrelated Domain Probe',
+    ]);
+
+    const caseSensitiveExclusions = await Partner.search([
+      ...fixtureDomain,
+      ['name', 'not like', '%Domain Probe%'],
+    ]);
+    expect(caseSensitiveExclusions.map(({ name }) => name)).toEqual(['DOMAIN PROBE Beta']);
+
+    const negativeInsensitiveMatches = await Partner.search([
+      ...fixtureDomain,
+      ['name', 'not ilike', '%domain probe%'],
+    ]);
+    expect(negativeInsensitiveMatches).toHaveLength(0);
+
+    const nullCities = await Partner.search([...fixtureDomain, ['city', 'is null', null]]);
+    expect(nullCities.map(({ name }) => name)).toEqual(['Unrelated Domain Probe']);
+
+    const nonNullCities = await Partner.search([...fixtureDomain, ['city', 'is not null', null]]);
+    expect(nonNullCities.map(({ city }) => city).sort()).toEqual(['Bandung', 'Jakarta']);
+
+    const listedCities = await Partner.search([
+      ...fixtureDomain,
+      ['city', 'in', ['Jakarta', 'Bandung']],
+    ]);
+    expect(listedCities).toHaveLength(2);
+
+    const excludedCities = await Partner.search([
+      ...fixtureDomain,
+      ['city', 'not in', ['Jakarta', 'Bandung']],
+    ]);
+    expect(excludedCities).toHaveLength(0);
+
+    const boundedIds = await Partner.search([
+      ...fixtureDomain,
+      ['id', '>=', Math.min(...fixtureIds)],
+      ['id', '<=', Math.max(...fixtureIds)],
+    ]);
+    expect(boundedIds).toHaveLength(3);
+  }, 30000);
+
+  it('claims one PostgreSQL job once when two workers race for the same queue item', async () => {
+    let signalStarted: (() => void) | undefined;
+    let releaseHandler: (() => void) | undefined;
+    let invocations = 0;
+    const started = new Promise<void>((resolve) => {
+      signalStarted = resolve;
+    });
+    const hold = new Promise<void>((resolve) => {
+      releaseHandler = resolve;
+    });
+    const unregister = registerJobHandler({
+      name: 'test.postgres-claim',
+      version: 1,
+      parse(payload: unknown): { run: true } {
+        if (typeof payload !== 'object' || payload === null || !('run' in payload))
+          throw new Error('invalid payload');
+        return { run: true };
+      },
+      async run() {
+        invocations += 1;
+        signalStarted?.();
+        await hold;
+      },
+    });
+    try {
+      const jobId = await enqueueJob('test.postgres-claim', { run: true });
+      const firstWorker = runOneJob({
+        workerId: 'postgres-worker-one',
+        leaseSeconds: 6,
+        heartbeatSeconds: 2,
+      });
+      await started;
+      expect(await runOneJob({ workerId: 'postgres-worker-two' })).toBe(false);
+      releaseHandler?.();
+      expect(await firstWorker).toBe(true);
+      expect(invocations).toBe(1);
+      expect(await Job.query().findById(jobId)).toMatchObject({
+        status: 'succeeded',
+        fencing_token: 1,
+      });
+      expect(await JobRun.query().where({ job_id: jobId })).toHaveLength(1);
+    } finally {
+      releaseHandler?.();
+      unregister();
+    }
+  }, 30000);
+
+  it('recovers an expired PostgreSQL worker lease with a new fence and preserved attempt history', async () => {
+    const unregister = registerJobHandler({
+      name: 'test.postgres-reclaim',
+      version: 1,
+      parse(payload: unknown): { run: true } {
+        if (typeof payload !== 'object' || payload === null || !('run' in payload))
+          throw new Error('invalid payload');
+        return { run: true };
+      },
+      async run() {
+        return { recovered: true };
+      },
+    });
+    try {
+      const expired = await Job.query().insertAndFetch({
+        handler: 'test.postgres-reclaim',
+        handler_version: 1,
+        payload: '{"run":true}',
+        status: 'running',
+        attempts: 1,
+        max_attempts: 3,
+        fencing_token: 1,
+        lease_owner: 'crashed-postgres-worker',
+        lease_until: new Date(0).toISOString(),
+        available_at: new Date(0).toISOString(),
+      });
+      const previousRun = await JobRun.query().insertAndFetch({
+        job_id: expired.id,
+        attempt: 1,
+        worker_id: 'crashed-postgres-worker',
+        status: 'running',
+        started_at: new Date(0).toISOString(),
+      });
+
+      expect(await runOneJob({ workerId: 'postgres-recovery-worker' })).toBe(true);
+      await expect(Job.query().findById(expired.id)).resolves.toMatchObject({
+        status: 'succeeded',
+        attempts: 2,
+        fencing_token: 2,
+        lease_owner: null,
+      });
+      await expect(JobRun.query().findById(previousRun.id)).resolves.toMatchObject({
+        status: 'retrying',
+        error_code: 'LEASE_EXPIRED',
+      });
+      const history = await JobRun.query().where({ job_id: expired.id }).orderBy('attempt');
+      expect(history).toHaveLength(2);
+      expect(history.map(({ worker_id, status }) => ({ worker_id, status }))).toEqual([
+        { worker_id: 'crashed-postgres-worker', status: 'retrying' },
+        { worker_id: 'postgres-recovery-worker', status: 'succeeded' },
+      ]);
+    } finally {
+      unregister();
+    }
   }, 30000);
 });

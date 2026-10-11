@@ -1,0 +1,16 @@
+sequenceDiagram
+  participant application as API or worker startup
+  participant manifest as Addon manifests
+  participant sorter as Dependency sorter
+  participant orm as ORM installer
+  participant database as PostgreSQL
+  participant registry as Runtime registry
+  application->>manifest: Load addon definitions and dependencies
+  manifest->>sorter: Provide addon manifests and dependencies
+  sorter->>orm: Validate and pass addons in dependency order
+  orm->>database: Open transaction and acquire install lock
+  orm->>database: Synchronize model schema and run versioned programmatic upgrades
+  orm->>database: Apply stable external-ID seeds and addon versions
+  database-->>orm: Commit installation transaction
+  orm->>registry: Register models, views, and menus after commit
+  registry-->>application: Expose installed addon capabilities

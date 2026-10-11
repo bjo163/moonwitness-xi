@@ -38,6 +38,8 @@ Validator menolak unpinned third-party action; fork execution tidak memperoleh p
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M8.02.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
+`pnpm automation:check:action-pins` memeriksa seluruh `.github/**/*.yml` dan `.yaml`, termasuk composite action lokal. Setiap external `uses:` harus memakai SHA lowercase 40 karakter dan komentar versi yang terbaca; local `./...` action dikecualikan. Test negatif berjalan di automation CI.
+
 ## M8.03 — Aktifkan code/dependency/secret scanning yang tersedia; scan container dan tetapkan severity policy serta exception beralasan dengan expiry.
 
 - **Prasyarat:** M0.04, M2.04
@@ -46,9 +48,12 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ### Langkah pelaksanaan
 
-1. Aktifkan CodeQL/secret/dependency alerts sesuai dukungan dan scan container.
-2. Definisikan blocker vulnerability reachable/critical dengan baseline exception expiry.
-3. Hasil scan masuk summary/SARIF jika tersedia; scanner failure bukan dianggap zero findings.
+1. Aktifkan CodeQL untuk JavaScript/TypeScript dan GitHub Actions pada PR/push, jadwal mingguan, dan dispatch; scope `security-events:write` hanya pada job analisis.
+2. Scan dependency graph dari lockfile serta image API dan Board hasil build pada lane container; block temuan CRITICAL yang actionable dan unggah tiap hasil SARIF.
+3. Definisikan exception minimum (ID, owner, alasan, expiry ISO); exception kedaluwarsa atau format invalid menggagalkan CI. Scanner error harus fail-closed dan tidak boleh dinyatakan sebagai scan bersih.
+4. Rekam status secret scanning/push protection dan keterbatasan alert/dependency settings dari GitHub; aktifkan dependency alerts yang tersedia setelah hak akses terkonfirmasi.
+
+5. Jalankan Gitleaks atas seluruh riwayat pada PR/push ke `dev` dan `main`, jadwal mingguan, serta dispatch manual. Beri workflow `contents: read`, pin action ke SHA, jangan izinkan komentar atau upload laporan yang dapat membocorkan nilai; allowlist hanya baris fixture/local yang ditinjau.
 
 ### Verifikasi dan syarat selesai
 
@@ -134,6 +139,8 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 - **Baca/periksa:** Reusable full verify; maintenance schedule.
 - **Deliverable:** Scheduled regression workflow.
 
+Implementasi terdiri dari matriks browser mingguan (`browser-matrix.yml`), regresi PostgreSQL upgrade/jobs recovery/restore mingguan (`deep-regression.yml`), serta CodeQL dan Gitleaks mingguan pada jadwal berbeda. Platform audit mencatat latest scheduled run dan latest successful run per workflow; dispatch manual tidak memenuhi bukti jadwal. Jadwal GitHub baru aktif dari default branch, jadi hasil hosted setelah promosi tetap acceptance terpisah.
+
 ### Langkah pelaksanaan
 
 1. Jadwalkan full browsers, upgrades, jobs recovery, restore drill dan rescan pada waktu staggered.
@@ -172,13 +179,16 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ### Langkah pelaksanaan
 
-1. Audit growth/retention/permission drift dan runtime end-of-support.
-2. Buat report bulanan dengan baseline/trend/action owner.
-3. Cleanup hanya disposable assets sesuai policy; preserve released digests dan bukti penting.
+1. Ambil snapshot API Actions yang dipaginasi untuk artifacts, workflow runs, retention, allowed actions, default token permission dan nilai repo override; simpan timestamp, SHA audit, perintah, dan keterbatasan akses.
+2. Bandingkan runtime (Node, pnpm, Postgres, browser, runner image) dengan support upstream; sertakan pemilik, tanggal tindak lanjut, dan bukti validasi.
+3. Buat report bulanan dengan baseline/trend/action owner. Registry atau billing yang tidak dapat dibaca harus ditulis sebagai unknown beserta permission yang kurang, bukan nol.
+4. Cleanup harus berupa rencana dry-run dengan daftar ID, klasifikasi disposable/immutable, umur, dan alasan. Hapus hanya setelah tiap target lolos allowlist disposable; preserve released digests dan bukti penting.
 
 ### Verifikasi dan syarat selesai
 
 Dry-run cleanup tidak memilih immutable releases; permissions drift ditampilkan.
+
+Snapshot parsial 2026-10-05 ada di [evidence M8.10](evidence/M8.10.md). Implementasi audit berjalan lewat [`pnpm platform:audit`](../operations/platform-audit.md) dan scheduled workflow; jangan menandai milestone selesai sampai satu run hosted, baseline bulanan yang dapat dibandingkan, biaya/registry yang terukur atau terjelaskan, dan dry-run cleanup yang melindungi artifacts immutable tervalidasi.
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M8.10.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
@@ -191,7 +201,7 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 ### Langkah pelaksanaan
 
 1. Tulis vulnerability reporting channel yang benar-benar tersedia.
-2. Buat runbook revoke/rotate App/JWT/provider credentials serta incident containment.
+2. Buat runbook revoke/rotate App/JWT/provider credentials serta incident containment. Implementasi dan tabletop JWT dicatat di [evidence M8.11](evidence/M8.11.md); verifikasi private reporting dan pemilik operasional masih pending.
 3. Release correction memakai versi baru dan disclosure sesuai risiko, tidak memindahkan published tags.
 
 ### Verifikasi dan syarat selesai

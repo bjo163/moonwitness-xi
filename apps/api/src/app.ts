@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import type { FastifyBaseLogger, FastifyInstance } from 'fastify';
+import { randomUUID } from 'node:crypto';
 import cors from '@fastify/cors';
 import sensible from '@fastify/sensible';
 import swagger from '@fastify/swagger';
@@ -11,7 +12,10 @@ import { authRoutes } from './routes/auth.routes.js';
 import { genericRoutes } from './routes/generic.routes.js';
 import { healthRoutes } from './routes/health.routes.js';
 import { jobsRoutes } from './routes/jobs.routes.js';
+import { notificationRoutes } from './routes/notification.routes.js';
+import { workflowRoutes } from './routes/workflow.routes.js';
 import { config } from './config/env.js';
+import { LocalFileAttachmentStorage } from '@moonwitness/orm-storage';
 import { createDatabase } from './database/knex.js';
 import { databaseErrorCode, databaseErrorContext } from './database/errors.js';
 import type { Knex } from 'knex';
@@ -19,6 +23,11 @@ import { manifest as baseAddon, initializeSuperadminPassword } from '@moonwitnes
 import { installAddons } from '@moonwitness/orm';
 import { manifest as authAddon, createAuthService } from '@moonwitness/auth';
 import { jobsManifest } from '@moonwitness/jobs';
+import { manifest as notificationAddon } from '@moonwitness/orm-notification';
+import { manifest as workflowAddon } from '@moonwitness/orm-workflow';
+import { manifest as organizationAddon } from '@moonwitness/orm-organization';
+import { manifest as integrationAddon } from '@moonwitness/orm-integration';
+import { manifest as requestAddon } from '@moonwitness/orm-request';
 
 import { createLogger, type LogLevel } from '@moonwitness/logger';
 import observabilityPlugin from './plugins/observability.plugin.js';
@@ -38,6 +47,15 @@ export interface BuildAppOptions {
   /** Overrides AUTH_LOGIN_RATE_MAX (used by tests). */
   loginRateMax?: number;
   metricsToken?: string;
+  /** Overrides attachment storage for isolated tests or custom providers. */
+  attachmentStorage?: LocalFileAttachmentStorage;
+  /** @deprecated Use attachmentStorage; retained for existing test/app callers. */
+  attachmentStorageDirectory?: string;
+}
+
+function requestIdFromHeader(value: string | string[] | undefined): string | null {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  return candidate && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/u.test(candidate) ? candidate : null;
 }
 
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
@@ -54,7 +72,16 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
 
   const db = options.db ?? createDatabase();
   try {
-    await installAddons(db, [baseAddon, authAddon, jobsManifest]);
+    await installAddons(db, [
+      baseAddon,
+      authAddon,
+      jobsManifest,
+      integrationAddon,
+      requestAddon,
+      notificationAddon,
+      organizationAddon,
+      workflowAddon,
+    ]);
     await initializeSuperadminPassword(superadminPassword);
   } catch (error) {
     if (!options.db) await db.destroy();
@@ -70,12 +97,20 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   });
 
   const app = Fastify({
+    bodyLimit: 1024 * 1024,
+    requestIdHeader: false,
+    genReqId: (request) => requestIdFromHeader(request.headers['x-request-id']) ?? randomUUID(),
     loggerInstance: appLogger,
     ajv: {
       customOptions: {
         coerceTypes: false,
       },
     },
+  });
+
+  app.addHook('onSend', async (request, reply, payload) => {
+    reply.header('x-request-id', request.id);
+    return payload;
   });
 
   await app.register(observabilityPlugin);
@@ -182,12 +217,23 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   // Install the handler before route plugins inherit their error handling scope.
   await app.register(healthRoutes, { metricsToken: options.metricsToken ?? config.metricsToken });
   await app.register(authRoutes, {
-    authService: createAuthService({ refreshTtlSeconds: authConfig.refreshTtlSeconds }),
+    authService: createAuthService({
+      refreshTtlSeconds: authConfig.refreshTtlSeconds,
+      refreshTokenSecret: jwtSecret,
+    }),
     accessTtlSeconds: authConfig.accessTtlSeconds,
     loginRateMax: options.loginRateMax ?? authConfig.loginRateMax,
   });
-  await app.register(genericRoutes);
+  await app.register(genericRoutes, {
+    attachmentStorage:
+      options.attachmentStorage ??
+      new LocalFileAttachmentStorage(
+        options.attachmentStorageDirectory ?? config.attachmentStorageDirectory
+      ),
+  });
   await app.register(jobsRoutes);
+  await app.register(notificationRoutes);
+  await app.register(workflowRoutes);
 
   return app;
 }

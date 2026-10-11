@@ -1,6 +1,56 @@
 # MoonWitness Monorepo
 
+![MoonWitness — every model, one board](packages/assets/brand/readme-banner.svg)
+
 Rencana pengembangan dan checklist jangka panjang: [Master Roadmap](ROADMAP.md).
+
+Diagram arsitektur, relasi model base, dan alur runtime tersedia di
+[Architecture diagrams](docs/architecture/diagrams/README.md) dan diperiksa
+otomatis agar tetap mengikuti metadata workspace.
+
+Panduan developer untuk quickstart, addon, API/metadata, Board, jobs, security, recovery, dan
+troubleshooting tersedia di [Developer guide](docs/guide/index.md).
+
+<!-- BEGIN GENERATED WORKSPACE REFERENCE -->
+
+## Generated workspace reference
+
+Monorepo version: `1.0.0-rc.1` · metadata fingerprint: `a3706d919e3a663f98120eb421f9b97d433aa70d20fe697f2045faaf56c3ca9f`.
+
+| App/package                     | Kind    | Version      | Workspace scripts                                                                                                                                                                    |
+| ------------------------------- | ------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@moonwitness/api`              | App     | `1.0.0-rc.1` | `attachments:reconcile`, `build`, `dev`, `jobs:outbox`, `jobs:scheduler`, `jobs:worker`, `reset:superadmin-password`, `revoke:auth-sessions`, `start`, `test`, `visual-audit:server` |
+| `@moonwitness/board`            | App     | `1.0.0-rc.1` | `build`, `dev`, `lint`, `preview`, `typecheck`                                                                                                                                       |
+| `@moonwitness/docs`             | App     | `1.0.0-rc.1` | `dev`, `portal:build`, `preview`, `test`, `typecheck`                                                                                                                                |
+| `@moonwitness/ui-catalog`       | App     | `1.0.0-rc.1` | `build`, `dev`, `preview`, `test`                                                                                                                                                    |
+| `@moonwitness/assets`           | Package | `1.0.0-rc.1` | —                                                                                                                                                                                    |
+| `@moonwitness/auth`             | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/client`           | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/eslint-config`    | Package | `1.0.0-rc.1` | —                                                                                                                                                                                    |
+| `@moonwitness/jobs`             | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/logger`           | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/orm`              | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/orm-base`         | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/orm-integration`  | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/orm-notification` | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/orm-organization` | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/orm-request`      | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/orm-storage`      | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/orm-workflow`     | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/types`            | Package | `1.0.0-rc.1` | `build`                                                                                                                                                                              |
+| `@moonwitness/ui`               | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                                                      |
+
+Root commands: `pnpm architecture:check`, `pnpm architecture:generate`, `pnpm assets:check:docs`, `pnpm assets:export:docs`, `pnpm assets:generate`, `pnpm assets:generate:illustrations`, `pnpm assets:render`, `pnpm assets:validate`, `pnpm attachments:reconcile`, `pnpm audit:workspace`, `pnpm automation:check:action-pins`, `pnpm automation:check:action-tags`, `pnpm automation:check:roadmap`, `pnpm automation:check:secrets`, `pnpm automation:check:ubuntu-runner-candidate`, `pnpm automation:check:workflow-trust`, `pnpm board:budget`, `pnpm board:visual:update`, `pnpm build`, `pnpm ci:affected`, `pnpm dependency:candidate`, `pnpm dependency:plan`, `pnpm dev`, `pnpm dev:board`, `pnpm docs:build`, `pnpm docs:change:classify`, `pnpm docs:check`, `pnpm docs:examples:check`, `pnpm docs:generate`, `pnpm docs:links`, `pnpm docs:links:external`, `pnpm docs:publication:check`, `pnpm format`, `pnpm format:check`, `pnpm jobs:outbox`, `pnpm jobs:scheduler`, `pnpm jobs:worker`, `pnpm lint`, `pnpm lint:fix`, `pnpm platform:audit`, `pnpm promotion:approval-check`, `pnpm promotion:risk`, `pnpm readme:check`, `pnpm readme:generate`, `pnpm release:changelog`, `pnpm release:check`, `pnpm release:classify`, `pnpm release:dry-run`, `pnpm release:plan`, `pnpm release:prepare`, `pnpm release:verify-attestations`, `pnpm reset:superadmin-password`, `pnpm revoke:auth-sessions`, `pnpm roadmap:issues:audit`, `pnpm roadmap:issues:plan`, `pnpm roadmap:progress`, `pnpm test`, `pnpm test:action-pins`, `pnpm test:action-tags`, `pnpm test:addon-conformance`, `pnpm test:affected`, `pnpm test:architecture`, `pnpm test:artifact-safety`, `pnpm test:assets`, `pnpm test:board-budget`, `pnpm test:ci-gate`, `pnpm test:coverage-policy`, `pnpm test:dependency-candidate`, `pnpm test:dependency-plan`, `pnpm test:docs-navigation`, `pnpm test:docs-portal`, `pnpm test:docs-publication`, `pnpm test:e2e`, `pnpm test:e2e:diagnostics`, `pnpm test:e2e:visual`, `pnpm test:e2e:visual:matrix`, `pnpm test:expected-ref`, `pnpm test:flaky-policy`, `pnpm test:integration`, `pnpm test:maintenance-incidents`, `pnpm test:package-manager`, `pnpm test:platform-audit`, `pnpm test:promotion-policy`, `pnpm test:promotion-report`, `pnpm test:release-asset-reconcile`, `pnpm test:release-classification`, `pnpm test:release-dry-run`, `pnpm test:release-image-publish`, `pnpm test:release-latest-policy`, `pnpm test:release-plan`, `pnpm test:release-prepare`, `pnpm test:release-prepare-workflow`, `pnpm test:release-verify-attestations`, `pnpm test:release-workflow`, `pnpm test:render-changelog`, `pnpm test:restore-drill`, `pnpm test:roadmap`, `pnpm test:secrets`, `pnpm test:security-policy`, `pnpm test:ubuntu-runner-candidate`, `pnpm test:ui`, `pnpm test:ui-budget`, `pnpm test:ui-catalog`, `pnpm test:unit`, `pnpm test:unit:ci`, `pnpm test:versioned-docs`, `pnpm test:workflow-trust`, `pnpm test:workspace-version-policy`, `pnpm typecheck`, `pnpm ui:budget`, `pnpm ui:visual:update`, `pnpm verify`.
+
+Generated model, field, relation, access, environment-name, and endpoint references are in the [developer guide](docs/guide/index.md).
+
+<!-- END GENERATED WORKSPACE REFERENCE -->
+
+Panduan sumber brand, token bersama, serta asset statis untuk dokumentasi:
+[Brand assets](docs/design/brand-assets.md).
+
+Katalog interaktif untuk seluruh primitive UI:
+[UI component catalog](docs/design/ui-catalog.md).
 
 Arsitektur monorepo berkinerja tinggi menggunakan **pnpm workspaces** yang memisahkan core ORM, shared types, konfigurasi linter, dan service API.
 
@@ -368,10 +418,19 @@ terenkripsi/terpisah, dan `BACKUP_RETENTION_DAYS` (default 14). File custom-form
 memiliki izin terbatas. Pulihkan dengan menjalankan `bash scripts/restore-postgres.sh`
 setelah mengatur `BACKUP_FILE`, `DATABASE_URL`, dan
 `ALLOW_DATABASE_RESTORE=true`; skrip meminta operator mengetik nama database target
-sebelum mengubahnya. Uji pemulihan rutin ke database sementara; CI menjalankan dump,
-skrip restore yang sama (termasuk konfirmasi target yang salah), lalu memverifikasi row
-contoh pada setiap build. Simpan salinan backup di luar server/database utama dan
-gunakan enkripsi storage yang dikelola infrastruktur.
+sebelum mengubahnya. CI menjalankan `pnpm test:restore-drill` dengan dua database bernama
+acak: addon dan data aplikasi sintetis di-dump, lalu dipulihkan menggunakan skrip yang sama
+ke target terpisah. Drill membuktikan mismatch confirmation ditolak tanpa mengubah sentinel
+target, membandingkan jumlah row dan ID, memeriksa relasi/membership, dan mencoba login
+sesudah pemulihan; durasi dump dan restore dicatat sebagai pengukuran fixture CI. Untuk
+menjalankannya sendiri, siapkan
+`POSTGRES_TEST_URL` dan PostgreSQL client utilities (`pg_dump`, `pg_restore`, `createdb`,
+`dropdb`, `psql`). Untuk mencegah koneksi salah sasaran, drill hanya berjalan pada host
+loopback dan nama database yang mengandung `test`, `e2e`, atau `ci`. Drill satu kali ini
+tidak menetapkan RPO atau RTO produksi: frekuensi backup off-host dan waktu
+provisioning/cutover harus ditetapkan serta diukur oleh operator.
+Simpan backup produksi di luar server/database utama dan gunakan enkripsi storage yang
+dikelola infrastruktur.
 
 ### Image container dan rilis
 
@@ -393,10 +452,12 @@ menulis log ke stdout. Worker diberi waktu drain sebelum dihentikan. Tambahkan h
 domain ke image dan isi `JOB_HANDLERS_MODULE`/`OUTBOX_HANDLERS_MODULE` dengan path modul
 di dalam image. Endpoint readiness akan tetap gagal sampai PostgreSQL siap.
 
-Urutan rilis yang aman: pastikan CI lulus (termasuk PostgreSQL, backup/restore, dan
-build image), buat backup terverifikasi, deploy staging, periksa `/readyz`, `/livez`,
-login, alur mutasi, job/outbox, dan log, lalu promosikan image yang sama ke production.
-Catat tag image, commit, waktu deploy, hasil backup, dan hasil smoke test. Saat rollback,
+Deployment aplikasi dikelola operator di luar workflow GitHub repository ini. Sebelum
+operator mengganti image, verifikasi CI (termasuk PostgreSQL, backup/restore, dan build
+image), backup database, dan image provenance; setelah perubahan, periksa `/readyz`,
+`/livez`, login, alur mutasi, job/outbox, dan log, lalu catat image, commit, waktu,
+backup, serta hasil smoke test. Staging bukan prasyarat automation/release repository.
+Saat rollback,
 gunakan image sebelumnya hanya jika schema/data baru masih kompatibel dengannya; hook
 upgrade tidak dibalik otomatis. Pemulihan database adalah tindakan terpisah dan
 destruktif: lakukan ke target yang dipilih dengan backup yang telah diuji, ikuti
@@ -419,11 +480,3 @@ Perubahan melalui REST dan JSON-RPC ditulis ke `base.audit_log`, berisi actor, m
 record, operasi, dan diff field. Password, token, secret, credential, dan hash tidak
 disalin. Log hanya bisa dibaca role `system`/`superadmin` melalui API dan tidak dapat
 diubah/dihapus lewat generic API.
-
-Workflow `.github/workflows/deploy.yml` berjalan setelah CI sukses, menggunakan deployment hook dan smoke test.
-Atur GitHub environment `staging` dengan secret `STAGING_DEPLOY_HOOK_URL` dan variable
-`STAGING_BASE_URL`. Push ke `main` memicu CI terlebih dahulu; setelah sukses, workflow ini
-men-deploy staging lalu memeriksa `/readyz`, `/livez`,
-dan root API. Workflow manual dapat melanjutkan ke production jika input disetujui;
-configure protected environment `production` dengan `PRODUCTION_DEPLOY_HOOK_URL` dan
-`PRODUCTION_BASE_URL` agar approval policy GitHub berlaku sebelum deploy.

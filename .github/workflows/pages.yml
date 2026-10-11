@@ -1,0 +1,548 @@
+name: Documentation Pages
+
+on:
+  push:
+    branches: [dev, main]
+    paths:
+      - 'apps/docs/**'
+      - 'apps/api/**'
+      - 'packages/**'
+      - 'docs/**'
+      - 'README.md'
+      - 'ROADMAP.md'
+      - 'scripts/docs/**'
+      - 'scripts/check-docs-publication.mjs'
+      - 'scripts/classify-docs-change.mjs'
+      - 'scripts/docs-change-policy.mjs'
+      - 'scripts/main-ci-policy.mjs'
+      - 'scripts/maintenance-incident.mjs'
+      - 'scripts/maintenance-incident.test.mjs'
+      - 'scripts/write-docs-metadata.mjs'
+      - 'packages/assets/**'
+      - 'packages/ui/**'
+      - '.github/workflows/pages.yml'
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Use dev for a preview; publish main, an exact verified main SHA, or a published stable release tag
+        required: true
+        type: string
+        default: dev
+      publish:
+        description: Publish Pages (requires main, an exact verified main SHA, or a stable release tag)
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: documentation-pages
+  cancel-in-progress: false
+
+jobs:
+  change-detection:
+    name: Detect documentation changes
+    if: github.event_name == 'push' && github.ref_type == 'branch'
+    runs-on: ubuntu-24.04
+    outputs:
+      docs: ${{ steps.filter.outputs.docs }}
+      docs_only: ${{ steps.classification.outputs.docs_only }}
+      release_change_kind: ${{ steps.classification.outputs.release_change_kind }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Detect docs-related paths
+        id: filter
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          filters: |
+            docs:
+              - 'apps/docs/**'
+              - 'apps/api/**'
+              - 'packages/**'
+              - 'docs/**'
+              - 'README.md'
+              - 'ROADMAP.md'
+              - 'scripts/docs/**'
+              - 'packages/assets/**'
+              - 'packages/ui/**'
+              - '.github/workflows/pages.yml'
+              - 'package.json'
+              - 'pnpm-workspace.yaml'
+              - 'pnpm-lock.yaml'
+      - name: Classify docs-only content separately from executable changes
+        id: classification
+        if: steps.filter.outputs.docs == 'true'
+        env:
+          BASE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$BASE_SHA" || "$BASE_SHA" =~ ^0+$ ]]; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            echo "release_change_kind=unknown" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          docs_result="$(node scripts/classify-docs-change.mjs "$BASE_SHA" "$HEAD_SHA")"
+          echo "docs_only=$(jq -r '.docsOnly' <<< "$docs_result")" >> "$GITHUB_OUTPUT"
+          release_result="$(node scripts/classify-release-commits.mjs "$BASE_SHA" "$HEAD_SHA" --summary)"
+          echo "release_change_kind=$(jq -r '.changeKind' <<< "$release_result")" >> "$GITHUB_OUTPUT"
+          if [[ "$(jq -r '.docsOnly' <<< "$docs_result")" == "true" && "$(jq -r '.changeKind' <<< "$release_result")" != "none" ]]; then
+            echo "Pure documentation content unexpectedly classifies as an application release change." >&2
+            exit 1
+          fi
+          {
+            echo '### Documentation change classification'
+            echo "- Docs-only content: $(jq -r '.docsOnly' <<< "$docs_result")"
+            echo "- Application release change: $(jq -r '.changeKind' <<< "$release_result")"
+            echo "- Source SHA: \`$HEAD_SHA\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+  build:
+    name: Build and verify documentation
+    outputs:
+      source_sha: ${{ steps.source_sha.outputs.sha }}
+      site_kind: ${{ steps.site.outputs.kind }}
+      base_path: ${{ steps.site.outputs.base_path }}
+      selected_ref: ${{ steps.site.outputs.source_ref }}
+    needs: change-detection
+    if: always() && (needs.change-detection.result == 'skipped' || needs.change-detection.outputs.docs == 'true')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Validate dispatch trust policy
+        id: policy
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          SOURCE_REF: ${{ inputs.source_ref }}
+          PUBLISH: ${{ inputs.publish }}
+          DISPATCH_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [[ "$PUBLISH" == "true" && "$DISPATCH_REF" != "refs/heads/main" ]]; then
+            echo "Pages publication can only be dispatched from trusted main." >&2
+            exit 1
+          fi
+          if [[ "$PUBLISH" != "true" && "$DISPATCH_REF" != "refs/heads/dev" ]]; then
+            echo "Documentation previews must be dispatched from the protected dev branch." >&2
+            exit 1
+          fi
+          if [[ "$PUBLISH" == "true" && "$SOURCE_REF" != "main" && ! "$SOURCE_REF" =~ ^[0-9a-f]{40}$ && ! "$SOURCE_REF" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Publication accepts only main, a full lowercase main SHA, or a stable semantic release tag; got $SOURCE_REF" >&2
+            exit 1
+          fi
+          echo "publish=$PUBLISH" >> "$GITHUB_OUTPUT"
+          if [[ "$PUBLISH" == "true" ]]; then
+            echo "selected_ref=$SOURCE_REF" >> "$GITHUB_OUTPUT"
+          else
+            echo "selected_ref=dev" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify and select a published stable release tag
+        if: github.event_name == 'workflow_dispatch' && inputs.publish == true && startsWith(inputs.source_ref, 'v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.source_ref }}
+        run: |
+          set -euo pipefail
+          git fetch --force origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
+          release_sha="$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"
+          gh release view "$RELEASE_TAG" --repo "$GH_REPO" --json tagName,publishedAt,isDraft,isPrerelease --jq 'select(.publishedAt != null and .isDraft == false and .isPrerelease == false) | .tagName' | grep -Fx "$RELEASE_TAG"
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor "$release_sha" refs/remotes/origin/main; then
+            echo "Release tag $RELEASE_TAG does not point to a commit reachable from trusted main." >&2
+            exit 1
+          fi
+          git checkout --detach "$RELEASE_TAG"
+          test "$(git rev-parse HEAD)" = "$release_sha"
+      - name: Verify and select an immutable main source SHA for Pages recovery
+        if: github.event_name == 'workflow_dispatch' && inputs.publish == true && inputs.source_ref != 'main' && !startsWith(inputs.source_ref, 'v')
+        env:
+          SOURCE_SHA: ${{ inputs.source_ref }}
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          git cat-file -e "$SOURCE_SHA^{commit}"
+          git merge-base --is-ancestor "$SOURCE_SHA" refs/remotes/origin/main
+          git checkout --detach "$SOURCE_SHA"
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+      - name: Record immutable source SHA
+        id: source_sha
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Select docs channel and URL
+        id: site
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_REF: ${{ github.ref }}
+          PUBLISH: ${{ inputs.publish }}
+          SELECTED_REF: ${{ steps.policy.outputs.selected_ref || github.ref_name }}
+          SOURCE_SHA: ${{ steps.source_sha.outputs.sha }}
+        run: |
+          set -euo pipefail
+          kind=next
+          source_ref=main
+          base_path=/moonwitness-xi/next/
+          channel=next
+          if [[ "$EVENT_NAME" == "workflow_dispatch" && "$PUBLISH" == "true" && "$SELECTED_REF" == v* ]]; then
+            kind=stable
+            source_ref="$SELECTED_REF"
+            base_path="/moonwitness-xi/$SELECTED_REF/"
+            channel=stable
+          elif [[ "$EVENT_NAME" == "workflow_dispatch" && "$PUBLISH" != "true" ]]; then
+            kind=preview
+            source_ref=dev
+            base_path=/moonwitness-xi/
+            channel=preview
+          elif [[ "$EVENT_REF" == refs/heads/dev ]]; then
+            kind=preview
+            source_ref=dev
+            base_path=/moonwitness-xi/
+            channel=preview
+          elif [[ "$SELECTED_REF" != main ]]; then
+            source_ref="$SOURCE_SHA"
+          fi
+          printf 'kind=%s\nbase_path=%s\nsource_ref=%s\nchannel=%s\n' "$kind" "$base_path" "$source_ref" "$channel" >> "$GITHUB_OUTPUT"
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          node-version: '22'
+          pnpm-version: '11.17.0'
+      - name: Install frozen workspace dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
+      - name: Export docs channel metadata
+        env:
+          BASE_PATH: ${{ steps.site.outputs.base_path }}
+          SOURCE_REF: ${{ steps.site.outputs.source_ref }}
+          CHANNEL: ${{ steps.site.outputs.channel }}
+        run: |
+          {
+            echo "MW_DOCS_BASE_PATH=$BASE_PATH"
+            echo "MW_DOCS_SOURCE_REF=$SOURCE_REF"
+            echo "MW_DOCS_CHANNEL=$CHANNEL"
+          } >> "$GITHUB_ENV"
+      - name: Install Chromium for portal browser tests
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Build documentation package types
+        run: node scripts/ci/build-workspace-package.mjs @moonwitness/types
+      - name: Build documentation package ORM
+        run: node scripts/ci/build-workspace-package.mjs @moonwitness/orm
+      - name: Build documentation package base addon
+        run: node scripts/ci/build-workspace-package.mjs @moonwitness/orm-base
+      - name: Build documentation package auth
+        run: node scripts/ci/build-workspace-package.mjs @moonwitness/auth
+      - name: Build documentation package jobs
+        run: node scripts/ci/build-workspace-package.mjs @moonwitness/jobs
+      - name: Build documentation package integration
+        run: node scripts/ci/build-workspace-package.mjs @moonwitness/orm-integration
+      - name: Build documentation package notifications
+        run: node scripts/ci/build-workspace-package.mjs @moonwitness/orm-notification
+      - name: Build documentation package organization
+        run: node scripts/ci/build-workspace-package.mjs @moonwitness/orm-organization
+      - name: Build documentation package workflow
+        run: node scripts/ci/build-workspace-package.mjs @moonwitness/orm-workflow
+      - name: Build documentation package requests
+        run: node scripts/ci/build-workspace-package.mjs @moonwitness/orm-request
+      - name: Build documentation package storage
+        run: node scripts/ci/build-workspace-package.mjs @moonwitness/orm-storage
+      - name: Test documentation generators
+        run: node --test scripts/docs/generate-reference.test.mjs scripts/docs/update-readme.test.mjs scripts/docs/build-guide.test.mjs
+      - name: Verify generated documentation reference
+        run: node scripts/docs/generate-reference.mjs --check
+      - name: Verify generated README
+        run: node scripts/docs/update-readme.mjs --check
+      - name: Check documentation links
+        run: pnpm docs:links
+      - name: Check documentation example types
+        run: pnpm exec tsc --noEmit -p packages/orm/examples/tsconfig.json
+      - name: Test documented addon examples
+        run: pnpm --filter @moonwitness/orm exec vitest run tests/addon.test.ts
+      - name: Build documentation portal site
+        run: pnpm --filter @moonwitness/docs portal:build
+      - name: Test documentation portal
+        id: docs_portal_tests
+        run: pnpm --filter @moonwitness/docs test
+      - name: Annotate failed documentation portal testcases
+        if: always() && steps.docs_portal_tests.outcome == 'failure'
+        continue-on-error: true
+        run: node scripts/summarize-junit-failures.mjs test-results/junit
+      - name: Require successful CI gate for trusted main source
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.publish == true)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SOURCE_SHA: ${{ steps.source_sha.outputs.sha }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            runs="$(gh api "repos/$GH_REPO/actions/workflows/ci.yml/runs?branch=main&head_sha=$SOURCE_SHA&event=push&per_page=100")"
+            run="$(jq --arg sha "$SOURCE_SHA" '[.workflow_runs[] | select(.head_sha == $sha and .head_branch == "main" and .event == "push")] | sort_by(.created_at, .run_attempt) | last // empty' <<< "$runs")"
+            if [[ -n "$run" ]]; then
+              run_id="$(jq -r '.id' <<< "$run")"
+              run_attempt="$(jq -r '.run_attempt' <<< "$run")"
+              run_status="$(jq -r '.status' <<< "$run")"
+              run_conclusion="$(jq -r '.conclusion // ""' <<< "$run")"
+              if [[ "$run_status" == "completed" ]]; then
+                if [[ "$run_conclusion" != "success" ]]; then
+                  echo "The newest main push CI run for $SOURCE_SHA concluded $run_conclusion." >&2
+                  exit 1
+                fi
+                jobs="$(gh api "repos/$GH_REPO/actions/runs/$run_id/attempts/$run_attempt/jobs?per_page=100")"
+                gate="$(jq '[.jobs[] | select(.name == "ci-gate")] | last // empty' <<< "$jobs")"
+                if [[ "$(jq -r 'if type == "object" then (.conclusion // "") else "" end' <<< "$gate")" != "success" ]]; then
+                  echo "The main push CI run has no successful ci-gate for $SOURCE_SHA." >&2
+                  exit 1
+                fi
+                echo "Verified main push ci-gate success for source SHA $SOURCE_SHA (run $run_id)."
+                exit 0
+              fi
+            fi
+            echo "Waiting for main push CI and ci-gate on source SHA $SOURCE_SHA (attempt $attempt/60)."
+            sleep 15
+          done
+          echo "Timed out waiting for successful ci-gate on $SOURCE_SHA." >&2
+          exit 1
+      - name: Confirm docs-only source does not request an app version bump
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.change-detection.outputs.docs_only == 'true'
+        env:
+          RELEASE_CHANGE_KIND: ${{ needs.change-detection.outputs.release_change_kind }}
+        run: |
+          set -euo pipefail
+          if [[ "$RELEASE_CHANGE_KIND" != "none" ]]; then
+            echo "Docs-only change must have release change kind none; got $RELEASE_CHANGE_KIND." >&2
+            exit 1
+          fi
+      - name: Test publication safety contracts
+        run: pnpm test:docs-publication
+      - name: Scan public output for secrets and unsafe files
+        run: node scripts/check-docs-publication.mjs apps/docs/dist
+      - name: Write source metadata
+        env:
+          SOURCE_SHA: ${{ steps.source_sha.outputs.sha }}
+          SOURCE_REF: ${{ steps.site.outputs.source_ref }}
+          RUN_ID: ${{ github.run_id }}
+          DOCS_ONLY: ${{ needs.change-detection.outputs.docs_only }}
+          RELEASE_CHANGE_KIND: ${{ needs.change-detection.outputs.release_change_kind }}
+        run: node scripts/write-docs-metadata.mjs apps/docs/dist
+      - name: Upload development preview artifact
+        if: github.ref == 'refs/heads/dev' || (github.event_name == 'workflow_dispatch' && inputs.publish != true)
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: docs-preview-${{ steps.source_sha.outputs.sha }}
+          path: apps/docs/dist
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload current documentation snapshot
+        if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && inputs.publish == true)
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: docs-current-${{ steps.source_sha.outputs.sha }}
+          path: apps/docs/dist
+          if-no-files-found: error
+          retention-days: 1
+      - name: Package immutable stable documentation snapshot
+        if: steps.site.outputs.kind == 'stable'
+        run: |
+          mkdir -p versioned-docs
+          node scripts/docs/versioned-site.mjs package --site apps/docs/dist --tag '${{ steps.site.outputs.source_ref }}' --output 'versioned-docs/docs-site-${{ steps.site.outputs.source_ref }}.tar.gz'
+      - name: Upload stable documentation archive
+        if: steps.site.outputs.kind == 'stable'
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: docs-stable-${{ steps.site.outputs.source_ref }}
+          path: versioned-docs/*.tar.gz
+          if-no-files-found: error
+          retention-days: 1
+
+  store-versioned-docs:
+    name: Store immutable docs release asset
+    needs: build
+    if: needs.build.result == 'success' && needs.build.outputs.site_kind == 'stable'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    concurrency:
+      group: repository-write-coordinator
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: docs-stable-${{ needs.build.outputs.selected_ref }}
+          path: versioned-docs
+      - name: Reconcile immutable docs archive on the published release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.build.outputs.selected_ref }}
+          SOURCE_SHA: ${{ needs.build.outputs.source_sha }}
+        run: |
+          set -euo pipefail
+          file="versioned-docs/docs-site-$TAG.tar.gz"
+          test -s "$file"
+          release="$(gh api "repos/$GH_REPO/releases/tags/$TAG")"
+          test "$(jq -r '.published_at != null and .draft == false and .prerelease == false' <<< "$release")" = true
+          release_id="$(jq -r '.id' <<< "$release")"
+          expected="sha256:$(sha256sum "$file" | awk '{print $1}')"
+          expected_size="$(wc -c < "$file" | tr -d ' ')"
+          assets="$(gh api --paginate "repos/$GH_REPO/releases/$release_id/assets?per_page=100")"
+          asset="$(jq -c --arg name "$(basename "$file")" '[.[] | select(.name == $name)] | first // empty' <<< "$assets")"
+          if [[ -n "$asset" ]]; then
+            test "$(jq -r '.digest // empty' <<< "$asset")" = "$expected"
+            test "$(jq -r '.size' <<< "$asset")" = "$expected_size"
+          else
+            if ! gh release upload "$TAG" "$file" --repo "$GH_REPO"; then
+              assets="$(gh api --paginate "repos/$GH_REPO/releases/$release_id/assets?per_page=100")"
+              asset="$(jq -c --arg name "$(basename "$file")" '[.[] | select(.name == $name)] | first // empty' <<< "$assets")"
+            else
+              assets="$(gh api --paginate "repos/$GH_REPO/releases/$release_id/assets?per_page=100")"
+              asset="$(jq -c --arg name "$(basename "$file")" '[.[] | select(.name == $name)] | first // empty' <<< "$assets")"
+            fi
+            test -n "$asset"
+            test "$(jq -r '.digest // empty' <<< "$asset")" = "$expected"
+            test "$(jq -r '.size' <<< "$asset")" = "$expected_size"
+          fi
+          echo "Stored immutable documentation archive for $TAG at source SHA $SOURCE_SHA ($expected)." >> "$GITHUB_STEP_SUMMARY"
+
+  compose-site:
+    name: Compose versioned Pages site
+    needs: [build, store-versioned-docs]
+    if: always() && needs.build.result == 'success' && (needs.store-versioned-docs.result == 'success' || needs.store-versioned-docs.result == 'skipped') && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.publish == true))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          node-version: '22'
+          pnpm-version: '11.17.0'
+      - name: Install frozen workspace dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: docs-current-${{ needs.build.outputs.source_sha }}
+          path: current-site
+      - name: Read stable release inventory
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh api --paginate --slurp "repos/$GH_REPO/releases?per_page=100" > release-inventory.json
+      - name: Plan and download retained snapshots
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p versioned-docs
+          node scripts/docs/versioned-site.mjs plan --releases release-inventory.json --limit 5 > versioned-docs-plan.json
+          while IFS= read -r tag; do
+            [[ -n "$tag" ]] || continue
+            gh release download "$tag" --repo "$GH_REPO" --pattern "docs-site-$tag.tar.gz" --dir versioned-docs
+          done < <(jq -r '.retained[].tag' versioned-docs-plan.json)
+      - name: Compose and scan versioned site
+        env:
+          SITE_KIND: ${{ needs.build.outputs.site_kind }}
+          SOURCE_REF: ${{ needs.build.outputs.selected_ref }}
+          BASE_PATH: ${{ needs.build.outputs.base_path }}
+        run: |
+          set -euo pipefail
+          node scripts/docs/versioned-site.mjs compose --site current-site --kind "$SITE_KIND" --source-ref "$SOURCE_REF" --releases release-inventory.json --archives versioned-docs --output composed-site --base-path "$BASE_PATH" --retention 5
+          node scripts/check-docs-publication.mjs composed-site
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        with:
+          path: composed-site
+
+  deploy:
+    name: Publish trusted documentation
+    needs: [change-detection, build, store-versioned-docs, compose-site]
+    if: always() && needs.build.result == 'success' && needs.compose-site.result == 'success' && (needs.store-versioned-docs.result == 'success' || needs.store-versioned-docs.result == 'skipped') && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.publish == true))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    concurrency:
+      group: repository-write-coordinator
+      cancel-in-progress: false
+    permissions:
+      pages: write
+      id-token: write
+      contents: read
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy verified Pages artifact
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+
+  report-failure:
+    name: Report documentation publication failure
+    if: always() && needs.build.outputs.source_sha != '' && (needs.build.result == 'failure' || needs.store-versioned-docs.result == 'failure' || needs.compose-site.result == 'failure' || needs.deploy.result == 'failure') && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.publish == true))
+    needs: [change-detection, build, store-versioned-docs, compose-site, deploy]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    concurrency:
+      group: repository-write-coordinator
+      cancel-in-progress: false
+    permissions:
+      issues: write
+    steps:
+      - name: Upsert the documentation publication incident
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          SOURCE_REF: ${{ inputs.source_ref }}
+          EVENT_REF_NAME: ${{ github.ref_name }}
+          SOURCE_SHA: ${{ needs.build.outputs.source_sha }}
+          INCIDENT_STATUS: failed
+        run: node scripts/maintenance-incident.mjs
+
+  resolve-failure:
+    name: Resolve recovered documentation publication incident
+    if: always() && needs.build.result == 'success' && needs.compose-site.result == 'success' && needs.deploy.result == 'success' && (needs.store-versioned-docs.result == 'success' || needs.store-versioned-docs.result == 'skipped') && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.publish == true))
+    needs: [change-detection, build, store-versioned-docs, compose-site, deploy]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    concurrency:
+      group: repository-write-coordinator
+      cancel-in-progress: false
+    permissions:
+      issues: write
+    steps:
+      - name: Resolve the documentation publication incident after successful deploy
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          SOURCE_REF: ${{ inputs.source_ref }}
+          EVENT_REF_NAME: ${{ github.ref_name }}
+          SOURCE_SHA: ${{ needs.build.outputs.source_sha }}
+          INCIDENT_STATUS: recovered
+        run: node scripts/maintenance-incident.mjs

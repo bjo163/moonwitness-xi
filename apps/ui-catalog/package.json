@@ -1,0 +1,32 @@
+{
+  "name": "@moonwitness/ui-catalog",
+  "private": true,
+  "version": "1.0.0-rc.1",
+  "description": "Static, interactive catalog for the MoonWitness UI package",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "pnpm --filter @moonwitness/ui build && tsc -p tsconfig.json && vite build",
+    "test": "playwright test",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@moonwitness/ui": "workspace:*",
+    "radix-ui": "^1.6.7",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "sonner": "^2.0.8"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "^1.63.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.6.4",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~5.7.3",
+    "vite": "^8.3.0"
+  }
+}

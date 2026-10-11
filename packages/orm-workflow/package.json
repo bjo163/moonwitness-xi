@@ -1,0 +1,33 @@
+{
+  "name": "@moonwitness/orm-workflow",
+  "version": "1.0.0-rc.1",
+  "description": "Versioned, auditable workflow and approval engine for MoonWitness",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "tsc -p tsconfig.check.json && vitest run"
+  },
+  "dependencies": {
+    "@moonwitness/orm": "workspace:*",
+    "@moonwitness/orm-base": "workspace:*",
+    "@moonwitness/jobs": "workspace:*",
+    "@moonwitness/orm-notification": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@vitest/coverage-v8": "5.0.3",
+    "better-sqlite3": "^13.0.3",
+    "knex": "^3.3.0",
+    "objection": "^3.1.5",
+    "typescript": "~5.7.3",
+    "vitest": "5.0.3"
+  }
+}

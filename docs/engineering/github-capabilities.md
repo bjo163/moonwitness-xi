@@ -1,20 +1,20 @@
 # GitHub capability baseline
 
-Read using gh CLI/API on 2026-10-04; no secret values were requested or recorded.
+Latest public REST/ruleset read: 2026-10-11. Repository settings and refs below are snapshots, not credentials; no secret values were requested or recorded.
 
-| Capability                      | Observed state                               | Implication                                                                                            |
-| ------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Repository                      | bjo163/moonwitness-xi, public, admin access  | Can inspect/change settings when an implementation task is ready                                       |
-| Default branch                  | main                                         | Issue closing keywords on PR behave specially for default branch; promotion remains dev→main           |
-| Remote branch refs              | main and dev                                 | Two-branch bootstrap exists; no extra remote branch observed                                           |
-| Issues                          | enabled                                      | M11 can use Issues; creating 148 issues remains gated on reconciler dry-run/pilot                      |
-| Repository rulesets             | empty list                                   | No rulesets observed; verify branch protection endpoints before enforcing                              |
-| Main branch protection endpoint | API read returned unavailable/not configured | Exact reason (missing rule vs permission/API limitation) needs follow-up before claiming no protection |
-| GitHub Pages endpoint           | unavailable/not configured                   | Pages requires explicit bootstrap/settings                                                             |
-| Auto-merge                      | disabled                                     | Enable only after required checks and policies work                                                    |
-| Merge methods                   | merge, squash and rebase enabled             | M1 should retain merge only if this is the chosen promotion contract                                   |
-| Delete branch on merge          | false                                        | Correct for persistent dev branch                                                                      |
-| Existing workflows              | CI, Release, Staging deploy                  | CI push trigger needs dev; staging deployment conflicts with current user scope                        |
-| Bot credential/App setup        | Not audited/configured                       | Determine minimum installation permission during M8/M11 bootstrap                                      |
+| Capability                      | Observed state                                                                                                       | Implication                                                                                                         |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Repository                      | `bjo163/moonwitness-xi`, public; repository ID `1402784682`; API reports admin permission for connected identity     | Public read-only audit is possible; the connected GitHub API integration cannot read branch-protection endpoints.   |
+| Default branch                  | `main`                                                                                                               | Promotion stays `dev` → `main`.                                                                                     |
+| Remote branch refs              | Exactly `main`=`6eba99761376832a38beedd5ac673e83fb0e7800`, `dev`=`b48e028607cf0037dc2b407c58eb0d96a4777e67`          | Only the authorized two refs currently exist.                                                                       |
+| Issues / Projects               | Issues enabled; Projects enabled                                                                                     | Roadmap reconciliation can use Issues; public dry-run found 148 create operations, so import remains pilot-gated.   |
+| Repository rulesets             | Three active: two-branch-only (ID `24436078`), main protection (ID `24436095`), version tags (ID `24442531`)         | Branch creation/deletion/non-fast-forward restrictions and protected `v*` tags are active.                          |
+| Main effective merge gate       | Active main ruleset requires PR, strict `ci-gate`, thread resolution, and merge-only method; no bypass actors        | Promotions must pass the gate and use a merge commit. CODEOWNER freshness is additionally enforced by `ci-gate`.    |
+| Classic branch-protection API   | GET for `main`/`dev` returned HTTP 403 `Resource not accessible by integration`                                      | No claim is made about settings outside the readable active rulesets.                                               |
+| GitHub Pages                    | Repository metadata reports `has_pages=true`                                                                         | Pages capability is enabled; publication still requires exact-main workflow/artifact evidence.                      |
+| Auto-merge                      | Repository metadata reports `allow_auto_merge=true`                                                                  | Capability is enabled; it does not bypass checks, approval, or per-PR risk policy.                                  |
+| Merge methods / branch deletion | Repository allows merge, squash and rebase globally; main ruleset allows merge only; delete-branch-on-merge is false | Effective main promotion remains merge-only and persistent `dev` is retained.                                       |
+| Workflows on `main`             | `deploy.yml` remains in contents with `on: []`; `roadmap-issue-plan.yml` returns 404 on `main`                       | App deployment workflow is not event-triggered, but M1.11 deletion and default-branch activation remain unpromoted. |
+| Promotion PR                    | PR #24 is open, `dev` → `main`, exact head `b48e028607cf0037dc2b407c58eb0d96a4777e67` at audit time                  | Current promotion report exists; approval and exact-head gate remain authoritative.                                 |
 
-This file records observable configuration only. “Unavailable/not configured” is not treated as proof of an absent feature; re-read settings and report the exact API response during settings changes.
+This file records observable configuration only. Re-read external settings before changes; an inaccessible endpoint is not evidence that a protection is absent.

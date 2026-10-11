@@ -3,8 +3,8 @@ import { ExternalLink, Loader2, Plus, Trash2 } from 'lucide-react';
 import { Link } from 'react-router';
 import type { Domain, FieldMeta } from '@moonwitness/client';
 import { useRecordMutations, useRecords, useViews } from '@/hooks/use-model';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@moonwitness/ui/components/button';
+import { Skeleton } from '@moonwitness/ui/components/skeleton';
 import { FieldCell } from './fields';
 
 interface One2ManyWidgetProps {
@@ -135,7 +135,7 @@ export function One2ManyWidget({ field, parentId, isCreate }: One2ManyWidgetProp
                         <Button
                           variant="ghost"
                           size="xs"
-                          className="h-6 px-1.5 text-pink hover:bg-pink hover:text-white"
+                          className="h-6 px-1.5 text-pink hover:bg-pink hover:text-on-pink"
                           onClick={() => handleDelete(row.id as number)}
                           disabled={deletingId === row.id}
                           title="Archive item"

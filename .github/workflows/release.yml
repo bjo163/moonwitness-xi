@@ -16,7 +16,7 @@ on:
         default: false
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: release-${{ github.ref }}
@@ -24,8 +24,13 @@ concurrency:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+      attestations: write
     services:
       postgres:
         image: postgres:16-alpine
@@ -45,18 +50,59 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/moonwitness_test
       REQUIRE_POSTGRES_TESTS: 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - uses: ./.github/actions/setup-pnpm
         with:
           node-version: '22'
-          pnpm-version: '11'
+          pnpm-version: '11.17.0'
+      - name: Install frozen workspace dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
       - name: Verify workspace release version
+        id: version
         env:
           RELEASE_VERSION: ${{ inputs.version || github.ref_name }}
         run: |
           version="$RELEASE_VERSION"
           if [[ "$version" != v* ]]; then version="v$version"; fi
           pnpm release:check "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Require the exact source commit to be verified by main CI
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          git fetch --force origin refs/heads/main:refs/remotes/origin/main
+          git merge-base --is-ancestor "$SOURCE_SHA" refs/remotes/origin/main
+          for attempt in $(seq 1 60); do
+            runs="$(gh api "repos/$GH_REPO/actions/workflows/ci.yml/runs?branch=main&head_sha=$SOURCE_SHA&event=push&per_page=100")"
+            run="$(jq --arg sha "$SOURCE_SHA" '[.workflow_runs[] | select(.head_sha == $sha and .head_branch == "main" and .event == "push")] | sort_by(.created_at, .run_attempt) | last // empty' <<< "$runs")"
+            if [[ -n "$run" ]]; then
+              run_id="$(jq -r '.id' <<< "$run")"
+              run_attempt="$(jq -r '.run_attempt' <<< "$run")"
+              if [[ "$(jq -r '.status' <<< "$run")" == "completed" ]]; then
+                if [[ "$(jq -r '.conclusion // ""' <<< "$run")" != "success" ]]; then
+                  echo "The newest main push CI run for $SOURCE_SHA did not succeed." >&2
+                  exit 1
+                fi
+                jobs="$(gh api "repos/$GH_REPO/actions/runs/$run_id/attempts/$run_attempt/jobs?per_page=100")"
+                if [[ "$(jq '[.jobs[] | select(.name == "ci-gate" and .conclusion == "success")] | length' <<< "$jobs")" != "1" ]]; then
+                  echo "The exact main push CI run has no successful ci-gate for $SOURCE_SHA." >&2
+                  exit 1
+                fi
+                echo "Verified exact main ci-gate for source SHA $SOURCE_SHA (run $run_id)."
+                exit 0
+              fi
+            fi
+            echo "Waiting for exact main ci-gate on $SOURCE_SHA (attempt $attempt/60)."
+            sleep 15
+          done
+          echo "Timed out waiting for a successful main ci-gate on $SOURCE_SHA." >&2
+          exit 1
       - run: pnpm lint
       - run: pnpm format:check
       - run: pnpm typecheck
@@ -64,45 +110,356 @@ jobs:
       - run: pnpm --filter @moonwitness/board lint
       - run: pnpm test:unit
       - run: pnpm test:integration
-      - run: docker build --tag moonwitness-api:"$GITHUB_REF_NAME" .
-      - run: docker build --target board-runtime --tag moonwitness-board:"$GITHUB_REF_NAME" .
+      - name: Build the release images once with immutable source metadata
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          docker build --label "org.opencontainers.image.revision=$GITHUB_SHA" --label "org.opencontainers.image.version=$RELEASE_VERSION" --tag moonwitness-api:production .
+          docker build --target board-runtime --label "org.opencontainers.image.revision=$GITHUB_SHA" --label "org.opencontainers.image.version=$RELEASE_VERSION" --tag moonwitness-board:production .
+      - name: Generate the API image SPDX SBOM
+        if: github.ref_type == 'tag'
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          image: moonwitness-api:production
+          format: spdx-json
+          output-file: release-api.spdx.json
+          syft-version: v1.40.0
+          upload-artifact: false
+          upload-release-assets: false
+      - name: Generate the Board image SPDX SBOM
+        if: github.ref_type == 'tag'
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          image: moonwitness-board:production
+          format: spdx-json
+          output-file: release-board.spdx.json
+          syft-version: v1.40.0
+          upload-artifact: false
+          upload-release-assets: false
+      - name: Smoke test the exact release images against isolated PostgreSQL
+        env:
+          SMOKE_USE_PREBUILT_IMAGES: 'true'
+        run: bash scripts/smoke-containers.sh
+      - name: Scan the exact release images for critical vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: moonwitness-api:production
+          vuln-type: os,library
+          severity: CRITICAL
+          ignore-unfixed: true
+          format: table
+          exit-code: '1'
+      - name: Scan the exact Board release image for critical vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: moonwitness-board:production
+          vuln-type: os,library
+          severity: CRITICAL
+          ignore-unfixed: true
+          format: table
+          exit-code: '1'
       - name: Validate production Compose configuration
         env:
           DATABASE_URL: postgresql://moonwitness:ci-password@postgres.example:5432/moonwitness
           JWT_SECRET: ci-only-secret-that-is-at-least-32-characters-long
         run: docker compose -f docker-compose.production.yml config --quiet
+      - name: Export the verified images and record their transport digest
+        if: github.ref_type == 'tag'
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          docker save --output release-images.tar moonwitness-api:production moonwitness-board:production
+          api_image_id="$(docker image inspect moonwitness-api:production --format '{{.Id}}')"
+          board_image_id="$(docker image inspect moonwitness-board:production --format '{{.Id}}')"
+          jq -n \
+            --arg sourceSha "$GITHUB_SHA" \
+            --arg version "$RELEASE_VERSION" \
+            --arg apiImageId "$api_image_id" \
+            --arg boardImageId "$board_image_id" \
+            '{sourceSha: $sourceSha, version: $version, apiImageId: $apiImageId, boardImageId: $boardImageId}' \
+            > release-image-manifest.json
+          sha256sum release-images.tar release-image-manifest.json release-api.spdx.json release-board.spdx.json > release-artifacts.sha256
+          sha256sum release-api.spdx.json release-board.spdx.json > release-assets.sha256
+      - name: Upload the exact release images for promotion
+        id: upload_images
+        if: github.ref_type == 'tag'
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: release-images-${{ github.sha }}
+          path: |
+            release-images.tar
+            release-image-manifest.json
+            release-api.spdx.json
+            release-board.spdx.json
+            release-artifacts.sha256
+            release-assets.sha256
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+      - name: Record the immutable candidate artifact identity
+        if: github.ref_type == 'tag'
+        env:
+          ARTIFACT_ID: ${{ steps.upload_images.outputs.artifact-id }}
+          ARTIFACT_DIGEST: ${{ steps.upload_images.outputs.artifact-digest }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          test -n "$ARTIFACT_ID"
+          test -n "$ARTIFACT_DIGEST"
+          {
+            echo '### Verified release image artifact'
+            echo "- Source SHA: $SOURCE_SHA"
+            echo "- Artifact ID: $ARTIFACT_ID"
+            echo "- Artifact digest: $ARTIFACT_DIGEST"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  attest-artifact:
+    if: github.ref_type == 'tag'
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+      attestations: write
+      id-token: write
+    steps:
+      - name: Download the verified release bundle
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: release-images-${{ github.sha }}
+          path: release-images
+      - name: Verify the exact files before creating provenance
+        working-directory: release-images
+        run: sha256sum --check release-artifacts.sha256
+      - name: Attest the exact release transport and SBOM files
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: |
+            release-images/release-images.tar
+            release-images/release-image-manifest.json
+            release-images/release-api.spdx.json
+            release-images/release-board.spdx.json
+            release-images/release-assets.sha256
 
   publish:
     if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref_type == 'tag'
-    needs: verify
-    runs-on: ubuntu-latest
+    needs: [verify, attest-artifact]
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
+    concurrency:
+      group: repository-write-coordinator
+      cancel-in-progress: false
     permissions:
       contents: write
       packages: write
+      attestations: write
+      id-token: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Download the images produced and verified by the release gate
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: release-images-${{ github.sha }}
+          path: release-images
+      - name: Verify artifact transport digest and source metadata
+        env:
+          RELEASE_VERSION: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          cd release-images
+          sha256sum --check release-artifacts.sha256
+          test "$(jq -r '.sourceSha' release-image-manifest.json)" = "$GITHUB_SHA"
+          test "$(jq -r '.version' release-image-manifest.json)" = "$RELEASE_VERSION"
+          docker load --input release-images.tar
+          for image in moonwitness-api:production moonwitness-board:production; do
+            revision="$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')"
+            version="$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')"
+            test "$revision" = "$GITHUB_SHA"
+            test "$version" = "$RELEASE_VERSION"
+          done
+          test "$(docker image inspect moonwitness-api:production --format '{{.Id}}')" = "$(jq -r '.apiImageId' release-image-manifest.json)"
+          test "$(docker image inspect moonwitness-board:production --format '{{.Id}}')" = "$(jq -r '.boardImageId' release-image-manifest.json)"
+      - name: Require the source tag to remain on the verified SHA
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          EXPECTED_SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          remote_tag_sha="$(git ls-remote origin "refs/tags/$RELEASE_TAG" "refs/tags/$RELEASE_TAG^{}" | awk 'END { print $1 }')"
+          test -n "$remote_tag_sha"
+          test "$remote_tag_sha" = "$EXPECTED_SOURCE_SHA"
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Publish API image to GitHub Container Registry
+      - name: Plan stable latest promotion against published GitHub releases
+        id: latest_policy
+        if: ${{ !contains(github.ref_name, '-') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+          CANDIDATE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          stable_tags="$(gh api --paginate "repos/$GH_REPOSITORY/releases?per_page=100" --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name')"
+          plan="$(printf '%s\n' "$stable_tags" | node scripts/release-latest-policy.mjs "$CANDIDATE_TAG")"
+          advance="$(jq -r '.advance' <<< "$plan")"
+          reason="$(jq -r '.reason' <<< "$plan")"
+          latest="$(jq -r '.latest // ""' <<< "$plan")"
+          {
+            echo "advance=$advance"
+            echo "reason=$reason"
+            echo "latest=$latest"
+          } >> "$GITHUB_OUTPUT"
+          echo "- Stable latest promotion: $advance ($reason; current stable release: ${latest:-none})." >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish the verified API image to GitHub Container Registry
+        id: publish_api
+        env:
+          SOURCE_IMAGE: moonwitness-api:production
+          IMAGE_REPOSITORY: ghcr.io/${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          SOURCE_SHA: ${{ github.sha }}
+          RELEASE_VERSION: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          result="$(node scripts/publish-release-image.mjs)"
+          action="$(jq -r '.action' <<< "$result")"
+          digest="$(jq -r '.digest' <<< "$result")"
+          test -n "$digest"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "- API image publication: $action, $digest." >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish the verified Board image to GitHub Container Registry
+        id: publish_board
+        env:
+          SOURCE_IMAGE: moonwitness-board:production
+          IMAGE_REPOSITORY: ghcr.io/${{ github.repository }}-board
+          RELEASE_TAG: ${{ github.ref_name }}
+          SOURCE_SHA: ${{ github.sha }}
+          RELEASE_VERSION: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          result="$(node scripts/publish-release-image.mjs)"
+          action="$(jq -r '.action' <<< "$result")"
+          digest="$(jq -r '.digest' <<< "$result")"
+          test -n "$digest"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "- Board image publication: $action, $digest." >> "$GITHUB_STEP_SUMMARY"
+      - name: Resolve canonical OCI image names
+        id: image_names
+        env:
+          API_IMAGE: ghcr.io/${{ github.repository }}
+          BOARD_IMAGE: ghcr.io/${{ github.repository }}-board
+        run: |
+          set -euo pipefail
+          echo "api=$(printf '%s' "$API_IMAGE" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+          echo "board=$(printf '%s' "$BOARD_IMAGE" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+      - name: Attest API image build provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ steps.image_names.outputs.api }}
+          subject-digest: ${{ steps.publish_api.outputs.digest }}
+          push-to-registry: true
+          create-storage-record: false
+      - name: Attest Board image build provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ steps.image_names.outputs.board }}
+          subject-digest: ${{ steps.publish_board.outputs.digest }}
+          push-to-registry: true
+          create-storage-record: false
+      - name: Attest API image SPDX SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ steps.image_names.outputs.api }}
+          subject-digest: ${{ steps.publish_api.outputs.digest }}
+          sbom-path: release-images/release-api.spdx.json
+          push-to-registry: true
+          create-storage-record: false
+      - name: Attest Board image SPDX SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ steps.image_names.outputs.board }}
+          subject-digest: ${{ steps.publish_board.outputs.digest }}
+          sbom-path: release-images/release-board.spdx.json
+          push-to-registry: true
+          create-storage-record: false
+      - name: Ensure a draft GitHub release exists
+        id: draft_release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          UPDATE_LATEST: ${{ steps.latest_policy.outputs.advance || 'false' }}
+        run: |
+          set -euo pipefail
+          if release="$(gh release view "$TAG" --json tagName,isDraft,isPrerelease 2>/dev/null)"; then
+            test "$(jq -r '.tagName' <<< "$release")" = "$TAG"
+            is_draft="$(jq -r '.isDraft' <<< "$release")"
+            if [[ "$TAG" == *-* ]]; then expected_prerelease=true; else expected_prerelease=false; fi
+            test "$(jq -r '.isPrerelease' <<< "$release")" = "$expected_prerelease"
+            echo "Reusing the existing GitHub Release for $TAG."
+          elif [[ "$TAG" == *-* ]]; then
+            gh release create "$TAG" --verify-tag --generate-notes --draft --prerelease --latest=false
+            is_draft=true
+          else
+            gh release create "$TAG" --verify-tag --generate-notes --draft --latest=false
+            is_draft=true
+          fi
+          echo "is_draft=$is_draft" >> "$GITHUB_OUTPUT"
+          echo "draft release ready for required asset reconciliation: $TAG"
+      - name: Reconcile immutable release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: node scripts/reconcile-release-assets.mjs
+      - name: Verify release assets before completing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          UPDATE_LATEST: ${{ steps.latest_policy.outputs.advance || 'false' }}
+        run: |
+          set -euo pipefail
+          gh release verify-asset "$TAG" release-images/release-api.spdx.json
+          gh release verify-asset "$TAG" release-images/release-board.spdx.json
+          if [[ "$TAG" == *-* ]]; then
+            gh release edit "$TAG" --draft=false --prerelease --latest=false
+          elif [[ "$UPDATE_LATEST" == 'true' ]]; then
+            gh release edit "$TAG" --draft=false --latest
+          else
+            gh release edit "$TAG" --draft=false --latest=false
+          fi
+      - name: Advance stable API latest after release completion
+        if: steps.latest_policy.outputs.advance == 'true'
         env:
           IMAGE_URI: ghcr.io/${{ github.repository }}
           TAG: ${{ github.ref_name }}
+          VERSION_DIGEST: ${{ steps.publish_api.outputs.digest }}
         run: |
+          set -euo pipefail
           image="$(printf '%s' "$IMAGE_URI" | tr '[:upper:]' '[:lower:]')"
-          docker buildx build --push --tag "$image:$TAG" --tag "$image:latest" .
-      - name: Publish Board image to GitHub Container Registry
+          docker tag moonwitness-api:production "$image:latest"
+          latest_digest="$(docker push "$image:latest" 2>&1 | tee /dev/stderr | grep -oE 'digest: sha256:[a-f0-9]{64}' | awk '{print $2}' | tail -n 1)"
+          test -n "$latest_digest"
+          test "$latest_digest" = "$VERSION_DIGEST"
+          echo "- API stable latest advanced to $TAG at $latest_digest." >> "$GITHUB_STEP_SUMMARY"
+      - name: Advance stable Board latest after release completion
+        if: steps.latest_policy.outputs.advance == 'true'
         env:
           IMAGE_URI: ghcr.io/${{ github.repository }}-board
           TAG: ${{ github.ref_name }}
+          VERSION_DIGEST: ${{ steps.publish_board.outputs.digest }}
         run: |
+          set -euo pipefail
           image="$(printf '%s' "$IMAGE_URI" | tr '[:upper:]' '[:lower:]')"
-          docker buildx build --target board-runtime --push --tag "$image:$TAG" --tag "$image:latest" .
-      - name: Create GitHub release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes
+          docker tag moonwitness-board:production "$image:latest"
+          latest_digest="$(docker push "$image:latest" 2>&1 | tee /dev/stderr | grep -oE 'digest: sha256:[a-f0-9]{64}' | awk '{print $2}' | tail -n 1)"
+          test -n "$latest_digest"
+          test "$latest_digest" = "$VERSION_DIGEST"
+          echo "- Board stable latest advanced to $TAG at $latest_digest." >> "$GITHUB_STEP_SUMMARY"

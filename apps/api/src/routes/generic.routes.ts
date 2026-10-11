@@ -1,15 +1,22 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
+import { createHash, randomUUID } from 'node:crypto';
 import { databaseErrorCode } from '../database/errors.js';
+import type { AttachmentStorage } from '@moonwitness/orm-storage';
 import {
   BaseModel,
   Registry,
   applyDomain,
   describeFields,
+  validateDomain,
   resolveViews,
   getModelMenuInfo,
+  columnName,
+  type Field,
+  type FieldMap,
   type Domain,
 } from '@moonwitness/orm';
 import { assignDefaultCompanyMembership, assignDefaultUserGroup } from '@moonwitness/orm-base';
+import { isValidOrganizationMutation } from '@moonwitness/orm-organization';
 import type { JsonValue } from '@moonwitness/types';
 import type { Transaction } from 'objection';
 import { canAccess, canManageBaseUser, operationFor, rpcOperation } from '../auth/policy.js';
@@ -17,6 +24,7 @@ import { getRecordRuleDomain } from '../auth/rules.js';
 import type {
   ActionRequestBody,
   DeleteQueryParams,
+  GroupCountQueryParams,
   ModelActionParam,
   ModelIdParam,
   ModelListResponse,
@@ -25,9 +33,6 @@ import type {
 } from '@moonwitness/types';
 
 type JsonObject = { [key: string]: JsonValue };
-type AuditableModel = typeof BaseModel & {
-  fields?: Readonly<Record<string, { kind?: string }>>;
-};
 type RpcEnvelope = {
   jsonrpc?: unknown;
   method?: unknown;
@@ -35,12 +40,24 @@ type RpcEnvelope = {
   id?: unknown;
 };
 
+const SERVER_MANAGED_FIELDS = new Set([
+  'id',
+  'create_date',
+  'write_date',
+  'create_uid',
+  'write_uid',
+]);
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function asJsonObject(value: unknown): JsonObject | null {
   return isObject(value) && Object.values(value).every(isJsonValue) ? (value as JsonObject) : null;
+}
+
+function hasServerManagedFields(value: JsonObject): boolean {
+  return Object.keys(value).some((key) => SERVER_MANAGED_FIELDS.has(key));
 }
 
 function isJsonValue(value: unknown): value is JsonValue {
@@ -72,6 +89,18 @@ function resolveModel(req: FastifyRequest, name: string) {
   return Registry.has(name) ? req.env.get(name) : null;
 }
 
+function parseModelDomain(raw: string | undefined, Model: typeof BaseModel): Domain | null {
+  if (!raw) return [];
+  try {
+    return validateDomain(
+      JSON.parse(raw) as unknown,
+      new Set(Object.keys(Model.jsonSchema.properties ?? {}))
+    );
+  } catch {
+    return null;
+  }
+}
+
 function requireId(value: string, reply: FastifyReply): number | null {
   const id = parseInteger(value);
   if (id === undefined || id < 1) {
@@ -92,30 +121,6 @@ function recordNotFound(name: string, id: number) {
   return { success: false, error: `Record #${id} of model '${name}' not found` };
 }
 
-const BASE_REFERENCES: Readonly<Record<string, readonly { model: string; column: string }[]>> = {
-  'base.partner': [
-    { model: 'base.user', column: 'partner_id' },
-    { model: 'base.partner_address', column: 'partner_id' },
-    { model: 'base.partner_category_link', column: 'partner_id' },
-  ],
-  'base.partner_category': [{ model: 'base.partner_category_link', column: 'category_id' }],
-  'base.company': [
-    { model: 'base.partner', column: 'company_id' },
-    { model: 'base.company_membership', column: 'company_id' },
-  ],
-  'base.user': [{ model: 'base.company_membership', column: 'user_id' }],
-  'base.country': [
-    { model: 'base.partner', column: 'country_id' },
-    { model: 'base.company', column: 'country_id' },
-  ],
-  'base.currency': [{ model: 'base.company', column: 'currency_id' }],
-  'base.language': [
-    { model: 'base.company', column: 'language_id' },
-    { model: 'base.user', column: 'language_id' },
-  ],
-};
-const POLYMORPHIC_REFERENCE_MODELS = new Set(['base.tag_link', 'base.attachment', 'base.activity']);
-
 function property(value: unknown, key: string): unknown {
   return isObject(value) ? value[key] : undefined;
 }
@@ -125,25 +130,42 @@ function roleOf(value: unknown): string | undefined {
   return typeof role === 'string' ? role : undefined;
 }
 
+function resolveFieldTarget(field: Field): typeof BaseModel | undefined {
+  const target = field.target;
+  if (!target) return undefined;
+  if (typeof target === 'function' && !('modelName' in target)) return target();
+  return target as typeof BaseModel;
+}
+
+function hasPolymorphicResourceFields(fields: FieldMap): boolean {
+  return 'resource_model' in fields && 'resource_id' in fields;
+}
+
 async function findReference(
   targetModel: string,
   targetId: number,
   activeUsersOnly = false,
   trx?: Transaction
 ): Promise<string | null> {
-  for (const reference of BASE_REFERENCES[targetModel] ?? []) {
-    if (!Registry.has(reference.model)) continue;
-    let query = Registry.get(reference.model).query(trx).where(reference.column, targetId);
-    if (activeUsersOnly && reference.model === 'base.user') query = query.where('active', true);
-    if (await query.first()) return reference.model;
-  }
-  for (const modelName of POLYMORPHIC_REFERENCE_MODELS) {
-    if (!Registry.has(modelName)) continue;
-    const reference = await Registry.get(modelName)
-      .query(trx)
-      .where({ resource_model: targetModel, resource_id: targetId })
-      .first();
-    if (reference) return modelName;
+  for (const [modelName, RegisteredModel] of Registry.getAll()) {
+    const fields = RegisteredModel.fields ?? {};
+    const references = Object.entries(fields).flatMap(([fieldName, field]) => {
+      if (field.kind !== 'belongsTo') return [];
+      const target = resolveFieldTarget(field);
+      return target?.modelName === targetModel ? [columnName(fieldName, field)] : [];
+    });
+    for (const column of references) {
+      let query = RegisteredModel.query(trx).where(column, targetId);
+      if (activeUsersOnly && modelName === 'base.user') query = query.where('active', true);
+      if (await query.first()) return modelName;
+    }
+
+    if (hasPolymorphicResourceFields(fields)) {
+      const reference = await RegisteredModel.query(trx)
+        .where({ resource_model: targetModel, resource_id: targetId })
+        .first();
+      if (reference) return modelName;
+    }
   }
   return null;
 }
@@ -171,41 +193,47 @@ async function hasCompanyAccess(
   current?: BaseModel,
   trx?: Transaction
 ): Promise<boolean> {
-  type RelationModel = typeof BaseModel & {
-    modelName: string;
-    fields: Record<string, { kind?: string; required?: boolean; target?: RelationModel }>;
-  };
   const companyId = req.auth?.companyId;
-  const modelFields = (Registry.get(modelName) as RelationModel).fields ?? {};
+  const modelFields = Registry.get(modelName).fields ?? {};
   const targetCompany = Object.hasOwn(values, 'company_id')
     ? values.company_id
     : property(current, 'company_id');
+  const canAssignCompanyMembership =
+    modelName === 'base.company_membership' &&
+    (req.auth?.role === 'system' || req.auth?.role === 'superadmin');
   if ('company' in modelFields || 'company_id' in modelFields) {
     const currentCompany = property(current, 'company_id');
     if (typeof currentCompany === 'number' && targetCompany === null) return false;
-    if (targetCompany !== undefined && targetCompany !== null && targetCompany !== companyId)
+    if (
+      targetCompany !== undefined &&
+      targetCompany !== null &&
+      targetCompany !== companyId &&
+      !canAssignCompanyMembership
+    )
       return false;
     if (targetCompany === undefined && companyId !== undefined && modelFields.company?.required)
       return false;
   }
   for (const [fieldName, field] of Object.entries(modelFields)) {
-    if (field.kind !== 'belongsTo' || !field.target) continue;
+    if (field.kind !== 'belongsTo') continue;
     const relationId = Object.hasOwn(values, `${fieldName}_id`)
       ? values[`${fieldName}_id`]
       : Object.hasOwn(values, fieldName)
         ? values[fieldName]
         : property(current, `${fieldName}_id`);
     if (typeof relationId !== 'number' || !Number.isSafeInteger(relationId)) continue;
-    const target = await req.env.get(field.target.modelName).query(trx).findById(relationId);
+    const targetModel = resolveFieldTarget(field);
+    if (!targetModel) continue;
+    const target = await req.env.get(targetModel.modelName).query(trx).findById(relationId);
     if (!target) return false;
-    const targetFields = field.target.fields ?? {};
+    const targetFields = targetModel.fields ?? {};
     if ('company' in targetFields || 'company_id' in targetFields) {
       const relatedCompany = property(target, 'company_id');
       if (relatedCompany !== undefined && relatedCompany !== null && relatedCompany !== companyId)
         return false;
     }
   }
-  return true;
+  return isValidOrganizationMutation(modelName, values, current?.toJSON(), trx);
 }
 
 function forbidden(reply: FastifyReply) {
@@ -221,7 +249,7 @@ function relationConflict(reply: FastifyReply, modelName: string, reference: str
 
 const AUDIT_SECRET_KEY = /password|token|secret|credential|hash/i;
 
-function auditSnapshot(model: AuditableModel, record: unknown): JsonObject {
+function auditSnapshot(model: typeof BaseModel, record: unknown): JsonObject {
   const source = record instanceof BaseModel ? record.toJSON() : record;
   if (!isObject(source)) return {};
   const fields = model.fields;
@@ -237,9 +265,11 @@ function auditSnapshot(model: AuditableModel, record: unknown): JsonObject {
       .filter(([, field]) => field.kind === 'belongsTo')
       .map(([key]) => `${key}_id`),
   ]);
+  const modelHidden = new Set(model.hiddenFields ?? []);
   const snapshot: JsonObject = {};
   for (const [key, value] of Object.entries(source)) {
-    if (keys.has(key) && !AUDIT_SECRET_KEY.test(key) && isJsonValue(value)) snapshot[key] = value;
+    if (keys.has(key) && !modelHidden.has(key) && !AUDIT_SECRET_KEY.test(key) && isJsonValue(value))
+      snapshot[key] = value;
   }
   return snapshot;
 }
@@ -254,7 +284,7 @@ async function recordAudit(
   trx?: Transaction
 ): Promise<void> {
   if (modelName === 'base.audit_log') return;
-  const Model = resolveModel(req, modelName) as AuditableModel | null;
+  const Model = resolveModel(req, modelName);
   if (!Model) return;
   const previous = auditSnapshot(Model, before);
   const current = auditSnapshot(Model, after);
@@ -342,13 +372,15 @@ async function hasValidResourceReference(
   current?: BaseModel,
   trx?: Transaction
 ): Promise<boolean> {
-  if (!POLYMORPHIC_REFERENCE_MODELS.has(modelName)) return true;
+  const Model = Registry.get(modelName);
+  if (!hasPolymorphicResourceFields(Model.fields ?? {})) return true;
   const resourceModel = Object.hasOwn(values, 'resource_model')
     ? values.resource_model
     : property(current, 'resource_model');
   const resourceId = Object.hasOwn(values, 'resource_id')
     ? values.resource_id
     : property(current, 'resource_id');
+  if (resourceModel === undefined && resourceId === undefined) return true;
   if (
     typeof resourceModel !== 'string' ||
     !Registry.has(resourceModel) ||
@@ -401,6 +433,25 @@ function relationExpression(graph: string | undefined): string | undefined {
   const value = graph?.trim();
   if (!value || !value.includes(',') || value.startsWith('[')) return value;
   return `[${value}]`;
+}
+
+function queryGraphIsBounded(graph: string | undefined): boolean {
+  if (!graph) return true;
+  if (graph.length > 512) return false;
+  const paths =
+    graph.startsWith('[') && graph.endsWith(']') ? graph.slice(1, -1).split(',') : [graph];
+  return paths.every((path) => {
+    const segments = path.trim().split('.');
+    return segments.length > 0 && segments.length <= 3 && segments.every(Boolean);
+  });
+}
+
+function rpcSearchReadIsBounded(kwargs: Record<string, JsonValue>): boolean {
+  const fields = kwargs.fields;
+  if (Array.isArray(fields) && fields.length > 100) return false;
+  const graph = typeof kwargs.with === 'string' ? kwargs.with : undefined;
+  const order = typeof kwargs.order === 'string' ? kwargs.order : undefined;
+  return queryGraphIsBounded(graph) && (order?.length ?? 0) <= 512;
 }
 
 async function rpcUserMutationAllowed(
@@ -622,7 +673,61 @@ async function executeRpc(
   }
 }
 
-export const genericRoutes: FastifyPluginAsync = async (fastify) => {
+interface GenericRoutesOptions {
+  attachmentStorage: AttachmentStorage;
+}
+
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+const ATTACHMENT_MIME_TYPES = new Set([
+  'application/octet-stream',
+  'application/pdf',
+  'application/json',
+  'application/zip',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/msword',
+  'application/vnd.ms-excel',
+  'application/vnd.ms-powerpoint',
+  'text/plain',
+  'text/csv',
+  'image/gif',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+]);
+
+function safeAttachmentName(value: string | undefined): string | null {
+  if (
+    !value ||
+    value.length > 255 ||
+    value.includes('/') ||
+    value.includes('\\') ||
+    [...value].some((character) => {
+      const code = character.charCodeAt(0);
+      return code < 32 || code === 127;
+    })
+  )
+    return null;
+  const name = value.normalize('NFC').trim();
+  if (!name || name === '.' || name === '..' || name.includes('..')) return null;
+  return name;
+}
+
+function encodedAttachmentName(name: string): string {
+  return encodeURIComponent(name).replace(
+    /[!'()*]/gu,
+    (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`
+  );
+}
+
+export const genericRoutes: FastifyPluginAsync<GenericRoutesOptions> = async (fastify, options) => {
+  fastify.addContentTypeParser(
+    'application/octet-stream',
+    { parseAs: 'buffer' },
+    (_request, body, done) => done(null, body)
+  );
+
   // Single authorization point for every /api/:model route; handlers stay policy-free.
   fastify.addHook('preHandler', async (req, reply) => {
     const model = (req.params as { model?: string } | undefined)?.model;
@@ -630,6 +735,139 @@ export const genericRoutes: FastifyPluginAsync = async (fastify) => {
     const operation = operationFor(req.method, req.routeOptions.url ?? '');
     if (!canAccess(req.auth?.role, model, operation, req.auth?.groupPermissions)) {
       return reply.code(403).send({ success: false, error: 'Forbidden' });
+    }
+    if (model === 'base.attachment' && operation === 'create') {
+      return reply.code(400).send({ success: false, error: 'Use the attachment upload endpoint' });
+    }
+    if (
+      model === 'base.attachment' &&
+      operation === 'write' &&
+      req.routeOptions.url !== '/api/:model/:id/action/:method'
+    ) {
+      return reply.code(400).send({ success: false, error: 'Attachment metadata is immutable' });
+    }
+  });
+
+  fastify.post<{
+    Querystring: { resource_model?: string; resource_id?: string; name?: string };
+    Body: Buffer;
+  }>(
+    '/api/base.attachment/upload',
+    {
+      bodyLimit: MAX_ATTACHMENT_BYTES,
+      config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
+    },
+    async (req, reply) => {
+      if (!canAccess(req.auth?.role, 'base.attachment', 'create', req.auth?.groupPermissions))
+        return forbidden(reply);
+      const { resource_model: resourceModel, resource_id: rawResourceId } = req.query;
+      const resourceId = parseInteger(rawResourceId);
+      const name = safeAttachmentName(req.query.name);
+      const mimeHeader = req.headers['x-file-mime'];
+      const rawMime = (Array.isArray(mimeHeader) ? mimeHeader[0] : mimeHeader)
+        ?.trim()
+        .toLowerCase();
+      const mimetype = rawMime && ATTACHMENT_MIME_TYPES.has(rawMime) ? rawMime : null;
+      if (
+        !resourceModel ||
+        !Registry.has(resourceModel) ||
+        resourceId === undefined ||
+        resourceId < 1 ||
+        !name ||
+        !mimetype
+      ) {
+        return reply.code(400).send({ success: false, error: 'Invalid attachment metadata' });
+      }
+      const resource = await scopedRecord(
+        req,
+        resolveModel(req, resourceModel) ?? BaseModel,
+        resourceModel,
+        resourceId
+      );
+      if (!resource) return reply.code(404).send({ success: false, error: 'Record not found' });
+      if (!Buffer.isBuffer(req.body) || req.body.length === 0)
+        return reply.code(400).send({ success: false, error: 'Attachment must not be empty' });
+      if (req.body.length > MAX_ATTACHMENT_BYTES)
+        return reply.code(413).send({ success: false, error: 'Attachment exceeds 10 MiB limit' });
+
+      const key = randomUUID();
+      const checksum = createHash('sha256').update(req.body).digest('hex');
+      let persisted = false;
+      try {
+        await options.attachmentStorage.put(key, req.body);
+        persisted = true;
+        const record = await inRequestTransaction(req, async (trx) => {
+          const AttachmentModel = req.env.get('base.attachment');
+          const created = await AttachmentModel.create(
+            {
+              name,
+              resource_model: resourceModel,
+              resource_id: resourceId,
+              mimetype,
+              size_bytes: req.body.length,
+              storage_key: key,
+              checksum,
+            } as JsonObject,
+            { transaction: trx }
+          );
+          const createdRecord = Array.isArray(created) ? created[0] : created;
+          if (!createdRecord) throw new Error('Attachment metadata was not created');
+          await recordAudit(
+            req,
+            'base.attachment',
+            'create',
+            createdRecord.id,
+            null,
+            createdRecord,
+            trx
+          );
+          await recordOutbox(
+            req,
+            'base.attachment',
+            'created',
+            createdRecord.id,
+            auditSnapshot(AttachmentModel, createdRecord),
+            trx
+          );
+          return createdRecord;
+        });
+        return reply.code(201).send({ success: true, data: record });
+      } catch (error) {
+        if (persisted) await options.attachmentStorage.delete(key).catch(() => undefined);
+        throw error;
+      }
+    }
+  );
+
+  fastify.get<{ Params: ModelIdParam }>('/api/base.attachment/:id/download', async (req, reply) => {
+    if (!canAccess(req.auth?.role, 'base.attachment', 'read', req.auth?.groupPermissions))
+      return forbidden(reply);
+    const id = requireId(req.params.id, reply);
+    if (id === null) return;
+    const Model = req.env.get('base.attachment');
+    const attachment = await scopedRecord(req, Model, 'base.attachment', id);
+    if (!attachment) return reply.code(404).send({ success: false, error: 'Attachment not found' });
+    const key = property(attachment, 'storage_key');
+    const name = property(attachment, 'name');
+    const mimetype = property(attachment, 'mimetype');
+    if (typeof key !== 'string' || typeof name !== 'string' || typeof mimetype !== 'string')
+      return reply.code(404).send({ success: false, error: 'Attachment content not found' });
+    try {
+      const content = await options.attachmentStorage.get(key);
+      if (!content)
+        return reply.code(404).send({ success: false, error: 'Attachment content not found' });
+      reply
+        .header('Content-Type', mimetype)
+        .header('Content-Length', content.length)
+        .header(
+          'Content-Disposition',
+          `attachment; filename*=UTF-8''${encodedAttachmentName(name)}`
+        )
+        .header('X-Content-Type-Options', 'nosniff')
+        .header('Cache-Control', 'private, no-store');
+      return reply.send(content);
+    } catch {
+      return reply.code(404).send({ success: false, error: 'Attachment content not found' });
     }
   });
 
@@ -655,9 +893,9 @@ export const genericRoutes: FastifyPluginAsync = async (fastify) => {
   /** Field metadata with readonly forced on when the caller cannot write. */
   const fieldsFor = (req: FastifyRequest, model: string) => {
     const writable = canAccess(req.auth?.role, model, 'write', req.auth?.groupPermissions);
-    return describeFields(Registry.get(model)).map((field) =>
-      writable ? field : { ...field, readonly: true }
-    );
+    return describeFields(Registry.get(model))
+      .filter((field) => model !== 'base.attachment' || field.name !== 'storage_key')
+      .map((field) => (writable ? field : { ...field, readonly: true }));
   };
 
   fastify.get<{ Params: ModelParam }>('/api/:model/fields', async (req, reply) => {
@@ -683,23 +921,59 @@ export const genericRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
+  fastify.get<{ Params: ModelParam; Querystring: GroupCountQueryParams }>(
+    '/api/:model/group-count',
+    async (req, reply) => {
+      const Model = resolveModel(req, req.params.model);
+      if (!Model) return reply.status(404).send(modelNotFound(req.params.model));
+      const domain = parseModelDomain(req.query.domain, Model);
+      if (!domain) {
+        return reply
+          .code(400)
+          .send({ success: false, error: 'Invalid domain; expected a JSON domain array' });
+      }
+      if (!req.query.group_by || req.query.group_by.length > 512) {
+        return reply.code(400).send({ success: false, error: 'group_by is required' });
+      }
+      const groupBy = req.query.group_by.split(',').map((field) => field.trim());
+      const limit = parseInteger(req.query.limit, 100);
+      const offset = parseInteger(req.query.offset, 0);
+      if (limit === undefined || limit < 1 || limit > 500) {
+        return reply.code(400).send({ success: false, error: 'limit must be 1–500' });
+      }
+      if (offset === undefined || offset < 0 || offset > 10_000) {
+        return reply.code(400).send({ success: false, error: 'offset must be 0–10000' });
+      }
+      try {
+        const scope = await userReadScope(req, req.params.model);
+        const page = await Model.search_group_count([...domain, ...scope], groupBy, {
+          limit,
+          offset,
+        });
+        return { success: true, model: req.params.model, groupBy, ...page };
+      } catch (error) {
+        const validationError = isObject(error) && error.statusCode === 400;
+        return reply.code(validationError ? 400 : 500).send({
+          success: false,
+          error: validationError
+            ? errorMessage(error, 'Invalid grouped-count request')
+            : errorMessage(error, 'Unable to group records'),
+        });
+      }
+    }
+  );
+
   fastify.get<{ Params: ModelParam; Querystring: SearchQueryParams }>(
     '/api/:model',
     async (req, reply) => {
       const Model = resolveModel(req, req.params.model);
       if (!Model) return reply.status(404).send(modelNotFound(req.params.model));
 
-      let domain: Domain = [];
-      if (req.query.domain) {
-        try {
-          const parsed: unknown = JSON.parse(req.query.domain);
-          if (!Array.isArray(parsed)) throw new Error('Domain must be an array');
-          domain = parsed as Domain;
-        } catch {
-          return reply
-            .status(400)
-            .send({ success: false, error: 'Invalid domain; expected a JSON domain array' });
-        }
+      const domain = parseModelDomain(req.query.domain, Model);
+      if (!domain) {
+        return reply
+          .status(400)
+          .send({ success: false, error: 'Invalid domain; expected a JSON domain array' });
       }
 
       const limit = parseInteger(req.query.limit, 80);
@@ -730,6 +1004,19 @@ export const genericRoutes: FastifyPluginAsync = async (fastify) => {
         ?.split(',')
         .map((field) => field.trim())
         .filter(Boolean);
+      if (fields && fields.length > 100) {
+        return reply
+          .code(400)
+          .send({ success: false, error: 'At most 100 fields may be selected' });
+      }
+      if ((req.query.with?.length ?? 0) > 512 || (req.query.order?.length ?? 0) > 512) {
+        return reply.code(400).send({ success: false, error: 'Query expression is too long' });
+      }
+      if (!queryGraphIsBounded(req.query.with)) {
+        return reply
+          .code(400)
+          .send({ success: false, error: 'Relation graph exceeds maximum depth' });
+      }
       const options = {
         fields,
         limit: cursorMode && limit > 0 ? limit + 1 : limit,
@@ -767,6 +1054,10 @@ export const genericRoutes: FastifyPluginAsync = async (fastify) => {
       if (!Model) return reply.status(404).send(modelNotFound(req.params.model));
       const id = requireId(req.params.id, reply);
       if (id === null) return;
+      if (!queryGraphIsBounded(req.query.with))
+        return reply
+          .code(400)
+          .send({ success: false, error: 'Relation graph exceeds maximum depth' });
       if (!userGraphAllowed(req.auth?.role, req.params.model, req.query.with))
         return reply.code(403).send({ success: false, error: 'Forbidden relation graph' });
       if (req.auth?.role === 'user') {
@@ -796,6 +1087,10 @@ export const genericRoutes: FastifyPluginAsync = async (fastify) => {
         .status(400)
         .send({ success: false, error: 'Request body must be a JSON object or array of objects' });
     const inputRecords = values as JsonObject[];
+    if (inputRecords.some(hasServerManagedFields))
+      return reply
+        .status(400)
+        .send({ success: false, error: 'Identity and audit fields are managed by the server' });
     if (
       req.params.model === 'base.user' &&
       !inputRecords.every((value) =>
@@ -872,6 +1167,10 @@ export const genericRoutes: FastifyPluginAsync = async (fastify) => {
       return reply
         .status(400)
         .send({ success: false, error: 'Request body must be a JSON object' });
+    if (hasServerManagedFields(values))
+      return reply
+        .status(400)
+        .send({ success: false, error: 'Identity and audit fields are managed by the server' });
     if (!(await hasCompanyAccess(req, req.params.model, values, record)))
       return reply.code(403).send({ success: false, error: 'Company access denied' });
     if (!(await hasValidResourceReference(req, req.params.model, values, record))) {
@@ -982,7 +1281,7 @@ export const genericRoutes: FastifyPluginAsync = async (fastify) => {
           trx
         );
         if (reference) return { reference };
-        await locked.unlink(hardDelete, { transaction: trx });
+        await locked.remove(hardDelete, { transaction: trx });
         await recordAudit(
           req,
           req.params.model,
@@ -1000,13 +1299,20 @@ export const genericRoutes: FastifyPluginAsync = async (fastify) => {
           auditSnapshot(transactionalModel, hardDelete ? before : locked),
           trx
         );
-        return { deleted: true as const };
+        const storageKey =
+          hardDelete && req.params.model === 'base.attachment'
+            ? property(locked, 'storage_key')
+            : undefined;
+        return { deleted: true as const, storageKey };
       });
       if ('missing' in deletion)
         return reply.status(404).send(recordNotFound(req.params.model, id));
       if ('forbidden' in deletion) return forbidden(reply);
       if ('reference' in deletion && typeof deletion.reference === 'string')
         return relationConflict(reply, req.params.model, deletion.reference);
+      if (typeof deletion.storageKey === 'string') {
+        await options.attachmentStorage.delete(deletion.storageKey);
+      }
       return {
         success: true,
         model: req.params.model,
@@ -1141,18 +1447,43 @@ export const genericRoutes: FastifyPluginAsync = async (fastify) => {
     const Model = resolveModel(req, modelName);
     if (!Model) return reply.send(rpcError(-32000, `Model '${modelName}' not found`));
     const required = rpcOperation(method);
+    if (
+      modelName === 'base.attachment' &&
+      (required === 'create' || required === 'write' || required === 'unlink')
+    ) {
+      return reply.send(rpcError(-32003, 'Use the attachment content endpoints'));
+    }
     if (required && !canAccess(req.auth?.role, modelName, required, req.auth?.groupPermissions)) {
       return reply.status(403).send(rpcError(-32003, 'Forbidden'));
     }
     const args = Array.isArray(rawArgs) && rawArgs.every(isJsonValue) ? rawArgs : [];
     const kwargs = asJsonObject(rawKwargs) ?? {};
+    const rpcMutationValues =
+      required === 'create'
+        ? (Array.isArray(args[0]) ? args[0] : [args[0]]).map(asJsonObject)
+        : required === 'write'
+          ? [asJsonObject(args[1])]
+          : [];
+    if (rpcMutationValues.some((value) => value !== null && hasServerManagedFields(value)))
+      return reply.send(rpcError(-32602, 'Identity and audit fields are managed by the server'));
+    if (required === 'read' && (method === 'search_read' || method === 'search')) {
+      try {
+        validateDomain(args[0] ?? [], new Set(Object.keys(Model.jsonSchema.properties ?? {})));
+      } catch {
+        return reply.send(rpcError(-32602, 'Invalid search domain'));
+      }
+    }
     const requestedGraph = typeof kwargs.with === 'string' ? kwargs.with : undefined;
-    if (required === 'read' && !userGraphAllowed(req.auth?.role, modelName, requestedGraph))
-      return reply.status(403).send(rpcError(-32003, 'Forbidden relation graph'));
+    if (required === 'read' && !queryGraphIsBounded(requestedGraph))
+      return reply.send(rpcError(-32602, 'Relation graph exceeds maximum depth'));
     const scope =
       required === 'read' || required === 'write' || required === 'unlink'
         ? await userReadScope(req, modelName)
         : [];
+    if (required === 'read' && method === 'search_read' && !rpcSearchReadIsBounded(kwargs))
+      return reply.send(rpcError(-32602, 'Search query exceeds configured limits'));
+    if (required === 'read' && !userGraphAllowed(req.auth?.role, modelName, requestedGraph))
+      return reply.status(403).send(rpcError(-32003, 'Forbidden relation graph'));
     if (
       modelName === 'base.user' &&
       (required === 'create' || required === 'write' || required === 'unlink') &&

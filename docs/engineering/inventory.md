@@ -1,65 +1,84 @@
-# Inventory awal MoonWitness
+# Inventory MoonWitness
 
-Baseline inspeksi: source pada dev setelah M0.08. Ini inventaris bukti kode, bukan klaim bahwa setiap kombinasi telah diuji.
+Source audit refreshed on `dev` at `97eb36369e4f07454b0d5244a0959cb370264364` (2026-10-11). This is a source inventory, not proof that every route/role/data combination behaves correctly. The generated package/model references are maintained by `pnpm docs:generate` and checked in CI.
 
-## Workspace
+## Workspace and public package surfaces
 
-| Workspace                            | Peran                                                                                                    |
-| ------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| apps/api                             | Fastify API, auth/policy, generic ORM API, health/metrics, jobs admin, startup checks                    |
-| apps/board                           | React/Vite login, dashboard, profile, settings, generic model/list/form and widgets                      |
-| packages/types                       | Shared DTO, routes, domain, JSON-RPC/config types                                                        |
-| packages/orm                         | BaseModel, addon installer/programmatic schema and seed, registry, fields, views, domains                |
-| packages/orm-base                    | Base manifest/models/views/reference/demo seed/access metadata                                           |
-| packages/auth                        | Authentication/session service and addon manifest                                                        |
-| packages/jobs                        | Database jobs/scheduler/outbox runtime                                                                   |
-| packages/client                      | Typed API client and query/domain support                                                                |
-| packages/logger                      | Shared logging/redaction                                                                                 |
-| packages/eslint-config               | Shared ESLint rules                                                                                      |
-| packages/addons                      | Directory exists but no package source found in first scan; decide whether empty scaffold is intentional |
-| Planned packages/ui, packages/assets | Not present at baseline                                                                                  |
+The pnpm workspace has 4 applications and 16 packages (20 workspace children; 21 projects including the root). `pnpm audit:workspace` counted 438 TypeScript/JavaScript source files, no runtime import cycles, and no workspace dependency cycles. Its two file-level import cycles include type-only back-edges and are documented in [the refactor map](refactor-map.md). The repository also has `apps/logs`, `packages/addons`, and `packages/illustrations` directories that are not separate pnpm projects; a directory alone is not counted as a package.
 
-## Base addon models
+| Workspace                       | Kind    | Public surface / purpose                                                                                                   |
+| ------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `@moonwitness/api`              | App     | Fastify API and job/password/session maintenance CLIs; not a library export.                                               |
+| `@moonwitness/board`            | App     | React/Vite signed-in application: auth, dashboard, generic model, profile and settings.                                    |
+| `@moonwitness/docs`             | App     | Searchable docs portal and version-aware Pages build.                                                                      |
+| `@moonwitness/ui-catalog`       | App     | Interactive design-system and asset catalog.                                                                               |
+| `@moonwitness/assets`           | Package | Framework-independent static brand, icon and illustration files plus manifest/license metadata; explicit wildcard exports. |
+| `@moonwitness/ui`               | Package | Typed React controls/charts, icons, explicit component subpaths and package-owned CSS/tokens.                              |
+| `@moonwitness/types`            | Package | Shared DTO, API route, domain, JSON-RPC and configuration types.                                                           |
+| `@moonwitness/client`           | Package | Typed HTTP client and query/domain support.                                                                                |
+| `@moonwitness/orm`              | Package | ORM, model/addon contracts, programmatic schema/seed, registry and query support.                                          |
+| `@moonwitness/orm-base`         | Package | Base identity/contact/localization/company/access models and stable example seeds.                                         |
+| `@moonwitness/orm-organization` | Package | Organization/company-scoped addon models and seeds.                                                                        |
+| `@moonwitness/orm-integration`  | Package | Integration/configuration addon models and seeds.                                                                          |
+| `@moonwitness/orm-notification` | Package | Notification preferences/inbox addon models and seeds.                                                                     |
+| `@moonwitness/orm-request`      | Package | Request management addon models and seeds.                                                                                 |
+| `@moonwitness/orm-storage`      | Package | Storage metadata addon models and seeds.                                                                                   |
+| `@moonwitness/orm-workflow`     | Package | Workflow addon models and seeds.                                                                                           |
+| `@moonwitness/auth`             | Package | Authentication/session services and addon contract.                                                                        |
+| `@moonwitness/jobs`             | Package | Durable jobs, scheduler, outbox runtime and worker contracts.                                                              |
+| `@moonwitness/logger`           | Package | Structured logging and secret/error redaction.                                                                             |
+| `@moonwitness/eslint-config`    | Package | Shared repository lint rules.                                                                                              |
 
-Declared in packages/orm-base/src/manifest.ts: base.country, base.country_state, base.currency, base.language, base.company, base.bank, base.partner, base.partner_bank, base.partner_category, base.partner_category_link, base.partner_address, base.user, base.tag, base.tag_link, base.attachment, base.activity, base.sequence, base.access_group, base.group_membership, base.model_access, base.company_membership, base.audit_log.
+Library packages expose their root `.` entry unless noted. UI and assets have explicit stable subpath exports to support tree-shaking and prevent consumer deep imports. Exact export maps and package versions are source-derived in [generated platform reference](../guide/reference/generated-platform.md); the model and relation inventory is in [generated models](../guide/reference/generated-models.md). The legacy directories listed above are not package exports and remain unowned scaffolding unless a roadmap item promotes them into a workspace project.
 
-Manifest declares a menu for each model. Development-only, localization and technical menus use metadata. AuditLog has no fake seed. Model seed completeness checks exist in packages/orm-base/tests/addon.test.ts.
+## Domain models, menus, access and example data
 
-Seed areas visible in packages/orm-base/src/data.ts: 249 countries, a state reference subset, currency/language, default company, bank examples, user-linked partner profiles and contact examples, bank account examples, categories, address, access groups/memberships/model access, tags, attachment/activity examples, and sequences. Bank account, attachment and activity examples require a deliberate demo-data/publication audit.
+`packages/orm-base/src/manifest.ts` declares the 22 base models: `base.country`, `base.country_state`, `base.currency`, `base.language`, `base.company`, `base.bank`, `base.partner`, `base.partner_bank`, `base.partner_category`, `base.partner_category_link`, `base.partner_address`, `base.user`, `base.tag`, `base.tag_link`, `base.attachment`, `base.activity`, `base.sequence`, `base.access_group`, `base.group_membership`, `base.model_access`, `base.company_membership`, and `base.audit_log`. Other addon manifests extend this to 41 core addon models and 66 model relations in the checked architecture graph. Generated reference derives each model's fields/relations from source; do not maintain a second handwritten field catalog.
 
-## API route families
+Menus are manifest metadata. Normal Workspace/Organization entries expose primary partner, company, user, activity, attachment and tag flows; technical, localization, finance and relation-support models are grouped under development/technical sections. Visibility in a menu is not an authorization rule: server-side model access, record rules and company scoping remain authoritative.
 
-| Family              | Source                                | Behavior                                                                                 |
-| ------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Health/root/metrics | apps/api/src/routes/health.routes.ts  | /livez, /readyz, /health, /metrics, root info                                            |
-| Authentication      | apps/api/src/routes/auth.routes.ts    | register, login, refresh, logout, current user, own password, preferences, own profile   |
-| Generic models      | apps/api/src/routes/generic.routes.ts | models/fields/views, search/count, read, create/update/delete/archive, actions, JSON-RPC |
-| Jobs administration | apps/api/src/routes/jobs.routes.ts    | job/outbox health/list/runs/retry/cancel and cron management/trigger                     |
-| Startup             | apps/api/src/startup-checks.ts        | required models, seed, accounts and credentials readiness                                |
+Seeds provide examples for countries (249), a country-state subset, currencies/languages, a default company, system/superadmin users and partner profiles, banks/bank accounts, partner categories/addresses, access groups/memberships/model access, tags, attachment/activity metadata and sequences. Seed identities are stable and conformance tests install the runtime addon set repeatedly to detect duplicate or overwritten records. `base.audit_log` deliberately has no fake seed. Seeded attachment/activity examples and any real uploaded bytes require a publication/privacy review; seed presence is not production user data.
 
-Dynamic generic operations are behavior families, not one route per model. Test role/company/model/action combinations; route existence does not prove authorization.
+## API surface by route family
 
-## Background work and Board
+API route sources are under `apps/api/src/routes/`; generic model operations are dynamically dispatched, so route family count does not equal endpoint/model count.
 
-- Entrypoints: apps/api/src/commands/jobs-worker.ts, jobs-scheduler.ts, outbox-worker.ts. Runtime/data is in packages/jobs/src; specs exist under packages/jobs/tests/runtime.test.ts and apps/api/tests/jobs.test.ts.
-- Board: public auth-page; signed-in dashboard, profile, settings, generic model page. Shell/menu in components/layout/app-shell.tsx and lib/navigation.ts. Widgets include list, form, fields, one2many, query builder, import wizard, tags and chatter.
-- Board-local primitives are in components/ui; visual/logo files are in components/manga. Existing profile/settings are pages/profile-page.tsx and settings-page.tsx.
-- No Board test script or browser/component specs were found in first scan. Board typecheck/lint scripts are separate.
+| Family                      | Source                   | Main behavior                                                                                         |
+| --------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------- |
+| Health/root/metrics         | `health.routes.ts`       | Liveness/readiness, health, metrics and root metadata.                                                |
+| Authentication/account      | `auth.routes.ts`         | Registration, login, refresh/logout, current account, own password/preferences/profile.               |
+| Generic model/JSON-RPC      | `generic.routes.ts`      | Model metadata, views, search/count/read, create/update/delete/archive, actions and relation loading. |
+| Jobs administration         | `jobs.routes.ts`         | Job/outbox health, list/runs/retry/cancel and cron administration/trigger.                            |
+| Notifications               | `notification.routes.ts` | Inbox and account notification preferences.                                                           |
+| Workflow/request operations | `workflow.routes.ts`     | Workflow/request actions and approval transitions.                                                    |
 
-## Tests and GitHub automation
+Startup (`apps/api/src/index.ts`) verifies registered required models, seeded default base accounts and PostgreSQL connectivity before listening. Route registration is centralized in `apps/api/src/app.ts`; runtime route logging can enumerate method/path from the built Fastify app. Authorization must be assessed across user role, active company, model and action; merely seeing a route or a positive test does not prove its negative cases.
 
-- Existing test families: ORM/client domains, logger, auth, jobs, base addon/password/extensions, API auth/client/database errors/jobs/observability/ORM/record rules/startup/ratelimit/views, optional PostgreSQL upgrade/auth integration.
-- Root pnpm test runs recursive workspace tests. API PostgreSQL tests currently skip without POSTGRES_TEST_URL; M2.06 must fail closed in required CI mode.
-- Existing CI is .github/workflows/ci.yml; PostgreSQL service, lint, format, build, tests, container builds, Compose validation and backup/restore. At baseline push trigger names main only; PR trigger is unfiltered.
-- Existing release is .github/workflows/release.yml, tag/workflow_dispatch with explicit publish boolean.
-- Existing deploy file is .github/workflows/deploy.yml and had staging/optional production behavior at baseline; remove app deployment per user scope.
-- GitHub default branch is main, repo is public and Issues enabled; remote branches at bootstrap were main and dev. Initial rulesets API read returned none. Read branch protection, Pages and auto-merge settings before activation.
-- Current Board tests and dev CI execution still need to be implemented/verified.
+## Board user flows and reusable visual system
 
-## Open inventory questions
+Board pages are auth, dashboard, generic model, profile and settings. The shell/navigation is in `apps/board/src/components/layout/app-shell.tsx` and `apps/board/src/lib/navigation.ts`; development mode gates technical model menus. Profile/preferences and password updates use the account API. Generic views include list, form/fields, one-to-many, query builder, import/export, tags, chatter/activities and attachment metadata/content. Shared primitives and charts are in `packages/ui`; brand/vector/social assets are in `packages/assets` and exposed through the UI catalog.
 
-- Are there model metadata/access combinations not reachable from the visible Board routes?
-- Do sample bank/contact/account values need replacement before public demo docs?
-- Is packages/addons intentionally empty?
-- Which DB tests skip locally, and does full CI execute each one?
-- Are loading/error/empty states shared or independently implemented by each view?
+Browser specs under `apps/board/e2e/` cover authentication/session, account settings, protected navigation, data list, record editing, workflow/request, notifications, resilience, extended generic model behavior, and responsive/accessibility/visual audits. The PostgreSQL-backed integration specs require a dedicated `POSTGRES_TEST_URL`; browser suites using SQLite audit fixtures cover selected visual states, not PostgreSQL semantics. Check M3/M10 evidence for exact engine, viewport, screenshot and hosted-database coverage.
+
+CSV import reports per-row failures. CSV export applies to selected rows on the currently loaded result page and neutralizes spreadsheet formula prefixes; cross-page selection/export is outside this flow. Chatter attachment content is served by the authenticated local-filesystem provider with server-only storage keys and parent-record authorization; shared-volume/distributed-storage, object-store and orphan-reconciliation limits are documented in [attachments](attachments.md). These are explicit operational boundaries, not invisible capabilities.
+
+## Background work and persistence
+
+Three API commands start independent processes: `jobs-worker`, `jobs-scheduler`, and `outbox-worker` (`apps/api/src/commands/`). Durable job leases/retries, schedule claiming, outbox delivery and graceful shutdown are in `packages/jobs/src/`; these use PostgreSQL and require dedicated runtime health checks. They are not in-process request timers. API startup and deployment must run the scheduler/worker roles intentionally; running multiple worker replicas relies on database claiming/locking semantics.
+
+ORM addon installation uses programmatic model metadata and database operations; schema changes are not shipped as hand-maintained traditional SQL migration files. Addons own manifests, model declarations, access/menu metadata and stable seed identities. Addon conformance verifies manifests, dependencies, public models, views/menus, seed identity, repeated install and no accidental seed overwrite.
+
+## Verification and automation inventory
+
+- `pnpm verify` runs root lint, format, workspace build/typecheck, configured unit suites, addon conformance, UI/assets/charts and accessibility contracts, Board route-aware bundle budgets, release-policy tests, architecture verification and docs/Pages production build. It does not itself run live PostgreSQL integration, PostgreSQL-backed Board E2E, remote release/promotion, or Linux container runtime smoke.
+- `.github/workflows/ci.yml` defines parallel quality/integration/Board/UI/automation/container lanes and an aggregate gate. The current `.github/workflows` directory contains 20 workflow files, including visual/browser matrix, docs links and Pages, security scans, dependency candidates, promotion, release planning/preparation/publication, main-to-dev sync, platform audit, roadmap issue planning/apply, and read-only maintainer issue intake. The intake workflow is source-configured on `dev` and still requires GitHub App repository variables/secrets plus default-branch promotion before hosted activation.
+- PR/promotion checks must be read against the exact current SHA. Previous green CI is not inherited by a changed head. Fresh CODEOWNER approval, GitHub settings, default-branch workflow discovery, token permissions and hosted workflows are external state; local source cannot prove activation.
+- Latest full local verification recorded in [M10.03 evidence](../roadmap/evidence/M10.03.md) passed on `9df3205b3350e8fb906674c943a00d7743ae246c`; it is historical relative to this source audit. On audit SHA `97eb363`, current focused checks pass: `pnpm audit:workspace`, `pnpm architecture:check` (14 artifacts, 20 workspace children, 41 addon models, 66 relations), `pnpm test:addon-conformance` (2/2), and API startup checks (3/3). GitHub CI, PostgreSQL/browser/container runtime and promotion are separate exact-SHA checks; the current `97eb363` CI had not completed at this observation.
+
+## Remaining source questions and acceptance boundaries
+
+- Audit all model × role × company/action combinations using the feature matrix and negative-access cases; a source inventory alone cannot prove authorization.
+- Review demo seed records and attachment examples for privacy before public documentation captures or reusable fixtures.
+- Latest read-only GitHub audit (2026-10-11) confirms exactly `main`/`dev`, active branch/tag rulesets, repository-level auto-merge and Pages capability, and the main-required `ci-gate`; classic branch-protection endpoints return 403 to the connected integration. See [GitHub capability baseline](github-capabilities.md). Default-branch activation and sensitive promotion remain separate hosted gates.
+- Capture repeatable coverage and performance baselines without replacing the route-aware Board bundle budgets with a single total-bundle number.
+- Run PostgreSQL integration/browser and container runtime lanes on the supported hosted runner; local `pnpm verify` intentionally does not claim them.

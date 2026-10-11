@@ -1,0 +1,381 @@
+{
+  "schemaVersion": 1,
+  "generatedFrom": "apps/*/package.json and packages/*/package.json",
+  "sourceSha256": "a0a7c49d4757f5368e3d553983b49ee5ad47f71522bea86aabf197597f93978b",
+  "packages": [
+    {
+      "name": "@moonwitness/api",
+      "kind": "app",
+      "version": "1.0.0-rc.1",
+      "manifest": "apps/api"
+    },
+    {
+      "name": "@moonwitness/assets",
+      "kind": "package",
+      "version": "1.0.0-rc.1",
+      "manifest": "packages/assets"
+    },
+    {
+      "name": "@moonwitness/auth",
+      "kind": "package",
+      "version": "1.0.0-rc.1",
+      "manifest": "packages/auth"
+    },
+    {
+      "name": "@moonwitness/board",
+      "kind": "app",
+      "version": "1.0.0-rc.1",
+      "manifest": "apps/board"
+    },
+    {
+      "name": "@moonwitness/client",
+      "kind": "package",
+      "version": "1.0.0-rc.1",
+      "manifest": "packages/client"
+    },
+    {
+      "name": "@moonwitness/docs",
+      "kind": "app",
+      "version": "1.0.0-rc.1",
+      "manifest": "apps/docs"
+    },
+    {
+      "name": "@moonwitness/eslint-config",
+      "kind": "package",
+      "version": "1.0.0-rc.1",
+      "manifest": "packages/eslint-config"
+    },
+    {
+      "name": "@moonwitness/jobs",
+      "kind": "package",
+      "version": "1.0.0-rc.1",
+      "manifest": "packages/jobs"
+    },
+    {
+      "name": "@moonwitness/logger",
+      "kind": "package",
+      "version": "1.0.0-rc.1",
+      "manifest": "packages/logger"
+    },
+    {
+      "name": "@moonwitness/orm",
+      "kind": "package",
+      "version": "1.0.0-rc.1",
+      "manifest": "packages/orm"
+    },
+    {
+      "name": "@moonwitness/orm-base",
+      "kind": "package",
+      "version": "1.0.0-rc.1",
+      "manifest": "packages/orm-base"
+    },
+    {
+      "name": "@moonwitness/orm-integration",
+      "kind": "package",
+      "version": "1.0.0-rc.1",
+      "manifest": "packages/orm-integration"
+    },
+    {
+      "name": "@moonwitness/orm-notification",
+      "kind": "package",
+      "version": "1.0.0-rc.1",
+      "manifest": "packages/orm-notification"
+    },
+    {
+      "name": "@moonwitness/orm-organization",
+      "kind": "package",
+      "version": "1.0.0-rc.1",
+      "manifest": "packages/orm-organization"
+    },
+    {
+      "name": "@moonwitness/orm-request",
+      "kind": "package",
+      "version": "1.0.0-rc.1",
+      "manifest": "packages/orm-request"
+    },
+    {
+      "name": "@moonwitness/orm-storage",
+      "kind": "package",
+      "version": "1.0.0-rc.1",
+      "manifest": "packages/orm-storage"
+    },
+    {
+      "name": "@moonwitness/orm-workflow",
+      "kind": "package",
+      "version": "1.0.0-rc.1",
+      "manifest": "packages/orm-workflow"
+    },
+    {
+      "name": "@moonwitness/types",
+      "kind": "package",
+      "version": "1.0.0-rc.1",
+      "manifest": "packages/types"
+    },
+    {
+      "name": "@moonwitness/ui",
+      "kind": "package",
+      "version": "1.0.0-rc.1",
+      "manifest": "packages/ui"
+    },
+    {
+      "name": "@moonwitness/ui-catalog",
+      "kind": "app",
+      "version": "1.0.0-rc.1",
+      "manifest": "apps/ui-catalog"
+    }
+  ],
+  "dependencies": [
+    {
+      "from": "@moonwitness/api",
+      "to": "@moonwitness/client",
+      "kind": "development",
+      "manifest": "apps/api"
+    },
+    {
+      "from": "@moonwitness/api",
+      "to": "@moonwitness/auth",
+      "kind": "runtime",
+      "manifest": "apps/api"
+    },
+    {
+      "from": "@moonwitness/api",
+      "to": "@moonwitness/jobs",
+      "kind": "runtime",
+      "manifest": "apps/api"
+    },
+    {
+      "from": "@moonwitness/api",
+      "to": "@moonwitness/logger",
+      "kind": "runtime",
+      "manifest": "apps/api"
+    },
+    {
+      "from": "@moonwitness/api",
+      "to": "@moonwitness/orm",
+      "kind": "runtime",
+      "manifest": "apps/api"
+    },
+    {
+      "from": "@moonwitness/api",
+      "to": "@moonwitness/orm-base",
+      "kind": "runtime",
+      "manifest": "apps/api"
+    },
+    {
+      "from": "@moonwitness/api",
+      "to": "@moonwitness/orm-integration",
+      "kind": "runtime",
+      "manifest": "apps/api"
+    },
+    {
+      "from": "@moonwitness/api",
+      "to": "@moonwitness/orm-notification",
+      "kind": "runtime",
+      "manifest": "apps/api"
+    },
+    {
+      "from": "@moonwitness/api",
+      "to": "@moonwitness/orm-organization",
+      "kind": "runtime",
+      "manifest": "apps/api"
+    },
+    {
+      "from": "@moonwitness/api",
+      "to": "@moonwitness/orm-request",
+      "kind": "runtime",
+      "manifest": "apps/api"
+    },
+    {
+      "from": "@moonwitness/api",
+      "to": "@moonwitness/orm-storage",
+      "kind": "runtime",
+      "manifest": "apps/api"
+    },
+    {
+      "from": "@moonwitness/api",
+      "to": "@moonwitness/orm-workflow",
+      "kind": "runtime",
+      "manifest": "apps/api"
+    },
+    {
+      "from": "@moonwitness/api",
+      "to": "@moonwitness/types",
+      "kind": "runtime",
+      "manifest": "apps/api"
+    },
+    {
+      "from": "@moonwitness/auth",
+      "to": "@moonwitness/orm",
+      "kind": "runtime",
+      "manifest": "packages/auth"
+    },
+    {
+      "from": "@moonwitness/auth",
+      "to": "@moonwitness/orm-base",
+      "kind": "runtime",
+      "manifest": "packages/auth"
+    },
+    {
+      "from": "@moonwitness/board",
+      "to": "@moonwitness/client",
+      "kind": "runtime",
+      "manifest": "apps/board"
+    },
+    {
+      "from": "@moonwitness/board",
+      "to": "@moonwitness/ui",
+      "kind": "runtime",
+      "manifest": "apps/board"
+    },
+    {
+      "from": "@moonwitness/docs",
+      "to": "@moonwitness/assets",
+      "kind": "runtime",
+      "manifest": "apps/docs"
+    },
+    {
+      "from": "@moonwitness/docs",
+      "to": "@moonwitness/ui",
+      "kind": "runtime",
+      "manifest": "apps/docs"
+    },
+    {
+      "from": "@moonwitness/jobs",
+      "to": "@moonwitness/orm",
+      "kind": "runtime",
+      "manifest": "packages/jobs"
+    },
+    {
+      "from": "@moonwitness/jobs",
+      "to": "@moonwitness/orm-base",
+      "kind": "runtime",
+      "manifest": "packages/jobs"
+    },
+    {
+      "from": "@moonwitness/orm",
+      "to": "@moonwitness/types",
+      "kind": "runtime",
+      "manifest": "packages/orm"
+    },
+    {
+      "from": "@moonwitness/orm-base",
+      "to": "@moonwitness/orm",
+      "kind": "runtime",
+      "manifest": "packages/orm-base"
+    },
+    {
+      "from": "@moonwitness/orm-integration",
+      "to": "@moonwitness/jobs",
+      "kind": "runtime",
+      "manifest": "packages/orm-integration"
+    },
+    {
+      "from": "@moonwitness/orm-integration",
+      "to": "@moonwitness/orm",
+      "kind": "runtime",
+      "manifest": "packages/orm-integration"
+    },
+    {
+      "from": "@moonwitness/orm-integration",
+      "to": "@moonwitness/orm-base",
+      "kind": "runtime",
+      "manifest": "packages/orm-integration"
+    },
+    {
+      "from": "@moonwitness/orm-notification",
+      "to": "@moonwitness/jobs",
+      "kind": "runtime",
+      "manifest": "packages/orm-notification"
+    },
+    {
+      "from": "@moonwitness/orm-notification",
+      "to": "@moonwitness/orm",
+      "kind": "runtime",
+      "manifest": "packages/orm-notification"
+    },
+    {
+      "from": "@moonwitness/orm-notification",
+      "to": "@moonwitness/orm-base",
+      "kind": "runtime",
+      "manifest": "packages/orm-notification"
+    },
+    {
+      "from": "@moonwitness/orm-organization",
+      "to": "@moonwitness/orm",
+      "kind": "runtime",
+      "manifest": "packages/orm-organization"
+    },
+    {
+      "from": "@moonwitness/orm-organization",
+      "to": "@moonwitness/orm-base",
+      "kind": "runtime",
+      "manifest": "packages/orm-organization"
+    },
+    {
+      "from": "@moonwitness/orm-request",
+      "to": "@moonwitness/jobs",
+      "kind": "runtime",
+      "manifest": "packages/orm-request"
+    },
+    {
+      "from": "@moonwitness/orm-request",
+      "to": "@moonwitness/orm",
+      "kind": "runtime",
+      "manifest": "packages/orm-request"
+    },
+    {
+      "from": "@moonwitness/orm-request",
+      "to": "@moonwitness/orm-base",
+      "kind": "runtime",
+      "manifest": "packages/orm-request"
+    },
+    {
+      "from": "@moonwitness/orm-request",
+      "to": "@moonwitness/orm-notification",
+      "kind": "runtime",
+      "manifest": "packages/orm-request"
+    },
+    {
+      "from": "@moonwitness/orm-request",
+      "to": "@moonwitness/orm-workflow",
+      "kind": "runtime",
+      "manifest": "packages/orm-request"
+    },
+    {
+      "from": "@moonwitness/orm-storage",
+      "to": "@moonwitness/orm",
+      "kind": "runtime",
+      "manifest": "packages/orm-storage"
+    },
+    {
+      "from": "@moonwitness/orm-workflow",
+      "to": "@moonwitness/jobs",
+      "kind": "runtime",
+      "manifest": "packages/orm-workflow"
+    },
+    {
+      "from": "@moonwitness/orm-workflow",
+      "to": "@moonwitness/orm",
+      "kind": "runtime",
+      "manifest": "packages/orm-workflow"
+    },
+    {
+      "from": "@moonwitness/orm-workflow",
+      "to": "@moonwitness/orm-base",
+      "kind": "runtime",
+      "manifest": "packages/orm-workflow"
+    },
+    {
+      "from": "@moonwitness/orm-workflow",
+      "to": "@moonwitness/orm-notification",
+      "kind": "runtime",
+      "manifest": "packages/orm-workflow"
+    },
+    {
+      "from": "@moonwitness/ui-catalog",
+      "to": "@moonwitness/ui",
+      "kind": "runtime",
+      "manifest": "apps/ui-catalog"
+    }
+  ]
+}

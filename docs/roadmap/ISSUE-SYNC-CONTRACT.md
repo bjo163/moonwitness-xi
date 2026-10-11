@@ -27,7 +27,7 @@ Identitas stabil menggunakan repository ID plus task ID. Title dapat berubah, no
 Contoh body target:
 
 ```markdown
-<!-- moonwitness-task: M11.03 -->
+<!-- moonwitness-task: <numeric-repository-id>:M11.03 -->
 <!-- BEGIN MOONWITNESS MANAGED -->
 
 Task: M11.03
@@ -81,6 +81,8 @@ Implementation status dan delivery stage adalah dua dimensi. Task audit read-onl
 
 Manual close tanpa evidence menimbulkan `needs-triage` dan report. Jangan membuat perang reopen/close otomatis; perubahan source/status hanya diterima setelah maintainer dan evidence direkonsiliasi. Event tidak tepercaya tidak boleh memicu commit, shell command, release, atau arbitrary URL fetch.
 
+Evaluator lokal di `scripts/roadmap/lifecycle.mjs` hanya memproyeksikan fakta terstruktur yang diberikan pemanggil: source ancestry, required check runs pada SHA dev saat ini, ancestry main, dan manifest release. Collector `scripts/roadmap/collect-lifecycle-snapshot-cli.mjs` membaca check runs exact dev SHA dan GitHub Releases via `gh`, lalu memakai full checkout untuk membuktikan ancestry source/dev/main/tag; status kerja dan acceptance berasal dari checkbox tervalidasi serta evidence file. Gate `ci-gate` sesuai kebijakan M1.02–M1.06. Source SHA yang tidak ditemukan di evidence tidak dipinjam dari evidence commit; task tetap complete secara kerja tetapi delivery tidak diverifikasi dan issue tidak menjadi kandidat close. Importer `scripts/roadmap/lifecycle-snapshot.mjs` menolak repo/SHA yang berbeda, snapshot lebih tua dari lima menit, task hilang/duplikat/tidak dikenal. Hard dependency yang belum complete dipertahankan sebagai blocker dan mencegah issue close, termasuk jika acceptance checkbox task sudah dicentang. Planner default tetap read-only dengan `--lifecycle-snapshot <path>`. Apply hanya pada manual dispatch dev, task IDs eksplisit (maksimal lima), fresh snapshot exact SHA, fresh remote re-plan, permission `issues: write`, dan writer coordinator. Reconciler hanya menutup issue yang sudah ada dan masih open bila snapshot membuktikan acceptance, dependency dan `verified-dev`/delivery criteria; closed manual tetap closed dan race perubahan state menggagalkan PATCH. Snapshot ephemeral dihapus setelah dipakai. Hosted lifecycle write pilot masih harus dibuktikan sebelum M11.07 ditutup.
+
 ## Commit/push yang wajib pada setiap unit selesai
 
 1. Selesaikan satu perubahan logis beserta acceptance relevan.
@@ -122,7 +124,7 @@ Auto-merge GitHub menunggu required checks dan reviews; setting repository dan e
 ## Workflow target dan bootstrap
 
 1. Validator lokal memeriksa index/cards/dependencies dan menghasilkan desired issues.
-2. Dry-run membaca seluruh remote managed issues dan menulis plan create/update/no-op/conflict.
+2. Dry-run membaca seluruh remote managed issues dan menulis plan create/update/no-op/conflict. Pada repository publik, planning read-only tidak memerlukan token; private repositories tetap memerlukan credential read yang sesuai.
 3. Uji satu task pilot, termasuk title rename, notes maintainer dan repeated run.
 4. Bulk import dijalankan bertahap dengan pembatasan mutation rate dan checkpoint.
 5. Aktifkan push-trigger trusted dev roadmap/evidence, periodic reconciliation, serta manual dispatch.

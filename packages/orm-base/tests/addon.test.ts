@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { RelationMappings } from 'objection';
 import knex, { type Knex } from 'knex';
 import {
   defineAddon,
@@ -12,6 +13,9 @@ import {
 } from '@moonwitness/orm';
 import {
   manifest,
+  countries,
+  countryDataSource,
+  countryStateDataSource,
   countryStates,
   Partner,
   User,
@@ -185,6 +189,114 @@ describe('declarative addons', () => {
       unlink: false,
     });
     expect(await GroupMembership.query().resultSize()).toBe(1);
+  });
+
+  it('validates reference-data codes, provenance, coverage, relations, and non-destructive updates', async () => {
+    expect(countryDataSource.standard).toBe('ISO 3166-1 alpha-2');
+    expect(countryDataSource.url).toMatch(/^https:\/\//);
+    expect(countryDataSource.verifiedDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(countries).toHaveLength(249);
+    expect(new Set(countries.map((country) => country.code)).size).toBe(countries.length);
+    expect(countries.every((country) => /^[A-Z]{2}$/.test(country.code))).toBe(true);
+    expect(countryStateDataSource.coverage).toContain('not complete worldwide');
+    expect(new Set(countryStates.map((state) => state.code)).size).toBe(countryStates.length);
+    expect(countryStates.every((state) => /^[A-Z]{2}-[A-Z0-9]{1,3}$/.test(state.code))).toBe(true);
+    expect(
+      countryStates.every((state) =>
+        countries.some((country) => country.code === state.countryCode)
+      )
+    ).toBe(true);
+
+    await installAddons(db, [manifest]);
+    const indonesia = await Country.query().findOne({ code: 'ID' }).throwIfNotFound();
+    const indonesianCountryState = await CountryState.query()
+      .findOne({ code: 'ID-JK' })
+      .throwIfNotFound();
+    await Country.query().findById(indonesia.id).patch({ name: 'User-customized Indonesia' });
+    await CountryState.query()
+      .findById(indonesianCountryState.id)
+      .patch({ name: 'User-customized Jakarta' });
+    await installAddons(db, [manifest]);
+    await expect(Country.query().findById(indonesia.id)).resolves.toMatchObject({
+      name: 'User-customized Indonesia',
+    });
+    await expect(CountryState.query().findById(indonesianCountryState.id)).resolves.toMatchObject({
+      name: 'User-customized Jakarta',
+    });
+    expect(await db('countries').count({ count: '*' }).first()).toMatchObject({ count: 249 });
+    expect(await db('country_states').count({ count: '*' }).first()).toMatchObject({
+      count: countryStates.length,
+    });
+  });
+
+  it('keeps addon metadata internally consistent across models, relations, views, menus, and seeds', async () => {
+    const modelNames = new Set(manifest.models.map((model) => model.modelName));
+    const viewsByModel = new Map((manifest.views ?? []).map((view) => [view.model, view]));
+    const menusByModel = new Map((manifest.menus ?? []).map((menu) => [menu.model, menu]));
+    const seededModels = new Set((manifest.data ?? []).map((record) => record.model.modelName));
+
+    expect(modelNames.size).toBe(manifest.models.length);
+    expect(viewsByModel.size).toBe(manifest.views?.length);
+    expect(menusByModel.size).toBe(manifest.menus?.length);
+    expect([...menusByModel.keys()].sort()).toEqual([...modelNames].sort());
+    const modelsWithoutSeeds = [...modelNames].filter((name) => !seededModels.has(name));
+    expect(modelsWithoutSeeds).toEqual([AuditLog.modelName]);
+
+    for (const model of manifest.models) {
+      const view = viewsByModel.get(model.modelName);
+      if (model !== AuditLog) {
+        expect(view, `${model.modelName} should declare a view`).toBeDefined();
+      }
+      expect(seededModels.has(model.modelName) || model === AuditLog).toBe(true);
+
+      for (const [name, field] of Object.entries(model.fields)) {
+        if (field.kind === 'belongsTo' || field.kind === 'hasMany') {
+          const target =
+            typeof field.target === 'function' && !('tableName' in field.target)
+              ? field.target()
+              : field.target;
+          expect(target, `${model.modelName}.${name} target`).toBeDefined();
+          if (target) {
+            expect(modelNames.has(target.modelName), `${model.modelName}.${name} target`).toBe(
+              true
+            );
+          }
+          const relationMappings = model.relationMappings as RelationMappings;
+          expect(relationMappings[name], `${model.modelName}.${name} mapping`).toBeDefined();
+        }
+      }
+
+      const usedColumns = [
+        ...(view?.spec.list?.columns ?? []),
+        ...(view?.spec.search?.fields ?? []),
+        ...(view?.spec.form?.sections?.flatMap((section) => section.fields) ?? []),
+      ];
+      const columns = new Set([
+        ...Object.entries(model.fields).map(([name, field]) =>
+          field.kind === 'belongsTo' ? `${name}_id` : name
+        ),
+        'id',
+        'active',
+        'create_date',
+        'write_date',
+      ]);
+      for (const column of usedColumns) {
+        expect(columns.has(column), `${model.modelName} view column ${column}`).toBe(true);
+      }
+    }
+
+    const seedIds = (manifest.data ?? []).map((record) => record.id);
+    expect(new Set(seedIds).size).toBe(seedIds.length);
+    for (const record of manifest.data ?? []) {
+      for (const [name, value] of Object.entries(record.values)) {
+        const field = record.model.fields[name];
+        expect(field, `${record.id}.${name} field`).toBeDefined();
+        if (typeof value === 'object' && value !== null) {
+          expect(field?.kind, `${record.id}.${name} reference field`).toBe('belongsTo');
+          expect(seedIds, `${record.id}.${name} reference`).toContain(value.$ref);
+        }
+      }
+    }
   });
 
   it('keeps seed identities and edits after email and login change', async () => {
@@ -465,6 +577,8 @@ describe('declarative addons', () => {
     const partner = await actor.query().insertAndFetch({ name: 'Audited Partner' });
     expect(Date.parse(partner.create_date ?? '')).not.toBeNaN();
     expect(Date.parse(partner.write_date ?? '')).not.toBeNaN();
+    expect(partner.create_date).toMatch(/Z$/u);
+    expect(partner.write_date).toMatch(/Z$/u);
     expect(partner.create_uid).toBe(42);
     expect(partner.write_uid).toBe(42);
 
@@ -474,6 +588,36 @@ describe('declarative addons', () => {
     expect(Date.parse(updated.write_date ?? '')).not.toBeNaN();
     expect(updated.write_date).not.toBe(partner.write_date);
     expect(updated.write_uid).toBe(42);
+  });
+
+  it('keeps audit records append-only through direct ORM updates and deletes', async () => {
+    await installAddons(db, [manifest]);
+    const audit = new Environment({ userId: 42 }).get<typeof AuditLog>(AuditLog.modelName);
+    const event = await audit.query().insertAndFetch({
+      model: 'base.partner',
+      record_id: 1,
+      operation: 'create',
+      changes: '{"name":"Original"}',
+    });
+
+    await expect(
+      audit.query().findById(event.id).patch({ changes: '{"name":"Tampered"}' })
+    ).rejects.toThrow('Audit log records are append-only');
+    await expect(
+      audit.query().patch({ changes: '{"name":"Tampered"}' }).where('id', event.id)
+    ).rejects.toThrow('Audit log records are append-only');
+    await expect(audit.query().findById(event.id).delete()).rejects.toThrow(
+      'Audit log records are append-only'
+    );
+    await expect(audit.query().delete().where('id', event.id)).rejects.toThrow(
+      'Audit log records are append-only'
+    );
+    await expect(audit.query().findById(event.id)).resolves.toMatchObject({
+      model: 'base.partner',
+      record_id: 1,
+      operation: 'create',
+      changes: '{"name":"Original"}',
+    });
   });
 
   it('rolls back schema and data if an external reference is missing', async () => {
@@ -508,5 +652,31 @@ describe('declarative addons', () => {
       version: '1.1.0',
     });
     await expect(installAddons(db, [first])).rejects.toThrow(/downgrade rejected/i);
+  });
+
+  it('rolls back upgrade DDL, data, and addon version when a programmatic upgrade fails', async () => {
+    const first = defineAddon({ name: 'upgrade.rollback', version: '1.0.0', models: [] });
+    const failingUpgrade = defineAddon({
+      name: 'upgrade.rollback',
+      version: '1.1.0',
+      models: [],
+      upgrade: {
+        '1.0.0': async (trx) => {
+          await trx.schema.createTable('upgrade_rollback_probe', (table) => table.string('value'));
+          await trx('upgrade_rollback_probe').insert({ value: 'must rollback' });
+          throw new Error('injected upgrade failure');
+        },
+      },
+    });
+
+    await installAddons(db, [first]);
+    await expect(installAddons(db, [failingUpgrade])).rejects.toThrow('injected upgrade failure');
+
+    expect(await db.schema.hasTable('upgrade_rollback_probe')).toBe(false);
+    expect(
+      await db('_orm_addons').where({ name: 'upgrade.rollback' }).first('version')
+    ).toMatchObject({
+      version: '1.0.0',
+    });
   });
 });

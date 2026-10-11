@@ -7,6 +7,8 @@ type Scalar = string | number | boolean;
 export interface FieldOptions<T extends Scalar = Scalar> {
   required?: boolean;
   unique?: boolean;
+  /** Excludes the field from serialized records and generic query inputs. */
+  hidden?: boolean;
   default?: T;
   /** Human-readable label for generated UIs; defaults to the humanized field name. */
   label?: string;
@@ -124,6 +126,15 @@ export function columnName(name: string, field: Field): string {
   return field.kind === 'belongsTo' ? `${name}_id` : name;
 }
 
+function conflictsWithInstanceMember(name: string): boolean {
+  let prototype: object | null = BaseModel.prototype;
+  while (prototype !== null) {
+    if (Object.hasOwn(prototype, name)) return true;
+    prototype = Object.getPrototypeOf(prototype) as object | null;
+  }
+  return false;
+}
+
 function fieldSchema(field: Field): JSONSchema {
   const type =
     field.kind === 'belongsTo'
@@ -162,7 +173,11 @@ export function defineModel<const F extends FieldMap>(
   const required: string[] = [];
   for (const [key, field] of Object.entries(definition.fields)) {
     const column = columnName(key, field);
-    if (!/^[a-z][a-z0-9_]*$/.test(key) || column in properties) {
+    if (
+      !/^[a-z][a-z0-9_]*$/.test(key) ||
+      column in properties ||
+      conflictsWithInstanceMember(key)
+    ) {
       throw new Error(`Invalid or duplicate field: ${name}.${key}`);
     }
     if (field.kind === 'hasMany') {
@@ -181,12 +196,15 @@ export function defineModel<const F extends FieldMap>(
 
   class DeclaredModel extends BaseModel {
     static override hiddenFields = Object.entries(definition.fields)
-      .filter(([, field]) => field.kind === 'password')
+      .filter(([, field]) => field.kind === 'password' || field.hidden === true)
       .map(([key]) => key);
 
     private async hashPasswords() {
       const values = this as unknown as Record<string, unknown>;
-      for (const key of DeclaredModel.hiddenFields) {
+      const passwordFields = Object.entries(definition.fields)
+        .filter(([, field]) => field.kind === 'password')
+        .map(([key]) => key);
+      for (const key of passwordFields) {
         if (typeof values[key] === 'string') values[key] = await hashPassword(values[key]);
       }
     }

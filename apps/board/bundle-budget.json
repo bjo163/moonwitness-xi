@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "initialJavaScript": { "maxRawBytes": 600000, "maxGzipBytes": 190000 },
+  "initialStylesheet": { "maxRawBytes": 100000, "maxGzipBytes": 25000 },
+  "lazyRouteJavaScript": { "maxRawBytes": 500000, "maxGzipBytes": 150000 },
+  "fullRouteJavaScript": { "maxRawBytes": 1100000, "maxGzipBytes": 340000 },
+  "lazyRouteStylesheet": { "maxRawBytes": 100000, "maxGzipBytes": 25000 }
+}

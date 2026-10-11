@@ -12,15 +12,17 @@ import {
   Calendar,
 } from 'lucide-react';
 import { client } from '@/lib/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { formatDateTime } from '@/lib/date-format';
+import { scopedQueryKey } from '@/lib/query-scope';
+import { Button } from '@moonwitness/ui/components/button';
+import { Input } from '@moonwitness/ui/components/input';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@/components/ui/dialog';
+} from '@moonwitness/ui/components/dialog';
 import { Doodle } from '@/components/manga/effects';
 import { cn } from '@/lib/utils';
 
@@ -75,7 +77,7 @@ export function CronSchedulerPanel({ onOpenFailureTriage }: CronSchedulerPanelPr
     isLoading: cronsLoading,
     refetch: refetchCrons,
   } = useQuery({
-    queryKey: ['admin', 'crons'],
+    queryKey: scopedQueryKey(['admin', 'crons']),
     queryFn: () => client.request<{ success: boolean; data: CronItem[] }>('/admin/crons'),
     refetchInterval: 15_000,
   });
@@ -86,7 +88,7 @@ export function CronSchedulerPanel({ onOpenFailureTriage }: CronSchedulerPanelPr
     isLoading: jobsLoading,
     refetch: refetchJobs,
   } = useQuery({
-    queryKey: ['admin', 'jobs', 'recent'],
+    queryKey: scopedQueryKey(['admin', 'jobs', 'recent']),
     queryFn: () => client.request<{ success: boolean; data: JobItem[] }>('/admin/jobs?limit=15'),
     refetchInterval: 10_000,
   });
@@ -262,7 +264,7 @@ export function CronSchedulerPanel({ onOpenFailureTriage }: CronSchedulerPanelPr
                     </td>
                     <td className="p-3 border-r border-ink/20 text-ink-faint">{cron.timezone}</td>
                     <td className="p-3 border-r border-ink/20 text-ink">
-                      {cron.next_run_at ? new Date(cron.next_run_at).toLocaleString() : '—'}
+                      {cron.next_run_at ? formatDateTime(cron.next_run_at) : '—'}
                     </td>
                     <td className="p-3 border-r border-ink/20">
                       {cron.enabled ? (
@@ -332,7 +334,7 @@ export function CronSchedulerPanel({ onOpenFailureTriage }: CronSchedulerPanelPr
               variant="outline"
               size="xs"
               onClick={onOpenFailureTriage}
-              className="gap-1 text-pink border-pink hover:bg-pink hover:text-white"
+              className="gap-1 text-pink border-pink hover:bg-pink hover:text-on-pink"
             >
               <AlertTriangle className="size-3.5" />
               <span>Dead Job Triage</span>
@@ -375,7 +377,7 @@ export function CronSchedulerPanel({ onOpenFailureTriage }: CronSchedulerPanelPr
                             : job.status === 'running'
                               ? 'border-ink bg-lime text-on-accent animate-pulse'
                               : job.status === 'dead'
-                                ? 'border-pink bg-pink text-white'
+                                ? 'border-pink bg-pink text-on-pink'
                                 : 'border-ink/40 bg-card text-ink-soft'
                         )}
                       >
@@ -389,7 +391,7 @@ export function CronSchedulerPanel({ onOpenFailureTriage }: CronSchedulerPanelPr
                       {job.lease_owner || '—'}
                     </td>
                     <td className="p-3 text-right text-ink-faint">
-                      {job.create_date ? new Date(job.create_date).toLocaleTimeString() : '—'}
+                      {job.create_date ? formatDateTime(job.create_date, 'time') : '—'}
                     </td>
                   </tr>
                 ))}

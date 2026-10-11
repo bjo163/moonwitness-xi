@@ -4,7 +4,7 @@ import { join, relative, resolve } from 'node:path';
 import { argv, cwd, env, stderr, stdout } from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-const requiredProjects = ['quality', 'integration', 'browser', 'containers', 'automation'];
+const requiredProjects = ['quality', 'integration', 'browser', 'containers', 'automation', 'ui'];
 const fullScopeFiles = new Set([
   '.github',
   'scripts',
@@ -55,6 +55,8 @@ export function expandWorkspaceDependencies(changedNames, projects) {
 export function ciProjectsForAffectedPackages(affectedPackages) {
   const affected = new Set(affectedPackages);
   const projects = new Set(['automation']);
+  const uiPackages = new Set(['@moonwitness/assets', '@moonwitness/ui', '@moonwitness/ui-catalog']);
+  const specializedPackages = new Set([...uiPackages, '@moonwitness/api', '@moonwitness/board']);
   if (affected.has('@moonwitness/board')) {
     projects.add('quality');
     projects.add('browser');
@@ -64,7 +66,11 @@ export function ciProjectsForAffectedPackages(affectedPackages) {
     projects.add('integration');
     projects.add('containers');
   }
-  if ([...affected].some((name) => name !== '@moonwitness/board' && name !== '@moonwitness/api')) {
+  if ([...affected].some((name) => uiPackages.has(name))) {
+    projects.add('quality');
+    projects.add('ui');
+  }
+  if ([...affected].some((name) => !specializedPackages.has(name))) {
     for (const project of ['quality', 'integration', 'browser', 'containers']) {
       projects.add(project);
     }
