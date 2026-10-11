@@ -135,6 +135,8 @@ test('users can edit only their profile, persist preferences, and change passwor
   await expect(page.getByText('Created At', { exact: true }).locator('..')).toContainText(
     localizedCreateTime
   );
+  await page.goto('/settings');
+  await expect(page.getByLabel('Current password')).toBeVisible();
 
   const wrongCurrentPassword = await page.request.post('/auth/me/password', {
     headers: ordinaryHeaders,
