@@ -160,22 +160,44 @@ export function planArtifactCleanup(artifacts, generatedAt, minimumAgeDays = 90)
   const unclassified = [];
   for (const artifact of artifacts) {
     const name = typeof artifact.name === 'string' ? artifact.name : '';
+    const createdAt = Date.parse(artifact.created_at ?? '');
+    const ageDays = Number.isFinite(createdAt)
+      ? Math.floor((now - createdAt) / (24 * 60 * 60 * 1000))
+      : null;
     if (protectedArtifactName.test(name)) {
-      protectedArtifacts.push({ id: artifact.id, name, reason: 'protected-name-policy' });
+      protectedArtifacts.push({
+        id: artifact.id,
+        name,
+        classification: 'protected',
+        ageDays,
+        reason: 'protected-name-policy',
+      });
       continue;
     }
-    const createdAt = Date.parse(artifact.created_at ?? '');
     if (
       !artifact.expired &&
       disposableArtifactName.test(name) &&
       Number.isFinite(createdAt) &&
       createdAt <= cutoff
     ) {
-      candidates.push({ id: artifact.id, name, createdAt: artifact.created_at });
+      candidates.push({
+        id: artifact.id,
+        name,
+        classification: 'disposable',
+        ageDays,
+        createdAt: artifact.created_at,
+        reason: 'allowlisted-name-exceeds-minimum-age',
+      });
       continue;
     }
     if (!disposableArtifactName.test(name)) {
-      unclassified.push({ id: artifact.id, name });
+      unclassified.push({
+        id: artifact.id,
+        name,
+        classification: 'unclassified',
+        ageDays,
+        reason: 'name-not-allowlisted',
+      });
     }
   }
   return {

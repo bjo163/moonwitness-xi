@@ -241,17 +241,51 @@ test('cleanup dry-run only selects old allowlisted disposable artifacts', () => 
   );
 
   assert.deepEqual(
-    plan.candidates.map(({ id }) => id),
-    [1, 5, 6, 7, 8]
+    plan.candidates.map(({ id, classification, ageDays, reason }) => ({
+      id,
+      classification,
+      ageDays,
+      reason,
+    })),
+    [1, 5, 6, 7, 8].map((id) => ({
+      id,
+      classification: 'disposable',
+      ageDays: 126,
+      reason: 'allowlisted-name-exceeds-minimum-age',
+    }))
   );
-  assert.deepEqual(
-    plan.protectedArtifacts.map(({ id }) => id),
-    [2]
-  );
-  assert.deepEqual(
-    plan.unclassified.map(({ id }) => id),
-    [3, 9, 10]
-  );
+  assert.deepEqual(plan.protectedArtifacts, [
+    {
+      id: 2,
+      name: 'release-provenance-123',
+      classification: 'protected',
+      ageDays: 277,
+      reason: 'protected-name-policy',
+    },
+  ]);
+  assert.deepEqual(plan.unclassified, [
+    {
+      id: 3,
+      name: 'manual-upload',
+      classification: 'unclassified',
+      ageDays: 277,
+      reason: 'name-not-allowlisted',
+    },
+    {
+      id: 9,
+      name: 'roadmap-progress-not-a-run-id',
+      classification: 'unclassified',
+      ageDays: 277,
+      reason: 'name-not-allowlisted',
+    },
+    {
+      id: 10,
+      name: `roadmap-issue-plan-${'G'.repeat(40)}`,
+      classification: 'unclassified',
+      ageDays: 277,
+      reason: 'name-not-allowlisted',
+    },
+  ]);
   assert.equal(plan.deletionSupported, false);
   assert.throws(() => planArtifactCleanup([], 'invalid', 90), /valid timestamp/u);
 });
