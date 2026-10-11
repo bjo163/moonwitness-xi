@@ -8,6 +8,7 @@ import {
   CompanyMembership,
   Country,
   GroupMembership,
+  Language,
   ModelAccess,
   PartnerAddress,
   PartnerCategory,
@@ -288,13 +289,28 @@ describe('authentication and authorization', () => {
       });
       expect(invalid.statusCode).toBe(400);
 
+      const unknownLanguage = await as(alice.access_token, {
+        method: 'PATCH',
+        url: '/auth/me/preferences',
+        payload: { language_id: Number.MAX_SAFE_INTEGER, timezone: 'Asia/Jakarta' },
+      });
+      expect(unknownLanguage.statusCode).toBe(400);
+      expect(unknownLanguage.json()).toMatchObject({ error: 'Unknown language' });
+      await expect(User.query().findById(alice.user.id)).resolves.toMatchObject({
+        language_id: null,
+        timezone: null,
+      });
+
+      const english = await Language.query().findOne({ code: 'en-US' }).throwIfNotFound();
+
       const updated = await as(alice.access_token, {
         method: 'PATCH',
         url: '/auth/me/preferences',
-        payload: { language_id: null, timezone: 'Asia/Jakarta' },
+        payload: { language_id: english.id, timezone: 'Asia/Jakarta' },
       });
       expect(updated.statusCode).toBe(200);
       await expect(User.query().findById(alice.user.id)).resolves.toMatchObject({
+        language_id: english.id,
         timezone: 'Asia/Jakarta',
       });
     });
