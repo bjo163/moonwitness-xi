@@ -444,7 +444,8 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     expect(userList.total).toBe(2);
     expect(userList.data).toHaveLength(2);
     const superadmin = userList.data.find((user) => user.login === 'superadmin');
-    expect(superadmin?.partner.name).toBe('Super Administrator');
+    if (!superadmin) throw new Error('PostgreSQL seed must include a superadmin user');
+    expect(superadmin.partner.name).toBe('Super Administrator');
 
     await Sequence.query().findOne({ code: 'sales.order' }).patch({ next_number: 1 });
     const allocated = await Promise.all(
@@ -463,14 +464,14 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
 
     const update = await app.inject({
       method: 'PATCH',
-      url: `/api/base.user/${superadmin?.id}`,
+      url: `/api/base.user/${superadmin.id}`,
       headers: authorization,
       payload: { timezone: 'Pacific/Honolulu' },
     });
     expect(update.statusCode).toBe(200);
     const updated = await app.inject({
       method: 'GET',
-      url: `/api/base.user/${superadmin?.id}?with=partner`,
+      url: `/api/base.user/${superadmin.id}?with=partner`,
       headers: authorization,
     });
     expect(updated.json<{ data: { timezone: string } }>().data.timezone).toBe('Pacific/Honolulu');
@@ -548,6 +549,77 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
         attempts: 1,
         fencing_token: 1,
       });
+
+      const lifecycleRecord = await app.inject({
+        method: 'POST',
+        url: '/api/base.partner',
+        headers: authorization,
+        payload: { name: 'PostgreSQL audit lifecycle probe' },
+      });
+      expect(lifecycleRecord.statusCode).toBe(201);
+      const lifecycleId = lifecycleRecord.json<{ data: { id: number } }>().data.id;
+      for (const method of ['action_archive', 'action_unarchive']) {
+        const response = await app.inject({
+          method: 'POST',
+          url: `/api/base.partner/${lifecycleId}/action/${method}`,
+          headers: authorization,
+        });
+        expect(response.statusCode, response.payload).toBe(200);
+      }
+      const lifecycleAudit = await AuditLog.query()
+        .where({ model: 'base.partner', record_id: lifecycleId })
+        .orderBy('id', 'asc');
+      expect(lifecycleAudit.map(({ operation, actor_id }) => [operation, actor_id])).toEqual([
+        ['create', superadmin.id],
+        ['action_archive', superadmin.id],
+        ['action_unarchive', superadmin.id],
+      ]);
+      await expect(Partner.query().findById(lifecycleId)).resolves.toMatchObject({ active: true });
+
+      const rollbackRecord = await app.inject({
+        method: 'POST',
+        url: '/api/base.partner',
+        headers: authorization,
+        payload: { name: 'PostgreSQL audit rollback probe' },
+      });
+      expect(rollbackRecord.statusCode).toBe(201);
+      const rollbackId = rollbackRecord.json<{ data: { id: number } }>().data.id;
+      await apiDb.raw(`
+        CREATE FUNCTION reject_archive_outbox() RETURNS trigger
+        LANGUAGE plpgsql AS $$
+        BEGIN
+          IF NEW.event_type = 'record.action_archive' THEN
+            RAISE EXCEPTION 'injected outbox failure';
+          END IF;
+          RETURN NEW;
+        END;
+        $$;
+      `);
+      await apiDb.raw(`
+        CREATE TRIGGER reject_archive_outbox
+        BEFORE INSERT ON outbox_events
+        FOR EACH ROW EXECUTE FUNCTION reject_archive_outbox();
+      `);
+      let rejectedArchive: Awaited<ReturnType<typeof app.inject>>;
+      try {
+        rejectedArchive = await app.inject({
+          method: 'POST',
+          url: `/api/base.partner/${rollbackId}/action/action_archive`,
+          headers: authorization,
+        });
+      } finally {
+        await apiDb.raw('DROP TRIGGER IF EXISTS reject_archive_outbox ON outbox_events');
+        await apiDb.raw('DROP FUNCTION IF EXISTS reject_archive_outbox()');
+      }
+      expect(rejectedArchive.statusCode).toBe(500);
+      await expect(Partner.query().findById(rollbackId)).resolves.toMatchObject({ active: true });
+      await expect(
+        AuditLog.query().where({
+          model: 'base.partner',
+          record_id: rollbackId,
+          operation: 'action_archive',
+        })
+      ).resolves.toHaveLength(0);
     } finally {
       unregisterConsumer();
     }
