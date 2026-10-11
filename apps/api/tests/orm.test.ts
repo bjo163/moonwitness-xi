@@ -8,6 +8,7 @@ import path from 'node:path';
 import { BaseModel, Registry, Environment } from '@moonwitness/orm';
 import { Company, Language, User } from '@moonwitness/orm-base';
 import { OrganizationDepartment } from '@moonwitness/orm-organization';
+import { LocalFileAttachmentStorage, type AttachmentStorage } from '@moonwitness/orm-storage';
 import { buildApp } from '../src/app.js';
 import type { FastifyInstance, InjectOptions } from 'fastify';
 
@@ -61,6 +62,7 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
   let testDb: Knex;
   let app: FastifyInstance;
   let attachmentStorageDirectory: string;
+  const attachmentStorageOperations: string[] = [];
   let accessToken = '';
   /** Injects a request authenticated as the seeded superadmin. */
   const send = (options: InjectOptions) =>
@@ -97,11 +99,27 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
 
     process.env.NODE_ENV = 'test';
     attachmentStorageDirectory = await mkdtemp(path.join(tmpdir(), 'moonwitness-attachments-'));
+    const localStorage = new LocalFileAttachmentStorage(attachmentStorageDirectory);
+    const attachmentStorage: AttachmentStorage = {
+      put: async (key, content) => {
+        attachmentStorageOperations.push('put');
+        return localStorage.put(key, content);
+      },
+      get: async (key) => {
+        attachmentStorageOperations.push('get');
+        return localStorage.get(key);
+      },
+      delete: async (key) => {
+        attachmentStorageOperations.push('delete');
+        return localStorage.delete(key);
+      },
+      list: () => localStorage.list(),
+    };
     app = await buildApp({
       db: testDb,
       superadminPassword: 'api-test-password',
       jwtSecret: 'test-secret-test-secret-test-secret-123',
-      attachmentStorageDirectory,
+      attachmentStorage,
     });
     await app.ready();
     const login = await app.inject({
@@ -486,6 +504,7 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
       payload: Buffer.from('%PDF attachment content'),
     });
     expect(attachment.statusCode).toBe(201);
+    expect(attachmentStorageOperations).toContain('put');
     expect(attachment.json<{ data: Record<string, unknown> }>().data).not.toHaveProperty(
       'storage_key'
     );
@@ -495,6 +514,7 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
       url: `/api/base.attachment/${attachmentId}/download`,
     });
     expect(downloaded.statusCode).toBe(200);
+    expect(attachmentStorageOperations).toContain('get');
     expect(downloaded.headers['content-disposition']).toContain('proposal.pdf');
     expect(downloaded.payload).toBe('%PDF attachment content');
     expect(downloaded.headers['x-content-type-options']).toBe('nosniff');
@@ -534,6 +554,7 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
       url: `/api/base.attachment/${attachmentId}?hard=true`,
     });
     expect(deletedAttachment.statusCode).toBe(200);
+    expect(attachmentStorageOperations).toContain('delete');
     expect(await readdir(attachmentStorageDirectory)).toHaveLength(0);
     await testDb.raw(`
       CREATE TRIGGER reject_outbox_insert
