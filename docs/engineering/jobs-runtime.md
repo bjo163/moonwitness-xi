@@ -24,6 +24,8 @@ Cancellation is cooperative. A running handler receives an `AbortSignal`; the wo
 
 Cron expressions are evaluated by `cron-parser` with the configured IANA timezone. `next_run_at` and occurrence keys are UTC instants. Each schedule update is locked in a transaction, and `schedule_key` deduplicates an occurrence across scheduler replicas.
 
+During a daylight-saving spring gap, a configured wall-clock time that does not exist is shifted forward by the size of the gap. For example, `02:30` in `America/New_York` is represented as `03:30` local on the spring-forward date; the next day returns to `02:30`. During the fall overlap, both matching UTC instants are generated and normal misfire policy (such as `coalesce`) decides which due instances are queued. These are the pinned `cron-parser` semantics and are regression-tested so an upgrade cannot silently change schedule timing.
+
 - `skip` drops missed occurrences.
 - `coalesce` queues one occurrence for a missed interval.
 - `catch_up` queues at most `max_catch_up` missed occurrences.

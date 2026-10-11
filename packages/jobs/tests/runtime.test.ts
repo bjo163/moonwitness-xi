@@ -398,6 +398,51 @@ describe('durable job runtime', () => {
     }
   });
 
+  it('shifts nonexistent local cron times forward across a daylight-saving spring transition', async () => {
+    const unregister = registerJobHandler({
+      name: 'test.dst-spring',
+      version: 1,
+      parse(payload: unknown): { run: true } {
+        if (typeof payload !== 'object' || payload === null || !('run' in payload))
+          throw new Error('invalid payload');
+        return { run: true };
+      },
+      async run() {
+        return null;
+      },
+    });
+    try {
+      const company = await Company.query().findOne({ name: 'MoonWitness' }).throwIfNotFound();
+      const now = new Date('2026-03-09T08:00:00.000Z');
+      const cron = await Cron.query().insertAndFetch({
+        code: 'test.dst-spring-forward',
+        name: 'DST spring-forward schedule',
+        handler: 'test.dst-spring',
+        payload: '{"run":true}',
+        company_id: company.id,
+        cron_expression: '30 2 * * *',
+        timezone: 'America/New_York',
+        enabled: true,
+        next_run_at: '2026-03-07T07:30:00.000Z',
+        misfire_policy: 'catch_up',
+        concurrency_policy: 'allow',
+        max_catch_up: 10,
+      });
+
+      expect(await enqueueDueCrons({ now })).toBe(3);
+      const jobs = await Job.query().where({ cron_id: cron.id }).orderBy('schedule_key');
+      expect(jobs.map(({ schedule_key }) => schedule_key)).toEqual([
+        `cron:${cron.id}:2026-03-07T07:30:00.000Z`,
+        `cron:${cron.id}:2026-03-08T07:30:00.000Z`,
+        `cron:${cron.id}:2026-03-09T06:30:00.000Z`,
+      ]);
+      const advanced = await Cron.query().findById(cron.id).throwIfNotFound();
+      expect(advanced.next_run_at).toBe('2026-03-10T06:30:00.000Z');
+    } finally {
+      unregister();
+    }
+  });
+
   it('honors skip and bounded catch-up misfire policies while advancing past the backlog', async () => {
     const unregister = registerJobHandler({
       name: 'test.cron-misfire',
