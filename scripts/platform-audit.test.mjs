@@ -89,6 +89,32 @@ test('public audit fallback rejects pagination links outside GitHub API', async 
   );
 });
 
+test('public audit fallback rejects a truncated inventory at its page limit', async () => {
+  const limited = await readApiInventory(
+    'repos/owner/project/actions/artifacts?per_page=1',
+    'artifacts',
+    (endpoint) =>
+      fetchPublicGitHubPages(
+        endpoint,
+        async () => ({
+          ok: true,
+          headers: {
+            get: () =>
+              '<https://api.github.com/repos/owner/project/actions/artifacts?per_page=1&page=2>; rel="next"',
+          },
+          json: async () => ({ artifacts: [{ id: 1 }] }),
+        }),
+        1
+      )
+  );
+
+  assert.deepEqual(limited, {
+    status: 'unknown',
+    reason: 'GitHub API pagination exceeded the configured maximum of 1 pages.',
+    items: [],
+  });
+});
+
 test('public audit fallback reports GitHub rate-limit reset without leaking request data', async () => {
   await assert.rejects(
     fetchPublicGitHubPages('repos/owner/project/actions/artifacts', async () => ({

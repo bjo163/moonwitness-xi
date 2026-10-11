@@ -26,6 +26,12 @@ function knownApiFailure(error) {
   if (invalidCollection) {
     return `GitHub API response did not contain a ${invalidCollection} collection.`;
   }
+  const paginationLimit = /pagination exceeded the configured maximum of (\d+) pages/iu.exec(
+    output
+  )?.[1];
+  if (paginationLimit) {
+    return `GitHub API pagination exceeded the configured maximum of ${paginationLimit} pages.`;
+  }
   const resetAt = /rate limit exhausted; resets at (\d{4}-\d{2}-\d{2}T[^\s]+)\.?/iu.exec(
     output
   )?.[1];
@@ -560,6 +566,11 @@ export async function fetchPublicGitHubPages(
     }
     pages.push(await response.json());
     nextUrl = nextPublicPage(response.headers.get('link'), nextUrl);
+  }
+  if (nextUrl) {
+    throw new Error(
+      `GitHub API pagination exceeded the configured maximum of ${maximumPages} pages.`
+    );
   }
   return pages;
 }
