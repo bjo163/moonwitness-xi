@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { delimiter, join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -22,6 +22,7 @@ const assetReconciler = await readFile(
   new globalThis.URL('./reconcile-release-assets.mjs', import.meta.url),
   'utf8'
 );
+const workflowDirectory = new globalThis.URL('../.github/workflows/', import.meta.url);
 const releasePlanner = await readFile(
   new globalThis.URL('./release-plan.mjs', import.meta.url),
   'utf8'
@@ -31,6 +32,19 @@ const verifyStart = workflow.indexOf('  verify:', jobsStart);
 const publishStart = workflow.indexOf('  publish:', jobsStart);
 const verify = workflow.slice(verifyStart, publishStart);
 const publish = workflow.slice(publishStart);
+
+test('application deployment remains outside repository automation', async () => {
+  const workflowNames = await readdir(workflowDirectory);
+  assert.ok(!workflowNames.includes('deploy.yml'), 'legacy deploy workflow must stay removed');
+
+  const workflowSources = await Promise.all(
+    workflowNames
+      .filter((name) => name.endsWith('.yml') || name.endsWith('.yaml'))
+      .map((name) => readFile(new globalThis.URL(name, workflowDirectory), 'utf8'))
+  );
+  const workflowText = workflowSources.join('\n');
+  assert.doesNotMatch(workflowText, /STAGING_DEPLOY|PRODUCTION_DEPLOY|deployment hook/iu);
+});
 
 test('release tags require exact main ancestry and successful ci-gate for the same SHA', () => {
   assert.match(verify, /if \[\[ "\$version" != v\*/u);
