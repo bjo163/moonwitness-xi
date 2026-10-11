@@ -25,11 +25,12 @@ transaction: if deletion fails after the database commit, the orphaned object ap
 reconciliation report. Run `pnpm attachments:reconcile` for a read-only report. To delete candidates,
 provide an explicit age grace period, for example
 `pnpm attachments:reconcile -- --apply --older-than=2026-09-01T00:00:00.000Z`. Cleanup is bounded to
-1,000 directory entries per run by default and can be tuned with `--limit=1..10000`; this bounds the
-directory traversal as well as the number of stale UUID objects considered. The report includes
-`scannedEntries` and `scanTruncated`; when truncated is true, repeat reconciliation to cover the
-remaining entries. Only UUID-named objects older than the cutoff are considered. Review the report
-before apply mode.
+1,000 stale, unreferenced UUID objects per run by default and can be tuned with `--limit=1..10000`.
+The directory is streamed rather than loaded into memory; fresh objects and objects referenced by
+the database do not consume the candidate limit. The report includes `scannedEntries` and
+`scanTruncated`; when truncated is true, repeat reconciliation to cover the remaining stale
+candidates. Only UUID-named objects older than the cutoff are considered. Review the report before
+apply mode.
 
 Every upload and download resolves the parent record using the caller's row/company scope. A caller
 who cannot read the parent receives the same not-found response as for an absent attachment. The

@@ -112,22 +112,27 @@ export class LocalFileAttachmentStorage implements AttachmentStorage {
     }
   }
 
-  async scanStale(olderThan: Date, limit: number): Promise<StaleObjectScan> {
+  async scanStale(
+    olderThan: Date,
+    limit: number,
+    protectedKeys: ReadonlySet<string> = new Set()
+  ): Promise<StaleObjectScan> {
     validateScanOptions(olderThan, limit);
     const objects: StoredObjectMetadata[] = [];
     let directory;
     try {
       directory = await opendir(this.directory);
     } catch (error) {
-      if (isMissing(error)) return { objects, scannedEntries: 0, truncated: false };
+      if (isMissing(error)) return { objects, checked: 0, scannedEntries: 0, truncated: false };
       throw error;
     }
 
     let scannedEntries = 0;
+    let checked = 0;
     let truncated = false;
     const entries = directory[Symbol.asyncIterator]();
     try {
-      while (scannedEntries < limit) {
+      while (true) {
         const next = await entries.next();
         if (next.done) break;
         scannedEntries += 1;
@@ -137,6 +142,15 @@ export class LocalFileAttachmentStorage implements AttachmentStorage {
         const objectPath = this.objectPath(key);
         const details = await stat(objectPath);
         if (details.mtimeMs > olderThan.getTime()) continue;
+        if (protectedKeys.has(key)) {
+          checked += 1;
+          continue;
+        }
+        if (objects.length === limit) {
+          truncated = true;
+          break;
+        }
+        checked += 1;
 
         const file = await open(objectPath, 'r');
         const hash = createHash('sha256');
@@ -147,13 +161,11 @@ export class LocalFileAttachmentStorage implements AttachmentStorage {
         }
         objects.push({ key, sizeBytes: details.size, checksum: hash.digest('hex') });
       }
-
-      if (scannedEntries === limit) truncated = !(await entries.next()).done;
     } finally {
       await directory.close().catch(() => undefined);
     }
 
-    return { objects, scannedEntries, truncated };
+    return { objects, checked, scannedEntries, truncated };
   }
 }
 
@@ -165,6 +177,7 @@ export interface AttachmentReference {
 
 export interface StaleObjectScan {
   readonly objects: readonly StoredObjectMetadata[];
+  readonly checked: number;
   readonly scannedEntries: number;
   readonly truncated: boolean;
 }
@@ -227,8 +240,8 @@ export async function reconcileLocalAttachmentStorage(
   const orphaned: string[] = [];
   const deleted: string[] = [];
   const failures: string[] = [];
-  const scan = await storage.scanStale(options.olderThan, limit);
-  const checked = scan.objects.length;
+  const scan = await storage.scanStale(options.olderThan, limit, new Set(byKey.keys()));
+  const checked = scan.checked;
   for (const object of scan.objects) {
     const reference = byKey.get(object.key);
     if (reference) {

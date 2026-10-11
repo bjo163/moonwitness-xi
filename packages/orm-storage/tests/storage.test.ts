@@ -131,7 +131,7 @@ describe('LocalFileAttachmentStorage', () => {
       limit: 2,
     });
     expect(firstBatch).toMatchObject({
-      scannedEntries: 2,
+      scannedEntries: 3,
       scanTruncated: true,
       checked: 2,
     });
