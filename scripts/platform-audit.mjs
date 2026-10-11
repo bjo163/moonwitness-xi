@@ -101,9 +101,14 @@ export function auditScheduledWorkflows(workflowRuns, generatedAt) {
   }
 
   return scheduledWorkflowExpectations.map(({ name, workflowFile, maximumAgeDays }) => {
-    const sourceRuns = Array.isArray(workflowRuns)
-      ? workflowRuns
-      : (workflowRuns[workflowFile] ?? []);
+    const workflowSource = Array.isArray(workflowRuns) ? workflowRuns : workflowRuns[workflowFile];
+    const unavailableReason =
+      workflowSource && !Array.isArray(workflowSource) && workflowSource.status === 'unknown'
+        ? workflowSource.reason
+        : null;
+    const sourceRuns = Array.isArray(workflowSource)
+      ? workflowSource
+      : (workflowSource?.runs ?? []);
     const scheduledRuns = sourceRuns
       .filter((run) => run.name === name && run.event === 'schedule')
       .sort(
@@ -119,8 +124,9 @@ export function auditScheduledWorkflows(workflowRuns, generatedAt) {
     const lastRunAgeDays = Number.isFinite(lastRunTime)
       ? Math.floor((generatedTime - lastRunTime) / (24 * 60 * 60 * 1000))
       : null;
-    const status =
-      lastSuccessAgeDays === null
+    const status = unavailableReason
+      ? 'unknown'
+      : lastSuccessAgeDays === null
         ? 'missing-success'
         : lastSuccessAgeDays > maximumAgeDays
           ? 'stale'
@@ -133,6 +139,7 @@ export function auditScheduledWorkflows(workflowRuns, generatedAt) {
       event: 'schedule',
       maximumAgeDays,
       status,
+      reason: unavailableReason ?? null,
       lastRunAt: latestRun?.created_at ?? null,
       lastRunConclusion: latestRun?.conclusion ?? latestRun?.status ?? null,
       lastRunAgeDays,
@@ -239,7 +246,11 @@ export function buildPlatformAudit(input) {
       workflowRunHistoryMayBeTruncated: workflowRuns.length >= 1000,
       scheduledWorkflowRunsScanned: Array.isArray(scheduledWorkflowRuns)
         ? null
-        : Object.values(scheduledWorkflowRuns).reduce((count, runs) => count + runs.length, 0),
+        : Object.values(scheduledWorkflowRuns).reduce(
+            (count, source) =>
+              count + (Array.isArray(source) ? source.length : (source?.runs?.length ?? 0)),
+            0
+          ),
     },
     inventory: {
       artifacts: {
@@ -304,7 +315,10 @@ export function buildPlatformAudit(input) {
         : []),
       ...scheduledWorkflows
         .filter((workflow) => workflow.status !== 'healthy')
-        .map((workflow) => `Scheduled workflow ${workflow.name} is ${workflow.status}.`),
+        .map(
+          (workflow) =>
+            `Scheduled workflow ${workflow.name} is ${workflow.status}.${workflow.reason ? ` ${workflow.reason}` : ''}`
+        ),
       ...supportReviews
         .filter((review) => review.reviewStatus !== 'current')
         .map(
@@ -450,10 +464,17 @@ async function main() {
   const workflowRuns = runPages.flatMap((page) => page.workflow_runs ?? []);
   const scheduledEntries = await Promise.all(
     scheduledWorkflowExpectations.map(async ({ workflowFile }) => {
-      const pages = await runGitHubApi(
-        `repos/${repo}/actions/workflows/${workflowFile}/runs?per_page=100&event=schedule&created=%3E%3D${encodedWindowStart}`
-      );
-      return [workflowFile, pages.flatMap((page) => page.workflow_runs ?? [])];
+      try {
+        const pages = await runGitHubApi(
+          `repos/${repo}/actions/workflows/${workflowFile}/runs?per_page=100&event=schedule&created=%3E%3D${encodedWindowStart}`
+        );
+        return [workflowFile, pages.flatMap((page) => page.workflow_runs ?? [])];
+      } catch (error) {
+        const reason = /HTTP 404/u.test(`${error.stderr ?? ''} ${error.message ?? ''}`)
+          ? 'GitHub cannot resolve this workflow from the repository default branch yet.'
+          : knownApiFailure(error);
+        return [workflowFile, { status: 'unknown', reason, runs: [] }];
+      }
     })
   );
   const scheduledWorkflowRuns = Object.fromEntries(scheduledEntries);

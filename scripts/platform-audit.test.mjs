@@ -296,6 +296,23 @@ test('scheduled audit uses workflow-scoped runs when the global inventory is tru
   assert.equal(checks[1].status, 'missing-success');
 });
 
+test('scheduled audit distinguishes workflows missing from the default branch', () => {
+  const checks = auditScheduledWorkflows(
+    {
+      'browser-matrix.yml': {
+        status: 'unknown',
+        reason: 'GitHub cannot resolve this workflow from the repository default branch yet.',
+        runs: [],
+      },
+    },
+    generatedAt
+  );
+
+  assert.equal(checks[0].status, 'unknown');
+  assert.match(checks[0].reason, /default branch/u);
+  assert.equal(checks[0].lastRunAt, null);
+});
+
 test('runtime support reviews become due and overdue without claiming the software is unsupported', () => {
   const current = evaluateRuntimeSupportReviews(supportReviewPolicy, generatedAt);
   const due = evaluateRuntimeSupportReviews(
