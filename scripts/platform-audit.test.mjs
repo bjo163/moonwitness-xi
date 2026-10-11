@@ -87,6 +87,22 @@ test('public audit fallback rejects pagination links outside GitHub API', async 
   );
 });
 
+test('public audit fallback reports GitHub rate-limit reset without leaking request data', async () => {
+  await assert.rejects(
+    fetchPublicGitHubPages('repos/owner/project/actions/artifacts', async () => ({
+      ok: false,
+      status: 403,
+      headers: {
+        get: (name) =>
+          ({ 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': '1791688222' })[
+            name.toLowerCase()
+          ] ?? null,
+      },
+    })),
+    /rate limit exhausted; resets at 2026-10-11T03:10:22\.000Z/u
+  );
+});
+
 test('audit summarizes paginated inventory and compares a prior baseline', () => {
   const report = buildPlatformAudit({
     repo: 'owner/project',

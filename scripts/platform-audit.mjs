@@ -365,6 +365,17 @@ export async function fetchPublicGitHubPages(
       },
     });
     if (!response.ok) {
+      const rateLimitRemaining = response.headers.get('x-ratelimit-remaining');
+      const rateLimitReset = response.headers.get('x-ratelimit-reset');
+      if (response.status === 403 && rateLimitRemaining === '0' && rateLimitReset) {
+        const resetTime = Number(rateLimitReset);
+        const resetAt = Number.isFinite(resetTime)
+          ? new Date(resetTime * 1000).toISOString()
+          : null;
+        if (resetAt) {
+          throw new Error(`Public GitHub API rate limit exhausted; resets at ${resetAt}.`);
+        }
+      }
       throw new Error(`Public GitHub API returned HTTP ${response.status}.`);
     }
     pages.push(await response.json());
