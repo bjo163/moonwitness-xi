@@ -5,7 +5,10 @@ import type { Knex } from 'knex';
 import { OutboxEvent, PermanentJobError, registerOutboxConsumer } from '@moonwitness/jobs';
 import { WebhookDelivery, WebhookEndpoint } from './models.js';
 import { sendSignedRequest } from './transport.js';
+import type { WebhookDeliveryRequest } from './delivery.types.js';
 import { isPublicWebhookAddress, validateWebhookUrl } from './webhook-security.js';
+
+export type { WebhookDeliveryRequest } from './delivery.types.js';
 
 const EVENT_TYPE = 'integration.webhook.dispatch';
 const MAX_PAYLOAD_BYTES = 256 * 1024;
@@ -24,17 +27,6 @@ export type WebhookSecretResolver = (
   secretRef: string,
   companyId: number
 ) => Promise<string | null>;
-
-export interface WebhookDeliveryRequest {
-  readonly url: URL;
-  readonly targetAddress: string;
-  readonly body: string;
-  readonly eventId: number;
-  readonly eventType: string;
-  readonly signature: string;
-  readonly idempotencyKey: string;
-  readonly signal: AbortSignal;
-}
 
 export interface WebhookDeliveryAdapters {
   readonly resolveAddresses?: (hostname: string) => Promise<LookupAddress[]>;

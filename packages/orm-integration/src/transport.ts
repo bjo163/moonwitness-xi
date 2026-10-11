@@ -1,5 +1,5 @@
 import { request as httpsRequest } from 'node:https';
-import type { WebhookDeliveryRequest } from './runtime.js';
+import type { WebhookDeliveryRequest } from './delivery.types.js';
 
 const MAX_RESPONSE_BYTES = 64 * 1024;
 const REQUEST_TIMEOUT_MS = 10_000;
