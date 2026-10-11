@@ -69,7 +69,7 @@ test('issue plan summary is useful for operators without rendering issue bodies'
   assert.doesNotMatch(summary, /Build planner/u);
 });
 
-test('issue sync workflow scopes automatic writes to changed tasks and isolates them to dev apply', async () => {
+test('issue sync workflow bounds changed-task and backlog writes to an exact dev source', async () => {
   const workflow = await readFile(
     new URL('../../.github/workflows/roadmap-issue-plan.yml', import.meta.url),
     'utf8'
@@ -82,7 +82,11 @@ test('issue sync workflow scopes automatic writes to changed tasks and isolates 
   assert.match(workflow, /schedule:/u);
   assert.match(workflow, /workflow_dispatch:/u);
   assert.match(workflow, /default: false/u);
+  assert.match(workflow, /cron: '13 9 \* \* \*'/u);
+  assert.match(workflow, /backfill_next_batch:/u);
+  assert.match(workflow, /github\.event_name == 'schedule' && 'dev'/u);
   assert.match(workflow, /changed-task-ids\.mjs --base/u);
+  assert.match(workflow, /select-issue-sync-batch\.mjs/u);
   assert.match(workflow, /TASK_IDS_AUTO/u);
   assert.match(workflow, /Changed roadmap tasks selected for bounded automatic sync/u);
   assert.match(workflow, /--apply --task-ids "\$TASK_IDS" --lifecycle-snapshot/u);
@@ -101,6 +105,12 @@ test('issue sync workflow scopes automatic writes to changed tasks and isolates 
     applyJob,
     /event_name == 'workflow_dispatch' && inputs\.apply && github\.ref == 'refs\/heads\/dev'/u
   );
+  assert.match(
+    applyJob,
+    /event_name == 'schedule' && github\.ref == 'refs\/heads\/main' && needs\.plan\.outputs\.backfill_task_ids/u
+  );
+  assert.match(applyJob, /"\$\(git rev-parse refs\/remotes\/origin\/dev\)" != "\$SOURCE_SHA"/u);
+  assert.match(applyJob, /Issue sync apply is limited to five task IDs/u);
   assert.match(applyJob, /issues: write/u);
   assert.match(applyJob, /checks: read/u);
   assert.match(applyJob, /group: repository-write-coordinator/u);

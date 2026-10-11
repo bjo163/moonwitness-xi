@@ -127,13 +127,13 @@ Auto-merge GitHub menunggu required checks dan reviews; setting repository dan e
 2. Dry-run membaca seluruh remote managed issues dan menulis plan create/update/no-op/conflict. Pada repository publik, planning read-only tidak memerlukan token; private repositories tetap memerlukan credential read yang sesuai.
 3. Push `dev` membandingkan checklist, objek task index, seksi kartu, dan evidence antara `before` dan `head`; hanya Task ID yang berubah dikirim ke bounded apply.
 4. Apply membaca ulang semua issue open/closed, menolak fingerprint basi/konflik, memastikan metadata milestone/label, kemudian menulis serial dengan recovery marker dan maksimal lima task.
-5. Backfill issue yang belum ada tetap memakai manual dispatch dengan Task ID eksplisit. Schedule mingguan tetap audit/dry-run sampai pilot authenticated selesai.
+5. Backfill otomatis memilih maksimal lima operasi create/update berikutnya per hari dari plan pada SHA `dev` terbaru. Job terjadwal berjalan dari workflow `main` tetapi checkout dan guard apply wajib membuktikan SHA `dev` masih sama dengan plan; manual dispatch tetap menyediakan Task ID eksplisit atau pilihan next batch.
 6. Tambahkan lifecycle updates dari CI/promosi/release dengan source SHA validation.
 7. Aktifkan dashboard/Projects projection hanya setelah core sync stabil.
 
 Current default branch masih main. Scheduled/manual workflow discovery dan GitHub App setup harus diuji saat bootstrap; workflow yang hanya ada di dev mungkin belum menjadi entry point schedule/manual sebagaimana diharapkan. Promosikan workflow lewat jalur terverifikasi sebelum mengklaim schedule aktif.
 
-GitHub API mutations dilakukan serial dan menghormati Retry-After/rate reset. Automatic push sync tidak mengimpor 148 task lama sekaligus; ia hanya menerapkan task yang berubah pada exact push. Jalur kerja agen boleh paralel, API writes tetap terkoordinasi. [Best practices GitHub REST API](https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api).
+GitHub API mutations dilakukan serial dan menghormati Retry-After/rate reset. Automatic push sync hanya menerapkan task yang berubah pada exact push; job backlog terjadwal membuat/memperbarui paling banyak lima task per hari sampai seluruh projection sinkron. Keduanya menggunakan exact SHA dan shared writer coordinator. Jalur kerja agen boleh paralel, API writes tetap terkoordinasi. [Best practices GitHub REST API](https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api).
 
 ## Test wajib untuk reconciler
 

@@ -64,9 +64,11 @@ function resolveReleaseCommit(tag) {
 async function main() {
   const repository = process.env.GITHUB_REPOSITORY;
   const repositoryId = process.env.GITHUB_REPOSITORY_ID;
-  const eventSha = process.env.GITHUB_SHA;
+  const eventSha = process.env.SOURCE_SHA ?? process.env.GITHUB_SHA;
   if (!repository || !repositoryId || !eventSha)
-    throw new Error('GITHUB_REPOSITORY, GITHUB_REPOSITORY_ID and GITHUB_SHA are required.');
+    throw new Error(
+      'GITHUB_REPOSITORY, GITHUB_REPOSITORY_ID and a workflow source SHA are required.'
+    );
   execFileSync(
     process.execPath,
     [path.join(repositoryRoot, 'scripts/roadmap/validate-roadmap.mjs')],

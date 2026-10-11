@@ -769,7 +769,7 @@ async function main() {
     }
   );
   const tasks = selectTasksForSync(index.tasks, rawTaskIds, apply);
-  const sha = process.env.GITHUB_SHA ?? process.env.SOURCE_SHA;
+  const sha = process.env.SOURCE_SHA ?? process.env.GITHUB_SHA;
   const sourceSha =
     sha ??
     execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repositoryRoot, encoding: 'utf8' }).trim();
