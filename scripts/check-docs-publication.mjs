@@ -20,8 +20,16 @@ const secretPatterns = [
   /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/,
   /(?:gh[pousr]_[A-Za-z0-9_]{30,}|github_pat_[A-Za-z0-9_]{30,})/,
   /(?:AKIA|ASIA)[A-Z0-9]{16}/,
+  /\bauthorization\s*[:=]\s*bearer\s+[A-Za-z0-9._~+/-]{20,}={0,2}/i,
+  /\bAIza[0-9A-Za-z_-]{35}\b/,
+  /\bnpm_[A-Za-z0-9]{30,}\b/,
+  /\bxox[baprs]-[0-9A-Za-z-]{20,}\b/,
+  /\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{20,}\b/i,
+  /\bsk-(?:proj-)?[A-Za-z0-9_-]{20,}\b/i,
+  /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/,
   /postgres(?:ql)?:\/\/[^\s"']+:[^\s"'@]+@/i,
   /(?:password|secret|token)\s*[:=]\s*["'][^"']{12,}["']/i,
+  /(?:password|secret|token|api[_-]?key)\s*[:=]\s*["']?[\w.+/=-]{20,}["']?/i,
 ];
 
 function scan(directory) {

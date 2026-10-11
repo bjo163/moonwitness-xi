@@ -42,6 +42,28 @@ test('rejects credential-like values in public output', () => {
   });
 });
 
+test('rejects common provider tokens, bearer credentials, JWTs, and unquoted secret assignments', () => {
+  const credentials = [
+    `Authorization: Bearer ${'a'.repeat(32)}`,
+    `provider key: AIza${'A'.repeat(35)}`,
+    `registry token: npm_${'a'.repeat(36)}`,
+    `messaging token: xoxb-${'1'.repeat(12)}-${'2'.repeat(12)}-${'a'.repeat(24)}`,
+    `AI client key: sk-proj-${'c'.repeat(30)}`,
+    `payment key: sk_live_${'d'.repeat(24)}`,
+    `session: eyJ${'a'.repeat(16)}.${'b'.repeat(16)}.${'c'.repeat(16)}`,
+    `password=${'a'.repeat(24)}`,
+  ];
+
+  for (const [index, credential] of credentials.entries()) {
+    withSite((directory) => {
+      fs.writeFileSync(path.join(directory, `sample-${index}.txt`), credential);
+      const result = scan(directory);
+      assert.equal(result.status, 1, `expected fixture ${index} to be rejected`);
+      assert.match(result.stderr, /Potential secret detected/);
+    });
+  }
+});
+
 test('rejects env/auth artifacts and source maps', () => {
   withSite((directory) => {
     fs.writeFileSync(path.join(directory, '.env.production'), 'SECRET=fixture');
