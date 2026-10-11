@@ -15,7 +15,7 @@ test('accepts least-privilege full-history scanning with exact reviewed fixtures
   assert.deepEqual(validateGitleaksSetup(workflow, config), []);
 });
 
-test('historical scanner exceptions match only the six exact false-positive source lines', () => {
+test('historical scanner exceptions match only the seven exact false-positive source lines', () => {
   const tokenHash = [
     '269a6e000da6fa28',
     '8380cf36ec127df0',
@@ -39,6 +39,11 @@ test('historical scanner exceptions match only the six exact false-positive sour
       'decision-0001',
       '\',$"',
       ',',
+    ].join(''),
+    [
+      '- Add adapter fixtures for API pagination, missing',
+      '/',
+      'duplicate checks, stale snapshots, revoked permissions, and malformed/untrusted webhook or issue events.',
     ].join(''),
   ];
   const matchers = expectedAllowlistExpressions.slice(3).map((source) => new RegExp(source, 'u'));

@@ -62,6 +62,7 @@ const historicalFalsePositiveLines = [
     '\',$"',
     ',',
   ]),
+  String.raw`^\s*- Add adapter fixtures for API pagination, missing[/]duplicate checks, stale snapshots, revoked permissions, and malformed/untrusted webhook or issue events\.$`,
 ];
 export const expectedAllowlistExpressions = [
   ...allowedLines.map(({ source }) => source),
