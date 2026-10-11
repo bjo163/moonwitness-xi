@@ -7,6 +7,7 @@ import {
   auditScheduledWorkflows,
   buildPlatformAudit,
   evaluateRuntimeSupportReviews,
+  fetchScheduledWorkflowRuns,
   fetchPublicGitHubPages,
   planArtifactCleanup,
 } from './platform-audit.mjs';
@@ -311,6 +312,20 @@ test('scheduled audit distinguishes workflows missing from the default branch', 
   assert.equal(checks[0].status, 'unknown');
   assert.match(checks[0].reason, /default branch/u);
   assert.equal(checks[0].lastRunAt, null);
+});
+
+test('workflow 404s produce scoped unknown coverage without aborting the audit', async () => {
+  const requested = [];
+  const scheduled = await fetchScheduledWorkflowRuns('owner/project', '2026-07-01', async (url) => {
+    requested.push(url);
+    if (url.includes('browser-matrix.yml')) throw new Error('Public GitHub API returned HTTP 404.');
+    return [{ workflow_runs: [{ event: 'schedule', conclusion: 'success' }] }];
+  });
+
+  assert.equal(requested.length, 5);
+  assert.equal(scheduled['browser-matrix.yml'].status, 'unknown');
+  assert.match(scheduled['browser-matrix.yml'].reason, /default branch/u);
+  assert.equal(scheduled['codeql.yml'].length, 1);
 });
 
 test('runtime support reviews become due and overdue without claiming the software is unsupported', () => {

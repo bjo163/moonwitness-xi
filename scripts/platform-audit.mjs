@@ -419,6 +419,25 @@ async function readOptionalApi(endpoint, mapPages = (pages) => pages[0]) {
   }
 }
 
+export async function fetchScheduledWorkflowRuns(repo, windowStart, requestPages = runGitHubApi) {
+  const entries = await Promise.all(
+    scheduledWorkflowExpectations.map(async ({ workflowFile }) => {
+      try {
+        const pages = await requestPages(
+          `repos/${repo}/actions/workflows/${workflowFile}/runs?per_page=100&event=schedule&created=%3E%3D${windowStart}`
+        );
+        return [workflowFile, pages.flatMap((page) => page.workflow_runs ?? [])];
+      } catch (error) {
+        const reason = /HTTP 404/u.test(`${error.stderr ?? ''} ${error.message ?? ''}`)
+          ? 'GitHub cannot resolve this workflow from the repository default branch yet.'
+          : knownApiFailure(error);
+        return [workflowFile, { status: 'unknown', reason, runs: [] }];
+      }
+    })
+  );
+  return Object.fromEntries(entries);
+}
+
 async function fetchNodeSchedule() {
   const response = await globalThis.fetch(
     'https://raw.githubusercontent.com/nodejs/Release/main/schedule.json'
@@ -462,22 +481,7 @@ async function main() {
     `repos/${repo}/actions/runs?per_page=100&created=%3E%3D${encodedWindowStart}`
   );
   const workflowRuns = runPages.flatMap((page) => page.workflow_runs ?? []);
-  const scheduledEntries = await Promise.all(
-    scheduledWorkflowExpectations.map(async ({ workflowFile }) => {
-      try {
-        const pages = await runGitHubApi(
-          `repos/${repo}/actions/workflows/${workflowFile}/runs?per_page=100&event=schedule&created=%3E%3D${encodedWindowStart}`
-        );
-        return [workflowFile, pages.flatMap((page) => page.workflow_runs ?? [])];
-      } catch (error) {
-        const reason = /HTTP 404/u.test(`${error.stderr ?? ''} ${error.message ?? ''}`)
-          ? 'GitHub cannot resolve this workflow from the repository default branch yet.'
-          : knownApiFailure(error);
-        return [workflowFile, { status: 'unknown', reason, runs: [] }];
-      }
-    })
-  );
-  const scheduledWorkflowRuns = Object.fromEntries(scheduledEntries);
+  const scheduledWorkflowRuns = await fetchScheduledWorkflowRuns(repo, encodedWindowStart);
   const workflowPermissions = await readOptionalApi(`repos/${repo}/actions/permissions/workflow`);
   const actionPermissions = await readOptionalApi(`repos/${repo}/actions/permissions`);
   const packages = await readOptionalApi(
