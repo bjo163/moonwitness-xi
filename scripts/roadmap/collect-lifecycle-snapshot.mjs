@@ -132,7 +132,7 @@ export async function collectLifecycleSnapshot(input) {
       ...(knownSource ? { sourceSha: knownSource } : {}),
       ...(knownSource ? { sourceInDev } : {}),
       ...(knownSource ? { sourceInMain } : {}),
-      ...(state.acceptanceVerified
+      ...(knownSource && sourceInDev === true
         ? { requiredChecks: latestRequiredChecks(input.checkRuns, input.branchHeads.dev) }
         : {}),
       ...(releaseManifest && sourceInMain ? { releaseManifest } : {}),

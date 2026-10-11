@@ -55,11 +55,14 @@ test('parses the explicit source commit marker and derives canonical roadmap tas
 });
 
 test('collects current checks and ancestry without confusing evidence SHA with implementation SHA', async () => {
+  const partialSourceSha = 'f'.repeat(40);
   const snapshot = await collectLifecycleSnapshot({
     tasks: indexTasks,
     roadmap,
     readEvidence: async (file) =>
-      file === 'evidence.md' ? `# Evidence\n- Source SHA: \`${sourceSha}\`\n` : '# In progress\n',
+      file === 'evidence.md'
+        ? `# Evidence\n- Source SHA: \`${sourceSha}\`\n`
+        : `# In progress\n- Source SHA: \`${partialSourceSha}\`\n`,
     repositoryId: '12345',
     sourceSha: planSha,
     branchHeads: { dev: devSha, main: mainSha },
@@ -71,8 +74,9 @@ test('collects current checks and ancestry without confusing evidence SHA with i
     ],
     releases: [],
     resolveReleaseCommit: () => undefined,
-    commitExists: (sha) => sha === sourceSha,
-    isAncestor: (source, branch) => source === sourceSha && branch === devSha,
+    commitExists: (sha) => sha === sourceSha || sha === partialSourceSha,
+    isAncestor: (source, branch) =>
+      [sourceSha, partialSourceSha].includes(source) && branch === devSha,
     generatedAt: '2026-10-07T10:00:00.000Z',
   });
   const row = snapshot.tasks.find(({ taskId }) => taskId === 'M1.01');
@@ -81,6 +85,12 @@ test('collects current checks and ancestry without confusing evidence SHA with i
   assert.equal(row.sourceInDev, true);
   assert.equal(row.sourceInMain, false);
   assert.deepEqual(row.requiredChecks, [
+    { name: 'ci-gate', headSha: devSha, status: 'completed', conclusion: 'success' },
+  ]);
+  const partialRow = snapshot.tasks.find(({ taskId }) => taskId === 'M1.02');
+  assert.equal(partialRow.acceptanceVerified, false);
+  assert.equal(partialRow.sourceInDev, true);
+  assert.deepEqual(partialRow.requiredChecks, [
     { name: 'ci-gate', headSha: devSha, status: 'completed', conclusion: 'success' },
   ]);
   const projected = projectLifecycleSnapshot({
