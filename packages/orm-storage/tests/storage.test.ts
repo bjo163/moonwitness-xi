@@ -118,6 +118,41 @@ describe('LocalFileAttachmentStorage', () => {
     await expect(storage.get(keyA)).resolves.toEqual(Buffer.from('managed'));
   });
 
+  it('bounds directory traversal and reports when reconciliation needs another batch', async () => {
+    const storage = await storageFixture();
+    for (const key of [keyA, keyB, keyC]) {
+      await storage.put(key, Buffer.from(key));
+      await utimes(path.join(storage.directory, key), new Date(0), new Date(0));
+    }
+
+    const firstBatch = await reconcileLocalAttachmentStorage(storage, references([]), {
+      apply: true,
+      olderThan: new Date(),
+      limit: 2,
+    });
+    expect(firstBatch).toMatchObject({
+      scannedEntries: 2,
+      scanTruncated: true,
+      checked: 2,
+    });
+    expect(firstBatch.deleted).toHaveLength(2);
+    const remainingAfterFirstBatch: string[] = [];
+    for await (const object of storage.list()) remainingAfterFirstBatch.push(object.key);
+    expect(remainingAfterFirstBatch).toHaveLength(1);
+
+    const secondBatch = await reconcileLocalAttachmentStorage(storage, references([]), {
+      apply: true,
+      olderThan: new Date(),
+      limit: 2,
+    });
+    expect(secondBatch).toMatchObject({
+      scannedEntries: 1,
+      scanTruncated: false,
+      checked: 1,
+    });
+    expect(secondBatch.deleted).toEqual(remainingAfterFirstBatch);
+  });
+
   it('rejects invalid reconciliation cutoffs and unbounded limits', async () => {
     const storage = await storageFixture();
     await expect(

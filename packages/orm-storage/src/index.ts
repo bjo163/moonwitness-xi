@@ -1,6 +1,16 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { defineAddon } from '@moonwitness/orm';
-import { mkdir, open, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import {
+  mkdir,
+  open,
+  opendir,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  stat,
+  writeFile,
+} from 'node:fs/promises';
 import path from 'node:path';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
@@ -21,6 +31,12 @@ export interface AttachmentStorage {
 function validateKey(key: string): string {
   if (!UUID_PATTERN.test(key)) throw new Error('Invalid attachment storage key');
   return key.toLowerCase();
+}
+
+function validateScanOptions(olderThan: Date, limit: number): void {
+  if (!Number.isFinite(olderThan.getTime())) throw new Error('olderThan must be a valid date');
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 10000)
+    throw new Error('limit must be an integer from 1 to 10000');
 }
 
 function objectMetadata(key: string, content: Uint8Array): StoredObjectMetadata {
@@ -96,32 +112,48 @@ export class LocalFileAttachmentStorage implements AttachmentStorage {
     }
   }
 
-  async *scanStale(olderThan: Date, limit: number): AsyncIterable<StoredObjectMetadata> {
-    let entries;
+  async scanStale(olderThan: Date, limit: number): Promise<StaleObjectScan> {
+    validateScanOptions(olderThan, limit);
+    const objects: StoredObjectMetadata[] = [];
+    let directory;
     try {
-      entries = await readdir(this.directory, { withFileTypes: true });
+      directory = await opendir(this.directory);
     } catch (error) {
-      if (isMissing(error)) return;
+      if (isMissing(error)) return { objects, scannedEntries: 0, truncated: false };
       throw error;
     }
-    let scanned = 0;
-    for (const entry of entries) {
-      if (scanned >= limit) break;
-      if (!entry.isFile() || !UUID_PATTERN.test(entry.name)) continue;
-      const key = entry.name.toLowerCase();
-      const objectPath = this.objectPath(key);
-      const details = await stat(objectPath);
-      if (details.mtimeMs > olderThan.getTime()) continue;
-      scanned += 1;
-      const file = await open(objectPath, 'r');
-      const hash = createHash('sha256');
-      try {
-        for await (const chunk of file.createReadStream({ autoClose: false })) hash.update(chunk);
-      } finally {
-        await file.close();
+
+    let scannedEntries = 0;
+    let truncated = false;
+    const entries = directory[Symbol.asyncIterator]();
+    try {
+      while (scannedEntries < limit) {
+        const next = await entries.next();
+        if (next.done) break;
+        scannedEntries += 1;
+        const entry = next.value;
+        if (!entry.isFile() || !UUID_PATTERN.test(entry.name)) continue;
+        const key = entry.name.toLowerCase();
+        const objectPath = this.objectPath(key);
+        const details = await stat(objectPath);
+        if (details.mtimeMs > olderThan.getTime()) continue;
+
+        const file = await open(objectPath, 'r');
+        const hash = createHash('sha256');
+        try {
+          for await (const chunk of file.createReadStream({ autoClose: false })) hash.update(chunk);
+        } finally {
+          await file.close();
+        }
+        objects.push({ key, sizeBytes: details.size, checksum: hash.digest('hex') });
       }
-      yield { key, sizeBytes: details.size, checksum: hash.digest('hex') };
+
+      if (scannedEntries === limit) truncated = !(await entries.next()).done;
+    } finally {
+      await directory.close().catch(() => undefined);
     }
+
+    return { objects, scannedEntries, truncated };
   }
 }
 
@@ -131,8 +163,16 @@ export interface AttachmentReference {
   readonly checksum?: string | null;
 }
 
+export interface StaleObjectScan {
+  readonly objects: readonly StoredObjectMetadata[];
+  readonly scannedEntries: number;
+  readonly truncated: boolean;
+}
+
 export interface ReconcileResult {
   readonly checked: number;
+  readonly scannedEntries: number;
+  readonly scanTruncated: boolean;
   readonly missing: readonly string[];
   readonly corrupt: readonly string[];
   readonly orphaned: readonly string[];
@@ -161,11 +201,8 @@ export async function reconcileLocalAttachmentStorage(
   references: AsyncIterable<AttachmentReference>,
   options: ReconcileOptions
 ): Promise<ReconcileResult> {
-  if (!Number.isFinite(options.olderThan.getTime()))
-    throw new Error('olderThan must be a valid date');
   const limit = options.limit ?? 1000;
-  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 10000)
-    throw new Error('limit must be an integer from 1 to 10000');
+  validateScanOptions(options.olderThan, limit);
 
   const byKey = new Map<string, AttachmentReference>();
   for await (const reference of references) byKey.set(validateKey(reference.storageKey), reference);
@@ -190,9 +227,9 @@ export async function reconcileLocalAttachmentStorage(
   const orphaned: string[] = [];
   const deleted: string[] = [];
   const failures: string[] = [];
-  let checked = 0;
-  for await (const object of storage.scanStale(options.olderThan, limit)) {
-    checked += 1;
+  const scan = await storage.scanStale(options.olderThan, limit);
+  const checked = scan.objects.length;
+  for (const object of scan.objects) {
     const reference = byKey.get(object.key);
     if (reference) {
       continue;
@@ -206,5 +243,14 @@ export async function reconcileLocalAttachmentStorage(
       failures.push(object.key);
     }
   }
-  return { checked, missing, corrupt, orphaned, deleted, failures };
+  return {
+    checked,
+    scannedEntries: scan.scannedEntries,
+    scanTruncated: scan.truncated,
+    missing,
+    corrupt,
+    orphaned,
+    deleted,
+    failures,
+  };
 }
