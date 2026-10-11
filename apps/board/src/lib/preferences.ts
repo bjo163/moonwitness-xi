@@ -1,3 +1,5 @@
+import { isRecord } from '@moonwitness/types';
+
 export interface BoardPreferences {
   theme: 'light' | 'dark';
   language: string;
@@ -5,10 +7,6 @@ export interface BoardPreferences {
 }
 
 const PREFERENCES_KEY = 'mw-board-preferences';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function isSupportedLanguage(value: unknown): value is string {
   if (typeof value !== 'string' || value.length === 0) return false;

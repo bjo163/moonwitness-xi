@@ -30,12 +30,11 @@ import { manifest as integrationAddon } from '@moonwitness/orm-integration';
 import { manifest as requestAddon } from '@moonwitness/orm-request';
 
 import { createLogger, type LogLevel } from '@moonwitness/logger';
+import { isRecord } from '@moonwitness/types';
 import observabilityPlugin from './plugins/observability.plugin.js';
 
 function errorProperty(error: unknown, key: string): unknown {
-  return typeof error === 'object' && error !== null && key in error
-    ? (error as Record<string, unknown>)[key]
-    : undefined;
+  return isRecord(error) && key in error ? error[key] : undefined;
 }
 
 export interface BuildAppOptions {

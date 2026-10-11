@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "apps/*/package.json and packages/*/package.json",
-  "sourceSha256": "05981d5e6b07a200584a54a75a15e8836f7436ecf0a796ae946e2e9a94f2bb6c",
+  "sourceSha256": "cf61ebc356e46d367ce54db5679494faaa47c6a096bf3146067e4f2e4fc0f0bb",
   "packages": [
     {
       "name": "@moonwitness/api",
@@ -218,6 +218,12 @@
     {
       "from": "@moonwitness/board",
       "to": "@moonwitness/client",
+      "kind": "runtime",
+      "manifest": "apps/board"
+    },
+    {
+      "from": "@moonwitness/board",
+      "to": "@moonwitness/types",
       "kind": "runtime",
       "manifest": "apps/board"
     },

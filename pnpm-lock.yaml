@@ -148,6 +148,9 @@ importers:
       '@moonwitness/client':
         specifier: workspace:*
         version: link:../../packages/client
+      '@moonwitness/types':
+        specifier: workspace:*
+        version: link:../../packages/types
       '@moonwitness/ui':
         specifier: workspace:*
         version: link:../../packages/ui

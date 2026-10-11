@@ -7,6 +7,7 @@ import {
 } from 'objection';
 import { applyDomain } from './domain.js';
 import { Environment } from './environment.js';
+import { isRecord } from '@moonwitness/types';
 import type { FieldMap } from './model-definition.js';
 import type {
   Domain,
@@ -18,10 +19,6 @@ import type {
   SearchOptions,
   SearchReadOptions,
 } from './types.js';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 export class BaseModel extends Model {
   /**
