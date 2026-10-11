@@ -206,13 +206,43 @@ test('cleanup dry-run only selects old allowlisted disposable artifacts', () => 
         expired: false,
         created_at: '2026-06-01T00:00:00.000Z',
       },
+      {
+        id: 7,
+        name: 'roadmap-progress-38115450478',
+        expired: false,
+        created_at: '2026-06-01T00:00:00.000Z',
+      },
+      {
+        id: 8,
+        name: `roadmap-issue-plan-${'a'.repeat(40)}`,
+        expired: false,
+        created_at: '2026-06-01T00:00:00.000Z',
+      },
+      {
+        id: 9,
+        name: 'roadmap-progress-not-a-run-id',
+        expired: false,
+        created_at: '2026-01-01T00:00:00.000Z',
+      },
+      {
+        id: 10,
+        name: `roadmap-issue-plan-${'G'.repeat(40)}`,
+        expired: false,
+        created_at: '2026-01-01T00:00:00.000Z',
+      },
+      {
+        id: 11,
+        name: 'roadmap-progress-38115450479',
+        expired: false,
+        created_at: '2026-10-01T00:00:00.000Z',
+      },
     ],
     generatedAt
   );
 
   assert.deepEqual(
     plan.candidates.map(({ id }) => id),
-    [1, 5, 6]
+    [1, 5, 6, 7, 8]
   );
   assert.deepEqual(
     plan.protectedArtifacts.map(({ id }) => id),
@@ -220,7 +250,7 @@ test('cleanup dry-run only selects old allowlisted disposable artifacts', () => 
   );
   assert.deepEqual(
     plan.unclassified.map(({ id }) => id),
-    [3]
+    [3, 9, 10]
   );
   assert.equal(plan.deletionSupported, false);
   assert.throws(() => planArtifactCleanup([], 'invalid', 90), /valid timestamp/u);

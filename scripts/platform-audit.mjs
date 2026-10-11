@@ -8,7 +8,7 @@ const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url))
 const protectedArtifactName =
   /release|sbom|provenance|attestation|evidence|audit|backup|restore|recovery|migration|package|registry/iu;
 const disposableArtifactName =
-  /^(?:board-[a-z0-9-]+-\d+-\d+|ui-catalog-playwright-\d+-\d+|dependency-update-plan-\d+|docs-preview-[a-f0-9]{40}|test-junit-\d+-\d+)$/u;
+  /^(?:board-[a-z0-9-]+-\d+-\d+|ui-catalog-playwright-\d+-\d+|dependency-update-plan-\d+|docs-preview-[a-f0-9]{40}|test-junit-\d+-\d+|roadmap-progress-\d+|roadmap-issue-plan-[a-f0-9]{40})$/u;
 
 const scheduledWorkflowExpectations = [
   { name: 'Scheduled browser matrix', workflowFile: 'browser-matrix.yml', maximumAgeDays: 8 },
