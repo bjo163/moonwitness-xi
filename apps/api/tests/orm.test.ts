@@ -6,7 +6,7 @@ import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { BaseModel, Registry, Environment } from '@moonwitness/orm';
-import { Company } from '@moonwitness/orm-base';
+import { Company, Language, User } from '@moonwitness/orm-base';
 import { OrganizationDepartment } from '@moonwitness/orm-organization';
 import { buildApp } from '../src/app.js';
 import type { FastifyInstance, InjectOptions } from 'fastify';
@@ -186,12 +186,32 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
       category_links: [{ category: { code: 'customer' } }],
     });
     expect(response.payload).not.toContain('scrypt$');
-    const commaRelations = await send({
-      method: 'GET',
-      url: '/api/base.user?with=partner%2Clanguage&count=true&order=login%20asc',
-    });
-    expect(commaRelations.statusCode).toBe(200);
-    expect(commaRelations.json<{ total: number }>().total).toBe(2);
+    const english = await Language.query().findOne({ code: 'en-US' }).throwIfNotFound();
+    const superadmin = await User.query().findOne({ login: 'superadmin' }).throwIfNotFound();
+    await testDb('users').where({ id: superadmin.id }).update({ language_id: english.id });
+    try {
+      const commaRelations = await send({
+        method: 'GET',
+        url: '/api/base.user?with=partner%2Clanguage&count=true&order=login%20asc',
+      });
+      expect(commaRelations.statusCode, commaRelations.payload).toBe(200);
+      const commaRelationBody = commaRelations.json<{
+        total: number;
+        data: {
+          login: string;
+          partner: { name: string };
+          language: { code: string } | null;
+        }[];
+      }>();
+      expect(commaRelationBody.total).toBe(2);
+      expect(commaRelationBody.data).toHaveLength(2);
+      expect(commaRelationBody.data.find((user) => user.login === 'superadmin')).toMatchObject({
+        partner: { name: 'Super Administrator' },
+        language: { code: 'en-US' },
+      });
+    } finally {
+      await testDb('users').where({ id: superadmin.id }).update({ language_id: null });
+    }
     const privateField = await send({ method: 'GET', url: '/api/base.user?fields=password' });
     expect(privateField.statusCode).toBe(400);
   });
