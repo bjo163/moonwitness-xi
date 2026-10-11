@@ -193,6 +193,18 @@ function git(args) {
   return execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
 }
 
+export function loadPromotionSourceMetadata(
+  headSha,
+  readAtRevision = (file) => git(['show', `${headSha}:${file}`])
+) {
+  if (!/^[a-f0-9]{40}$/u.test(headSha))
+    throw new Error('Promotion source metadata requires a full lowercase commit SHA.');
+  const roadmap = readAtRevision('ROADMAP.md');
+  const tasksIndex = JSON.parse(readAtRevision('docs/roadmap/tasks.json'));
+  if (!Array.isArray(tasksIndex.tasks)) throw new Error('Promotion source task index is invalid.');
+  return { roadmap, tasksIndex };
+}
+
 function parseChecks(value) {
   if (!Array.isArray(value.check_runs)) throw new Error('GitHub check-runs response is invalid.');
   return value.check_runs.map((check) => ({
@@ -232,8 +244,7 @@ async function main() {
   const changedFiles = git(['diff', '--name-only', baseSha, headSha])
     .split(/\r?\n/u)
     .filter(Boolean);
-  const roadmap = await readFile(path.join(root, 'ROADMAP.md'), 'utf8');
-  const tasksIndex = JSON.parse(await readFile(path.join(root, 'docs/roadmap/tasks.json'), 'utf8'));
+  const { roadmap, tasksIndex } = loadPromotionSourceMetadata(headSha);
   const changedTaskIds = new Set(
     extractTaskIds(`${commits.join('\n')}\n${changedFiles.join('\n')}`).filter((id) =>
       tasksIndex.tasks.some((task) => task.id === id)

@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFile } from 'node:fs/promises';
 import { URL } from 'node:url';
-import { renderPromotionReport, replacePromotionReport } from './render-promotion-report.mjs';
+import {
+  loadPromotionSourceMetadata,
+  renderPromotionReport,
+  replacePromotionReport,
+} from './render-promotion-report.mjs';
 
 const baseSha = 'a'.repeat(40);
 const headSha = 'b'.repeat(40);
@@ -130,6 +134,24 @@ test('managed report refuses malformed markers instead of overwriting PR content
   );
 });
 
+test('promotion source metadata is loaded from the exact reported commit', () => {
+  const requestedFiles = [];
+  const metadata = loadPromotionSourceMetadata(headSha, (file) => {
+    requestedFiles.push(file);
+    if (file === 'ROADMAP.md') return '- [x] M11.10 generated source status';
+    return JSON.stringify({ tasks: [{ id: 'M11.10', title: 'Exact source task' }] });
+  });
+
+  assert.deepEqual(requestedFiles, ['ROADMAP.md', 'docs/roadmap/tasks.json']);
+  assert.match(metadata.roadmap, /\[x\] M11\.10/u);
+  assert.equal(metadata.tasksIndex.tasks[0]?.title, 'Exact source task');
+  assert.throws(() => loadPromotionSourceMetadata('dev', () => '{}'), /full lowercase commit SHA/u);
+  assert.throws(
+    () => loadPromotionSourceMetadata(headSha, () => '{"tasks":{}}'),
+    /task index is invalid/u
+  );
+});
+
 test('promotion workflow refreshes one managed report from event SHA and preserves PR write boundaries', async () => {
   const workflow = await readFile(
     new URL('../.github/workflows/promote.yml', import.meta.url),
@@ -147,4 +169,22 @@ test('promotion workflow refreshes one managed report from event SHA and preserv
     workflow,
     /gh pr edit "\$PR_NUMBER" --repo "\$GH_REPO" --add-label approval-required/u
   );
+});
+
+test('completed verification refreshes report without running source-branch code or merging', async () => {
+  const workflow = await readFile(
+    new URL('../.github/workflows/refresh-promotion-report.yml', import.meta.url),
+    'utf8'
+  );
+  assert.match(workflow, /workflow_run:/u);
+  assert.match(workflow, /EXPECTED_SHA: \$\{\{ github\.event\.workflow_run\.head_sha \}\}/u);
+  assert.match(workflow, /ref: \$\{\{ github\.sha \}\}/u);
+  assert.match(workflow, /persist-credentials: false/u);
+  assert.match(workflow, /checks: read/u);
+  assert.match(workflow, /pull-requests: write/u);
+  assert.match(
+    workflow,
+    /gh pr edit "\$PR_NUMBER" --repo "\$GH_REPO" --body-file "\$report_file"/u
+  );
+  assert.doesNotMatch(workflow, /gh pr merge/u);
 });

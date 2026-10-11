@@ -119,6 +119,21 @@ test('accepts immutable event-SHA checkout and trusted dispatch restrictions', (
   assert.deepEqual(policies(), []);
 });
 
+test('promotion report refresh is trusted, dev-scoped, and read-only outside the PR body', async () => {
+  const promotionReportRefresh = await readFile(
+    new NodeURL('../.github/workflows/refresh-promotion-report.yml', import.meta.url),
+    'utf8'
+  );
+  assert.deepEqual(policies({ promotionReportRefresh }), []);
+
+  const unsafe = promotionReportRefresh
+    .replace('ref: ${{ github.sha }}', 'ref: ${{ github.event.workflow_run.head_sha }}')
+    .replace('      checks: read', '      contents: write');
+  const findings = policies({ promotionReportRefresh: unsafe });
+  assert.ok(findings.some((finding) => finding.includes('trusted default-branch code')));
+  assert.ok(findings.some((finding) => finding.includes('PR-only writes')));
+});
+
 test('issue intake workflow keeps the current permission lookup scoped and report inert', async () => {
   const [issueIntake, issueIntakeRunner] = await Promise.all([
     readFile(new NodeURL('../.github/workflows/roadmap-issue-intake.yml', import.meta.url), 'utf8'),

@@ -47,6 +47,7 @@ export function inspectTrustedCheckoutPolicies({
   dependencyCandidate,
   releasePlan,
   promote,
+  promotionReportRefresh,
   issueIntake,
   issueIntakeRunner,
   browserMatrix,
@@ -314,6 +315,65 @@ export function inspectTrustedCheckoutPolicies({
     }
   }
 
+  if (promotionReportRefresh) {
+    const refreshCheckout = checkoutSteps(promotionReportRefresh);
+    const sourceGuard = namedWorkflowStep(
+      promotionReportRefresh,
+      'Verify current dev and fetch trusted comparison refs'
+    );
+    const reportStep = namedWorkflowStep(
+      promotionReportRefresh,
+      'Refresh exact-SHA report after hosted checks complete'
+    );
+    if (
+      !promotionReportRefresh.includes('workflow_run:') ||
+      !promotionReportRefresh.includes('types: [completed]') ||
+      !promotionReportRefresh.includes('branches: [dev]')
+    )
+      findings.push('Promotion report refresh must run only after a dev workflow run completes.');
+    if (
+      !promotionReportRefresh.includes('permissions:\n  contents: read') ||
+      !promotionReportRefresh.includes('      checks: read') ||
+      !promotionReportRefresh.includes('      pull-requests: write') ||
+      /^\s+(?:contents|checks|actions):\s+write\s*$/mu.test(promotionReportRefresh)
+    )
+      findings.push(
+        'Promotion report refresh must use read-only source/checks and PR-only writes.'
+      );
+    if (
+      refreshCheckout.length !== 1 ||
+      !refreshCheckout[0].includes('ref: ${{ github.sha }}') ||
+      !refreshCheckout[0].includes('persist-credentials: false') ||
+      refreshCheckout[0].includes('github.event.workflow_run.head_sha')
+    )
+      findings.push(
+        'Promotion report refresh must execute trusted default-branch code, not workflow-run source code.'
+      );
+    if (
+      !promotionReportRefresh.includes(
+        'github.event.workflow_run.head_repository.full_name == github.repository'
+      ) ||
+      !promotionReportRefresh.includes("github.event.workflow_run.head_branch == 'dev'") ||
+      !sourceGuard?.includes('EXPECTED_SHA') ||
+      !sourceGuard.includes('git ls-remote origin refs/heads/dev') ||
+      !sourceGuard.includes('test "$(git rev-parse refs/remotes/origin/dev)" = "$EXPECTED_SHA"')
+    )
+      findings.push(
+        'Promotion report refresh must verify same-repository dev provenance and current exact SHA.'
+      );
+    if (
+      !reportStep?.includes('commits/$EXPECTED_SHA/check-runs?per_page=100') ||
+      !reportStep.includes('node scripts/render-promotion-report.mjs') ||
+      !reportStep.includes(
+        'gh pr edit "$PR_NUMBER" --repo "$GH_REPO" --body-file "$report_file"'
+      ) ||
+      reportStep.includes('gh pr merge')
+    )
+      findings.push(
+        'Post-CI refresh must update only the exact-SHA managed PR report and never merge.'
+      );
+  }
+
   if (issueIntake) {
     if (!issueIntake.includes('issue_comment:\n    types: [created]'))
       findings.push('Issue intake must process only newly created issue comments.');
@@ -436,6 +496,7 @@ async function main() {
     dependencyCandidate,
     releasePlan,
     promote,
+    promotionReportRefresh,
     issueIntake,
     issueIntakeRunner,
     browserMatrix,
@@ -448,6 +509,7 @@ async function main() {
     readFile(path.join(repositoryRoot, '.github/workflows/dependency-candidate.yml'), 'utf8'),
     readFile(path.join(repositoryRoot, '.github/workflows/release-plan.yml'), 'utf8'),
     readFile(path.join(repositoryRoot, '.github/workflows/promote.yml'), 'utf8'),
+    readFile(path.join(repositoryRoot, '.github/workflows/refresh-promotion-report.yml'), 'utf8'),
     readFile(path.join(repositoryRoot, '.github/workflows/roadmap-issue-intake.yml'), 'utf8'),
     readFile(path.join(repositoryRoot, 'scripts/roadmap/run-issue-intake.mjs'), 'utf8'),
     readFile(path.join(repositoryRoot, '.github/workflows/browser-matrix.yml'), 'utf8'),
@@ -461,6 +523,7 @@ async function main() {
     dependencyCandidate,
     releasePlan,
     promote,
+    promotionReportRefresh,
     issueIntake,
     issueIntakeRunner,
     browserMatrix,
