@@ -14,6 +14,11 @@ This list is a review queue, not a mandate to split files by line count. Preserv
 | Empty addons scaffold      | packages/addons has no sources in initial inventory                            | Could become addon template workspace later                                         | Re-evaluate purpose before adding any empty or unconsumed package.                                            |
 | Similar validation helpers | isObject/parseInteger live in generic routes; countValue is in jobs routes     | Candidate only if same semantic contract and multiple consumers are established     | Names alone do not justify centralization; avoid a generic utils dumping ground.                              |
 
+## Current extraction follow-up (2026-10-11)
+
+- The generic route's pure user relation allowlist, relation-expression normalization, relation bounds, and RPC field/order limits now live in `apps/api/src/routes/generic-query-graph.ts` with focused unit tests. The route is 1,513 lines after extracting this policy; treat that as a current measurement, not a target-size claim.
+- Preserve auth, record-rule, tenant-scope and relation-regression coverage before extracting another route responsibility. See [M9.08 evidence](../roadmap/evidence/M9.08.md).
+
 ## Initial duplication/coupling evidence
 
 - Dynamic API query and mutation orchestration are concentrated in one plugin; a route refactor could accidentally bypass policy/record rule checks.
