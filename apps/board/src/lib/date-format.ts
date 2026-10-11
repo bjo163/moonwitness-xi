@@ -9,14 +9,25 @@ const optionsByStyle: Record<DateFormatStyle, Intl.DateTimeFormatOptions> = {
   shortDateTime: { dateStyle: 'short', timeStyle: 'short' },
 };
 
+const formatterCache = new Map<DateFormatStyle, { key: string; formatter: Intl.DateTimeFormat }>();
+
 /** Format persisted timestamps with the user's saved language and timezone. */
 export function formatDateTime(value: Date | string | number, style: DateFormatStyle = 'dateTime') {
   const date = value instanceof Date ? value : new Date(value);
   if (!Number.isFinite(date.getTime())) return '—';
 
   const { language, timezone } = readPreferences();
-  return new Intl.DateTimeFormat(language, {
-    ...optionsByStyle[style],
-    timeZone: timezone,
-  }).format(date);
+  const key = `${language}\u0000${timezone}`;
+  let cached = formatterCache.get(style);
+  if (cached?.key !== key) {
+    cached = {
+      key,
+      formatter: new Intl.DateTimeFormat(language, {
+        ...optionsByStyle[style],
+        timeZone: timezone,
+      }),
+    };
+    formatterCache.set(style, cached);
+  }
+  return cached.formatter.format(date);
 }

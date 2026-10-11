@@ -61,6 +61,7 @@ const repository = 'https://github.com/bjo163/moonwitness-xi';
 const sourceRef = import.meta.env.MW_DOCS_SOURCE_REF ?? 'main';
 const applicationVersion = import.meta.env.MW_DOCS_APPLICATION_VERSION;
 const docsChannel = import.meta.env.MW_DOCS_CHANNEL ?? 'preview';
+const uiCatalogPath = '/moonwitness-xi/components/';
 const pages: SearchPageData[] = guideBundle.sections.flatMap((section) =>
   section.items.map((item) => ({
     ...item,
@@ -274,6 +275,10 @@ function PortalLayout() {
                 <span>Roadmap progress</span>
                 <span className="nav-kind">Status</span>
               </Link>
+              <a className="nav-link" href={uiCatalogPath}>
+                <span>UI component catalog</span>
+                <span className="nav-kind">Design</span>
+              </a>
             </nav>
           </section>
           <div className="sidebar-footnote">

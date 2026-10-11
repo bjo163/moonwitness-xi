@@ -49,6 +49,18 @@ test('renders the source-bound roadmap dashboard with honest delivery status', a
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });
 
+test('publishes the interactive shared UI catalog from the docs site', async ({ page }) => {
+  await page.goto('');
+  const catalogLink = page.getByRole('link', { name: 'UI component catalog Design' });
+  await expect(catalogLink).toHaveAttribute('href', '/moonwitness-xi/components/');
+  await catalogLink.click();
+  await expect(page).toHaveURL(/\/moonwitness-xi\/components\/$/u);
+  await expect(page.getByText('Every screen.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Use dark theme' })).toBeVisible();
+  await page.reload();
+  await expect(page.getByText('Every screen.', { exact: true })).toBeVisible();
+});
+
 test('search is keyboard reachable and routes to matching guide pages', async ({ page }) => {
   await page.goto('');
   const search = page.getByRole('searchbox', { name: 'Cari dokumentasi' });

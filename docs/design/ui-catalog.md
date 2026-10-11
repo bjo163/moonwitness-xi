@@ -28,6 +28,7 @@ screenshots are retained as CI artifacts. `pnpm test:ui-budget` checks that
 bundled JavaScript stays below 512 KiB raw / 160 KiB gzip and CSS below 64 KiB
 raw / 16 KiB gzip.
 
-The build output is `apps/ui-catalog/dist`. The catalog has not been published:
-the docs portal integration is M6.06 and the GitHub Pages artifact/settings are
-M6.07. See [ADR 0002](../decisions/0002-ui-catalog.md) for the framework choice.
+The build output is `apps/ui-catalog/dist`. The docs portal build includes this
+output at `/components/` and links it from the Project navigation. GitHub Pages
+publication and trusted-source activation are tracked separately in M6.07. See
+[ADR 0002](../decisions/0002-ui-catalog.md) for the framework choice.
