@@ -69,7 +69,7 @@ test('issue plan summary is useful for operators without rendering issue bodies'
   assert.doesNotMatch(summary, /Build planner/u);
 });
 
-test('issue sync workflow keeps writes opt-in, dev-only, and isolated to its apply job', async () => {
+test('issue sync workflow scopes automatic writes to changed tasks and isolates them to dev apply', async () => {
   const workflow = await readFile(
     new URL('../../.github/workflows/roadmap-issue-plan.yml', import.meta.url),
     'utf8'
@@ -82,6 +82,9 @@ test('issue sync workflow keeps writes opt-in, dev-only, and isolated to its app
   assert.match(workflow, /schedule:/u);
   assert.match(workflow, /workflow_dispatch:/u);
   assert.match(workflow, /default: false/u);
+  assert.match(workflow, /changed-task-ids\.mjs --base/u);
+  assert.match(workflow, /TASK_IDS_AUTO/u);
+  assert.match(workflow, /Changed roadmap tasks selected for bounded automatic sync/u);
   assert.match(workflow, /--apply --task-ids "\$TASK_IDS" --lifecycle-snapshot/u);
   assert.match(planJob, /issues: read/u);
   assert.match(planJob, /checks: read/u);
@@ -90,6 +93,10 @@ test('issue sync workflow keeps writes opt-in, dev-only, and isolated to its app
   assert.match(planJob, /collect-lifecycle-snapshot-cli\.mjs/u);
   assert.match(planJob, /--lifecycle-snapshot/u);
   assert.match(planJob, /trap 'rm -f/u);
+  assert.match(
+    applyJob,
+    /event_name == 'push' && github\.ref == 'refs\/heads\/dev' && needs\.plan\.outputs\.changed_task_ids != ''/u
+  );
   assert.match(
     applyJob,
     /event_name == 'workflow_dispatch' && inputs\.apply && github\.ref == 'refs\/heads\/dev'/u

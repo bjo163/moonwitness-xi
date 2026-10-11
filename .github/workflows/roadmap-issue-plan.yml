@@ -44,6 +44,8 @@ jobs:
       issues: read
     env:
       TASK_IDS: ${{ inputs.task_ids }}
+    outputs:
+      changed_task_ids: ${{ steps.changed.outputs.task_ids }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -56,6 +58,21 @@ jobs:
           pnpm-version: '11.17.0'
       - name: Install frozen workspace dependencies
         run: pnpm install --frozen-lockfile --no-runtime
+      - name: Select task IDs changed by this push
+        id: changed
+        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
+        run: |
+          set -euo pipefail
+          task_ids="$(node scripts/roadmap/changed-task-ids.mjs --base "$GITHUB_EVENT_BEFORE" --head "$GITHUB_SHA")"
+          echo "task_ids=$task_ids" >> "$GITHUB_OUTPUT"
+          if [[ -n "$task_ids" ]]; then
+            echo "Changed roadmap tasks selected for bounded automatic sync: $task_ids"
+          else
+            echo 'No issue-owned roadmap task content changed; no issue writes will run.'
+          fi
+        env:
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+          GITHUB_SHA: ${{ github.sha }}
       - name: Plan exact source SHA without issue writes
         run: |
           set -euo pipefail
@@ -65,6 +82,9 @@ jobs:
           node scripts/roadmap/audit-issues.mjs --quiet --output "$audit_file"
           node scripts/roadmap/collect-lifecycle-snapshot-cli.mjs
           args=(--quiet)
+          if [[ "$GITHUB_EVENT_NAME" == 'push' ]]; then
+            TASK_IDS="$TASK_IDS_AUTO"
+          fi
           if [[ -n "$TASK_IDS" ]]; then
             args+=(--task-ids "$TASK_IDS")
           fi
@@ -75,10 +95,12 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_REPOSITORY_ID: ${{ github.repository_id }}
           GITHUB_SHA: ${{ github.sha }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          TASK_IDS_AUTO: ${{ steps.changed.outputs.task_ids }}
 
   apply:
-    name: Apply an explicit bounded issue batch
-    if: github.event_name == 'workflow_dispatch' && inputs.apply && github.ref == 'refs/heads/dev'
+    name: Apply a changed-task or explicit bounded issue batch
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/dev' && needs.plan.outputs.changed_task_ids != '') || (github.event_name == 'workflow_dispatch' && inputs.apply && github.ref == 'refs/heads/dev')
     needs: [plan]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -106,6 +128,9 @@ jobs:
       - name: Collect lifecycle evidence and apply selected tasks with fresh-state guards
         run: |
           set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == 'push' ]]; then
+            TASK_IDS="$CHANGED_TASK_IDS"
+          fi
           if [[ -z "$TASK_IDS" ]]; then
             echo 'Applying roadmap issues requires explicit task IDs.' >&2
             exit 2
@@ -125,3 +150,5 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_REPOSITORY_ID: ${{ github.repository_id }}
           GITHUB_SHA: ${{ github.sha }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          CHANGED_TASK_IDS: ${{ needs.plan.outputs.changed_task_ids }}

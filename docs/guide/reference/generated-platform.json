@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "f596830c2c69e6510cb0d8c6c7df47e67b68562a5d376d7a6825a1c1c0c46198",
+  "generatedFromSha256": "fb2c877fb34040025aa95f730fe786a4b02f83e9ec36b564a7588b57195fb53b",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -329,7 +329,7 @@
       "test:release-workflow": "node --test scripts/release-workflow.test.mjs scripts/release-loop.test.mjs",
       "test:render-changelog": "node --test scripts/render-changelog.test.mjs",
       "test:restore-drill": "node scripts/verify-application-restore.mjs",
-      "test:roadmap": "node --test scripts/roadmap/validate-roadmap.test.mjs scripts/roadmap/sync-issues.test.mjs scripts/roadmap/lifecycle.test.mjs scripts/roadmap/lifecycle-snapshot.test.mjs scripts/roadmap/collect-lifecycle-snapshot.test.mjs scripts/roadmap/issue-intake.test.mjs scripts/roadmap/progress-dashboard.test.mjs scripts/roadmap/progress-workflow.test.mjs scripts/roadmap/audit-issues.test.mjs",
+      "test:roadmap": "node --test scripts/roadmap/validate-roadmap.test.mjs scripts/roadmap/sync-issues.test.mjs scripts/roadmap/changed-task-ids.test.mjs scripts/roadmap/lifecycle.test.mjs scripts/roadmap/lifecycle-snapshot.test.mjs scripts/roadmap/collect-lifecycle-snapshot.test.mjs scripts/roadmap/issue-intake.test.mjs scripts/roadmap/progress-dashboard.test.mjs scripts/roadmap/progress-workflow.test.mjs scripts/roadmap/audit-issues.test.mjs",
       "test:secrets": "node --test scripts/check-gitleaks-config.test.mjs",
       "test:security-policy": "node --test scripts/security-scan-policy.test.mjs scripts/check-trivy-sarif.test.mjs",
       "test:ubuntu-runner-candidate": "node --test scripts/check-ubuntu-runner-candidate.test.mjs",

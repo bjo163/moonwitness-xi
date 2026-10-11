@@ -2,7 +2,7 @@
 
 ## Tujuan dan batas aktivasi
 
-Setiap task roadmap mempunyai satu issue GitHub yang dapat ditelusuri ke source, bukti, commit, CI, PR, dan release. Dokumen ini merencanakan automation tersebut. Menulis rencana ini belum membuat issues atau mengaktifkan auto-merge; bootstrap dilakukan dalam M11.14 setelah dry-run dan pilot.
+Setiap task roadmap mempunyai satu issue GitHub yang dapat ditelusuri ke source, bukti, commit, CI, PR, dan release. Push `dev` otomatis merekonsiliasi hanya task yang isi checklist, index, kartu, atau evidence berubah. Apply dibatasi lima task per run, menghitung ulang state remote sebelum menulis, dan tetap terpisah dari auto-merge/release. Backfill issue lama memerlukan pilihan ID eksplisit; perubahan besar yang melewati batas harus dipecah menjadi batch terkontrol.
 
 Source code tetap menggunakan hanya `main` dan `dev`. Tidak membuat issue branches, dependency branches, release branches, maupun `gh-pages`.
 
@@ -125,15 +125,15 @@ Auto-merge GitHub menunggu required checks dan reviews; setting repository dan e
 
 1. Validator lokal memeriksa index/cards/dependencies dan menghasilkan desired issues.
 2. Dry-run membaca seluruh remote managed issues dan menulis plan create/update/no-op/conflict. Pada repository publik, planning read-only tidak memerlukan token; private repositories tetap memerlukan credential read yang sesuai.
-3. Uji satu task pilot, termasuk title rename, notes maintainer dan repeated run.
-4. Bulk import dijalankan bertahap dengan pembatasan mutation rate dan checkpoint.
-5. Aktifkan push-trigger trusted dev roadmap/evidence, periodic reconciliation, serta manual dispatch.
+3. Push `dev` membandingkan checklist, objek task index, seksi kartu, dan evidence antara `before` dan `head`; hanya Task ID yang berubah dikirim ke bounded apply.
+4. Apply membaca ulang semua issue open/closed, menolak fingerprint basi/konflik, memastikan metadata milestone/label, kemudian menulis serial dengan recovery marker dan maksimal lima task.
+5. Backfill issue yang belum ada tetap memakai manual dispatch dengan Task ID eksplisit. Schedule mingguan tetap audit/dry-run sampai pilot authenticated selesai.
 6. Tambahkan lifecycle updates dari CI/promosi/release dengan source SHA validation.
 7. Aktifkan dashboard/Projects projection hanya setelah core sync stabil.
 
 Current default branch masih main. Scheduled/manual workflow discovery dan GitHub App setup harus diuji saat bootstrap; workflow yang hanya ada di dev mungkin belum menjadi entry point schedule/manual sebagaimana diharapkan. Promosikan workflow lewat jalur terverifikasi sebelum mengklaim schedule aktif.
 
-GitHub API mutations dilakukan serial dan menghormati Retry-After/rate reset. Hindari membuat ratusan issue secara paralel; jalur kerja agen boleh paralel, API writes tetap terkoordinasi. [Best practices GitHub REST API](https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api).
+GitHub API mutations dilakukan serial dan menghormati Retry-After/rate reset. Automatic push sync tidak mengimpor 148 task lama sekaligus; ia hanya menerapkan task yang berubah pada exact push. Jalur kerja agen boleh paralel, API writes tetap terkoordinasi. [Best practices GitHub REST API](https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api).
 
 ## Test wajib untuk reconciler
 
