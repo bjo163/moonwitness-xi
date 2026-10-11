@@ -107,6 +107,48 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     expect(result.rows[0]?.statement_timeout).toBe('30s');
   });
 
+  it('rolls back PostgreSQL upgrade DDL, data, and addon version when a programmatic hook fails', async () => {
+    const upgradeSchema = `mw_upgrade_test_${randomUUID().replaceAll('-', '')}`;
+    await adminDb.raw('create schema ??', [upgradeSchema]);
+    const upgradeDb = knex(
+      createPostgresKnexConfig(
+        connectionString!,
+        { poolMin: 0, poolMax: 2, acquireTimeoutMs: 5000, statementTimeoutMs: 30_000 },
+        { searchPath: [upgradeSchema] }
+      )
+    );
+    const addonName = 'test.postgres_upgrade_rollback';
+    const installed = defineAddon({ name: addonName, version: '1.0.0', models: [] });
+    const failingUpgrade = defineAddon({
+      name: addonName,
+      version: '1.1.0',
+      models: [],
+      upgrade: {
+        '1.0.0': async (transaction) => {
+          await transaction.schema.createTable('upgrade_rollback_probe', (table) => {
+            table.string('value').notNullable();
+          });
+          await transaction('upgrade_rollback_probe').insert({ value: 'must roll back' });
+          throw new Error('injected PostgreSQL upgrade failure');
+        },
+      },
+    });
+
+    try {
+      await installAddons(upgradeDb, [installed]);
+      await expect(installAddons(upgradeDb, [failingUpgrade])).rejects.toThrow(
+        'injected PostgreSQL upgrade failure'
+      );
+      expect(await upgradeDb.schema.hasTable('upgrade_rollback_probe')).toBe(false);
+      await expect(
+        upgradeDb('_orm_addons').where({ name: addonName }).first('version')
+      ).resolves.toEqual({ version: '1.0.0' });
+    } finally {
+      await upgradeDb.destroy();
+      await adminDb.raw('drop schema if exists ?? cascade', [upgradeSchema]);
+    }
+  }, 30000);
+
   it('installs every seeded addon on a fresh PostgreSQL schema and preserves sample edits on reinstall', async () => {
     const seedSchema = `mw_seed_test_${randomUUID().replaceAll('-', '')}`;
     await adminDb.raw('create schema ??', [seedSchema]);
