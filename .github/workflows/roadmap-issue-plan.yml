@@ -42,8 +42,9 @@ jobs:
     name: Build read-only issue reconciliation plan
     if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 35
     permissions:
+      actions: read
       contents: read
       checks: read
       issues: read
@@ -135,6 +136,7 @@ jobs:
       group: repository-write-coordinator
       cancel-in-progress: false
     permissions:
+      actions: read
       contents: read
       checks: read
       issues: write

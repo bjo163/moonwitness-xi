@@ -20,6 +20,52 @@ export function flattenGitHubPages(pages, property) {
   });
 }
 
+/**
+ * Select the newest push-triggered CI run for the exact dev source SHA.
+ * PR and workflow-dispatch runs can share the same SHA but have different gates.
+ * @param {unknown} pages
+ * @param {string} sourceSha
+ * @returns {{id:number,status:string,head_sha:string,event:string,head_branch:string}|undefined}
+ */
+export function selectExactDevPushCiRun(pages, sourceSha) {
+  const runs = flattenGitHubPages(pages, 'workflow_runs');
+  const candidates = runs.filter(
+    (run) =>
+      run &&
+      run.head_sha === sourceSha &&
+      run.event === 'push' &&
+      run.head_branch === 'dev' &&
+      Number.isSafeInteger(run.id)
+  );
+  return candidates.sort((left, right) => right.id - left.id)[0];
+}
+
+/**
+ * Convert the exact dev push workflow's ci-gate job into lifecycle check metadata.
+ * @param {{id:number,head_sha:string}} run
+ * @param {unknown} pages
+ * @returns {{id:number,name:string,head_sha:string,status:'queued'|'in_progress'|'completed',conclusion:string|null}|undefined}
+ */
+export function exactDevPushCiGate(run, pages) {
+  const jobs = flattenGitHubPages(pages, 'jobs');
+  const gates = jobs.filter(
+    (job) =>
+      job &&
+      job.name === 'ci-gate' &&
+      Number.isSafeInteger(job.id) &&
+      ['queued', 'in_progress', 'completed'].includes(job.status)
+  );
+  const gate = gates.sort((left, right) => right.id - left.id)[0];
+  if (!gate) return undefined;
+  return {
+    id: gate.id,
+    name: gate.name,
+    head_sha: run.head_sha,
+    status: gate.status,
+    conclusion: gate.conclusion ?? null,
+  };
+}
+
 /** @param {string} markdown */
 export function parseEvidenceSourceSha(markdown) {
   const matches = [...markdown.matchAll(sourceLinePattern)].map((match) => match[1]);

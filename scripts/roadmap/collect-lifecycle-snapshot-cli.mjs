@@ -1,10 +1,16 @@
 import { execFile, execFileSync } from 'node:child_process';
 import { promisify } from 'node:util';
 import { readFile, writeFile } from 'node:fs/promises';
+import { setTimeout as delay } from 'node:timers/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { collectLifecycleSnapshot, flattenGitHubPages } from './collect-lifecycle-snapshot.mjs';
+import {
+  collectLifecycleSnapshot,
+  exactDevPushCiGate,
+  flattenGitHubPages,
+  selectExactDevPushCiRun,
+} from './collect-lifecycle-snapshot.mjs';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const execFileAsync = promisify(execFile);
@@ -21,6 +27,27 @@ async function ghJson(args) {
     maxBuffer: 32 * 1024 * 1024,
   });
   return JSON.parse(stdout);
+}
+
+async function currentDevPushCiGate(repository, sourceSha) {
+  const deadline = Date.now() + 25 * 60 * 1000;
+  while (Date.now() < deadline) {
+    const pages = await ghJson([
+      `repos/${repository}/actions/workflows/ci.yml/runs?branch=dev&per_page=100`,
+    ]);
+    const run = selectExactDevPushCiRun(pages, sourceSha);
+    if (run?.status === 'completed') {
+      const jobPages = await ghJson([
+        `repos/${repository}/actions/runs/${run.id}/jobs?per_page=100`,
+      ]);
+      const gate = exactDevPushCiGate(run, jobPages);
+      if (gate?.status === 'completed') return [gate];
+    }
+    await delay(15_000);
+  }
+  throw new Error(
+    `The exact dev push ci-gate did not complete within 25 minutes for ${sourceSha}; no lifecycle snapshot was written.`
+  );
 }
 
 function isAncestor(sourceSha, branchHeadSha) {
@@ -88,11 +115,10 @@ async function main() {
     dev: git(['rev-parse', 'refs/remotes/origin/dev']),
     main: git(['rev-parse', 'refs/remotes/origin/main']),
   };
-  const [checkPages, releasePages] = await Promise.all([
-    ghJson([`repos/${repository}/commits/${branchHeads.dev}/check-runs?per_page=100`]),
+  const [checkRuns, releasePages] = await Promise.all([
+    currentDevPushCiGate(repository, branchHeads.dev),
     ghJson([`repos/${repository}/releases?per_page=100`]),
   ]);
-  const checkRuns = flattenGitHubPages(checkPages, 'check_runs');
   const releases = flattenGitHubPages(releasePages);
   const snapshot = await collectLifecycleSnapshot({
     tasks: index.tasks,

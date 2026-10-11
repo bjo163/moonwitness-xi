@@ -2,9 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   collectLifecycleSnapshot,
+  exactDevPushCiGate,
   flattenGitHubPages,
   parseEvidenceSourceSha,
   parseRoadmapTaskStates,
+  selectExactDevPushCiRun,
 } from './collect-lifecycle-snapshot.mjs';
 import { projectLifecycleSnapshot } from './lifecycle-snapshot.mjs';
 
@@ -33,6 +35,50 @@ test('flattens every GitHub CLI pagination page and rejects malformed page shape
   ]);
   assert.throws(() => flattenGitHubPages({}, 'check_runs'), /pagination returned/u);
   assert.throws(() => flattenGitHubPages([{ check_runs: null }], 'check_runs'), /page has/u);
+});
+
+test('selects the exact dev push CI gate and ignores same-SHA PR gate failures', () => {
+  const run = selectExactDevPushCiRun(
+    [
+      {
+        workflow_runs: [
+          {
+            id: 9,
+            event: 'pull_request',
+            head_branch: 'dev',
+            head_sha: devSha,
+            status: 'completed',
+          },
+          {
+            id: 8,
+            event: 'workflow_dispatch',
+            head_branch: 'dev',
+            head_sha: devSha,
+            status: 'completed',
+          },
+          { id: 7, event: 'push', head_branch: 'main', head_sha: devSha, status: 'completed' },
+          { id: 6, event: 'push', head_branch: 'dev', head_sha: sourceSha, status: 'completed' },
+          { id: 10, event: 'push', head_branch: 'dev', head_sha: devSha, status: 'in_progress' },
+        ],
+      },
+    ],
+    devSha
+  );
+  assert.equal(run.id, 10);
+  assert.deepEqual(
+    exactDevPushCiGate(run, [
+      {
+        jobs: [
+          { id: 20, name: 'quality', status: 'completed', conclusion: 'success' },
+          { id: 22, name: 'ci-gate', status: 'completed', conclusion: 'failure' },
+          { id: 21, name: 'ci-gate', status: 'completed', conclusion: 'success' },
+        ],
+      },
+    ]),
+    { id: 22, name: 'ci-gate', head_sha: devSha, status: 'completed', conclusion: 'failure' }
+  );
+  assert.equal(exactDevPushCiGate(run, [{ jobs: [] }]), undefined);
+  assert.equal(selectExactDevPushCiRun([{ workflow_runs: [] }], devSha), undefined);
 });
 
 test('parses the explicit source commit marker and derives canonical roadmap task states', () => {
