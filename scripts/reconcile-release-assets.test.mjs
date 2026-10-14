@@ -145,13 +145,20 @@ test('stops after an accepted upload when remote verification is unavailable', a
   let inventoryReads = 0;
   adapter.listAssets = async () => {
     inventoryReads += 1;
-    if (inventoryReads > 1) throw new Error('simulated GitHub API outage');
-    return [];
+    if (inventoryReads === 2) throw new Error('simulated GitHub API outage');
+    return [...adapter.assets.values()];
   };
 
   await assert.rejects(reconcile(adapter), /Unable to verify release asset/u);
   assert.deepEqual(adapter.uploads, [files[0].name]);
   assert.deepEqual([...adapter.assets.keys()], [files[0].name]);
+
+  const retry = await reconcile(adapter);
+  assert.deepEqual(
+    retry.map(({ action }) => action),
+    ['reused', 'uploaded']
+  );
+  assert.deepEqual(adapter.uploads, [files[0].name, files[1].name]);
 });
 
 test('rejects a wrong digest or byte size observed after upload', async () => {
