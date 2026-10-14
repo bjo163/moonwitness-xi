@@ -1,8 +1,10 @@
-# Feature coverage inventory (local rechecks through `e48af9e`; 2026-10-14)
+# Feature coverage inventory (local rechecks through `f44347d`; 2026-10-14)
 
 This report expands the initial [feature-to-test matrix](feature-matrix.md) with an explicit status, priority, accountable role, executed assertion references, and remaining gap for every inventory row. It is a coverage inventory, not a claim that every feature is release-ready.
 
 ## Latest exact-head execution
+
+- Local authorization recheck at exact `dev` source `f44347db8202842ef036d410e02ec00f1c0c343f`: API auth tests passed 38/38; the PostgreSQL integration file's 11 tests skipped because no `POSTGRES_TEST_URL` is configured and the Docker daemon is unavailable. The group-granted department fixture allows create/write but denies unlink and verifies the row remains unchanged in both SQLite/API and the hosted PostgreSQL test. API build, ESLint, Prettier and diff checks passed.
 
 - Local PostgreSQL tenant-create/write regressions at exact `dev` source `e48af9eaba50fda4769f2ee6fc2aeb42abf7bdca`: auth tests passed 38/38; the PostgreSQL integration file's 11 tests were skipped because `POSTGRES_TEST_URL` is unavailable locally. The test asserts persisted same-company writes and unchanged foreign-row denial for `base.partner` and `organization.department`, plus persisted same-company department creation and denied foreign-company department creation with no row left behind. API build, ESLint, Prettier and diff checks passed. Exact-source hosted checks are still asynchronous; the PostgreSQL assertions are not yet counted as executed.
 
