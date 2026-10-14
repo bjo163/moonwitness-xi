@@ -44,17 +44,40 @@ Buka `http://localhost:5173`. Board mem-proxy `/api`, `/auth`, `/jsonrpc`, dan `
 lokal. Login dengan `superadmin` dan password development yang ditetapkan di `.env`. Seed contoh
 berisi company, user, partner, dan data referensi; gunakan hanya untuk eksplorasi lokal.
 
-## 4. Verifikasi perubahan
+## 4. Jalankan tes PostgreSQL terisolasi
+
+Tes PostgreSQL membutuhkan database kosong dengan nama yang mengandung `test` atau `e2e`.
+Buat database sementara dari service Compose dan arahkan `POSTGRES_TEST_URL` ke sana. Jangan gunakan
+`moonwitness_db` atau database yang berisi data yang ingin disimpan.
+
+```bash
+docker compose exec -T postgres createdb -U postgres moonwitness_local_test
+export POSTGRES_TEST_URL=postgresql://postgres:postgres@127.0.0.1:5432/moonwitness_local_test
+pnpm test:integration
+docker compose exec -T postgres dropdb -U postgres moonwitness_local_test
+```
+
+Di PowerShell, gunakan assignment berikut untuk baris environment:
+
+```powershell
+$env:POSTGRES_TEST_URL = 'postgresql://postgres:postgres@127.0.0.1:5432/moonwitness_local_test'
+```
+
+Jika tes gagal, tetap hapus database sementara setelah memeriksa bahwa namanya tepat `moonwitness_local_test`:
+`docker compose exec -T postgres dropdb -U postgres moonwitness_local_test`. Jalankan tes secara serial
+untuk database tersebut; setiap run E2E paralel perlu nama database disposable yang berbeda.
+
+## 5. Verifikasi perubahan
 
 ```bash
 pnpm verify
-pnpm test:integration
 ```
 
 `pnpm verify` menjalankan lint, format, build/typecheck, unit test, architecture checks, serta
-docs checks. Tes PostgreSQL membutuhkan `POSTGRES_TEST_URL` yang menunjuk database test terisolasi;
-tes membuat dan menghapus schema acak sendiri. Hasil yang diharapkan adalah command berakhir dengan
-exit code 0. Jangan menjalankan tes yang membuat/menghapus schema pada database berisi data penting.
+docs checks. `pnpm test:integration` membangun workspace, typecheck test integrasi, lalu menjalankan
+test PostgreSQL dan performance pada schema acak di database yang ditunjuk `POSTGRES_TEST_URL`;
+perintah tes tidak membuat atau menghapus database luarnya. Hasil yang diharapkan adalah command
+berakhir dengan exit code 0. Jangan jalankan test pada database berisi data penting.
 
 Untuk menghentikan service lokal, jalankan `docker compose down`. Tambahkan `-v` hanya bila memang
 ingin menghapus volume database development dan seluruh seed/perubahan lokal.
