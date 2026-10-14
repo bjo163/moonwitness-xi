@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "442d26ca69337b85980aeda2e17077069e3149b9fd4537e2d1c3d6eef05d7185",
+  "generatedFromSha256": "b622bc768d1528e30b2a007d4d1f0c43e76fbc93d412739ad95979b595d9fb4c",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -265,7 +265,7 @@
       "docs:generate": "pnpm --filter @moonwitness/types build && pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && pnpm --filter @moonwitness/orm-integration build && pnpm --filter @moonwitness/orm-notification build && pnpm --filter @moonwitness/orm-organization build && pnpm --filter @moonwitness/orm-workflow build && pnpm --filter @moonwitness/orm-request build && pnpm --filter @moonwitness/orm-storage build && node scripts/docs/generate-reference.mjs && node scripts/docs/update-readme.mjs",
       "docs:links": "node scripts/check-docs.mjs && node scripts/check-doc-navigation.mjs && node --test scripts/check-docs.test.mjs scripts/check-doc-navigation.test.mjs scripts/check-external-doc-links.test.mjs",
       "docs:links:external": "node scripts/check-external-doc-links.mjs",
-      "docs:publication:check": "node scripts/check-docs-publication.mjs",
+      "docs:publication:check": "node scripts/check-docs-publication.mjs apps/docs/dist",
       "format": "prettier --write .",
       "format:check": "prettier --check .",
       "jobs:outbox": "pnpm --filter @moonwitness/api jobs:outbox",

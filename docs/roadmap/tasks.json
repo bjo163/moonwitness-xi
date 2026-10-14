@@ -1226,6 +1226,7 @@
     },
     {
       "id": "M10.09",
+      "evidence": "docs/roadmap/evidence/M10.09.md",
       "title": "README/Pages/asset catalog sesuai source dan release; tidak ada secret atau data pengguna dalam output publik.",
       "milestone": "M10",
       "dependsOn": ["M6.09", "M5.15", "M10.07"],
