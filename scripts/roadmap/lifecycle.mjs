@@ -115,6 +115,8 @@ export function evaluateTaskLifecycle(input) {
     const release = input.releaseManifest;
     if (!sourceSha || !isFullSha(release.sourceSha))
       throw new Error('Release provenance must contain the task source SHA.');
+    if (release.sourceSha !== sourceSha)
+      throw new Error('Release provenance source SHA must match the task source SHA.');
     if (input.sourceInMain !== true)
       throw new Error('A release cannot be accepted before the source is verified in main.');
     if (
