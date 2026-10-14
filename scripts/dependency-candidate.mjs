@@ -4,6 +4,7 @@ import { dirname, join, resolve, relative } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { COMPATIBILITY_REVIEW_GATES } from './dependency-update-plan.mjs';
+import { resolvePackageManager } from './package-manager.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const VERSION = /^(?:\^|~|>=)?v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)$/;
@@ -16,11 +17,19 @@ function parseVersion(value, label) {
 }
 
 function command(executable, args, cwd, capture = false) {
+  const packageManager = executable === 'pnpm' ? resolvePackageManager() : undefined;
+  if (executable === 'pnpm' && !packageManager) {
+    throw new Error('Run dependency candidate commands through pnpm on this platform.');
+  }
+  const commandName = packageManager?.command ?? executable;
+  const commandArgs = [...(packageManager?.prefixArgs ?? []), ...args];
   try {
-    const output = execFileSync(executable, args, {
+    const output = execFileSync(commandName, commandArgs, {
       cwd,
       encoding: 'utf8',
       stdio: capture ? ['ignore', 'pipe', 'pipe'] : 'inherit',
+      ...(packageManager?.shell ? { shell: true } : {}),
+      windowsHide: true,
     });
     return capture ? output.trim() : '';
   } catch (error) {

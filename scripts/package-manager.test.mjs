@@ -22,19 +22,22 @@ test('uses the pnpm CLI path supplied by a package-manager script', () => {
 });
 
 test('falls back to the installed pnpm command when npm_execpath is absent', () => {
-  const command = platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
   const result = resolvePackageManager({}, platform);
 
-  assert.deepEqual(result, {
-    command,
-    prefixArgs: [],
-    shell: false,
-  });
+  assert.equal(result?.shell, false);
+  if (platform === 'win32') {
+    assert.equal(result?.command, execPath);
+    assert.match(
+      result?.prefixArgs[0] ?? '',
+      /node_modules[\\/]pnpm[\\/]bin[\\/]pnpm\.(?:mjs|cjs)$/u
+    );
+  } else {
+    assert.deepEqual(result, { command: 'pnpm', prefixArgs: [], shell: false });
+  }
 });
 
 test('ignores a stale npm_execpath and uses PATH fallback', () => {
   const result = resolvePackageManager({ npm_execpath: 'missing-pnpm-runtime.cjs' }, platform);
 
-  assert.equal(result?.prefixArgs.length, 0);
-  assert.equal(result?.command, platform === 'win32' ? 'pnpm.cmd' : 'pnpm');
+  assert.deepEqual(result, resolvePackageManager({}, platform));
 });

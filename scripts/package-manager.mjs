@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { dirname, join } from 'node:path';
 import { env, execPath, platform } from 'node:process';
 
 /** Resolve the pnpm executable for both direct CLI use and CI shell invocations. */
@@ -9,12 +10,29 @@ export function resolvePackageManager(environment = env, operatingSystem = platf
     return { command: execPath, prefixArgs: [cli], shell: false };
   }
 
-  const command = operatingSystem === 'win32' ? 'pnpm.cmd' : 'pnpm';
-  const probe = spawnSync(command, ['--version'], {
+  let command = 'pnpm';
+  let prefixArgs = [];
+  if (operatingSystem === 'win32') {
+    const locatedShim = spawnSync('where.exe', ['pnpm.cmd'], {
+      encoding: 'utf8',
+      windowsHide: true,
+    });
+    const shimPath = locatedShim.status === 0 ? locatedShim.stdout.trim().split(/\r?\n/u)[0] : '';
+    const pnpmCli = shimPath
+      ? ['mjs', 'cjs']
+          .map((extension) =>
+            join(dirname(shimPath), 'node_modules', 'pnpm', 'bin', `pnpm.${extension}`)
+          )
+          .find((path) => existsSync(path))
+      : undefined;
+    if (!pnpmCli) return undefined;
+    command = execPath;
+    prefixArgs = [pnpmCli];
+  }
+  const probe = spawnSync(command, [...prefixArgs, '--version'], {
     encoding: 'utf8',
-    ...(operatingSystem === 'win32' ? { shell: true } : {}),
     windowsHide: true,
   });
   if (probe.status !== 0 || probe.error) return undefined;
-  return { command, prefixArgs: [], shell: false };
+  return { command, prefixArgs, shell: false };
 }
