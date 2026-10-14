@@ -1,8 +1,10 @@
-# Feature coverage at `aad9d5e` (hosted execution refreshed 2026-10-11)
+# Feature coverage inventory (local recheck 2026-10-14; source `972486f`)
 
 This report expands the initial [feature-to-test matrix](feature-matrix.md) with an explicit status, priority, accountable role, executed assertion references, and remaining gap for every inventory row. It is a coverage inventory, not a claim that every feature is release-ready.
 
 ## Latest exact-head execution
+
+- Local recheck on source `972486f49646acdbb53502d46327e118e15696a3`: `pnpm --filter @moonwitness/api exec vitest run tests/auth.test.ts tests/orm.test.ts` passed 51/51 tests across two files. `POSTGRES_TEST_URL` is not configured in this environment, so this recheck does not claim a local PostgreSQL run. The matrix below remains an inventory with known open gaps: persisted mutations are not exercised for every action on all 41 models; audit retention/storage lifecycle and promoted-SHA release acceptance remain incomplete. Older hosted results below are retained as historical evidence and do not become exact-head evidence for this source.
 
 - Exact source SHA `fd30f79d2f90789a6253e8b0c4fa745ea781a2a4`: targeted company-scoped authorization for a group-granted `organization.department` passed SQLite/API and hosted PostgreSQL + browser CI. PR CI [38104134527](https://github.com/bjo163/moonwitness-xi/actions/runs/38104134527) passed all technical jobs; push CI [38104130305](https://github.com/bjo163/moonwitness-xi/actions/runs/38104130305) passed all enabled technical jobs. CodeQL/Gitleaks passed on push and PR; Pages preview passed. Both aggregate gates require fresh CODEOWNER approval for PR #24. See [M10.01 evidence](../roadmap/evidence/M10.01.md). This adds a targeted addon tenant-isolation case and does not close the full matrix.
 
