@@ -37,11 +37,12 @@ test('flattens every GitHub CLI pagination page and rejects malformed page shape
   assert.throws(() => flattenGitHubPages([{ check_runs: null }], 'check_runs'), /page has/u);
 });
 
-test('selects the exact dev push CI gate and ignores same-SHA PR gate failures', () => {
+test('selects the newest exact dev push and CI gate when workflow events arrive out of order', () => {
   const run = selectExactDevPushCiRun(
     [
       {
         workflow_runs: [
+          { id: 10, event: 'push', head_branch: 'dev', head_sha: devSha, status: 'in_progress' },
           {
             id: 9,
             event: 'pull_request',
@@ -58,7 +59,6 @@ test('selects the exact dev push CI gate and ignores same-SHA PR gate failures',
           },
           { id: 7, event: 'push', head_branch: 'main', head_sha: devSha, status: 'completed' },
           { id: 6, event: 'push', head_branch: 'dev', head_sha: sourceSha, status: 'completed' },
-          { id: 10, event: 'push', head_branch: 'dev', head_sha: devSha, status: 'in_progress' },
         ],
       },
     ],
@@ -113,8 +113,8 @@ test('collects current checks and ancestry without confusing evidence SHA with i
     sourceSha: planSha,
     branchHeads: { dev: devSha, main: mainSha },
     checkRuns: [
-      { id: 1, name: 'ci-gate', head_sha: devSha, status: 'completed', conclusion: 'failure' },
       { id: 2, name: 'ci-gate', head_sha: devSha, status: 'completed', conclusion: 'success' },
+      { id: 1, name: 'ci-gate', head_sha: devSha, status: 'completed', conclusion: 'failure' },
       { id: 3, name: 'ci-gate', head_sha: sourceSha, status: 'completed', conclusion: 'success' },
       { id: 4, name: 'CodeQL', head_sha: devSha, status: 'completed', conclusion: 'success' },
     ],
