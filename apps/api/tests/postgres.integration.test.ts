@@ -1410,6 +1410,18 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       company_id: localCompany.id,
     });
 
+    const deniedCompanyReassignment = await app.inject({
+      method: 'PATCH',
+      url: `/api/base.partner/${localPartner.id}`,
+      headers,
+      payload: { company_id: foreignCompany.id },
+    });
+    expect(deniedCompanyReassignment.statusCode).toBe(403);
+    expect(await Partner.query().findById(localPartner.id)).toMatchObject({
+      name: 'PostgreSQL Tenant Contact Updated',
+      company_id: localCompany.id,
+    });
+
     const deniedForeignWrite = await app.inject({
       method: 'PATCH',
       url: `/api/base.partner/${foreignPartner.id}`,
