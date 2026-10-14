@@ -15,6 +15,7 @@ import {
   ModelAccess,
   Language,
   Partner,
+  Tag,
   Sequence,
   User,
   initializeSuperadminPassword,
@@ -934,6 +935,36 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     expect(deniedForeignParentDownload.payload).not.toContain('company-scoped attachment');
     expect(postgresAttachmentGetCalls).toBe(getCallsBeforeForeignParentDownload);
     await Partner.query().findById(localPartner.id).patch({ company_id: localCompany.id });
+    const archivedParent = await Tag.query().insertAndFetch({
+      name: 'PostgreSQL Archived Attachment Parent',
+    });
+    const archivedParentUpload = await app.inject({
+      method: 'POST',
+      url: `/api/base.attachment/upload?resource_model=base.tag&resource_id=${archivedParent.id}&name=archived-parent.txt`,
+      headers: {
+        ...headers,
+        'content-type': 'application/octet-stream',
+        'x-file-mime': 'text/plain',
+      },
+      payload: Buffer.from('archived parent content'),
+    });
+    expect(archivedParentUpload.statusCode, archivedParentUpload.payload).toBe(201);
+    const archivedParentAttachmentId = archivedParentUpload.json<{ data: { id: number } }>().data
+      .id;
+    await Tag.query().findById(archivedParent.id).patch({ active: false });
+    try {
+      const getCallsBeforeArchivedParentDownload = postgresAttachmentGetCalls;
+      const deniedArchivedParentDownload = await app.inject({
+        method: 'GET',
+        url: `/api/base.attachment/${archivedParentAttachmentId}/download`,
+        headers,
+      });
+      expect(deniedArchivedParentDownload.statusCode).toBe(404);
+      expect(deniedArchivedParentDownload.payload).not.toContain('archived parent content');
+      expect(postgresAttachmentGetCalls).toBe(getCallsBeforeArchivedParentDownload);
+    } finally {
+      await Tag.query().findById(archivedParent.id).patch({ active: true });
+    }
 
     const listed = await app.inject({
       method: 'GET',

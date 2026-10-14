@@ -157,6 +157,8 @@ describe('authentication and authorization', () => {
       name: 'Attachment Scope Foreign Company',
     });
     let attachmentId: number | undefined;
+    let archivedTagId: number | undefined;
+    let archivedAttachmentId: number | undefined;
 
     try {
       const uploaded = await as(alice.access_token, {
@@ -178,16 +180,40 @@ describe('authentication and authorization', () => {
       expect(denied.statusCode).toBe(404);
       expect(denied.payload).not.toContain('private parent content');
       expect(attachmentGetCalls).toBe(getCallsBeforeDeniedDownload);
+
+      await Partner.query().findById(partner.id).patch({ company_id: originalCompanyId });
+      const archivedTag = await Tag.query().insertAndFetch({ name: 'Archived Attachment Parent' });
+      archivedTagId = archivedTag.id;
+      const archivedUpload = await as(alice.access_token, {
+        method: 'POST',
+        url: `/api/base.attachment/upload?resource_model=base.tag&resource_id=${archivedTag.id}&name=archived-parent.txt`,
+        headers: { 'content-type': 'application/octet-stream', 'x-file-mime': 'text/plain' },
+        payload: Buffer.from('archived parent content'),
+      });
+      expect(archivedUpload.statusCode, archivedUpload.payload).toBe(201);
+      archivedAttachmentId = archivedUpload.json<{ data: { id: number } }>().data.id;
+      await Tag.query().findById(archivedTag.id).patch({ active: false });
+      const getCallsBeforeArchivedParentDownload = attachmentGetCalls;
+      const deniedArchivedParent = await as(alice.access_token, {
+        method: 'GET',
+        url: `/api/base.attachment/${archivedAttachmentId}/download`,
+      });
+
+      expect(deniedArchivedParent.statusCode).toBe(404);
+      expect(deniedArchivedParent.payload).not.toContain('archived parent content');
+      expect(attachmentGetCalls).toBe(getCallsBeforeArchivedParentDownload);
     } finally {
       await Partner.query().findById(partner.id).patch({ company_id: originalCompanyId });
-      if (attachmentId !== undefined) {
+      for (const id of [attachmentId, archivedAttachmentId]) {
+        if (id === undefined) continue;
         const attachment = await db('attachments')
           .select('storage_key')
-          .where({ id: attachmentId })
+          .where({ id })
           .first<{ storage_key: string }>();
-        await db('attachments').where({ id: attachmentId }).delete();
+        await db('attachments').where({ id }).delete();
         if (attachment) await attachmentStorage.delete(attachment.storage_key);
       }
+      if (archivedTagId !== undefined) await Tag.query().deleteById(archivedTagId);
       await Company.query().deleteById(foreignCompany.id);
       if (existingGrant) {
         await ModelAccess.query().findById(grant.id).patch({
