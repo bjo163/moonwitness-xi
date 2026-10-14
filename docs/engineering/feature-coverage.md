@@ -1,8 +1,10 @@
-# Feature coverage inventory (local rechecks through `1db483f`; 2026-10-14)
+# Feature coverage inventory (local rechecks through `e48af9e`; 2026-10-14)
 
 This report expands the initial [feature-to-test matrix](feature-matrix.md) with an explicit status, priority, accountable role, executed assertion references, and remaining gap for every inventory row. It is a coverage inventory, not a claim that every feature is release-ready.
 
 ## Latest exact-head execution
+
+- Local PostgreSQL tenant-create/write regressions at exact `dev` source `e48af9eaba50fda4769f2ee6fc2aeb42abf7bdca`: auth tests passed 38/38; the PostgreSQL integration file's 11 tests were skipped because `POSTGRES_TEST_URL` is unavailable locally. The test asserts persisted same-company writes and unchanged foreign-row denial for `base.partner` and `organization.department`, plus persisted same-company department creation and denied foreign-company department creation with no row left behind. API build, ESLint, Prettier and diff checks passed. Exact-source hosted checks are still asynchronous; the PostgreSQL assertions are not yet counted as executed.
 
 - Local PostgreSQL tenant-write regressions at exact `dev` source `c8a9c1938f22447511523bbd47ab2ac1ba9b75b6`: `pnpm --filter @moonwitness/api exec vitest run tests/auth.test.ts tests/postgres.integration.test.ts` passed auth 38/38; the PostgreSQL integration file's 11 tests were skipped because `POSTGRES_TEST_URL` is unavailable locally. The integration fixture now asserts that same-company group-granted writes persist and foreign-company updates return 404 without changing data for both `base.partner` and `organization.department`; none of these new PostgreSQL assertions executed locally. Exact-source CI [38590724151](https://github.com/bjo163/moonwitness-xi/actions/runs/38590724151) and CodeQL [38590724408](https://github.com/bjo163/moonwitness-xi/actions/runs/38590724408) were pending, and Gitleaks [38590724442](https://github.com/bjo163/moonwitness-xi/actions/runs/38590724442) was queued at observation. The full model × role × action matrix, audit retention/storage and promoted-SHA acceptance remain open.
 
