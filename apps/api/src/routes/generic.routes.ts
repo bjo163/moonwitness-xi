@@ -346,7 +346,8 @@ async function hasValidResourceReference(
     resourceId < 1
   )
     return false;
-  return Boolean(await req.env.get(resourceModel).query(trx).findById(resourceId));
+  const Resource = Registry.get(resourceModel);
+  return Boolean(await scopedRecord(req, Resource, resourceModel, resourceId, true, trx));
 }
 
 const PROTECTED_ACCESS_MODELS = new Set([

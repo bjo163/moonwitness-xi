@@ -1316,6 +1316,43 @@ describe('authentication and authorization', () => {
         write: true,
       });
       const partner = await Partner.query().findById(alice.user.partner_id).throwIfNotFound();
+      const foreignCompany = await Company.query().insert({ name: 'Activity Foreign Company' });
+      const foreignPartner = await Partner.query().insert({
+        name: 'Activity Foreign Partner',
+        company_id: foreignCompany.id,
+      });
+
+      const deniedForeignParent = await as(alice.access_token, {
+        method: 'POST',
+        url: '/api/base.activity',
+        payload: {
+          summary: 'Must not reference another company',
+          resource_model: Partner.modelName,
+          resource_id: foreignPartner.id,
+        },
+      });
+      expect(deniedForeignParent.statusCode).toBe(400);
+      expect(
+        await Activity.query().findOne({ summary: 'Must not reference another company' })
+      ).toBeUndefined();
+      const deniedRpcForeignParent = await rpc(alice.access_token, [
+        'base.activity',
+        'create',
+        [
+          {
+            summary: 'Must not RPC-reference another company',
+            resource_model: Partner.modelName,
+            resource_id: foreignPartner.id,
+          },
+        ],
+      ]);
+      expect(deniedRpcForeignParent.statusCode).toBe(200);
+      expect(deniedRpcForeignParent.json<{ error: { message: string } }>().error.message).toBe(
+        'Invalid related record reference'
+      );
+      expect(
+        await Activity.query().findOne({ summary: 'Must not RPC-reference another company' })
+      ).toBeUndefined();
 
       const created = await as(alice.access_token, {
         method: 'POST',
@@ -1330,6 +1367,17 @@ describe('authentication and authorization', () => {
       const activityId = created.json<{ data: { id: number } }>().data.id;
       expect(await Activity.query().findById(activityId)).toMatchObject({
         summary: 'Review customer request',
+        resource_model: Partner.modelName,
+        resource_id: partner.id,
+      });
+
+      const deniedForeignReassignment = await as(alice.access_token, {
+        method: 'PATCH',
+        url: `/api/base.activity/${activityId}`,
+        payload: { resource_id: foreignPartner.id },
+      });
+      expect(deniedForeignReassignment.statusCode).toBe(400);
+      expect(await Activity.query().findById(activityId)).toMatchObject({
         resource_model: Partner.modelName,
         resource_id: partner.id,
       });

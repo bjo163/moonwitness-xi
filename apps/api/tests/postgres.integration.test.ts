@@ -1038,6 +1038,20 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       create: true,
       write: true,
     });
+    const deniedForeignActivity = await app.inject({
+      method: 'POST',
+      url: '/api/base.activity',
+      headers,
+      payload: {
+        summary: 'Must not reference a foreign PostgreSQL partner',
+        resource_model: Partner.modelName,
+        resource_id: foreignPartner.id,
+      },
+    });
+    expect(deniedForeignActivity.statusCode).toBe(400);
+    expect(
+      await Activity.query().findOne({ summary: 'Must not reference a foreign PostgreSQL partner' })
+    ).toBeUndefined();
     const createdActivity = await app.inject({
       method: 'POST',
       url: '/api/base.activity',
@@ -1052,6 +1066,17 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     const createdActivityId = createdActivity.json<{ data: { id: number } }>().data.id;
     expect(await Activity.query().findById(createdActivityId)).toMatchObject({
       summary: 'PostgreSQL customer follow-up',
+      resource_model: Partner.modelName,
+      resource_id: localPartner.id,
+    });
+    const deniedForeignActivityReassignment = await app.inject({
+      method: 'PATCH',
+      url: `/api/base.activity/${createdActivityId}`,
+      headers,
+      payload: { resource_id: foreignPartner.id },
+    });
+    expect(deniedForeignActivityReassignment.statusCode).toBe(400);
+    expect(await Activity.query().findById(createdActivityId)).toMatchObject({
       resource_model: Partner.modelName,
       resource_id: localPartner.id,
     });
