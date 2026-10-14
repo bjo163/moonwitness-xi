@@ -182,11 +182,48 @@ test('a failing full-suite E2E gate stops the candidate before container smoke c
     );
     assert.ok(executed.some((entry) => entry.endsWith(' test:e2e')));
     assert.equal(
-      executed.some((entry) => entry.includes('smoke-containers.sh')),
+      executed.some((entry) => entry.includes('smoke-containers.mjs')),
       false
     );
   } finally {
     rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('uses native browser installation semantics and cross-platform container smoke', async () => {
+  for (const [platform, expectedInstall] of [
+    ['linux', 'install --with-deps chromium'],
+    ['win32', 'install chromium'],
+  ]) {
+    const fixture = workspace();
+    const executed = [];
+    try {
+      await runCandidate({
+        packageName: 'is-number',
+        version: '7.0.2',
+        sourceSha: fixture.sourceSha,
+        expectedSourceSha: fixture.sourceSha,
+        root: fixture.root,
+        platform,
+        execute: (executable, args, cwd) => {
+          executed.push(`${executable} ${args.join(' ')}`);
+          if (executable === 'pnpm' && args.includes('add')) {
+            const manifestPath = join(args[args.indexOf('--dir') + 1], 'package.json');
+            const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+            const section = Object.hasOwn(manifest.dependencies ?? {}, 'is-number')
+              ? 'dependencies'
+              : 'devDependencies';
+            manifest[section]['is-number'] = '7.0.2';
+            writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+            writeFileSync(join(cwd, 'pnpm-lock.yaml'), "lockfileVersion: '9.0'\n");
+          }
+        },
+      });
+      assert.ok(executed.some((entry) => entry.endsWith(expectedInstall)));
+      assert.ok(executed.some((entry) => entry === 'node scripts/smoke-containers.mjs'));
+    } finally {
+      rmSync(fixture.root, { recursive: true, force: true });
+    }
   }
 });
 

@@ -172,6 +172,7 @@ export async function runCandidate({
   expectedSourceSha,
   root = ROOT,
   execute = command,
+  platform = process.platform,
 }) {
   const result = await applyCandidate({
     packageName,
@@ -182,16 +183,15 @@ export async function runCandidate({
     execute,
   });
   execute('pnpm', ['--dir', root, 'install', '--frozen-lockfile'], root);
-  execute(
-    'pnpm',
-    ['--dir', root, 'exec', 'playwright', 'install', '--with-deps', 'chromium'],
-    root
-  );
+  const playwrightInstall = ['--dir', root, 'exec', 'playwright', 'install'];
+  if (platform === 'linux') playwrightInstall.push('--with-deps');
+  playwrightInstall.push('chromium');
+  execute('pnpm', playwrightInstall, root);
   for (const gate of COMPATIBILITY_REVIEW_GATES) {
     execute('pnpm', ['--dir', root, ...gate.split(' ').slice(1)], root);
   }
   execute('pnpm', ['--dir', root, '--filter', '@moonwitness/board', 'lint'], root);
-  execute('bash', ['scripts/smoke-containers.sh'], root);
+  execute('node', ['scripts/smoke-containers.mjs'], root);
   return result;
 }
 

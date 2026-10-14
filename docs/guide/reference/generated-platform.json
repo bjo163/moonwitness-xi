@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "663a5abeda86bb89030fc08c91c1390234f639c7af10df3c2b91e844e2feeae4",
+  "generatedFromSha256": "3cebb13f1c817eea5951ab0b2ae30a4d25712fc2bb03f4bab12c596f470bd595",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -302,7 +302,7 @@
       "test:board-csv": "node --experimental-strip-types --test scripts/board/csv-export.test.mjs",
       "test:ci-gate": "node --test scripts/ci-gate.test.mjs",
       "test:coverage-policy": "node --test scripts/check-coverage.test.mjs",
-      "test:dependency-candidate": "node --test scripts/dependency-candidate.test.mjs",
+      "test:dependency-candidate": "node --test scripts/dependency-candidate.test.mjs scripts/smoke-containers.test.mjs",
       "test:dependency-plan": "node --test scripts/dependency-update-plan.test.mjs",
       "test:docs-navigation": "node --test scripts/check-doc-navigation.test.mjs",
       "test:docs-portal": "pnpm docs:build && pnpm --filter @moonwitness/docs test",
