@@ -1,8 +1,10 @@
-# Feature coverage inventory (local rechecks through `de8e389`; 2026-10-15)
+# Feature coverage inventory (local rechecks through `f4dd33f`; 2026-10-15)
 
 This report expands the initial [feature-to-test matrix](feature-matrix.md) with an explicit status, priority, accountable role, executed assertion references, and remaining gap for every inventory row. It is a coverage inventory, not a claim that every feature is release-ready.
 
 ## Latest exact-head execution
+
+- Full `pnpm verify` passed on the exact tree committed as `f4dd33f`: ESLint, Prettier, workspace and Board typecheck/build, API 122/122, all configured package/unit, addon conformance, assets/UI, architecture, release/security policy suites, documentation references/examples/links, and GitHub Pages build. One existing Windows-guarded Linux container smoke test was skipped. The canonical PostgreSQL integration/performance suite separately passed 13/13 at `de8e389`; Board responsive visual/accessibility matrix passed 9/9 at that same source. Hosted exact-candidate checks, Linux container smoke, and protected-main promotion remain separate.
 
 - On exact `dev` test source `de8e389`, local PostgreSQL 16.15 integration/performance passed 13/13, including immediate denial and persisted-row preservation after deactivating a dedicated `base.partner` group membership while reusing the same access token. Board responsive visual/accessibility matrix passed 9/9 across Chromium, Firefox, and WebKit after adding mobile Axe scans for all five protected views in both themes. Workspace typecheck/build and lint, targeted ESLint/Prettier, and `git diff --check` passed. These test-only additions do not close the broader M10.01 authorization/retention matrix or hosted release-candidate acceptance.
 
