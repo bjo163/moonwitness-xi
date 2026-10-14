@@ -52,15 +52,23 @@ Buat database sementara dari service Compose dan arahkan `POSTGRES_TEST_URL` ke 
 
 ```bash
 docker compose exec -T postgres createdb -U postgres moonwitness_local_test
-export POSTGRES_TEST_URL=postgresql://postgres:postgres@127.0.0.1:5432/moonwitness_local_test
+pg_user="$(docker compose exec -T postgres printenv POSTGRES_USER | tr -d '\r\n')"
+pg_password="$(docker compose exec -T postgres printenv POSTGRES_PASSWORD | tr -d '\r\n')"
+export POSTGRES_TEST_URL='postgresql://'
+POSTGRES_TEST_URL+="${pg_user}:${pg_password}@127.0.0.1:5432/moonwitness_local_test"
 pnpm test:integration
 docker compose exec -T postgres dropdb -U postgres moonwitness_local_test
 ```
 
-Di PowerShell, gunakan assignment berikut untuk baris environment:
+Di PowerShell, gunakan perintah berikut untuk menyiapkan environment tanpa menampilkan kredensial:
 
 ```powershell
-$env:POSTGRES_TEST_URL = 'postgresql://postgres:postgres@127.0.0.1:5432/moonwitness_local_test'
+$pgUser = (docker compose exec -T postgres printenv POSTGRES_USER).Trim()
+$pgPassword = (docker compose exec -T postgres printenv POSTGRES_PASSWORD).Trim()
+$env:POSTGRES_TEST_URL = 'postgresql://'
+$env:POSTGRES_TEST_URL += "${pgUser}:${pgPassword}@127.0.0.1:5432/moonwitness_local_test"
+pnpm test:integration
+docker compose exec -T postgres dropdb -U postgres moonwitness_local_test
 ```
 
 Jika tes gagal, tetap hapus database sementara setelah memeriksa bahwa namanya tepat `moonwitness_local_test`:
