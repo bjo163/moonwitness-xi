@@ -127,20 +127,9 @@ export async function applyCandidate({
   }
 
   for (const declaration of changedDeclarations) {
-    const manifestRelative = relative(root, declaration.manifestPath).replaceAll('\\', '/');
-    const addDirectory = relative(root, dirname(declaration.manifestPath)) || '.';
-    const addArgs = [
-      '--dir',
-      join(root, addDirectory),
-      'add',
-      '--save-exact',
-      '--ignore-scripts',
-      `${packageName}@${exactVersion}`,
-    ];
-    if (manifestRelative === 'package.json') addArgs.push('--workspace-root');
-    if (declaration.section === 'devDependencies') addArgs.push('--save-dev');
-    if (declaration.section === 'optionalDependencies') addArgs.push('--save-optional');
-    execute('pnpm', addArgs, root);
+    const manifest = await manifestAt(declaration.manifestPath);
+    manifest[declaration.section][packageName] = exactVersion;
+    await writeFile(declaration.manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
   }
   execute('pnpm', ['--dir', root, 'install', '--lockfile-only', '--ignore-scripts'], root);
 

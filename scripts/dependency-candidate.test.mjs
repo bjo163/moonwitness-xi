@@ -66,14 +66,7 @@ test('applies one non-major exact package update only on the matching source SHA
       root: fixture.root,
       execute: (_executable, args, cwd) => {
         assert.equal(_executable, 'pnpm');
-        if (args.includes('add')) {
-          const manifestPath = join(args[args.indexOf('--dir') + 1], 'package.json');
-          const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-          const section = Object.hasOwn(manifest.dependencies ?? {}, 'is-number')
-            ? 'dependencies'
-            : 'devDependencies';
-          manifest[section]['is-number'] = '7.0.2';
-          writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+        if (args.includes('--lockfile-only')) {
           writeFileSync(join(cwd, 'pnpm-lock.yaml'), "lockfileVersion: '9.0'\n");
         }
       },
@@ -163,14 +156,7 @@ test('a failing full-suite E2E gate stops the candidate before container smoke c
         root: fixture.root,
         execute: (executable, args, cwd) => {
           executed.push(`${executable} ${args.join(' ')}`);
-          if (executable === 'pnpm' && args.includes('add')) {
-            const manifestPath = join(args[args.indexOf('--dir') + 1], 'package.json');
-            const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-            const section = Object.hasOwn(manifest.dependencies ?? {}, 'is-number')
-              ? 'dependencies'
-              : 'devDependencies';
-            manifest[section]['is-number'] = '7.0.2';
-            writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+          if (executable === 'pnpm' && args.includes('--lockfile-only')) {
             writeFileSync(join(cwd, 'pnpm-lock.yaml'), "lockfileVersion: '9.0'\n");
           }
           if (executable === 'pnpm' && args.includes('test:e2e')) {
@@ -207,14 +193,7 @@ test('uses native browser installation semantics and cross-platform container sm
         platform,
         execute: (executable, args, cwd) => {
           executed.push(`${executable} ${args.join(' ')}`);
-          if (executable === 'pnpm' && args.includes('add')) {
-            const manifestPath = join(args[args.indexOf('--dir') + 1], 'package.json');
-            const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-            const section = Object.hasOwn(manifest.dependencies ?? {}, 'is-number')
-              ? 'dependencies'
-              : 'devDependencies';
-            manifest[section]['is-number'] = '7.0.2';
-            writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+          if (executable === 'pnpm' && args.includes('--lockfile-only')) {
             writeFileSync(join(cwd, 'pnpm-lock.yaml'), "lockfileVersion: '9.0'\n");
           }
         },
