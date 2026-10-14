@@ -1235,6 +1235,7 @@
     },
     {
       "id": "M10.10",
+      "evidence": "docs/roadmap/evidence/M10.10.md",
       "title": "Tetapkan recurring maintenance di bawah dan catat keterbatasan tersisa sebelum milestone dinyatakan selesai.",
       "milestone": "M10",
       "dependsOn": ["M8.08", "M8.09", "M8.10", "M10.01", "M10.02", "M10.08", "M10.09"],

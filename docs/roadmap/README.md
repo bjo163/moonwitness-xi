@@ -35,6 +35,8 @@ Roadmap ini terdiri dari 148 kartu kerja. Checklist `ROADMAP.md` tetap sumber st
 
 Lihat juga [Issues dan delivery — M11.01–M11.15](11-issues-delivery.md): issue sync, lifecycle, commit/push, auto-PR/merge dan recovery.
 
+Untuk jadwal operasi, pemilik lane, eskalasi dan pemulihan, lihat [maintenance runbook](../engineering/maintenance-runbook.md).
+
 ## Gelombang pelaksanaan
 
 Nomor milestone bukan urutan serial mutlak. Gunakan dependsOn di index. Contoh: M1.06 harus menunggu M2.05 agar ruleset tidak mengunci repo sebelum check tersedia. Hosted CI adalah verifikasi setelah push, bukan antrean untuk memulai local batch independen berikutnya.
