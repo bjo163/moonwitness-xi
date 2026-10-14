@@ -93,6 +93,17 @@ test('reuses a complete verified asset set on a published release without writes
   assert.deepEqual(adapter.uploads, []);
 });
 
+test('keeps a published asset unchanged when another required asset is missing', async () => {
+  const publishedAsset = { ...files[0] };
+  const adapter = fakeAdapter([publishedAsset]);
+
+  await assert.rejects(reconcile(adapter, { isDraft: false }), /published release/u);
+
+  assert.deepEqual(adapter.uploads, []);
+  assert.deepEqual(adapter.assets.get(publishedAsset.name), publishedAsset);
+  assert.equal(adapter.assets.has(files[1].name), false);
+});
+
 test('does not upload when the initial remote inventory cannot be read', async () => {
   const adapter = fakeAdapter();
   adapter.listAssets = async () => {
@@ -114,6 +125,30 @@ test('recovers an upload accepted remotely when the CLI response is lost', async
     adapter.uploads,
     files.map(({ name }) => name)
   );
+});
+
+test('does not overwrite or report recovery for a conflicting asset after a remote write error', async () => {
+  const concurrentAsset = {
+    name: files[0].name,
+    digest: digestB,
+    size: files[0].size + 1,
+  };
+  const adapter = fakeAdapter();
+  adapter.uploadAsset = async (_tag, path) => {
+    const expected = files.find((file) => file.path === path);
+    assert.ok(expected, `unexpected upload path ${path}`);
+    adapter.uploads.push(expected.name);
+    // Model GitHub accepting a concurrent immutable asset while the CLI loses
+    // its response; the failed write must never replace the existing bytes.
+    adapter.assets.set(expected.name, concurrentAsset);
+    throw new Error('simulated lost response after immutable-name conflict');
+  };
+
+  await assert.rejects(reconcile(adapter), /conflicts with the verified file/u);
+
+  assert.deepEqual(adapter.uploads, [files[0].name]);
+  assert.deepEqual(adapter.assets.get(files[0].name), concurrentAsset);
+  assert.equal(adapter.assets.has(files[1].name), false);
 });
 
 test('resumes a partially uploaded asset set without duplicating accepted assets', async () => {
