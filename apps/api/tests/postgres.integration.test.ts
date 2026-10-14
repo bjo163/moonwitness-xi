@@ -16,6 +16,7 @@ import {
   ModelAccess,
   Language,
   Partner,
+  PartnerAddress,
   PartnerCategory,
   PartnerCategoryLink,
   Tag,
@@ -1051,6 +1052,42 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       model_name: 'base.partner_category_link',
       create: true,
     });
+    await ModelAccess.query().insert({
+      group_id: activityGroup.id,
+      model_name: 'base.partner_address',
+      create: true,
+    });
+    const allowedAddress = await app.inject({
+      method: 'POST',
+      url: '/api/base.partner_address',
+      headers,
+      payload: {
+        partner_id: localPartner.id,
+        label: 'PostgreSQL Home',
+        street: '1 Main Street',
+        city: 'Jakarta',
+      },
+    });
+    expect(allowedAddress.statusCode, allowedAddress.payload).toBe(201);
+    const allowedAddressId = allowedAddress.json<{ data: { id: number } }>().data.id;
+    expect(await PartnerAddress.query().findById(allowedAddressId)).toMatchObject({
+      partner_id: localPartner.id,
+      label: 'PostgreSQL Home',
+      street: '1 Main Street',
+    });
+    const deniedForeignAddress = await app.inject({
+      method: 'POST',
+      url: '/api/base.partner_address',
+      headers,
+      payload: {
+        partner_id: foreignPartner.id,
+        label: 'PostgreSQL Foreign Home',
+        street: '2 Main Street',
+        city: 'Jakarta',
+      },
+    });
+    expect([400, 403]).toContain(deniedForeignAddress.statusCode);
+    expect(await PartnerAddress.query().findOne({ partner_id: foreignPartner.id })).toBeUndefined();
     const scopedCategory = await PartnerCategory.query().insertAndFetch({
       code: `postgres-scoped-category-${randomUUID()}`,
       name: 'PostgreSQL Scoped Category',

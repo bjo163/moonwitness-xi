@@ -1517,6 +1517,65 @@ describe('authentication and authorization', () => {
       await AccessGroup.query().deleteById(group.id);
     });
 
+    it('scopes group-granted partner addresses to the caller company', async () => {
+      const group = await AccessGroup.query().insert({
+        code: 'partner_address_maintainers',
+        name: 'Partner Address Maintainers',
+      });
+      await GroupMembership.query().insert({ user_id: alice.user.id, group_id: group.id });
+      await ModelAccess.query().insert({
+        group_id: group.id,
+        model_name: 'base.partner_address',
+        create: true,
+      });
+
+      const ownPartner = await Partner.query().findById(alice.user.partner_id).throwIfNotFound();
+      const foreignCompany = await Company.query().insert({ name: 'Address Foreign Company' });
+      const foreignPartner = await Partner.query().insert({
+        name: 'Address Foreign Partner',
+        company_id: foreignCompany.id,
+      });
+      const allowed = await as(alice.access_token, {
+        method: 'POST',
+        url: '/api/base.partner_address',
+        payload: {
+          partner_id: ownPartner.id,
+          label: 'Home',
+          street: '1 Main Street',
+          city: 'Jakarta',
+        },
+      });
+      expect(allowed.statusCode, allowed.payload).toBe(201);
+      const allowedId = allowed.json<{ data: { id: number } }>().data.id;
+      expect(await PartnerAddress.query().findById(allowedId)).toMatchObject({
+        partner_id: ownPartner.id,
+        label: 'Home',
+        street: '1 Main Street',
+      });
+
+      const denied = await as(alice.access_token, {
+        method: 'POST',
+        url: '/api/base.partner_address',
+        payload: {
+          partner_id: foreignPartner.id,
+          label: 'Foreign Home',
+          street: '2 Main Street',
+          city: 'Jakarta',
+        },
+      });
+      expect([400, 403]).toContain(denied.statusCode);
+      expect(
+        await PartnerAddress.query().findOne({ partner_id: foreignPartner.id })
+      ).toBeUndefined();
+
+      await PartnerAddress.query().deleteById(allowedId);
+      await Partner.query().deleteById(foreignPartner.id);
+      await Company.query().deleteById(foreignCompany.id);
+      await GroupMembership.query().delete().where({ user_id: alice.user.id, group_id: group.id });
+      await ModelAccess.query().delete().where('group_id', group.id);
+      await AccessGroup.query().deleteById(group.id);
+    });
+
     it('keeps group-granted organization mutations inside the user company', async () => {
       const company = await Company.query().findOne({ name: 'MoonWitness' }).throwIfNotFound();
       const foreignCompany = await Company.query().insert({ name: 'Organization Foreign Tenant' });
