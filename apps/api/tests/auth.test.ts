@@ -649,11 +649,34 @@ describe('authentication and authorization', () => {
           })
         ).statusCode
       ).toBe(404);
-      const userGroup = await AccessGroup.query().findOne({ code: 'user' }).throwIfNotFound();
-      const partnerGrant = await ModelAccess.query()
-        .findOne({ group_id: userGroup.id, model_name: 'base.partner' })
-        .throwIfNotFound();
-      await ModelAccess.query().findById(partnerGrant.id).patch({ write: true, create: true });
+      const partnerGroup = await AccessGroup.query().insert({
+        code: 'partner_maintainers',
+        name: 'Partner Maintainers',
+      });
+      const partnerMembership = await GroupMembership.query().insert({
+        user_id: alice.user.id,
+        group_id: partnerGroup.id,
+      });
+      await ModelAccess.query().insert({
+        group_id: partnerGroup.id,
+        model_name: 'base.partner',
+        read: true,
+        create: true,
+        write: true,
+      });
+      const ownCompany = await Company.query().findOne({ name: 'MoonWitness' }).throwIfNotFound();
+      const ownCreateName = 'Alice created own-company contact';
+      const allowedCreate = await as(alice.access_token, {
+        method: 'POST',
+        url: '/api/base.partner',
+        payload: { name: ownCreateName, company_id: ownCompany.id },
+      });
+      expect(allowedCreate.statusCode, allowedCreate.payload).toBe(201);
+      const createdPartnerId = allowedCreate.json<{ data: { id: number } }>().data.id;
+      expect(await Partner.query().findById(createdPartnerId)).toMatchObject({
+        name: ownCreateName,
+        company_id: ownCompany.id,
+      });
       expect(
         (
           await as(alice.access_token, {
@@ -662,7 +685,7 @@ describe('authentication and authorization', () => {
             payload: { name: 'Stolen Partner' },
           })
         ).statusCode
-      ).toBe(403);
+      ).toBe(404);
       const deniedCreate = await as(alice.access_token, {
         method: 'POST',
         url: '/api/base.partner',
@@ -670,6 +693,8 @@ describe('authentication and authorization', () => {
       });
       expect(deniedCreate.statusCode).toBe(403);
       expect(deniedCreate.payload).not.toContain('Foreign Tenant');
+      expect(await Partner.query().findOne({ name: 'Cross-company write' })).toBeUndefined();
+      await GroupMembership.query().findById(partnerMembership.id).patch({ active: false });
       const count = await as(alice.access_token, {
         method: 'GET',
         url: '/api/base.partner?count=true&limit=500',
@@ -767,7 +792,6 @@ describe('authentication and authorization', () => {
         url: '/api/base.partner/group-count?group_by=company_id&offset=10001',
       });
       expect(excessiveOffset.statusCode).toBe(400);
-      await ModelAccess.query().findById(partnerGrant.id).patch({ write: false, create: false });
       expect(
         (
           await as(alice.access_token, {

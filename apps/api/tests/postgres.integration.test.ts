@@ -1374,13 +1374,29 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       groupedCount.json<{ groups: { values: { company_id: number }; count: number }[] }>().groups
     ).toEqual([{ values: { company_id: localCompany.id }, count: 1 }]);
 
+    const allowedCreateName = 'PostgreSQL Granted Tenant Contact';
+    const allowedOwnCreate = await app.inject({
+      method: 'POST',
+      url: '/api/base.partner',
+      headers,
+      payload: { name: allowedCreateName, company_id: localCompany.id },
+    });
+    expect(allowedOwnCreate.statusCode, allowedOwnCreate.payload).toBe(201);
+    const createdPartnerId = allowedOwnCreate.json<{ data: { id: number } }>().data.id;
+    expect(await Partner.query().findById(createdPartnerId)).toMatchObject({
+      name: allowedCreateName,
+      company_id: localCompany.id,
+    });
+
+    const deniedCreateName = 'PostgreSQL Denied Foreign Create';
     const deniedForeignCreate = await app.inject({
       method: 'POST',
       url: '/api/base.partner',
       headers,
-      payload: { name: 'Foreign company assignment', company_id: foreignCompany.id },
+      payload: { name: deniedCreateName, company_id: foreignCompany.id },
     });
     expect(deniedForeignCreate.statusCode).toBe(403);
+    expect(await Partner.query().findOne({ name: deniedCreateName })).toBeUndefined();
 
     const deniedForeignParent = await app.inject({
       method: 'POST',
