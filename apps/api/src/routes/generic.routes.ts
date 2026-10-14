@@ -19,8 +19,8 @@ import { assignDefaultCompanyMembership, assignDefaultUserGroup } from '@moonwit
 import { isValidOrganizationMutation } from '@moonwitness/orm-organization';
 import {
   asJsonObject,
-  isJsonValue,
   isRecord as isObject,
+  isJsonValue,
   type JsonObject,
   type JsonValue,
 } from '@moonwitness/types';
@@ -43,6 +43,7 @@ import {
   rpcSearchReadIsBounded,
   userGraphAllowed,
 } from './generic-query-graph.js';
+import { auditSnapshot } from './generic-audit.js';
 
 type RpcEnvelope = {
   jsonrpc?: unknown;
@@ -236,33 +237,6 @@ function relationConflict(reply: FastifyReply, modelName: string, reference: str
     success: false,
     error: `Cannot archive or delete '${modelName}'; it is still referenced by '${reference}'`,
   });
-}
-
-const AUDIT_SECRET_KEY = /password|token|secret|credential|hash/i;
-
-function auditSnapshot(model: typeof BaseModel, record: unknown): JsonObject {
-  const source = record instanceof BaseModel ? record.toJSON() : record;
-  if (!isObject(source)) return {};
-  const fields = model.fields;
-  const keys = new Set([
-    'id',
-    'active',
-    'create_date',
-    'write_date',
-    'create_uid',
-    'write_uid',
-    ...(fields ? Object.keys(fields) : Object.keys(source)),
-    ...Object.entries(fields ?? {})
-      .filter(([, field]) => field.kind === 'belongsTo')
-      .map(([key]) => `${key}_id`),
-  ]);
-  const modelHidden = new Set(model.hiddenFields ?? []);
-  const snapshot: JsonObject = {};
-  for (const [key, value] of Object.entries(source)) {
-    if (keys.has(key) && !modelHidden.has(key) && !AUDIT_SECRET_KEY.test(key) && isJsonValue(value))
-      snapshot[key] = value;
-  }
-  return snapshot;
 }
 
 async function recordAudit(

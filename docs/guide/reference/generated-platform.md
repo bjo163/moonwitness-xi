@@ -1,6 +1,6 @@
 # Generated platform reference
 
-Source fingerprint: `ec9edfaae28b0abe764bfe0cc2ef49901be96efceb1f4a58b2f85dfb738d37de`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
+Source fingerprint: `367429b0552f193d16309f38002e134d4fc54cb3f3e490f7f7ef207c233943eb`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
 
 ## Workspace packages and apps
 
