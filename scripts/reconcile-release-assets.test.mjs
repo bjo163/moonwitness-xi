@@ -82,6 +82,17 @@ test('refuses to add an asset after a release is already published', async () =>
   assert.deepEqual(adapter.uploads, []);
 });
 
+test('reuses a complete verified asset set on a published release without writes', async () => {
+  const adapter = fakeAdapter(files);
+  const result = await reconcile(adapter, { isDraft: false });
+
+  assert.deepEqual(
+    result.map(({ action }) => action),
+    ['reused', 'reused']
+  );
+  assert.deepEqual(adapter.uploads, []);
+});
+
 test('does not upload when the initial remote inventory cannot be read', async () => {
   const adapter = fakeAdapter();
   adapter.listAssets = async () => {
