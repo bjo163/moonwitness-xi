@@ -1,8 +1,10 @@
-# Feature coverage inventory (local rechecks through `0ac732f`; 2026-10-15)
+# Feature coverage inventory (local rechecks through `72c35f7`; 2026-10-15)
 
 This report expands the initial [feature-to-test matrix](feature-matrix.md) with an explicit status, priority, accountable role, executed assertion references, and remaining gap for every inventory row. It is a coverage inventory, not a claim that every feature is release-ready.
 
 ## Latest exact-head execution
+
+- Test source `72c35f7f422f8f30829f003dcbe1ebdd72490386` adds an inactive-parent rejection: a group-granted user cannot create activity against an archived public tag, and no row is persisted. This complements foreign-company create/reassignment denial over REST and foreign-parent create denial over JSON-RPC. Focused API tests passed 53/53; the 11 PostgreSQL tests remain skipped locally. API build, ESLint and Prettier passed. Full `pnpm verify` passed against the implementation source `0ac732f`, immediately before this test-only addition; M10.01 remains open for PostgreSQL runtime and wider coverage.
 
 - At exact code source `0ac732f778b94a5967e5b065997552fb8c31f216`, generic polymorphic reference validation applies the caller's row/company scope and requires an active parent instead of checking bare existence. REST create/update and JSON-RPC create reject foreign-company activity references without creating or changing a row. The matching PostgreSQL assertions are authored but the 11-test integration file is skipped locally without `POSTGRES_TEST_URL`. Focused API tests passed 53/53, and full `pnpm verify` passed after generated-reference refresh; M10.01 remains open for PostgreSQL execution, broader persisted model/action coverage and retention/storage lifecycle.
 
