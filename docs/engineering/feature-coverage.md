@@ -1,8 +1,10 @@
-# Feature coverage inventory (local rechecks through `f4dd33f`; 2026-10-15)
+# Feature coverage inventory (local rechecks through `f6b6d48`; 2026-10-15)
 
 This report expands the initial [feature-to-test matrix](feature-matrix.md) with an explicit status, priority, accountable role, executed assertion references, and remaining gap for every inventory row. It is a coverage inventory, not a claim that every feature is release-ready.
 
 ## Latest exact-head execution
+
+- On exact `dev` source `f6b6d48`, `CI=true pnpm test:e2e` passed 23/23 in Chromium against PostgreSQL 16.15 and a dedicated disposable database, which was dropped and verified absent. This refreshes the current full Board/PostgreSQL journey after the mobile accessibility additions; it does not replace hosted scheduled Firefox/WebKit × PostgreSQL acceptance.
 
 - Full `pnpm verify` passed on the exact tree committed as `f4dd33f`: ESLint, Prettier, workspace and Board typecheck/build, API 122/122, all configured package/unit, addon conformance, assets/UI, architecture, release/security policy suites, documentation references/examples/links, and GitHub Pages build. One existing Windows-guarded Linux container smoke test was skipped. The canonical PostgreSQL integration/performance suite separately passed 13/13 at `de8e389`; Board responsive visual/accessibility matrix passed 9/9 at that same source. Hosted exact-candidate checks, Linux container smoke, and protected-main promotion remain separate.
 
