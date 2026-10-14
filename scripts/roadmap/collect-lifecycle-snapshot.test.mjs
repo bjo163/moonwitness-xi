@@ -177,6 +177,97 @@ test('adds release delivery only when the source is proven on main and in the re
   });
   const row = snapshot.tasks[0];
   assert.equal(row.sourceInMain, true);
-  assert.deepEqual(row.releaseManifest, { version: 'v1.2.3', sourceSha: releaseSha });
+  assert.deepEqual(row.releaseManifest, { version: 'v1.2.3', sourceSha, releaseSha });
   assert.equal(row.releaseContainsSource, true);
+  const projected = projectLifecycleSnapshot({
+    snapshot,
+    tasks: [task],
+    issues: [],
+    repositoryId: '12345',
+    sourceSha: planSha,
+    now: Date.parse('2026-10-07T10:00:00.000Z'),
+  });
+  assert.equal(projected.get('M1.01').deliveryStage, 'released');
+});
+
+test('keeps prerelease status bound to its semver tag and rejects invalid release targets', async () => {
+  const validReleaseSha = '9'.repeat(40);
+  const missingReleaseSha = '8'.repeat(40);
+  const tags = new Map([
+    ['v1.4.0-rc.2', validReleaseSha],
+    ['v1.4.0', missingReleaseSha],
+    ['v1.4.1', '7'.repeat(39)],
+    ['v1.5.0', '6'.repeat(40)],
+    ['v1.5.1', '5'.repeat(40)],
+  ]);
+  const snapshot = await collectLifecycleSnapshot({
+    tasks: [task],
+    roadmap: '- [x] M1.01 Done.\n',
+    readEvidence: async () => `- Source SHA: \`${sourceSha}\``,
+    repositoryId: '12345',
+    sourceSha: planSha,
+    branchHeads: { dev: devSha, main: mainSha },
+    checkRuns: [],
+    releases: [
+      {
+        tag_name: 'v1.5.1',
+        draft: false,
+        prerelease: false,
+        published_at: '2026-10-06T00:00:00.000Z',
+      },
+      {
+        tag_name: 'v1.5.0',
+        draft: false,
+        prerelease: true,
+        published_at: '2026-10-05T00:00:00.000Z',
+      },
+      {
+        tag_name: 'v1.4.1',
+        draft: false,
+        prerelease: false,
+        published_at: '2026-10-04T00:00:00.000Z',
+      },
+      {
+        tag_name: 'v1.4.0',
+        draft: false,
+        prerelease: false,
+        published_at: '2026-10-03T00:00:00.000Z',
+      },
+      {
+        tag_name: 'v1.4.0-rc.2',
+        draft: false,
+        prerelease: true,
+        published_at: '2026-10-02T00:00:00.000Z',
+      },
+      {
+        tag_name: 'v1.6.0',
+        draft: true,
+        prerelease: false,
+        published_at: '2026-10-06T00:00:00.000Z',
+      },
+    ],
+    resolveReleaseCommit: (tag) => tags.get(tag),
+    commitExists: (sha) => sha !== missingReleaseSha && sha !== '6'.repeat(40),
+    isAncestor: (candidate, branch) =>
+      candidate === sourceSha && [mainSha, devSha, validReleaseSha].includes(branch),
+    generatedAt: '2026-10-07T10:00:00.000Z',
+  });
+
+  const row = snapshot.tasks[0];
+  assert.deepEqual(row.releaseManifest, {
+    version: 'v1.4.0-rc.2',
+    sourceSha,
+    releaseSha: validReleaseSha,
+  });
+  assert.equal(row.releaseContainsSource, true);
+  const projected = projectLifecycleSnapshot({
+    snapshot,
+    tasks: [task],
+    issues: [],
+    repositoryId: '12345',
+    sourceSha: planSha,
+    now: Date.parse('2026-10-07T10:00:00.000Z'),
+  });
+  assert.equal(projected.get('M1.01').deliveryStage, 'released');
+  assert.equal(projected.get('M1.01').releaseVersion, 'v1.4.0-rc.2');
 });

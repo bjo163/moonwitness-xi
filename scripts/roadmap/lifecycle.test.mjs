@@ -123,7 +123,7 @@ test('main and release are distinct delivery stages and release provenance must 
     ...completed,
     sourceInMain: true,
     mainHeadSha: mainSha,
-    releaseManifest: { version: '1.2.0', sourceSha },
+    releaseManifest: { version: '1.2.0', sourceSha, releaseSha: 'e'.repeat(40) },
     releaseContainsSource: true,
   });
   assert.equal(released.deliveryStage, 'released');
@@ -133,7 +133,7 @@ test('main and release are distinct delivery stages and release provenance must 
       ...completed,
       sourceInMain: true,
       mainHeadSha: mainSha,
-      releaseManifest: { version: '1.2.0', sourceSha },
+      releaseManifest: { version: '1.2.0', sourceSha, releaseSha: 'e'.repeat(40) },
       releaseContainsSource: false,
     }).deliveryStage,
     'in-main'
@@ -144,7 +144,18 @@ test('main and release are distinct delivery stages and release provenance must 
         ...completed,
         sourceInMain: true,
         mainHeadSha: mainSha,
-        releaseManifest: { version: '1.2.0', sourceSha: mainSha },
+        releaseManifest: { version: '1.2.0', sourceSha, releaseSha: 'bad-sha' },
+        releaseContainsSource: true,
+      }),
+    /full release tag commit SHA/u
+  );
+  assert.throws(
+    () =>
+      evaluateTaskLifecycle({
+        ...completed,
+        sourceInMain: true,
+        mainHeadSha: mainSha,
+        releaseManifest: { version: '1.2.0', sourceSha: mainSha, releaseSha: 'e'.repeat(40) },
         releaseContainsSource: true,
       }),
     /Release provenance source SHA must match/u
@@ -155,7 +166,7 @@ test('main and release are distinct delivery stages and release provenance must 
         ...completed,
         sourceInMain: true,
         mainHeadSha: mainSha,
-        releaseManifest: { version: 'invalid', sourceSha },
+        releaseManifest: { version: 'invalid', sourceSha, releaseSha: 'e'.repeat(40) },
         releaseContainsSource: true,
       }),
     /Invalid release version/u
@@ -164,7 +175,7 @@ test('main and release are distinct delivery stages and release provenance must 
     () =>
       evaluateTaskLifecycle({
         ...completed,
-        releaseManifest: { version: '1.0.0', sourceSha },
+        releaseManifest: { version: '1.0.0', sourceSha, releaseSha: 'e'.repeat(40) },
         releaseContainsSource: true,
       }),
     /before the source is verified in main/u

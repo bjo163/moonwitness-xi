@@ -144,18 +144,22 @@ export async function collectLifecycleSnapshot(input) {
 
   const taskStates = parseRoadmapTaskStates(input.roadmap, input.tasks);
   const candidates = input.releases
-    .filter((release) => !release.draft && versionPattern.test(release.tag_name))
+    .filter((release) => {
+      if (release.draft || !versionPattern.test(release.tag_name)) return false;
+      const tagIsPrerelease = release.tag_name.includes('-');
+      return release.prerelease === tagIsPrerelease;
+    })
     .sort(
       (left, right) =>
         Date.parse(right.published_at ?? right.created_at ?? '') -
         Date.parse(left.published_at ?? left.created_at ?? '')
     );
-  let releaseManifest;
+  const releaseCandidates = [];
   for (const release of candidates) {
     const releaseSha = input.resolveReleaseCommit(release.tag_name);
-    if (!releaseSha || !fullShaPattern.test(releaseSha)) continue;
-    releaseManifest = { version: release.tag_name, sourceSha: releaseSha };
-    break;
+    if (!releaseSha || !fullShaPattern.test(releaseSha) || !input.commitExists(releaseSha))
+      continue;
+    releaseCandidates.push({ version: release.tag_name, releaseSha });
   }
 
   const records = [];
@@ -170,6 +174,11 @@ export async function collectLifecycleSnapshot(input) {
     const knownSource = sourceSha && input.commitExists(sourceSha) ? sourceSha : undefined;
     const sourceInMain = knownSource && input.isAncestor(knownSource, input.branchHeads.main);
     const sourceInDev = knownSource && input.isAncestor(knownSource, input.branchHeads.dev);
+    const releaseCandidate =
+      state.acceptanceVerified && knownSource && sourceInMain
+        ? releaseCandidates.find((candidate) => input.isAncestor(knownSource, candidate.releaseSha))
+        : undefined;
+    const releaseContainsSource = releaseCandidate !== undefined;
     records.push({
       taskId: task.id,
       status: state.status,
@@ -181,10 +190,14 @@ export async function collectLifecycleSnapshot(input) {
       ...(knownSource && sourceInDev === true
         ? { requiredChecks: latestRequiredChecks(input.checkRuns, input.branchHeads.dev) }
         : {}),
-      ...(releaseManifest && sourceInMain ? { releaseManifest } : {}),
-      ...(releaseManifest && sourceInMain && knownSource
+      ...(releaseContainsSource
         ? {
-            releaseContainsSource: input.isAncestor(knownSource, releaseManifest.sourceSha),
+            releaseManifest: {
+              version: releaseCandidate.version,
+              sourceSha: knownSource,
+              releaseSha: releaseCandidate.releaseSha,
+            },
+            releaseContainsSource: true,
           }
         : {}),
     });

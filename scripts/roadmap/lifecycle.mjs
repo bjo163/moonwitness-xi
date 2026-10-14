@@ -20,7 +20,7 @@ function isFullSha(value) {
  * This function is deliberately pure: callers must obtain all facts from
  * validated source files and GitHub metadata for the exact SHA under review.
  *
- * @param {{ taskId: string, status: 'todo'|'in_progress'|'blocked'|'complete', dependencyIds?: string[], incompleteDependencyIds?: string[], acceptanceVerified: boolean, evidenceSha?: string, sourceSha?: string, devHeadSha?: string, sourceInDev?: boolean, requiredChecks?: Array<{name: string, headSha: string, status: 'queued'|'in_progress'|'completed', conclusion: string|null}>, mainHeadSha?: string, sourceInMain?: boolean, releaseManifest?: {version: string, sourceSha: string}|null, releaseContainsSource?: boolean, issueState?: 'open'|'closed' }} input
+ * @param {{ taskId: string, status: 'todo'|'in_progress'|'blocked'|'complete', dependencyIds?: string[], incompleteDependencyIds?: string[], acceptanceVerified: boolean, evidenceSha?: string, sourceSha?: string, devHeadSha?: string, sourceInDev?: boolean, requiredChecks?: Array<{name: string, headSha: string, status: 'queued'|'in_progress'|'completed', conclusion: string|null}>, mainHeadSha?: string, sourceInMain?: boolean, releaseManifest?: {version: string, sourceSha: string, releaseSha: string}|null, releaseContainsSource?: boolean, issueState?: 'open'|'closed' }} input
  */
 export function evaluateTaskLifecycle(input) {
   if (!/^M(?:0|[1-9][0-9]*)\.[0-9]{2}$/u.test(input.taskId))
@@ -115,6 +115,8 @@ export function evaluateTaskLifecycle(input) {
     const release = input.releaseManifest;
     if (!sourceSha || !isFullSha(release.sourceSha))
       throw new Error('Release provenance must contain the task source SHA.');
+    if (!isFullSha(release.releaseSha))
+      throw new Error('Release provenance must contain the full release tag commit SHA.');
     if (release.sourceSha !== sourceSha)
       throw new Error('Release provenance source SHA must match the task source SHA.');
     if (input.sourceInMain !== true)
