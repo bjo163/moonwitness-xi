@@ -1,4 +1,4 @@
-import { mkdtemp, readdir, rm, utimes, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm, symlink, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -46,6 +46,25 @@ describe('LocalFileAttachmentStorage', () => {
     for await (const object of storage.list()) listed.push(object.key);
     expect(listed).toEqual([keyA]);
   });
+
+  it.skipIf(process.platform === 'win32')(
+    'refuses UUID symlinks instead of exposing files outside the attachment directory',
+    async () => {
+      const storage = await storageFixture();
+      const outside = path.join(path.dirname(storage.directory), 'private-target');
+      const content = Buffer.from('outside attachment directory');
+      await writeFile(outside, content);
+      directories.push(outside);
+      await symlink(outside, path.join(storage.directory, keyA));
+
+      await expect(storage.get(keyA)).rejects.toThrow('Attachment object must be a regular file');
+      await expect(storage.getWithMetadata(keyA)).rejects.toThrow(
+        'Attachment object must be a regular file'
+      );
+      expect(await readdir(storage.directory)).toContain(keyA);
+      await expect(readFile(outside)).resolves.toEqual(content);
+    }
+  );
 
   it('reconciles metadata snapshots read-only and requires a stale grace period for deletion', async () => {
     const storage = await storageFixture();

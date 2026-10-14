@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { defineAddon } from '@moonwitness/orm';
 import {
   mkdir,
+  lstat,
   open,
   opendir,
   readdir,
@@ -78,11 +79,27 @@ export class LocalFileAttachmentStorage implements AttachmentStorage {
   }
 
   async get(key: string): Promise<Buffer | null> {
+    const objectPath = this.objectPath(key);
+    let file: Awaited<ReturnType<typeof open>> | undefined;
     try {
-      return await readFile(this.objectPath(key));
+      file = await open(objectPath, 'r');
+      const opened = await file.stat();
+      const current = await lstat(objectPath);
+      if (
+        !opened.isFile() ||
+        !current.isFile() ||
+        current.isSymbolicLink() ||
+        opened.dev !== current.dev ||
+        opened.ino !== current.ino
+      ) {
+        throw new Error('Attachment object must be a regular file');
+      }
+      return await file.readFile();
     } catch (error) {
       if (isMissing(error)) return null;
       throw error;
+    } finally {
+      await file?.close();
     }
   }
 

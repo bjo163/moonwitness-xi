@@ -10,9 +10,11 @@ not content-sniffed; downloads are always `Content-Disposition: attachment`, car
 
 The API uses the typed `@moonwitness/orm-storage` provider contract. The default
 `LocalFileAttachmentStorage` writes UUID-named objects atomically and continues to read existing
-UUID files directly from `ATTACHMENT_STORAGE_DIR`; adopting the abstraction requires no metadata ID,
-ownership, checksum, or object key changes. Future providers can be injected through the same
-interface while upload/download authorization stays in the API.
+UUID files directly from `ATTACHMENT_STORAGE_DIR` only when the opened object remains the same
+regular file found at that UUID path. Symlinks, directories, and path swaps are rejected before
+bytes are returned; adopting the abstraction requires no metadata ID, ownership, checksum, or
+object key changes. Future providers can be injected through the same interface while
+upload/download authorization stays in the API.
 
 The server generates a UUID storage key and SHA-256 digest. `storage_key` is hidden from serialized
 records, query fields, views, audit snapshots, and client responses. Generic REST/JSON-RPC cannot
