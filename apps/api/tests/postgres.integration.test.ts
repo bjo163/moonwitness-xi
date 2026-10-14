@@ -1360,7 +1360,7 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     });
     expect(scopedOrExport.statusCode).toBe(200);
     expect(scopedOrExport.json<{ data: { id: number; name: string }[] }>().data).toEqual([
-      expect.objectContaining({ id: localPartner.id, name: 'PostgreSQL Tenant Contact' }),
+      expect.objectContaining({ id: localPartner.id, name: 'PostgreSQL Tenant Contact Updated' }),
     ]);
     expect(scopedOrExport.payload).not.toContain('PostgreSQL Foreign Contact');
 
