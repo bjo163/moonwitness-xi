@@ -539,7 +539,7 @@ test('transient create failure without a committed marker fails without a blind 
   assert.deepEqual(calls, ['read', 'create', 'read']);
 });
 
-test('GitHub issue adapter follows open and closed pagination and serializes issue writes', async () => {
+test('GitHub issue adapter exhausts multi-page open and closed inventories before writes', async () => {
   const calls = [];
   const fetchImpl = async (url, init = {}) => {
     calls.push({ url: String(url), init });
@@ -549,15 +549,16 @@ test('GitHub issue adapter follows open and closed pagination and serializes iss
     const query = urlText.split('?')[1] ?? '';
     const params = new URLSearchParams(query);
     const state = params.get('state');
-    const page = params.get('page');
-    if (state === 'open' && page === '1')
-      return {
-        ok: true,
-        status: 200,
-        json: async () => Array.from({ length: 100 }, (_, i) => ({ number: i + 1 })),
-      };
-    if (state === 'open') return { ok: true, status: 200, json: async () => [] };
-    return { ok: true, status: 200, json: async () => [{ number: 101 }] };
+    const page = Number(params.get('page'));
+    const firstNumber = state === 'open' ? 1 : 1001;
+    const count = state === 'open' ? (page < 3 ? 100 : 5) : page === 1 ? 100 : 1;
+    const offset = page === 1 ? 0 : page === 2 ? 100 : 200;
+    return {
+      ok: true,
+      status: 200,
+      json: async () =>
+        Array.from({ length: count }, (_, index) => ({ number: firstNumber + offset + index })),
+    };
   };
   const client = createGitHubIssuesClient({
     token: 'test-token',
@@ -565,13 +566,27 @@ test('GitHub issue adapter follows open and closed pagination and serializes iss
     repo: 'repo',
     fetchImpl,
   });
-  assert.equal((await client.listAll()).length, 101);
-  assert.equal(calls.length, 3);
+  const issues = await client.listAll();
+  assert.equal(issues.length, 306);
+  assert.equal(new Set(issues.map(({ number }) => number)).size, 306);
+  assert.deepEqual(
+    calls.map(({ url }) => {
+      const params = new URLSearchParams(url.split('?')[1]);
+      return [params.get('state'), params.get('page')];
+    }),
+    [
+      ['open', '1'],
+      ['open', '2'],
+      ['open', '3'],
+      ['closed', '1'],
+      ['closed', '2'],
+    ]
+  );
   await client.create({ title: 'test', body: 'body' });
-  assert.equal(calls[3].init.method, 'POST');
-  assert.equal(calls[3].init.body.includes('test-token'), false);
+  assert.equal(calls[5].init.method, 'POST');
+  assert.equal(calls[5].init.body.includes('test-token'), false);
   await client.getIssue(42);
-  assert.equal(calls[4].url.endsWith('/issues/42'), true);
+  assert.equal(calls[6].url.endsWith('/issues/42'), true);
 });
 
 test('public read-only planning needs no token and writes fail closed without one', async () => {
