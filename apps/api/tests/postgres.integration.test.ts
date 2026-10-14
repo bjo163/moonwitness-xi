@@ -962,6 +962,40 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       company_id: foreignCompany.id,
     });
 
+    const allowedDepartmentCreate = await app.inject({
+      method: 'POST',
+      url: '/api/organization.department',
+      headers,
+      payload: {
+        company_id: localCompany.id,
+        code: 'postgres_local_support',
+        name: 'PostgreSQL Local Support',
+      },
+    });
+    expect(allowedDepartmentCreate.statusCode, allowedDepartmentCreate.payload).toBe(201);
+    const createdDepartmentId = allowedDepartmentCreate.json<{ data: { id: number } }>().data.id;
+    expect(await OrganizationDepartment.query().findById(createdDepartmentId)).toMatchObject({
+      company_id: localCompany.id,
+      code: 'postgres_local_support',
+      name: 'PostgreSQL Local Support',
+    });
+
+    const deniedDepartmentCreate = await app.inject({
+      method: 'POST',
+      url: '/api/organization.department',
+      headers,
+      payload: {
+        company_id: foreignCompany.id,
+        code: 'postgres_foreign_support',
+        name: 'PostgreSQL Foreign Support',
+      },
+    });
+    expect(deniedDepartmentCreate.statusCode).toBe(403);
+    expect(deniedDepartmentCreate.payload).not.toContain('PostgreSQL Foreign Tenant');
+    expect(
+      await OrganizationDepartment.query().findOne({ code: 'postgres_foreign_support' })
+    ).toBeUndefined();
+
     const filteredCount = await app.inject({
       method: 'GET',
       url: `/api/base.partner?domain=${encodeURIComponent(JSON.stringify([['id', '=', foreignPartner.id]]))}&limit=500&count=true`,
