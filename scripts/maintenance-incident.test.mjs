@@ -203,6 +203,47 @@ test('scheduled browser and deep-regression incidents deduplicate and recover in
   }
 });
 
+test('deep-regression recovery is idempotent and leaves browser incidents open', () => {
+  const input = (category, id, status = 'failed', issues = []) => ({
+    category,
+    issues,
+    ...incidentInput(id, status),
+  });
+  const browserOpen = planMaintenanceIncident(input('browser-regression', 80));
+  const deepOpen = planMaintenanceIncident(input('deep-regression', 81));
+  const browserIssue = {
+    number: 82,
+    title: browserOpen.title,
+    body: browserOpen.body,
+    state: 'open',
+    labels: browserOpen.labels,
+  };
+  const deepIssue = {
+    number: 83,
+    title: deepOpen.title,
+    body: deepOpen.body,
+    state: 'open',
+    labels: deepOpen.labels,
+  };
+
+  const recovery = planMaintenanceIncident(
+    input('deep-regression', 84, 'recovered', [browserIssue, deepIssue])
+  );
+  assert.equal(recovery.operation, 'update');
+  assert.equal(recovery.issueNumber, deepIssue.number);
+  assert.equal(recovery.state, 'closed');
+  assert.equal(browserIssue.state, 'open');
+  assert.match(browserIssue.body, /OPEN/u);
+
+  const closedDeepIssue = { ...deepIssue, ...recovery };
+  const repeatedRecovery = planMaintenanceIncident(
+    input('deep-regression', 84, 'recovered', [closedDeepIssue])
+  );
+  assert.equal(repeatedRecovery.operation, 'noop');
+  assert.match(closedDeepIssue.body, /run #81/u);
+  assert.match(closedDeepIssue.body, /run #84/u);
+});
+
 test('duplicate docs incidents and malformed managed blocks fail closed', () => {
   const duplicate = planDocumentationIncident({
     issues: [incident(1), incident(2)],
