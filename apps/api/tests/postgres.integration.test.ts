@@ -57,6 +57,7 @@ import { manifest as requestManifest } from '@moonwitness/orm-request';
 import { manifest as integrationManifest } from '@moonwitness/orm-integration';
 import {
   manifest as workflowManifest,
+  expireDueWorkflows,
   startWorkflow,
   transitionWorkflow,
 } from '@moonwitness/orm-workflow';
@@ -536,6 +537,34 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
           )?.count
         )
       ).toBe(1);
+
+      const overdueStartedAt = new Date('2026-10-01T00:00:00.000Z');
+      const expirationTime = new Date('2026-10-10T00:00:00.000Z');
+      const overdueWorkflow = await startWorkflow(concurrentDb, {
+        ...workflowStart,
+        idempotencyKey: `pg-overdue-start-${randomUUID()}`,
+        now: overdueStartedAt,
+      });
+      const concurrentExpirations = await Promise.all([
+        expireDueWorkflows(concurrentDb, expirationTime),
+        expireDueWorkflows(concurrentDb, expirationTime),
+      ]);
+      expect(concurrentExpirations.reduce((total, expired) => total + expired, 0)).toBe(1);
+      expect(await expireDueWorkflows(concurrentDb, expirationTime)).toBe(0);
+      await expect(
+        concurrentDb('workflow_instances').where({ id: overdueWorkflow.id }).first()
+      ).resolves.toMatchObject({
+        status: 'timed_out',
+        current_state: 'timed_out',
+        revision: 1,
+      });
+      const timeoutEvents = await concurrentDb('workflow_events').where({
+        instance_id: overdueWorkflow.id,
+        action: 'timeout',
+        idempotency_key: `timeout:${overdueWorkflow.id}`,
+      });
+      expect(timeoutEvents).toHaveLength(1);
+      expect(timeoutEvents[0]).toMatchObject({ sequence: 1, revision: 1, actor_id: null });
 
       const handlerName = `test.pg-scheduler-${randomUUID()}`;
       const unregister = registerJobHandler({
