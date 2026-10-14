@@ -82,6 +82,17 @@ test('refuses to add an asset after a release is already published', async () =>
   assert.deepEqual(adapter.uploads, []);
 });
 
+test('does not upload when the initial remote inventory cannot be read', async () => {
+  const adapter = fakeAdapter();
+  adapter.listAssets = async () => {
+    throw new Error('simulated GitHub API outage');
+  };
+
+  await assert.rejects(reconcile(adapter), /simulated GitHub API outage/u);
+  assert.deepEqual(adapter.uploads, []);
+  assert.deepEqual([...adapter.assets.keys()], []);
+});
+
 test('recovers an upload accepted remotely when the CLI response is lost', async () => {
   const adapter = fakeAdapter();
   adapter.failAfterAccept.add(files[0].name);
@@ -116,6 +127,20 @@ test('fails without retry when a failed upload is not present remotely', async (
   adapter.failBeforeAccept.add(files[0].name);
   await assert.rejects(reconcile(adapter), /Upload command failed/u);
   assert.deepEqual(adapter.uploads, [files[0].name]);
+});
+
+test('stops after an accepted upload when remote verification is unavailable', async () => {
+  const adapter = fakeAdapter();
+  let inventoryReads = 0;
+  adapter.listAssets = async () => {
+    inventoryReads += 1;
+    if (inventoryReads > 1) throw new Error('simulated GitHub API outage');
+    return [];
+  };
+
+  await assert.rejects(reconcile(adapter), /Unable to verify release asset/u);
+  assert.deepEqual(adapter.uploads, [files[0].name]);
+  assert.deepEqual([...adapter.assets.keys()], [files[0].name]);
 });
 
 test('rejects a wrong digest or byte size observed after upload', async () => {
