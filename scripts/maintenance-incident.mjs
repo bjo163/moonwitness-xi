@@ -1,6 +1,8 @@
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
+const MAX_ISSUE_PAGES = 100;
+
 const CATEGORIES = {
   'docs-publication': {
     label: 'docs-publication',
@@ -316,10 +318,16 @@ export async function updateMaintenanceIncident({
 
   const issues = [];
   let url = `${base}/issues?state=open&labels=${config.label}&per_page=100&page=1`;
+  const visitedIssuePages = new Set();
   while (url) {
     const pageUrl = new globalThis.URL(url, base);
     if (pageUrl.origin !== apiBase.origin)
       throw new Error('GitHub API pagination left the configured API origin');
+    if (visitedIssuePages.has(pageUrl.href))
+      throw new Error('GitHub API issue pagination repeated a page');
+    if (visitedIssuePages.size >= MAX_ISSUE_PAGES)
+      throw new Error(`GitHub API issue pagination exceeded ${MAX_ISSUE_PAGES} pages`);
+    visitedIssuePages.add(pageUrl.href);
     const page = await request(pageUrl.href);
     if (!Array.isArray(page.data)) throw new Error('GitHub API returned an invalid issue page');
     issues.push(...page.data);

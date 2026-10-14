@@ -297,3 +297,67 @@ test('pagination links cannot redirect the scoped token outside the configured A
     false
   );
 });
+
+test('pagination rejects a repeated issue page before issuing the repeated request', async () => {
+  const requests = [];
+  const fetchImpl = async (url) => {
+    requests.push(String(url));
+    if (String(url).endsWith('/labels/docs-publication'))
+      return new globalThis.Response('{}', { status: 200 });
+    return new globalThis.Response('[]', {
+      status: 200,
+      headers: {
+        link: '<https://api.github.test/repos/owner/repo/issues?state=open&labels=docs-publication&per_page=100&page=1>; rel="next"',
+      },
+    });
+  };
+
+  await assert.rejects(
+    updateDocumentationIncident({
+      fetchImpl,
+      apiUrl: 'https://api.github.test',
+      token: 'test-only-token',
+      repository: repo,
+      ...incidentInput(52),
+    }),
+    /pagination repeated a page/u
+  );
+  assert.equal(requests.filter((url) => url.includes('/issues?')).length, 1);
+  assert.equal(
+    requests.some((url) => url.includes('/issues/')),
+    false
+  );
+});
+
+test('pagination stops after the configured maximum number of issue pages', async () => {
+  const requests = [];
+  const fetchImpl = async (url) => {
+    const value = String(url);
+    requests.push(value);
+    if (value.endsWith('/labels/docs-publication'))
+      return new globalThis.Response('{}', { status: 200 });
+    const page = Number(new globalThis.URL(value).searchParams.get('page'));
+    return new globalThis.Response('[]', {
+      status: 200,
+      headers: {
+        link: `<https://api.github.test/repos/owner/repo/issues?state=open&labels=docs-publication&per_page=100&page=${page + 1}>; rel="next"`,
+      },
+    });
+  };
+
+  await assert.rejects(
+    updateDocumentationIncident({
+      fetchImpl,
+      apiUrl: 'https://api.github.test',
+      token: 'test-only-token',
+      repository: repo,
+      ...incidentInput(53),
+    }),
+    /pagination exceeded 100 pages/u
+  );
+  assert.equal(requests.filter((url) => url.includes('/issues?')).length, 100);
+  assert.equal(
+    requests.some((url) => url.includes('/issues/')),
+    false
+  );
+});
