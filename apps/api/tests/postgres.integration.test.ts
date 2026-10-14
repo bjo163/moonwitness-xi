@@ -1337,6 +1337,31 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     expect(result.data.map(({ id }) => id)).not.toContain(foreignPartner.id);
     expect(result.data.find(({ id }) => id === localPartner.id)?.company?.name).toBe('MoonWitness');
 
+    const allowedPartnerCreateName = `PostgreSQL tenant create ${randomUUID()}`;
+    const allowedPartnerCreate = await app.inject({
+      method: 'POST',
+      url: '/api/base.partner',
+      headers,
+      payload: { name: allowedPartnerCreateName, company_id: localCompany.id },
+    });
+    expect(allowedPartnerCreate.statusCode, allowedPartnerCreate.payload).toBe(201);
+    const allowedPartnerId = allowedPartnerCreate.json<{ data: { id: number } }>().data.id;
+    expect(await Partner.query().findById(allowedPartnerId)).toMatchObject({
+      name: allowedPartnerCreateName,
+      company_id: localCompany.id,
+    });
+
+    const deniedForeignPartnerCreateName = `PostgreSQL foreign tenant create ${randomUUID()}`;
+    const deniedForeignPartnerCreate = await app.inject({
+      method: 'POST',
+      url: '/api/base.partner',
+      headers,
+      payload: { name: deniedForeignPartnerCreateName, company_id: foreignCompany.id },
+    });
+    expect([400, 403]).toContain(deniedForeignPartnerCreate.statusCode);
+    expect(deniedForeignPartnerCreate.payload).not.toContain('PostgreSQL Foreign Tenant');
+    expect(await Partner.query().findOne({ name: deniedForeignPartnerCreateName })).toBeUndefined();
+
     const directRead = await app.inject({
       method: 'GET',
       url: `/api/base.partner/${foreignPartner.id}`,
