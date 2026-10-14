@@ -94,6 +94,23 @@ test('recovers an upload accepted remotely when the CLI response is lost', async
   );
 });
 
+test('resumes a partially uploaded asset set without duplicating accepted assets', async () => {
+  const adapter = fakeAdapter();
+  adapter.failBeforeAccept.add(files[1].name);
+
+  await assert.rejects(reconcile(adapter), /Upload command failed/u);
+  assert.deepEqual(adapter.uploads, [files[0].name, files[1].name]);
+  assert.deepEqual([...adapter.assets.keys()], [files[0].name]);
+
+  adapter.failBeforeAccept.clear();
+  const retry = await reconcile(adapter);
+  assert.deepEqual(
+    retry.map(({ action }) => action),
+    ['reused', 'uploaded']
+  );
+  assert.deepEqual(adapter.uploads, [files[0].name, files[1].name, files[1].name]);
+});
+
 test('fails without retry when a failed upload is not present remotely', async () => {
   const adapter = fakeAdapter();
   adapter.failBeforeAccept.add(files[0].name);
