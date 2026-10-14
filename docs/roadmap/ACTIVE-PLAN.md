@@ -4,6 +4,8 @@
 
 **Latest local refresh:** on source `08d38c52b9a8f9ed1a67cd635c66c4edffc6792e`, PostgreSQL integration/performance passed 13/13 and the auth suite passed 42/42; a group-granted user cannot reassign an owned partner to a foreign company. The exact-current source planner at `3ea8fbf0ccedda59e6899b1f505de2fc26841772` also passed dependency inventory and verified all 91 immutable Actions pins. These reduce local validation gaps but do not complete the broader authorization matrix, dependency candidate application, or hosted release acceptance. See [M10.01](evidence/M10.01.md) and [M8.05](evidence/M8.05.md).
 
+**Latest local security scan:** Gitleaks v8.30.1 scanned 898 commits / 8.14 MB on source `25c156cdd87eb90b1fb50404b5104a21c76ab32f` and returned zero findings; scanner config/security-policy tests passed. Earlier evidence still records six unmatched historical findings on `d604f590`, so credential disposition and authenticated alert/SARIF review remain release blockers. See [M8.03 evidence](evidence/M8.03.md).
+
 The intended first release is a usable, secure application release with the repository's requested automation. It includes the existing base addon and safe seed/setup, authenticated access and company scoping, PostgreSQL acceptance, the main Board journey, user documentation, security response readiness, exact-SHA checks, and a reproducible release artifact. Application deployment is out of scope. Docs Pages and GitHub Release publication are in scope. Protected promotion to `main` remains subject to CODEOWNER and required checks.
 
 ## One release path
