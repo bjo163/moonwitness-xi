@@ -980,6 +980,18 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       name: 'PostgreSQL Local Support',
     });
 
+    const deniedDepartmentUnlink = await app.inject({
+      method: 'DELETE',
+      url: `/api/organization.department/${createdDepartmentId}`,
+      headers,
+    });
+    expect(deniedDepartmentUnlink.statusCode).toBe(403);
+    expect(await OrganizationDepartment.query().findById(createdDepartmentId)).toMatchObject({
+      company_id: localCompany.id,
+      code: 'postgres_local_support',
+      name: 'PostgreSQL Local Support',
+    });
+
     const deniedDepartmentCreate = await app.inject({
       method: 'POST',
       url: '/api/organization.department',

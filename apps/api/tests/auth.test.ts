@@ -1211,6 +1211,16 @@ describe('authentication and authorization', () => {
         name: 'Alice Operations Updated',
       });
 
+      const deniedUnlink = await as(alice.access_token, {
+        method: 'DELETE',
+        url: `/api/organization.department/${departmentId}`,
+      });
+      expect(deniedUnlink.statusCode).toBe(403);
+      expect(await OrganizationDepartment.query().findById(departmentId)).toMatchObject({
+        company_id: company.id,
+        name: 'Alice Operations Updated',
+      });
+
       const foreignRead = await as(alice.access_token, {
         method: 'GET',
         url: `/api/organization.department/${foreignDepartment.id}`,
