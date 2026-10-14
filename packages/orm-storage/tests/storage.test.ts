@@ -162,4 +162,17 @@ describe('LocalFileAttachmentStorage', () => {
       })
     ).rejects.toThrow('limit must be an integer from 1 to 10000');
   });
+
+  it('refuses destructive reconciliation with a future cutoff', async () => {
+    const storage = await storageFixture();
+    await storage.put(keyA, Buffer.from('fresh object'));
+
+    await expect(
+      reconcileLocalAttachmentStorage(storage, references([]), {
+        apply: true,
+        olderThan: new Date(Date.now() + 60_000),
+      })
+    ).rejects.toThrow('olderThan must not be in the future when apply is enabled');
+    await expect(storage.get(keyA)).resolves.toEqual(Buffer.from('fresh object'));
+  });
 });

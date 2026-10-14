@@ -216,6 +216,8 @@ export async function reconcileLocalAttachmentStorage(
 ): Promise<ReconcileResult> {
   const limit = options.limit ?? 1000;
   validateScanOptions(options.olderThan, limit);
+  if (options.apply && options.olderThan.getTime() > Date.now())
+    throw new Error('olderThan must not be in the future when apply is enabled');
 
   const byKey = new Map<string, AttachmentReference>();
   for await (const reference of references) byKey.set(validateKey(reference.storageKey), reference);

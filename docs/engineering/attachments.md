@@ -26,6 +26,7 @@ reconciliation report. Run `pnpm attachments:reconcile` for a read-only report. 
 provide an explicit age grace period, for example
 `pnpm attachments:reconcile -- --apply --older-than=2026-09-01T00:00:00.000Z`. Cleanup is bounded to
 1,000 stale, unreferenced UUID objects per run by default and can be tuned with `--limit=1..10000`.
+Apply mode rejects a future cutoff so a clock/date mistake cannot classify fresh uploads as stale.
 The directory is streamed rather than loaded into memory; fresh objects and objects referenced by
 the database do not consume the candidate limit. The report includes `scannedEntries` and
 `scanTruncated`; when truncated is true, repeat reconciliation to cover the remaining stale
