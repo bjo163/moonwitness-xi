@@ -151,6 +151,51 @@ test('does not overwrite or report recovery for a conflicting asset after a remo
   assert.equal(adapter.assets.has(files[1].name), false);
 });
 
+test('keeps earlier uploads when a concurrent immutable conflict appears mid-reconciliation', async () => {
+  const concurrentAsset = {
+    name: files[1].name,
+    digest: digestA,
+    size: files[1].size + 1,
+  };
+  const adapter = fakeAdapter();
+  const uploadAsset = adapter.uploadAsset;
+  adapter.uploadAsset = async (tag, path) => {
+    if (path !== files[1].path) {
+      await uploadAsset(tag, path);
+      return;
+    }
+
+    adapter.uploads.push(files[1].name);
+    // A competing writer wins this immutable name while this upload fails.
+    adapter.assets.set(files[1].name, concurrentAsset);
+    throw new Error('simulated concurrent immutable-name conflict');
+  };
+
+  await assert.rejects(reconcile(adapter), /conflicts with the verified file/u);
+  assert.deepEqual(
+    adapter.uploads,
+    files.map(({ name }) => name)
+  );
+  assert.deepEqual(adapter.assets.get(files[0].name), {
+    name: files[0].name,
+    digest: files[0].digest,
+    size: files[0].size,
+  });
+  assert.deepEqual(adapter.assets.get(files[1].name), concurrentAsset);
+
+  await assert.rejects(reconcile(adapter), /conflicts with the verified file/u);
+  assert.deepEqual(
+    adapter.uploads,
+    files.map(({ name }) => name)
+  );
+  assert.deepEqual(adapter.assets.get(files[0].name), {
+    name: files[0].name,
+    digest: files[0].digest,
+    size: files[0].size,
+  });
+  assert.deepEqual(adapter.assets.get(files[1].name), concurrentAsset);
+});
+
 test('resumes a partially uploaded asset set without duplicating accepted assets', async () => {
   const adapter = fakeAdapter();
   adapter.failBeforeAccept.add(files[1].name);
