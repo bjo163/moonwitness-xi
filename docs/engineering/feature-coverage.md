@@ -1,8 +1,10 @@
-# Feature coverage inventory (local rechecks through `57cccb7`; 2026-10-14)
+# Feature coverage inventory (local rechecks through `a1a95d1`; 2026-10-15)
 
 This report expands the initial [feature-to-test matrix](feature-matrix.md) with an explicit status, priority, accountable role, executed assertion references, and remaining gap for every inventory row. It is a coverage inventory, not a claim that every feature is release-ready.
 
 ## Latest exact-head execution
+
+- At exact code source `a1a95d12ef717da9ee4dff4d7e5f3bd1c8276180`, audit and outbox payloads share a credential-safe snapshot policy covering password/passphrase, token, secret, credential, hash, salt, authorization, cookie and key names in snake_case and camelCase. New model-metadata regression plus auth tests passed 41/41; full `pnpm verify` passed after `pnpm docs:generate` refreshed the README and reference fingerprints. API suite passed 119/119. PostgreSQL tests are excluded from local `pnpm verify` and remain an external exact-SHA acceptance; M10.01 remains open for persisted role/model breadth, retention/storage lifecycle, and promoted-SHA evidence.
 
 - At exact code source `57cccb79982b2ea1d2b5638cdd6a832d7899c467`, auth/ORM tests passed 52/52 after adding attachment download regressions for cross-company and archived parents; both return 404 without reading storage. The equivalent PostgreSQL assertions compile, but PostgreSQL runtime is unavailable locally because `POSTGRES_TEST_URL` is unset and Docker is stopped. Root `pnpm verify` passed on the same test changes, including lint, format, typecheck, workspace/API/Board builds, all local unit/policy suites, architecture, docs and Pages builds; the Linux-only container smoke runtime test was skipped by its platform guard. Exact-SHA hosted CI is still asynchronous.
 - At visual source `9accb0e00f8eca5648f1ba1381abebe80d4efd2a`, `pnpm test:e2e:visual:matrix` passed 9/9 across Chromium, Firefox and WebKit and generated 99 screenshots. Dashboard mobile dark/light and Settings desktop/mobile dark were manually reviewed with no visible clipping or unintended horizontal overflow. The visual fixture is SQLite-backed and does not replace PostgreSQL Board E2E.
