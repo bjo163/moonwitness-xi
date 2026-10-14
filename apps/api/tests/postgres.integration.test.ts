@@ -1,4 +1,7 @@
 import { randomUUID } from 'node:crypto';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import knex, { type Knex } from 'knex';
 import type { FastifyInstance } from 'fastify';
@@ -60,7 +63,7 @@ import {
 import { buildApp } from '../src/app.js';
 import { verifyDefaultBaseAccounts } from '../src/startup-checks.js';
 import { createPostgresKnexConfig } from '../src/config/knexfile.js';
-import type { AttachmentStorage } from '@moonwitness/orm-storage';
+import { LocalFileAttachmentStorage, type AttachmentStorage } from '@moonwitness/orm-storage';
 
 const POSTGRES_TEST_REFRESH_SECRET = 'postgres-integration-refresh-secret-32chars';
 
@@ -71,24 +74,33 @@ if (process.env.REQUIRE_POSTGRES_TESTS === 'true' && !connectionString) {
 const postgresDescribe = connectionString ? describe : describe.skip;
 const postgresAttachmentObjects = new Map<string, Buffer>();
 let postgresAttachmentGetCalls = 0;
+let postgresAttachmentStorageDirectory: string | undefined;
+let postgresLocalAttachmentStorage: LocalFileAttachmentStorage | undefined;
 const postgresAttachmentStorage: AttachmentStorage = {
   async put(key, content) {
     const copy = Buffer.from(content);
+    if (!postgresLocalAttachmentStorage)
+      throw new Error('PostgreSQL attachment storage is not initialized');
+    const metadata = await postgresLocalAttachmentStorage.put(key, copy);
     postgresAttachmentObjects.set(key, copy);
-    return { key, sizeBytes: copy.byteLength, checksum: '0'.repeat(64) };
+    return metadata;
   },
   async get(key) {
     postgresAttachmentGetCalls += 1;
-    const content = postgresAttachmentObjects.get(key);
-    return content ? Buffer.from(content) : null;
+    if (!postgresLocalAttachmentStorage)
+      throw new Error('PostgreSQL attachment storage is not initialized');
+    return postgresLocalAttachmentStorage.get(key);
   },
   async delete(key) {
     postgresAttachmentObjects.delete(key);
+    if (!postgresLocalAttachmentStorage)
+      throw new Error('PostgreSQL attachment storage is not initialized');
+    await postgresLocalAttachmentStorage.delete(key);
   },
   async *list() {
-    for (const [key, content] of postgresAttachmentObjects) {
-      yield { key, sizeBytes: content.byteLength, checksum: '0'.repeat(64) };
-    }
+    if (!postgresLocalAttachmentStorage)
+      throw new Error('PostgreSQL attachment storage is not initialized');
+    for await (const object of postgresLocalAttachmentStorage.list()) yield object;
   },
 };
 const runtimeManifests = [
@@ -116,6 +128,12 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     await adminDb.raw('select 1');
     await adminDb.raw('create schema ??', [schema]);
     await adminDb.raw('create schema ??', [apiSchema]);
+    postgresAttachmentStorageDirectory = await mkdtemp(
+      path.join(tmpdir(), 'moonwitness-postgres-attachments-')
+    );
+    postgresLocalAttachmentStorage = new LocalFileAttachmentStorage(
+      postgresAttachmentStorageDirectory
+    );
     db = knex(
       createPostgresKnexConfig(
         connectionString,
@@ -134,6 +152,8 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       await adminDb.raw('drop schema if exists ?? cascade', [apiSchema]);
       await adminDb.destroy();
     }
+    if (postgresAttachmentStorageDirectory)
+      await rm(postgresAttachmentStorageDirectory, { recursive: true, force: true });
   });
 
   it('applies the PostgreSQL statement timeout to pooled connections', async () => {
@@ -959,7 +979,11 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
         resource_id: lifecycleId,
       });
       const storageKey = String(attachmentRow.storage_key);
+      if (!postgresAttachmentStorageDirectory)
+        throw new Error('PostgreSQL attachment directory is not initialized');
+      const storagePath = path.join(postgresAttachmentStorageDirectory, storageKey);
       expect(postgresAttachmentObjects.get(storageKey)).toEqual(attachmentContent);
+      await expect(readFile(storagePath)).resolves.toEqual(attachmentContent);
 
       const archivedAttachment = await app.inject({
         method: 'DELETE',
@@ -972,6 +996,7 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
         active: false,
       });
       expect(postgresAttachmentObjects.get(storageKey)).toEqual(attachmentContent);
+      await expect(readFile(storagePath)).resolves.toEqual(attachmentContent);
 
       const restoredAttachment = await app.inject({
         method: 'POST',
@@ -995,6 +1020,7 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       expect(deletedAttachment.statusCode, deletedAttachment.payload).toBe(200);
       expect(await apiDb('attachments').where({ id: attachmentId }).first()).toBeUndefined();
       expect(postgresAttachmentObjects.has(storageKey)).toBe(false);
+      await expect(readFile(storagePath)).rejects.toMatchObject({ code: 'ENOENT' });
       await expect(
         AuditLog.query().where({
           model: 'base.attachment',
