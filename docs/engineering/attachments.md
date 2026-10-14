@@ -35,9 +35,11 @@ the database do not consume the candidate limit. The report includes `scannedEnt
 candidates. Only UUID-named objects older than the cutoff are considered. Review the report before
 apply mode.
 
-Every upload and download resolves the parent record using the caller's row/company scope. A caller
-who cannot read the parent receives the same not-found response as for an absent attachment. The
-server never builds a path from a filename or accepts a caller-supplied storage key. The provider
+Every upload and download resolves the parent record using the caller's row/company scope. Download
+first scopes the attachment metadata, then checks the current scope and active state of its parent
+before reading any bytes from storage. A caller who cannot read the parent receives the same
+not-found response as for an absent attachment, and the storage provider is not called. The server
+never builds a path from a filename or accepts a caller-supplied storage key. The provider
 validates object keys as UUIDs before resolving them.
 
 `ATTACHMENT_STORAGE_DIR` selects the writable storage directory; its default is

@@ -798,6 +798,24 @@ export const genericRoutes: FastifyPluginAsync<GenericRoutesOptions> = async (fa
     const Model = req.env.get('base.attachment');
     const attachment = await scopedRecord(req, Model, 'base.attachment', id);
     if (!attachment) return reply.code(404).send({ success: false, error: 'Attachment not found' });
+    const resourceModel = property(attachment, 'resource_model');
+    const resourceId = property(attachment, 'resource_id');
+    if (
+      typeof resourceModel !== 'string' ||
+      !Registry.has(resourceModel) ||
+      typeof resourceId !== 'number' ||
+      !Number.isSafeInteger(resourceId) ||
+      resourceId < 1
+    ) {
+      return reply.code(404).send({ success: false, error: 'Attachment not found' });
+    }
+    const resource = await scopedRecord(
+      req,
+      resolveModel(req, resourceModel) ?? BaseModel,
+      resourceModel,
+      resourceId
+    );
+    if (!resource) return reply.code(404).send({ success: false, error: 'Attachment not found' });
     const key = property(attachment, 'storage_key');
     const name = property(attachment, 'name');
     const mimetype = property(attachment, 'mimetype');

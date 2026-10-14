@@ -21,6 +21,7 @@ import { buildApp } from '../src/app.js';
 import { OutboxEvent } from '@moonwitness/jobs';
 import { canAccess } from '../src/auth/policy.js';
 import { OrganizationDepartment } from '@moonwitness/orm-organization';
+import type { AttachmentStorage } from '@moonwitness/orm-storage';
 
 const ADMIN_PASSWORD = 'admin-test-password';
 const USER_PASSWORD = 'alice-test-password';
@@ -43,6 +44,32 @@ describe('authentication and authorization', () => {
   let admin: TokenBody['data'];
   let alice: TokenBody['data'];
   let system: TokenBody['data'];
+  const attachmentObjects = new Map<string, Buffer>();
+  let attachmentGetCalls = 0;
+  const attachmentStorage: AttachmentStorage = {
+    async put(key, content) {
+      const copy = Buffer.from(content);
+      attachmentObjects.set(key, copy);
+      return { key, sizeBytes: copy.byteLength, checksum: '0'.repeat(64) };
+    },
+    async get(key) {
+      attachmentGetCalls += 1;
+      const content = attachmentObjects.get(key);
+      return content ? Buffer.from(content) : null;
+    },
+    async delete(key) {
+      attachmentObjects.delete(key);
+    },
+    async *list() {
+      for (const [key, content] of attachmentObjects) {
+        yield {
+          key,
+          sizeBytes: content.byteLength,
+          checksum: '0'.repeat(64),
+        };
+      }
+    },
+  };
 
   const login = (loginName: string, password: string) =>
     app.inject({ method: 'POST', url: '/auth/login', payload: { login: loginName, password } });
@@ -72,6 +99,7 @@ describe('authentication and authorization', () => {
       superadminPassword: ADMIN_PASSWORD,
       jwtSecret: TEST_JWT_SECRET,
       loginRateMax: 1000,
+      attachmentStorage,
     });
     await app.ready();
 
@@ -97,6 +125,80 @@ describe('authentication and authorization', () => {
 
   afterAll(async () => {
     await app.close();
+  });
+
+  it('rechecks parent record access before reading attachment bytes', async () => {
+    const userGroup = await AccessGroup.query().findOne({ code: 'user' }).throwIfNotFound();
+    const membership = await GroupMembership.query().findOne({
+      user_id: alice.user.id,
+      group_id: userGroup.id,
+    });
+    const createdMembership =
+      membership ??
+      (await GroupMembership.query().insert({ user_id: alice.user.id, group_id: userGroup.id }));
+    const existingGrant = await ModelAccess.query().findOne({
+      group_id: userGroup.id,
+      model_name: 'base.attachment',
+    });
+    const grant = existingGrant
+      ? await ModelAccess.query()
+          .findById(existingGrant.id)
+          .patchAndFetch({ read: true, create: true })
+      : await ModelAccess.query().insertAndFetch({
+          group_id: userGroup.id,
+          model_name: 'base.attachment',
+          read: true,
+          create: true,
+        });
+    const user = await User.query().findById(alice.user.id).throwIfNotFound();
+    const partner = await Partner.query().findById(user.partner_id).throwIfNotFound();
+    const originalCompanyId = partner.company_id;
+    const foreignCompany = await Company.query().insertAndFetch({
+      name: 'Attachment Scope Foreign Company',
+    });
+    let attachmentId: number | undefined;
+
+    try {
+      const uploaded = await as(alice.access_token, {
+        method: 'POST',
+        url: `/api/base.attachment/upload?resource_model=base.partner&resource_id=${partner.id}&name=scope-check.txt`,
+        headers: { 'content-type': 'application/octet-stream', 'x-file-mime': 'text/plain' },
+        payload: Buffer.from('private parent content'),
+      });
+      expect(uploaded.statusCode, uploaded.payload).toBe(201);
+      attachmentId = uploaded.json<{ data: { id: number } }>().data.id;
+
+      await Partner.query().findById(partner.id).patch({ company_id: foreignCompany.id });
+      const getCallsBeforeDeniedDownload = attachmentGetCalls;
+      const denied = await as(alice.access_token, {
+        method: 'GET',
+        url: `/api/base.attachment/${attachmentId}/download`,
+      });
+
+      expect(denied.statusCode).toBe(404);
+      expect(denied.payload).not.toContain('private parent content');
+      expect(attachmentGetCalls).toBe(getCallsBeforeDeniedDownload);
+    } finally {
+      await Partner.query().findById(partner.id).patch({ company_id: originalCompanyId });
+      if (attachmentId !== undefined) {
+        const attachment = await db('attachments')
+          .select('storage_key')
+          .where({ id: attachmentId })
+          .first<{ storage_key: string }>();
+        await db('attachments').where({ id: attachmentId }).delete();
+        if (attachment) await attachmentStorage.delete(attachment.storage_key);
+      }
+      await Company.query().deleteById(foreignCompany.id);
+      if (existingGrant) {
+        await ModelAccess.query().findById(grant.id).patch({
+          read: existingGrant.read,
+          create: existingGrant.create,
+        });
+      } else {
+        await ModelAccess.query().deleteById(grant.id);
+      }
+      if (!membership) await GroupMembership.query().deleteById(createdMembership.id);
+    }
   });
 
   describe('register', () => {

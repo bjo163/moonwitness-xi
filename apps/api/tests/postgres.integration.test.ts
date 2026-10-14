@@ -11,6 +11,7 @@ import {
   Country,
   CountryState,
   Currency,
+  GroupMembership,
   ModelAccess,
   Language,
   Partner,
@@ -53,6 +54,7 @@ import {
 import { buildApp } from '../src/app.js';
 import { verifyDefaultBaseAccounts } from '../src/startup-checks.js';
 import { createPostgresKnexConfig } from '../src/config/knexfile.js';
+import type { AttachmentStorage } from '@moonwitness/orm-storage';
 
 const POSTGRES_TEST_REFRESH_SECRET = 'postgres-integration-refresh-secret-32chars';
 
@@ -61,6 +63,28 @@ if (process.env.REQUIRE_POSTGRES_TESTS === 'true' && !connectionString) {
   throw new Error('POSTGRES_TEST_URL is required when REQUIRE_POSTGRES_TESTS=true');
 }
 const postgresDescribe = connectionString ? describe : describe.skip;
+const postgresAttachmentObjects = new Map<string, Buffer>();
+let postgresAttachmentGetCalls = 0;
+const postgresAttachmentStorage: AttachmentStorage = {
+  async put(key, content) {
+    const copy = Buffer.from(content);
+    postgresAttachmentObjects.set(key, copy);
+    return { key, sizeBytes: copy.byteLength, checksum: '0'.repeat(64) };
+  },
+  async get(key) {
+    postgresAttachmentGetCalls += 1;
+    const content = postgresAttachmentObjects.get(key);
+    return content ? Buffer.from(content) : null;
+  },
+  async delete(key) {
+    postgresAttachmentObjects.delete(key);
+  },
+  async *list() {
+    for (const [key, content] of postgresAttachmentObjects) {
+      yield { key, sizeBytes: content.byteLength, checksum: '0'.repeat(64) };
+    }
+  },
+};
 const runtimeManifests = [
   baseManifest,
   authManifest,
@@ -548,6 +572,7 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       db: apiDb,
       superadminPassword: 'postgres-flow-initial-password',
       jwtSecret: 'postgres-flow-jwt-secret-must-be-32-chars',
+      attachmentStorage: postgresAttachmentStorage,
     });
     await app.ready();
     await verifyDefaultBaseAccounts(apiDb, true);
@@ -804,6 +829,7 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       db: apiDb,
       superadminPassword: 'postgres-flow-initial-password',
       jwtSecret: 'postgres-flow-jwt-secret-must-be-32-chars',
+      attachmentStorage: postgresAttachmentStorage,
     });
     await app.ready();
 
@@ -848,6 +874,12 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     await apiDb('model_access')
       .where({ id: partnerGrant.id })
       .update({ create: true, write: true });
+    await ModelAccess.query().insert({
+      group_id: userGroup.id,
+      model_name: 'base.attachment',
+      read: true,
+      create: true,
+    });
 
     const foreignCompany = await Company.query().insertAndFetch({
       name: 'PostgreSQL Foreign Tenant',
@@ -864,6 +896,44 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     expect(login.statusCode).toBe(200);
     const accessToken = login.json<{ data: { access_token: string } }>().data.access_token;
     const headers = { authorization: `Bearer ${accessToken}` };
+
+    const uploadedAttachment = await app.inject({
+      method: 'POST',
+      url: `/api/base.attachment/upload?resource_model=base.partner&resource_id=${localPartner.id}&name=tenant-scope.txt`,
+      headers: {
+        ...headers,
+        'content-type': 'application/octet-stream',
+        'x-file-mime': 'text/plain',
+      },
+      payload: Buffer.from('company-scoped attachment'),
+    });
+    expect(uploadedAttachment.statusCode, uploadedAttachment.payload).toBe(201);
+    const uploadedAttachmentId = uploadedAttachment.json<{ data: { id: number } }>().data.id;
+    const putCountBeforeForeignUpload = postgresAttachmentObjects.size;
+    const deniedForeignUpload = await app.inject({
+      method: 'POST',
+      url: `/api/base.attachment/upload?resource_model=base.partner&resource_id=${foreignPartner.id}&name=foreign.txt`,
+      headers: {
+        ...headers,
+        'content-type': 'application/octet-stream',
+        'x-file-mime': 'text/plain',
+      },
+      payload: Buffer.from('foreign attachment'),
+    });
+    expect(deniedForeignUpload.statusCode).toBe(404);
+    expect(postgresAttachmentObjects.size).toBe(putCountBeforeForeignUpload);
+
+    await Partner.query().findById(localPartner.id).patch({ company_id: foreignCompany.id });
+    const getCallsBeforeForeignParentDownload = postgresAttachmentGetCalls;
+    const deniedForeignParentDownload = await app.inject({
+      method: 'GET',
+      url: `/api/base.attachment/${uploadedAttachmentId}/download`,
+      headers,
+    });
+    expect(deniedForeignParentDownload.statusCode).toBe(404);
+    expect(deniedForeignParentDownload.payload).not.toContain('company-scoped attachment');
+    expect(postgresAttachmentGetCalls).toBe(getCallsBeforeForeignParentDownload);
+    await Partner.query().findById(localPartner.id).patch({ company_id: localCompany.id });
 
     const listed = await app.inject({
       method: 'GET',
