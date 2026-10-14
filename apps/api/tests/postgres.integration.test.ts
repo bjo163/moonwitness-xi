@@ -1030,6 +1030,53 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
         })
       ).resolves.toHaveLength(1);
 
+      await apiDb.raw(`
+        CREATE OR REPLACE FUNCTION reject_attachment_outbox_insert()
+        RETURNS trigger
+        LANGUAGE plpgsql
+        AS $$ BEGIN RAISE EXCEPTION 'outbox unavailable'; END $$;
+      `);
+      await apiDb.raw(`
+        CREATE TRIGGER reject_attachment_outbox_insert
+        BEFORE INSERT ON outbox_events
+        FOR EACH ROW EXECUTE FUNCTION reject_attachment_outbox_insert();
+      `);
+      const attachmentCountBeforeRollback = (await apiDb('attachments').select('id')).length;
+      const auditCountBeforeRollback = (await apiDb('audit_logs').select('id')).length;
+      const storedObjectsBeforeRollback = postgresAttachmentObjects.size;
+      if (!postgresLocalAttachmentStorage)
+        throw new Error('PostgreSQL attachment storage is not initialized');
+      const storedFileKeysBeforeRollback = [];
+      for await (const object of postgresLocalAttachmentStorage.list())
+        storedFileKeysBeforeRollback.push(object.key);
+      let rejectedAttachmentUpload: Awaited<ReturnType<typeof app.inject>>;
+      try {
+        rejectedAttachmentUpload = await app.inject({
+          method: 'POST',
+          url: `/api/base.attachment/upload?resource_model=base.partner&resource_id=${lifecycleId}&name=rollback.txt`,
+          headers: {
+            ...authorization,
+            'content-type': 'application/octet-stream',
+            'x-file-mime': 'text/plain',
+          },
+          payload: Buffer.from('must be removed after rollback'),
+        });
+      } finally {
+        await apiDb.raw('DROP TRIGGER reject_attachment_outbox_insert ON outbox_events');
+        await apiDb.raw('DROP FUNCTION reject_attachment_outbox_insert()');
+      }
+      expect(rejectedAttachmentUpload.statusCode).toBe(500);
+      expect((await apiDb('attachments').select('id')).length).toBe(attachmentCountBeforeRollback);
+      expect((await apiDb('audit_logs').select('id')).length).toBe(auditCountBeforeRollback);
+      expect(postgresAttachmentObjects.size).toBe(storedObjectsBeforeRollback);
+      const storedFileKeysAfterRollback = [];
+      for await (const object of postgresLocalAttachmentStorage.list())
+        storedFileKeysAfterRollback.push(object.key);
+      expect(storedFileKeysAfterRollback).toEqual(storedFileKeysBeforeRollback);
+      await expect(
+        apiDb('attachments').where({ resource_id: lifecycleId, name: 'rollback.txt' }).first()
+      ).resolves.toBeUndefined();
+
       const rollbackRecord = await app.inject({
         method: 'POST',
         url: '/api/base.partner',
