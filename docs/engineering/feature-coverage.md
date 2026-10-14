@@ -1,8 +1,10 @@
-# Feature coverage inventory (local recheck 2026-10-14; source `972486f`)
+# Feature coverage inventory (local rechecks through `1db483f`; 2026-10-14)
 
 This report expands the initial [feature-to-test matrix](feature-matrix.md) with an explicit status, priority, accountable role, executed assertion references, and remaining gap for every inventory row. It is a coverage inventory, not a claim that every feature is release-ready.
 
 ## Latest exact-head execution
+
+- Local PostgreSQL tenant-write regression at exact `dev` source `1db483f0cf0996580291d022328152f96e7a850a`: `pnpm --filter @moonwitness/api exec vitest run tests/auth.test.ts tests/postgres.integration.test.ts` passed auth 38/38; the PostgreSQL integration file's 11 tests were skipped because `POSTGRES_TEST_URL` is unavailable locally. Added PostgreSQL assertions for an allowed same-company partner update that persists and a foreign-company update that returns 404 without changing the foreign row; these new database assertions have not executed locally. Exact-source hosted CI [38590373932](https://github.com/bjo163/moonwitness-xi/actions/runs/38590373932) was pending and Gitleaks [38590373850](https://github.com/bjo163/moonwitness-xi/actions/runs/38590373850) passed at observation. The full model × role × action matrix, audit retention/storage and promoted-SHA acceptance remain open.
 
 - Local recheck on source `972486f49646acdbb53502d46327e118e15696a3`: `pnpm --filter @moonwitness/api exec vitest run tests/auth.test.ts tests/orm.test.ts` passed 51/51 tests across two files. `POSTGRES_TEST_URL` is not configured in this environment, so this recheck does not claim a local PostgreSQL run. The matrix below remains an inventory with known open gaps: persisted mutations are not exercised for every action on all 41 models; audit retention/storage lifecycle and promoted-SHA release acceptance remain incomplete. Older hosted results below are retained as historical evidence and do not become exact-head evidence for this source.
 
