@@ -5,6 +5,7 @@ import { URL } from 'node:url';
 import {
   createModelGraph,
   createWorkspaceGraph,
+  hashWorkspaceGraph,
   renderModelSvg,
   renderSequenceSvg,
   renderWorkspaceSvg,
@@ -39,6 +40,23 @@ test('workspace graph keeps only known internal dependencies and records their s
       manifest: 'apps/board',
     },
   ]);
+});
+
+test('workspace provenance ignores external dependency ranges outside the rendered graph', () => {
+  const manifest = (version) => [
+    {
+      directory: 'apps/board',
+      manifest: {
+        name: '@moonwitness/board',
+        version: '1.0.0',
+        dependencies: { react: version },
+      },
+    },
+  ];
+  assert.equal(
+    hashWorkspaceGraph(createWorkspaceGraph(manifest('^19.0.0'))),
+    hashWorkspaceGraph(createWorkspaceGraph(manifest('^19.1.0')))
+  );
 });
 
 test('workspace graph rejects duplicate names and unresolved workspace dependencies', () => {

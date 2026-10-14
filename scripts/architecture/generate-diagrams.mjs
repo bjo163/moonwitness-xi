@@ -86,6 +86,10 @@ function hashSources(sources) {
   return hash.digest('hex');
 }
 
+export function hashWorkspaceGraph(graph) {
+  return createHash('sha256').update(JSON.stringify(graph)).digest('hex');
+}
+
 function relationTarget(field) {
   if (!field.target) return undefined;
   const target =
@@ -452,16 +456,15 @@ async function createArtifacts({
 }
 
 export async function generateArchitectureDiagrams({ check = false } = {}) {
-  const [{ manifests: packageManifests, sources: packageSources }, addonModules, flowSource] =
-    await Promise.all([
-      collectManifests(),
-      Promise.all(
-        addonManifestPaths.map(
-          ({ entry }) => import(pathToFileURL(path.join(rootDirectory, entry)).href)
-        )
-      ),
-      readFile(flowSourcePath, 'utf8').then(JSON.parse),
-    ]);
+  const [{ manifests: packageManifests }, addonModules, flowSource] = await Promise.all([
+    collectManifests(),
+    Promise.all(
+      addonManifestPaths.map(
+        ({ entry }) => import(pathToFileURL(path.join(rootDirectory, entry)).href)
+      )
+    ),
+    readFile(flowSourcePath, 'utf8').then(JSON.parse),
+  ]);
   const modelSourcePaths = [];
   for (const { sourceRoot, manifest } of addonManifestPaths) {
     modelSourcePaths.push(`${sourceRoot}/${manifest}`);
@@ -491,7 +494,7 @@ export async function generateArchitectureDiagrams({ check = false } = {}) {
   const artifacts = await createArtifacts({
     packageGraph,
     modelGraph,
-    packageSourceHash: hashSources(packageSources),
+    packageSourceHash: hashWorkspaceGraph(packageGraph),
     modelSourceHash: hashSources(modelSources),
     flows: validateFlows(flowSource),
   });

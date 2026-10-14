@@ -4,6 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import {
   collectReferenceMetadata,
+  fingerprintReferenceMetadata,
   extractRoutes,
   assertGeneratedOutputsCurrent,
   generateReference,
@@ -12,6 +13,19 @@ import {
 } from './generate-reference.mjs';
 
 const root = path.resolve(import.meta.dirname, '../..');
+
+test('reference provenance follows rendered metadata and excludes dependency-only manifest changes', async () => {
+  const metadata = await collectReferenceMetadata();
+  const { generatedFromSha256, ...renderedMetadata } = metadata;
+  assert.equal(generatedFromSha256, fingerprintReferenceMetadata(renderedMetadata));
+  assert.deepEqual(Object.keys(metadata.packages[0]).sort(), [
+    'directory',
+    'name',
+    'scripts',
+    'version',
+  ]);
+  assert.match(generatedFromSha256, /^[a-f0-9]{64}$/u);
+});
 
 test('stale generated output fails and reports every changed or missing path deterministically', () => {
   const actual = new Map([

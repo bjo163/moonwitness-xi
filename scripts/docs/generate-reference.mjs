@@ -217,6 +217,11 @@ async function filesUnder(directory, extension) {
   return files.sort(compare);
 }
 
+export function fingerprintReferenceMetadata(metadata) {
+  const { generatedFromSha256: _sourceFingerprint, ...renderedMetadata } = metadata;
+  return createHash('sha256').update(JSON.stringify(renderedMetadata)).digest('hex');
+}
+
 export async function collectReferenceMetadata() {
   const packageDirs = [];
   for (const group of ['apps', 'packages']) {
@@ -227,7 +232,6 @@ export async function collectReferenceMetadata() {
   packageDirs.sort(compare);
   const packages = [];
   const scripts = {};
-  const packageManifestPaths = [];
   for (const directory of packageDirs) {
     let manifest;
     try {
@@ -236,7 +240,6 @@ export async function collectReferenceMetadata() {
       if (error.code === 'ENOENT') continue;
       throw error;
     }
-    packageManifestPaths.push(`${directory}/package.json`);
     const localScripts = Object.fromEntries(
       Object.entries(manifest.scripts ?? {}).sort(([a], [b]) => compare(a, b))
     );
@@ -279,18 +282,6 @@ export async function collectReferenceMetadata() {
     import(pathToFileURL(organizationPath).href),
     import(pathToFileURL(integrationPath).href),
   ]);
-  const addonSources = [
-    ...(await filesUnder('packages/orm/src', '.ts')),
-    ...(await filesUnder('packages/orm-base/src', '.ts')),
-    ...(await filesUnder('packages/auth/src', '.ts')),
-    ...(await filesUnder('packages/jobs/src', '.ts')),
-    ...(await filesUnder('packages/orm-notification/src', '.ts')),
-    ...(await filesUnder('packages/orm-storage/src', '.ts')),
-    ...(await filesUnder('packages/orm-workflow/src', '.ts')),
-    ...(await filesUnder('packages/orm-request/src', '.ts')),
-    ...(await filesUnder('packages/orm-organization/src', '.ts')),
-    ...(await filesUnder('packages/orm-integration/src', '.ts')),
-  ];
   const addons = [
     base,
     auth,
@@ -412,33 +403,15 @@ export async function collectReferenceMetadata() {
   if (new Set(routeKeys).size !== routeKeys.length)
     throw new Error('Duplicate API route declaration found');
 
-  const inputs = [
-    'package.json',
-    'pnpm-workspace.yaml',
-    '.env.example',
-    ...packageManifestPaths,
-    ...envSourcePaths,
-    ...addonSources,
-    ...routePaths,
-  ].sort(compare);
-  const hash = createHash('sha256');
-  for (const file of inputs) {
-    hash
-      .update(file.replaceAll('\\', '/'))
-      .update('\0')
-      .update(await readFile(path.join(root, file)))
-      .update('\0');
-  }
   const example = await readFile(path.join(root, '.env.example'), 'utf8');
   const env = envNames(envSources, example);
   const rootManifest = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
   scripts.root = Object.fromEntries(
     Object.entries(rootManifest.scripts ?? {}).sort(([left], [right]) => compare(left, right))
   );
-  return {
+  const metadata = {
     schemaVersion: 1,
     rootVersion: rootManifest.version,
-    generatedFromSha256: hash.digest('hex'),
     safety: {
       applicationStarted: false,
       databaseConnected: false,
@@ -452,6 +425,7 @@ export async function collectReferenceMetadata() {
     addons,
     routes,
   };
+  return { ...metadata, generatedFromSha256: fingerprintReferenceMetadata(metadata) };
 }
 
 function renderPlatformJson(metadata) {

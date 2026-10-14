@@ -1,7 +1,6 @@
 {
   "schemaVersion": 1,
   "rootVersion": "1.0.0-rc.1",
-  "generatedFromSha256": "3cebb13f1c817eea5951ab0b2ae30a4d25712fc2bb03f4bab12c596f470bd595",
   "safety": {
     "applicationStarted": false,
     "databaseConnected": false,
@@ -4578,5 +4577,6 @@
       "method": "POST",
       "path": "/workflows/instances/:id/actions"
     }
-  ]
+  ],
+  "generatedFromSha256": "8b54747cd10f6da26ae596012d934966cefd86632602ebbfcbbe5d697eec00d2"
 }
