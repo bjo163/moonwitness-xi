@@ -193,6 +193,15 @@ describe('authentication and authorization', () => {
       expect(archivedUpload.statusCode, archivedUpload.payload).toBe(201);
       archivedAttachmentId = archivedUpload.json<{ data: { id: number } }>().data.id;
       await Tag.query().findById(archivedTag.id).patch({ active: false });
+      const storedObjectsBeforeArchivedUpload = attachmentObjects.size;
+      const deniedArchivedUpload = await as(alice.access_token, {
+        method: 'POST',
+        url: `/api/base.attachment/upload?resource_model=base.tag&resource_id=${archivedTag.id}&name=second-archived-parent.txt`,
+        headers: { 'content-type': 'application/octet-stream', 'x-file-mime': 'text/plain' },
+        payload: Buffer.from('must not be stored'),
+      });
+      expect(deniedArchivedUpload.statusCode).toBe(404);
+      expect(attachmentObjects.size).toBe(storedObjectsBeforeArchivedUpload);
       const getCallsBeforeArchivedParentDownload = attachmentGetCalls;
       const deniedArchivedParent = await as(alice.access_token, {
         method: 'GET',

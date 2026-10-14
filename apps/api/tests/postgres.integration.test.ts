@@ -953,6 +953,19 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       .id;
     await Tag.query().findById(archivedParent.id).patch({ active: false });
     try {
+      const objectsBeforeArchivedUpload = postgresAttachmentObjects.size;
+      const deniedArchivedParentUpload = await app.inject({
+        method: 'POST',
+        url: `/api/base.attachment/upload?resource_model=base.tag&resource_id=${archivedParent.id}&name=second-archived-parent.txt`,
+        headers: {
+          ...headers,
+          'content-type': 'application/octet-stream',
+          'x-file-mime': 'text/plain',
+        },
+        payload: Buffer.from('must not be stored'),
+      });
+      expect(deniedArchivedParentUpload.statusCode).toBe(404);
+      expect(postgresAttachmentObjects.size).toBe(objectsBeforeArchivedUpload);
       const getCallsBeforeArchivedParentDownload = postgresAttachmentGetCalls;
       const deniedArchivedParentDownload = await app.inject({
         method: 'GET',
