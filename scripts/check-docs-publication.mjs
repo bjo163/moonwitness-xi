@@ -50,8 +50,15 @@ function scan(directory) {
     if (entry.name.endsWith('.map'))
       throw new Error(`Source maps are not allowed in public docs: ${relativePath}`);
     const contents = fs.readFileSync(filePath);
-    if (contents.includes(0)) continue;
-    const text = contents.toString('utf8');
+    let text;
+    if (contents[0] === 0xff && contents[1] === 0xfe) {
+      text = contents.subarray(2).toString('utf16le');
+    } else if (contents[0] === 0xfe && contents[1] === 0xff) {
+      text = Buffer.from(contents.subarray(2)).swap16().toString('utf16le');
+    } else {
+      if (contents.includes(0)) continue;
+      text = contents.toString('utf8');
+    }
     for (const pattern of secretPatterns) {
       if (pattern.test(text))
         throw new Error(`Potential secret detected in public file: ${relativePath}`);

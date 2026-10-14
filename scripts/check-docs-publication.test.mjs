@@ -64,6 +64,25 @@ test('rejects common provider tokens, bearer credentials, JWTs, and unquoted sec
   }
 });
 
+test('rejects credential-like values in BOM-marked UTF-16 public files', () => {
+  const credential = 'password="synthetic-super-secret-value"';
+  const utf16le = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(credential, 'utf16le')]);
+  const utf16beBody = Buffer.from(credential, 'utf16le').swap16();
+  const utf16be = Buffer.concat([Buffer.from([0xfe, 0xff]), utf16beBody]);
+
+  for (const [name, contents] of [
+    ['sample-le.txt', utf16le],
+    ['sample-be.txt', utf16be],
+  ]) {
+    withSite((directory) => {
+      fs.writeFileSync(path.join(directory, name), contents);
+      const result = scan(directory);
+      assert.equal(result.status, 1, `expected ${name} to be rejected`);
+      assert.match(result.stderr, /Potential secret detected/);
+    });
+  }
+});
+
 test('rejects env/auth artifacts and source maps', () => {
   withSite((directory) => {
     fs.writeFileSync(path.join(directory, '.env.production'), 'SECRET=fixture');
