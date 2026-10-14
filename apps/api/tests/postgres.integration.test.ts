@@ -986,6 +986,36 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
         ['action_archive', superadmin.id],
         ['action_unarchive', superadmin.id],
       ]);
+      const auditMutationAttempts = await Promise.all([
+        app.inject({
+          method: 'POST',
+          url: '/api/base.audit_log',
+          headers: authorization,
+          payload: {
+            model: 'base.partner',
+            record_id: lifecycleId,
+            operation: 'create',
+            changes: 'forged PostgreSQL audit event',
+          },
+        }),
+        app.inject({
+          method: 'PATCH',
+          url: `/api/base.audit_log/${lifecycleAudit[0].id}`,
+          headers: authorization,
+          payload: { changes: 'forged PostgreSQL audit changes' },
+        }),
+        app.inject({
+          method: 'DELETE',
+          url: `/api/base.audit_log/${lifecycleAudit[0].id}?hard=true`,
+          headers: authorization,
+        }),
+      ]);
+      expect(auditMutationAttempts.map(({ statusCode }) => statusCode)).toEqual([403, 403, 403]);
+      await expect(
+        AuditLog.query()
+          .where({ model: 'base.partner', record_id: lifecycleId })
+          .orderBy('id', 'asc')
+      ).resolves.toEqual(lifecycleAudit);
       await expect(Partner.query().findById(lifecycleId)).resolves.toMatchObject({ active: true });
 
       const attachmentContent = Buffer.from('PostgreSQL attachment lifecycle probe');
