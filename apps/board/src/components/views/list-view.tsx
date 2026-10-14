@@ -847,7 +847,12 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
               })
             )}
           </div>
-          <div className="overflow-x-auto">
+          <div
+            className="overflow-x-auto"
+            role="region"
+            aria-label={`${views.title} records table`}
+            tabIndex={0}
+          >
             <table className="hidden w-full border-collapse text-left text-sm sm:table">
               <thead>
                 <tr className="border-b-2 border-ink bg-paper font-display uppercase tracking-wider text-ink">

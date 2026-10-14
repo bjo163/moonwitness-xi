@@ -143,6 +143,40 @@ test('responsive protected screens fit and remain accessible in both themes', as
         await expect(page.getByRole('heading', { name: view.heading, exact: false })).toBeVisible();
         const label = `${view.name}/${size.name}/${theme}`;
         await expectNoHorizontalOverflow(page, label);
+        if (view.name === 'list' && size.name === 'desktop-1440') {
+          const tableRegion = page.getByRole('region', {
+            name: 'Partners records table',
+            exact: true,
+          });
+          await expect(tableRegion).toBeVisible();
+          await tableRegion.focus();
+          await expect(tableRegion).toBeFocused();
+          const scrollAccess = await tableRegion.evaluate((element) => {
+            const previousScrollLeft = element.scrollLeft;
+            const maxScrollLeft = element.scrollWidth - element.clientWidth;
+            element.scrollLeft = maxScrollLeft;
+            const lastCell = element.querySelector('tbody tr td:last-child');
+            const regionBounds = element.getBoundingClientRect();
+            const actionBounds = lastCell?.getBoundingClientRect();
+            const result = {
+              maxScrollLeft,
+              scrollMoved: element.scrollLeft > previousScrollLeft,
+              regionLeft: regionBounds.left,
+              regionRight: regionBounds.right,
+              actionLeft: actionBounds?.left,
+              actionRight: actionBounds?.right,
+              actionColumnVisible:
+                actionBounds !== undefined &&
+                actionBounds.left >= regionBounds.left &&
+                actionBounds.right <= regionBounds.right + 1,
+            };
+            element.scrollLeft = previousScrollLeft;
+            return result;
+          });
+          expect(scrollAccess.maxScrollLeft).toBeGreaterThan(0);
+          expect(scrollAccess.scrollMoved).toBe(true);
+          expect(scrollAccess.actionColumnVisible, JSON.stringify(scrollAccess)).toBe(true);
+        }
         if (view.name === 'profile' && size.name === 'mobile-375') {
           await expect(page.getByRole('heading', { name: 'Super Administrator' })).toBeVisible();
         }
