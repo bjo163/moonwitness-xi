@@ -39,7 +39,10 @@ import {
 } from '@moonwitness/jobs';
 import { manifest as baseManifest } from '@moonwitness/orm-base';
 import { manifest as notificationManifest } from '@moonwitness/orm-notification';
-import { manifest as organizationManifest } from '@moonwitness/orm-organization';
+import {
+  OrganizationDepartment,
+  manifest as organizationManifest,
+} from '@moonwitness/orm-organization';
 import { manifest as requestManifest } from '@moonwitness/orm-request';
 import { manifest as integrationManifest } from '@moonwitness/orm-integration';
 import {
@@ -906,6 +909,56 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     expect(deniedForeignWrite.payload).not.toContain('PostgreSQL Foreign Tenant');
     expect(await Partner.query().findById(foreignPartner.id)).toMatchObject({
       name: 'PostgreSQL Foreign Contact',
+      company_id: foreignCompany.id,
+    });
+
+    const organizationGroup = await AccessGroup.query().insert({
+      code: 'postgres_org_maintainers',
+      name: 'PostgreSQL Organization Maintainers',
+    });
+    await GroupMembership.query().insert({
+      user_id: localUser.id,
+      group_id: organizationGroup.id,
+    });
+    await ModelAccess.query().insert({
+      group_id: organizationGroup.id,
+      model_name: 'organization.department',
+      create: true,
+      write: true,
+    });
+    const localDepartment = await OrganizationDepartment.query().insertAndFetch({
+      company_id: localCompany.id,
+      code: 'postgres_local_operations',
+      name: 'PostgreSQL Local Operations',
+    });
+    const foreignDepartment = await OrganizationDepartment.query().insertAndFetch({
+      company_id: foreignCompany.id,
+      code: 'postgres_foreign_operations',
+      name: 'PostgreSQL Foreign Operations',
+    });
+
+    const allowedDepartmentWrite = await app.inject({
+      method: 'PATCH',
+      url: `/api/organization.department/${localDepartment.id}`,
+      headers,
+      payload: { name: 'PostgreSQL Local Operations Updated' },
+    });
+    expect(allowedDepartmentWrite.statusCode, allowedDepartmentWrite.payload).toBe(200);
+    expect(await OrganizationDepartment.query().findById(localDepartment.id)).toMatchObject({
+      name: 'PostgreSQL Local Operations Updated',
+      company_id: localCompany.id,
+    });
+
+    const deniedDepartmentWrite = await app.inject({
+      method: 'PATCH',
+      url: `/api/organization.department/${foreignDepartment.id}`,
+      headers,
+      payload: { name: 'Unauthorized foreign department update' },
+    });
+    expect(deniedDepartmentWrite.statusCode).toBe(404);
+    expect(deniedDepartmentWrite.payload).not.toContain('PostgreSQL Foreign Tenant');
+    expect(await OrganizationDepartment.query().findById(foreignDepartment.id)).toMatchObject({
+      name: 'PostgreSQL Foreign Operations',
       company_id: foreignCompany.id,
     });
 
