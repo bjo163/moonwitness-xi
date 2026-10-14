@@ -519,6 +519,38 @@ test('ambiguous create failure re-reads marker and recovers without creating a d
   assert.deepEqual(result, [{ taskId: 'M11.03', issueNumber: 44, recovered: true }]);
 });
 
+test('ambiguous create failure refuses recovery when re-read finds duplicate managed markers', async () => {
+  const expected = plan().operations[0];
+  const committed = [
+    { number: 45, title: expected.title, body: expected.body, state: 'open' },
+    { number: 46, title: expected.title, body: expected.body, state: 'closed' },
+  ];
+  let reads = 0;
+  let creates = 0;
+  let updates = 0;
+  const client = {
+    listAll: async () => {
+      reads += 1;
+      return reads === 1 ? [] : committed;
+    },
+    create: async () => {
+      creates += 1;
+      throw new Error('response timed out after server accepted create');
+    },
+    update: async () => {
+      updates += 1;
+    },
+  };
+
+  await assert.rejects(
+    applyIssuePlan({ plan: plan(), client, tasks: [task], repositoryId, sourceSha }),
+    /response timed out after server accepted create/u
+  );
+  assert.equal(reads, 2);
+  assert.equal(creates, 1);
+  assert.equal(updates, 0);
+});
+
 test('transient create failure without a committed marker fails without a blind retry', async () => {
   const calls = [];
   const client = {
