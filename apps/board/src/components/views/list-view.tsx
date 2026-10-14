@@ -24,6 +24,7 @@ import {
 import type { Domain, ResolvedViews } from '@moonwitness/client';
 import { client } from '@/lib/client';
 import { formatDateTime } from '@/lib/date-format';
+import { serializeCsv } from '@/lib/csv-export';
 import { scopedQueryKey } from '@/lib/query-scope';
 import { useRecordMutations, useRecords } from '@/hooks/use-model';
 import { Button } from '@moonwitness/ui/components/button';
@@ -416,18 +417,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
       }),
     ]);
 
-    const escapeCsv = (value: string) => {
-      const safeValue = /^[=+\-@]/u.test(value.trimStart()) ? `'${value}` : value;
-      if (safeValue.includes(',') || safeValue.includes('"') || safeValue.includes('\n')) {
-        return `"${safeValue.replace(/"/g, '""')}"`;
-      }
-      return safeValue;
-    };
-
-    const csvContent = [
-      headers.map(escapeCsv).join(','),
-      ...rows.map((r) => r.map(escapeCsv).join(',')),
-    ].join('\r\n');
+    const csvContent = serializeCsv(headers, rows);
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
