@@ -1,8 +1,10 @@
-# Feature coverage inventory (local rechecks through `44815d3`; 2026-10-15)
+# Feature coverage inventory (local rechecks through `08d38c5`; 2026-10-15)
 
 This report expands the initial [feature-to-test matrix](feature-matrix.md) with an explicit status, priority, accountable role, executed assertion references, and remaining gap for every inventory row. It is a coverage inventory, not a claim that every feature is release-ready.
 
 ## Latest exact-head execution
+
+- On exact `dev` source `08d38c52b9a8f9ed1a67cd635c66c4edffc6792e`, the PostgreSQL integration/performance suites passed 13/13, including the persisted denial of moving an owned partner into another company; the row remained unchanged. Workspace build and integration TypeScript compilation passed, the auth suite passed 42/42, and targeted lint/format checks passed. The full workspace `pnpm verify` evidence remains at `44815d3`; no application implementation changed after that verification. Broader M10.01 authorization coverage and hosted release-candidate acceptance remain open.
 
 - Full `pnpm verify` passed on exact source `44815d3d6d43aaaa4b5bc4116092565e246225c2`: lint, format, workspace/Board typecheck and builds, API (122/122), package/unit suites, addon conformance, architecture, assets/UI, Board bundle budgets, release policy/workflow tests, docs links/examples and Pages build. Existing platform-specific skips were the Windows storage symlink case and Linux-only container smoke runtime. The canonical PostgreSQL integration/performance lane passed separately 13/13 on `faf8319fffdf6d5b7c7959c954736b427b1e323c` against a disposable PostgreSQL 16.15 database; the database was removed and absence verified. The only changes between those sources were roadmap/evidence docs and the release-asset adapter test, so application/API/ORM behavior was unchanged. Hosted release-candidate and protected-promotion acceptance remain open.
 
