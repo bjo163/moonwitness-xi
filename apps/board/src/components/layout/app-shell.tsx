@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import type { ModelInfo } from '@moonwitness/client';
@@ -138,6 +138,7 @@ export function AppShell() {
   const { theme, toggle } = useTheme();
   const { data: models, isLoading } = useModels();
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const commandPaletteTriggerRef = useRef<HTMLButtonElement>(null);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [paletteQuery, setPaletteQuery] = useState('');
@@ -380,6 +381,7 @@ export function AppShell() {
           {/* Omnisearch trigger button */}
           <button
             id="open-command-palette"
+            ref={commandPaletteTriggerRef}
             onClick={() => setPaletteOpen(true)}
             className="press flex h-10 min-w-0 flex-1 items-center gap-2 overflow-hidden rounded-none border-2 border-ink bg-paper-raised px-2 text-left text-sm text-ink-faint shadow-ink-sm sm:max-w-md sm:px-3"
           >
@@ -472,7 +474,7 @@ export function AppShell() {
             </Button>
 
             {/* User Dropdown */}
-            <DropdownMenu>
+            <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <Button
                   id="user-menu"
@@ -524,7 +526,13 @@ export function AppShell() {
       </div>
 
       {/* Global Omnisearch Dialog */}
-      <CommandDialog open={paletteOpen} onOpenChange={setPaletteOpen}>
+      <CommandDialog
+        open={paletteOpen}
+        onOpenChange={(open) => {
+          setPaletteOpen(open);
+          if (!open) requestAnimationFrame(() => commandPaletteTriggerRef.current?.focus());
+        }}
+      >
         <CommandInput
           placeholder="Search models or records (e.g. Acme, Alice, base.partner)…"
           value={paletteQuery}

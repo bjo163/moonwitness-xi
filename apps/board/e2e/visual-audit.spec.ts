@@ -45,6 +45,52 @@ test('command shortcut stays inactive while typing in an editable control', asyn
   await expect(page.getByRole('dialog', { name: 'Command Palette' })).toBeHidden();
 });
 
+test('mobile overlays keep accessible names, keyboard dismissal, focus return, and WCAG contrast', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/login');
+  await page.getByLabel('Login').fill('superadmin');
+  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await expect(page).toHaveURL(/\/$/u);
+
+  const modelNavigationTrigger = page.getByRole('button', { name: 'Open model navigation' });
+  await modelNavigationTrigger.focus();
+  await page.keyboard.press('Enter');
+  const modelNavigation = page.getByRole('dialog', { name: 'Model navigation' });
+  await expect(modelNavigation).toBeVisible();
+  await expectNoA11yViolations(page, 'mobile/model-navigation-open');
+  await page.keyboard.press('Escape');
+  await expect(modelNavigation).toBeHidden();
+  await expect(modelNavigationTrigger).toBeFocused();
+
+  const commandPaletteTrigger = page.getByRole('button', {
+    name: /Search records, models, commands/u,
+  });
+  await commandPaletteTrigger.click();
+  const commandPalette = page.getByRole('dialog', { name: 'Command Palette' });
+  await expect(commandPalette).toBeVisible();
+  await expect(commandPalette.getByPlaceholder(/Search models or records/u)).toBeFocused();
+  await expectNoA11yViolations(page, 'mobile/command-palette-open');
+  await page.keyboard.press('Escape');
+  await expect(commandPalette).toBeHidden();
+  await expect(commandPaletteTrigger).toBeFocused();
+
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Welcome, superadmin!' })).toBeVisible();
+  const userMenuTrigger = page.getByRole('button', { name: 'User menu for superadmin' });
+  await userMenuTrigger.click();
+  const userMenu = page.getByRole('menu');
+  await expect(userMenu).toBeVisible();
+  await expect(userMenu.getByRole('menuitem', { name: 'Profile' })).toBeVisible();
+  await expectNoA11yViolations(page, 'mobile/user-menu-open');
+  await page.keyboard.press('Escape');
+  await expect(userMenu).toBeHidden();
+  await expect(userMenuTrigger).toBeFocused();
+});
+
 async function expectNoHorizontalOverflow(page: Page, label: string) {
   const dimensions = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
