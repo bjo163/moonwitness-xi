@@ -38,14 +38,14 @@ test('checked-in support ledger covers every declared platform runtime', async (
       'utf8'
     )
   );
-  const reviews = evaluateRuntimeSupportReviews(ledger, '2026-10-06T00:00:00.000Z');
+  const reviews = evaluateRuntimeSupportReviews(ledger, '2026-10-14T00:00:00.000Z');
 
   assert.deepEqual(
     reviews.map(({ id }) => id),
     ['node', 'pnpm', 'postgresql', 'playwright', 'ubuntu-runner']
   );
   assert.ok(reviews.every(({ owner, source, reviewStatus }) => owner && source && reviewStatus));
-  assert.equal(reviews.find(({ id }) => id === 'ubuntu-runner')?.reviewBy, '2026-10-15');
+  assert.equal(reviews.find(({ id }) => id === 'ubuntu-runner')?.reviewBy, '2026-11-13');
 });
 
 test('public audit fallback follows paginated GitHub API links without credentials', async () => {

@@ -42,8 +42,8 @@
       "component": "GitHub Actions Ubuntu runner",
       "configured": "ubuntu-24.04",
       "owner": "repository maintainer (@bjo163)",
-      "reviewedAt": "2026-10-06",
-      "reviewBy": "2026-10-15",
+      "reviewedAt": "2026-10-14",
+      "reviewBy": "2026-11-13",
       "source": "https://github.com/actions/runner-images/issues/14748"
     }
   ]
