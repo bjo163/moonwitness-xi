@@ -567,6 +567,206 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     }
   }, 30000);
 
+  it('persists the purchase request approval lifecycle through the PostgreSQL API', async () => {
+    if (!connectionString) throw new Error('POSTGRES_TEST_URL is required');
+    const workflowSchema = `mw_workflow_api_${randomUUID().replaceAll('-', '')}`;
+    await adminDb.raw('create schema ??', [workflowSchema]);
+    const workflowDb = knex(
+      createPostgresKnexConfig(
+        connectionString,
+        { poolMin: 0, poolMax: 4, acquireTimeoutMs: 5000, statementTimeoutMs: 30_000 },
+        { searchPath: [workflowSchema] }
+      )
+    );
+    let workflowApp: FastifyInstance | undefined;
+
+    try {
+      workflowApp = await buildApp({
+        db: workflowDb,
+        superadminPassword: 'postgres-workflow-admin-password',
+        jwtSecret: 'postgres-workflow-api-jwt-secret-must-be-32-chars',
+      });
+      await workflowApp.ready();
+      const company = await workflowDb('companies').where({ name: 'MoonWitness' }).first('id');
+      const currency = await workflowDb('currencies').where({ code: 'USD' }).first('id');
+      if (!company || !currency) throw new Error('PostgreSQL base seeds are incomplete');
+      const suffix = randomUUID().replaceAll('-', '').slice(0, 12);
+      const requesterPartner = await Partner.query().insertAndFetch({
+        name: `PostgreSQL workflow requester ${suffix}`,
+        company_id: company.id,
+      });
+      const requester = await User.query().insertAndFetch({
+        login: `pg-workflow-${suffix}`,
+        password: 'postgres-workflow-user-password',
+        partner_id: requesterPartner.id,
+        role: 'user',
+      });
+      await assignDefaultUserGroup(requester.id);
+      await CompanyMembership.query().insert({
+        user_id: requester.id,
+        company_id: company.id,
+        is_default: true,
+      });
+      const adminUser = await workflowDb('users').where({ login: 'superadmin' }).first('id');
+      if (!adminUser) throw new Error('PostgreSQL seeded superadmin is missing');
+
+      const login = async (loginName: string, password: string) =>
+        workflowApp!.inject({
+          method: 'POST',
+          url: '/auth/login',
+          payload: { login: loginName, password },
+        });
+      const adminLogin = await login('superadmin', 'postgres-workflow-admin-password');
+      const requesterLogin = await login(requester.login, 'postgres-workflow-user-password');
+      expect(adminLogin.statusCode, adminLogin.payload).toBe(200);
+      expect(requesterLogin.statusCode, requesterLogin.payload).toBe(200);
+      const adminToken = adminLogin.json<{ data: { access_token: string } }>().data.access_token;
+      const requesterToken = requesterLogin.json<{ data: { access_token: string } }>().data
+        .access_token;
+      const headers = (token: string) => ({ authorization: `Bearer ${token}` });
+
+      const createdRequest = await workflowApp.inject({
+        method: 'POST',
+        url: '/api/request.purchase',
+        headers: headers(requesterToken),
+        payload: {
+          title: `PostgreSQL approval flow ${suffix}`,
+          description: 'Verify the persisted request workflow lifecycle.',
+          amount_minor: 87500,
+          currency_id: currency.id,
+          company_id: company.id,
+        },
+      });
+      expect(createdRequest.statusCode, createdRequest.payload).toBe(201);
+      const requestId = createdRequest.json<{ data: { id: number; create_uid: number } }>().data.id;
+      expect(createdRequest.json<{ data: { create_uid: number } }>().data.create_uid).toBe(
+        requester.id
+      );
+      await expect(
+        workflowDb('purchase_requests').where({ id: requestId }).first()
+      ).resolves.toMatchObject({
+        title: `PostgreSQL approval flow ${suffix}`,
+        company_id: company.id,
+        create_uid: requester.id,
+      });
+
+      const startPayload = {
+        code: 'request.purchase_approval',
+        resource_model: 'request.purchase',
+        resource_id: requestId,
+        idempotency_key: `pg-workflow-start-${suffix}`,
+      };
+      const started = await workflowApp.inject({
+        method: 'POST',
+        url: '/workflows/instances',
+        headers: headers(requesterToken),
+        payload: startPayload,
+      });
+      const replayedStart = await workflowApp.inject({
+        method: 'POST',
+        url: '/workflows/instances',
+        headers: headers(requesterToken),
+        payload: startPayload,
+      });
+      expect(started.statusCode, started.payload).toBe(201);
+      expect(replayedStart.statusCode, replayedStart.payload).toBe(201);
+      const instanceId = started.json<{ data: { id: number } }>().data.id;
+      expect(replayedStart.json<{ data: { id: number } }>().data.id).toBe(instanceId);
+      await expect(
+        workflowDb('workflow_events').where({
+          idempotency_key: `start:${startPayload.idempotency_key}`,
+        })
+      ).resolves.toHaveLength(1);
+
+      const submitted = await workflowApp.inject({
+        method: 'POST',
+        url: `/workflows/instances/${instanceId}/actions`,
+        headers: headers(requesterToken),
+        payload: {
+          action: 'submit',
+          expected_revision: 0,
+          idempotency_key: `pg-workflow-submit-${suffix}`,
+        },
+      });
+      expect(submitted.statusCode, submitted.payload).toBe(200);
+      const selfApproval = await workflowApp.inject({
+        method: 'POST',
+        url: `/workflows/instances/${instanceId}/actions`,
+        headers: headers(requesterToken),
+        payload: {
+          action: 'approve',
+          expected_revision: 1,
+          idempotency_key: `pg-workflow-self-approve-${suffix}`,
+        },
+      });
+      expect(selfApproval.statusCode, selfApproval.payload).toBe(403);
+      const approved = await workflowApp.inject({
+        method: 'POST',
+        url: `/workflows/instances/${instanceId}/actions`,
+        headers: headers(adminToken),
+        payload: {
+          action: 'approve',
+          expected_revision: 1,
+          idempotency_key: `pg-workflow-admin-approve-${suffix}`,
+        },
+      });
+      expect(approved.statusCode, approved.payload).toBe(200);
+      expect(
+        approved.json<{ data: { currentState: string; status: string; revision: number } }>().data
+      ).toMatchObject({ currentState: 'approved', status: 'completed', revision: 2 });
+
+      const persistedInstance = await workflowDb('workflow_instances')
+        .where({ id: instanceId })
+        .first();
+      expect(persistedInstance).toMatchObject({
+        company_id: company.id,
+        resource_model: 'request.purchase',
+        resource_id: requestId,
+        started_by_id: requester.id,
+        current_state: 'approved',
+        status: 'completed',
+        revision: 2,
+      });
+      const detail = await workflowApp.inject({
+        method: 'GET',
+        url: `/workflows/instances/${instanceId}`,
+        headers: headers(requesterToken),
+      });
+      expect(detail.statusCode, detail.payload).toBe(200);
+      expect(
+        detail
+          .json<{
+            data: {
+              events: { action: string; from_state: string; to_state: string; revision: number }[];
+              approvals: { action: string; decision: string; actor_id: number }[];
+            };
+          }>()
+          .data.events.map(({ action, from_state, to_state, revision }) => [
+            action,
+            from_state,
+            to_state,
+            revision,
+          ])
+      ).toEqual([
+        ['start', 'draft', 'draft', 0],
+        ['submit', 'draft', 'submitted', 1],
+        ['approve', 'submitted', 'approved', 2],
+      ]);
+      expect(
+        detail.json<{
+          data: { approvals: { action: string; decision: string; actor_id: number }[] };
+        }>().data.approvals
+      ).toMatchObject([{ action: 'approve', decision: 'approved', actor_id: adminUser.id }]);
+    } finally {
+      try {
+        if (workflowApp) await workflowApp.close();
+        else await workflowDb.destroy();
+      } finally {
+        await adminDb.raw('drop schema if exists ?? cascade', [workflowSchema]);
+      }
+    }
+  }, 60000);
+
   it('runs login, user list/count, profile update and password reset through the PostgreSQL API', async () => {
     apiDb = knex({
       client: 'pg',
