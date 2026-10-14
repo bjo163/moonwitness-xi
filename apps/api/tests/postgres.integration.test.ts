@@ -1410,6 +1410,46 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       company_id: localCompany.id,
     });
 
+    const revocableGroup = await AccessGroup.query().insert({
+      code: 'postgres_revocable_partner_writers',
+      name: 'PostgreSQL Revocable Partner Writers',
+    });
+    const revocableMembership = await GroupMembership.query().insert({
+      user_id: localUser.id,
+      group_id: revocableGroup.id,
+    });
+    await ModelAccess.query().insert({
+      group_id: revocableGroup.id,
+      model_name: 'base.partner',
+      read: true,
+      write: true,
+    });
+    await apiDb('model_access').where({ id: partnerGrant.id }).update({ write: false });
+    const revokedGrantAttempt = await app.inject({
+      method: 'PATCH',
+      url: `/api/base.partner/${localPartner.id}`,
+      headers,
+      payload: { name: 'Should remain unchanged after grant revocation' },
+    });
+    expect(revokedGrantAttempt.statusCode, revokedGrantAttempt.payload).toBe(200);
+    expect(await Partner.query().findById(localPartner.id)).toMatchObject({
+      name: 'Should remain unchanged after grant revocation',
+      company_id: localCompany.id,
+    });
+    await GroupMembership.query().findById(revocableMembership.id).patch({ active: false });
+    const deniedAfterGrantRevocation = await app.inject({
+      method: 'PATCH',
+      url: `/api/base.partner/${localPartner.id}`,
+      headers,
+      payload: { name: 'Unauthorized write after grant revocation' },
+    });
+    expect(deniedAfterGrantRevocation.statusCode).toBe(403);
+    expect(await Partner.query().findById(localPartner.id)).toMatchObject({
+      name: 'Should remain unchanged after grant revocation',
+      company_id: localCompany.id,
+    });
+    await apiDb('model_access').where({ id: partnerGrant.id }).update({ write: true });
+
     const deniedCompanyReassignment = await app.inject({
       method: 'PATCH',
       url: `/api/base.partner/${localPartner.id}`,
@@ -1418,7 +1458,7 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     });
     expect(deniedCompanyReassignment.statusCode).toBe(403);
     expect(await Partner.query().findById(localPartner.id)).toMatchObject({
-      name: 'PostgreSQL Tenant Contact Updated',
+      name: 'Should remain unchanged after grant revocation',
       company_id: localCompany.id,
     });
 
@@ -1764,7 +1804,10 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     });
     expect(scopedOrExport.statusCode).toBe(200);
     expect(scopedOrExport.json<{ data: { id: number; name: string }[] }>().data).toEqual([
-      expect.objectContaining({ id: localPartner.id, name: 'PostgreSQL Tenant Contact Updated' }),
+      expect.objectContaining({
+        id: localPartner.id,
+        name: 'Should remain unchanged after grant revocation',
+      }),
     ]);
     expect(scopedOrExport.payload).not.toContain('PostgreSQL Foreign Contact');
 

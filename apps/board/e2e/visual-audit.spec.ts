@@ -251,7 +251,9 @@ test('responsive protected screens fit and remain accessible in both themes', as
           await page.keyboard.press('Escape');
           await expect(page.getByRole('dialog', { name: 'Model navigation' })).toBeHidden();
         }
-        if (size.name === 'desktop-1440') await expectNoA11yViolations(page, label);
+        if (size.name === 'desktop-1440' || size.name === 'mobile-375') {
+          await expectNoA11yViolations(page, label);
+        }
       }
     }
   }
