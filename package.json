@@ -49,7 +49,7 @@
     "docs:links:external": "node scripts/check-external-doc-links.mjs",
     "docs:check": "pnpm --filter @moonwitness/types build && pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && pnpm --filter @moonwitness/orm-integration build && pnpm --filter @moonwitness/orm-notification build && pnpm --filter @moonwitness/orm-organization build && pnpm --filter @moonwitness/orm-workflow build && pnpm --filter @moonwitness/orm-request build && pnpm --filter @moonwitness/orm-storage build && node --test scripts/docs/generate-reference.test.mjs scripts/docs/update-readme.test.mjs scripts/docs/build-guide.test.mjs && node scripts/docs/generate-reference.mjs --check && node scripts/docs/update-readme.mjs --check && pnpm docs:links && pnpm docs:examples:check",
     "docs:build": "pnpm docs:check && node scripts/docs/build-guide.mjs && pnpm --filter @moonwitness/docs portal:build",
-    "docs:publication:check": "node scripts/check-docs-publication.mjs",
+    "docs:publication:check": "node scripts/check-docs-publication.mjs apps/docs/dist",
     "docs:change:classify": "node scripts/classify-docs-change.mjs",
     "test:docs-portal": "pnpm docs:build && pnpm --filter @moonwitness/docs test",
     "test:docs-publication": "node --test scripts/check-docs-publication.test.mjs scripts/write-docs-metadata.test.mjs scripts/classify-docs-change.test.mjs scripts/main-ci-policy.test.mjs scripts/maintenance-incident.test.mjs scripts/docs/versioned-site.test.mjs",
