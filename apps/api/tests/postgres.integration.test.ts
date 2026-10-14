@@ -17,6 +17,7 @@ import {
   Language,
   Partner,
   Tag,
+  TagLink,
   Sequence,
   User,
   initializeSuperadminPassword,
@@ -1038,6 +1039,46 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       create: true,
       write: true,
     });
+    await ModelAccess.query().insert({
+      group_id: activityGroup.id,
+      model_name: 'base.tag_link',
+      create: true,
+    });
+    const scopedTag = await Tag.query().insertAndFetch({ name: 'PostgreSQL Scoped Resource Tag' });
+    const allowedLocalTagLink = await app.inject({
+      method: 'POST',
+      url: '/api/base.tag_link',
+      headers,
+      payload: {
+        tag_id: scopedTag.id,
+        resource_model: Partner.modelName,
+        resource_id: localPartner.id,
+      },
+    });
+    expect(allowedLocalTagLink.statusCode, allowedLocalTagLink.payload).toBe(201);
+    const allowedLocalTagLinkId = allowedLocalTagLink.json<{ data: { id: number } }>().data.id;
+    expect(await TagLink.query().findById(allowedLocalTagLinkId)).toMatchObject({
+      tag_id: scopedTag.id,
+      resource_model: Partner.modelName,
+      resource_id: localPartner.id,
+    });
+    const deniedForeignTagLink = await app.inject({
+      method: 'POST',
+      url: '/api/base.tag_link',
+      headers,
+      payload: {
+        tag_id: scopedTag.id,
+        resource_model: Partner.modelName,
+        resource_id: foreignPartner.id,
+      },
+    });
+    expect(deniedForeignTagLink.statusCode).toBe(400);
+    expect(
+      await TagLink.query().findOne({
+        resource_model: Partner.modelName,
+        resource_id: foreignPartner.id,
+      })
+    ).toBeUndefined();
     const deniedForeignActivity = await app.inject({
       method: 'POST',
       url: '/api/base.activity',

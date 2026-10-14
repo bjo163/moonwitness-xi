@@ -16,6 +16,7 @@ import {
   PartnerCategoryLink,
   Partner,
   Tag,
+  TagLink,
   User,
 } from '@moonwitness/orm-base';
 import { buildApp } from '../src/app.js';
@@ -1315,12 +1316,52 @@ describe('authentication and authorization', () => {
         create: true,
         write: true,
       });
+      await ModelAccess.query().insert({
+        group_id: group.id,
+        model_name: 'base.tag_link',
+        create: true,
+      });
       const partner = await Partner.query().findById(alice.user.partner_id).throwIfNotFound();
       const foreignCompany = await Company.query().insert({ name: 'Activity Foreign Company' });
       const foreignPartner = await Partner.query().insert({
         name: 'Activity Foreign Partner',
         company_id: foreignCompany.id,
       });
+      const priorityTag = await Tag.query().insert({ name: 'Scoped Activity Priority' });
+
+      const allowedOwnTagLink = await as(alice.access_token, {
+        method: 'POST',
+        url: '/api/base.tag_link',
+        payload: {
+          tag_id: priorityTag.id,
+          resource_model: Partner.modelName,
+          resource_id: partner.id,
+        },
+      });
+      expect(allowedOwnTagLink.statusCode, allowedOwnTagLink.payload).toBe(201);
+      const ownTagLinkId = allowedOwnTagLink.json<{ data: { id: number } }>().data.id;
+      expect(await TagLink.query().findById(ownTagLinkId)).toMatchObject({
+        tag_id: priorityTag.id,
+        resource_model: Partner.modelName,
+        resource_id: partner.id,
+      });
+
+      const deniedForeignTagLink = await as(alice.access_token, {
+        method: 'POST',
+        url: '/api/base.tag_link',
+        payload: {
+          tag_id: priorityTag.id,
+          resource_model: Partner.modelName,
+          resource_id: foreignPartner.id,
+        },
+      });
+      expect(deniedForeignTagLink.statusCode).toBe(400);
+      expect(
+        await TagLink.query().findOne({
+          resource_model: Partner.modelName,
+          resource_id: foreignPartner.id,
+        })
+      ).toBeUndefined();
 
       const deniedForeignParent = await as(alice.access_token, {
         method: 'POST',
