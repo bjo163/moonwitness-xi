@@ -1,8 +1,10 @@
-# Feature coverage inventory (local rechecks through `08d38c5`; 2026-10-15)
+# Feature coverage inventory (local rechecks through `de8e389`; 2026-10-15)
 
 This report expands the initial [feature-to-test matrix](feature-matrix.md) with an explicit status, priority, accountable role, executed assertion references, and remaining gap for every inventory row. It is a coverage inventory, not a claim that every feature is release-ready.
 
 ## Latest exact-head execution
+
+- On exact `dev` test source `de8e389`, local PostgreSQL 16.15 integration/performance passed 13/13, including immediate denial and persisted-row preservation after deactivating a dedicated `base.partner` group membership while reusing the same access token. Board responsive visual/accessibility matrix passed 9/9 across Chromium, Firefox, and WebKit after adding mobile Axe scans for all five protected views in both themes. Workspace typecheck/build and lint, targeted ESLint/Prettier, and `git diff --check` passed. These test-only additions do not close the broader M10.01 authorization/retention matrix or hosted release-candidate acceptance.
 
 - On exact `dev` source `08d38c52b9a8f9ed1a67cd635c66c4edffc6792e`, the PostgreSQL integration/performance suites passed 13/13, including the persisted denial of moving an owned partner into another company; the row remained unchanged. Workspace build and integration TypeScript compilation passed, the auth suite passed 42/42, and targeted lint/format checks passed. The full workspace `pnpm verify` evidence remains at `44815d3`; no application implementation changed after that verification. Broader M10.01 authorization coverage and hosted release-candidate acceptance remain open.
 
