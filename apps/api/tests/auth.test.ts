@@ -1354,6 +1354,22 @@ describe('authentication and authorization', () => {
         await Activity.query().findOne({ summary: 'Must not RPC-reference another company' })
       ).toBeUndefined();
 
+      const archivedTag = await Tag.query().insert({ name: 'Archived Activity Parent' });
+      await Tag.query().findById(archivedTag.id).patch({ active: false });
+      const deniedArchivedParent = await as(alice.access_token, {
+        method: 'POST',
+        url: '/api/base.activity',
+        payload: {
+          summary: 'Must not reference an archived record',
+          resource_model: Tag.modelName,
+          resource_id: archivedTag.id,
+        },
+      });
+      expect(deniedArchivedParent.statusCode).toBe(400);
+      expect(
+        await Activity.query().findOne({ summary: 'Must not reference an archived record' })
+      ).toBeUndefined();
+
       const created = await as(alice.access_token, {
         method: 'POST',
         url: '/api/base.activity',

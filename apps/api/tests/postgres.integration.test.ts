@@ -1052,6 +1052,24 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     expect(
       await Activity.query().findOne({ summary: 'Must not reference a foreign PostgreSQL partner' })
     ).toBeUndefined();
+    const archivedActivityParent = await Tag.query().insertAndFetch({
+      name: 'PostgreSQL Archived Activity Parent',
+    });
+    await Tag.query().findById(archivedActivityParent.id).patch({ active: false });
+    const deniedArchivedActivity = await app.inject({
+      method: 'POST',
+      url: '/api/base.activity',
+      headers,
+      payload: {
+        summary: 'Must not reference an archived PostgreSQL tag',
+        resource_model: Tag.modelName,
+        resource_id: archivedActivityParent.id,
+      },
+    });
+    expect(deniedArchivedActivity.statusCode).toBe(400);
+    expect(
+      await Activity.query().findOne({ summary: 'Must not reference an archived PostgreSQL tag' })
+    ).toBeUndefined();
     const createdActivity = await app.inject({
       method: 'POST',
       url: '/api/base.activity',
