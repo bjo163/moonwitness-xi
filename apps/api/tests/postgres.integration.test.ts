@@ -739,6 +739,71 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       ]);
       await expect(Partner.query().findById(lifecycleId)).resolves.toMatchObject({ active: true });
 
+      const attachmentContent = Buffer.from('PostgreSQL attachment lifecycle probe');
+      const uploadedAttachment = await app.inject({
+        method: 'POST',
+        url: `/api/base.attachment/upload?resource_model=base.partner&resource_id=${lifecycleId}&name=lifecycle.txt`,
+        headers: {
+          ...authorization,
+          'content-type': 'application/octet-stream',
+          'x-file-mime': 'text/plain',
+        },
+        payload: attachmentContent,
+      });
+      expect(uploadedAttachment.statusCode, uploadedAttachment.payload).toBe(201);
+      const attachmentId = uploadedAttachment.json<{ data: { id: number } }>().data.id;
+      const attachmentRow = await apiDb('attachments').where({ id: attachmentId }).first();
+      expect(attachmentRow).toMatchObject({
+        id: attachmentId,
+        resource_model: 'base.partner',
+        resource_id: lifecycleId,
+      });
+      const storageKey = String(attachmentRow.storage_key);
+      expect(postgresAttachmentObjects.get(storageKey)).toEqual(attachmentContent);
+
+      const archivedAttachment = await app.inject({
+        method: 'DELETE',
+        url: `/api/base.attachment/${attachmentId}`,
+        headers: authorization,
+      });
+      expect(archivedAttachment.statusCode, archivedAttachment.payload).toBe(200);
+      expect(await apiDb('attachments').where({ id: attachmentId }).first()).toMatchObject({
+        id: attachmentId,
+        active: false,
+      });
+      expect(postgresAttachmentObjects.get(storageKey)).toEqual(attachmentContent);
+
+      const restoredAttachment = await app.inject({
+        method: 'POST',
+        url: `/api/base.attachment/${attachmentId}/action/action_unarchive`,
+        headers: authorization,
+      });
+      expect(restoredAttachment.statusCode, restoredAttachment.payload).toBe(200);
+      const restoredDownload = await app.inject({
+        method: 'GET',
+        url: `/api/base.attachment/${attachmentId}/download`,
+        headers: authorization,
+      });
+      expect(restoredDownload.statusCode, restoredDownload.payload).toBe(200);
+      expect(restoredDownload.payload).toBe(attachmentContent.toString());
+
+      const deletedAttachment = await app.inject({
+        method: 'DELETE',
+        url: `/api/base.attachment/${attachmentId}?hard=true`,
+        headers: authorization,
+      });
+      expect(deletedAttachment.statusCode, deletedAttachment.payload).toBe(200);
+      expect(await apiDb('attachments').where({ id: attachmentId }).first()).toBeUndefined();
+      expect(postgresAttachmentObjects.has(storageKey)).toBe(false);
+      await expect(
+        AuditLog.query().where({
+          model: 'base.attachment',
+          record_id: attachmentId,
+          operation: 'delete',
+          actor_id: superadmin.id,
+        })
+      ).resolves.toHaveLength(1);
+
       const rollbackRecord = await app.inject({
         method: 'POST',
         url: '/api/base.partner',
