@@ -4,10 +4,11 @@ import knex, { type Knex } from 'knex';
 import type { FastifyInstance } from 'fastify';
 import { defineAddon, defineModel, fields, installAddons, ref, seed } from '@moonwitness/orm';
 import {
-  Company,
+  Activity,
   AuditLog,
   AccessGroup,
   CompanyMembership,
+  Company,
   Country,
   CountryState,
   Currency,
@@ -1024,6 +1025,54 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     expect(await Partner.query().findById(foreignPartner.id)).toMatchObject({
       name: 'PostgreSQL Foreign Contact',
       company_id: foreignCompany.id,
+    });
+
+    const activityGroup = await AccessGroup.query().insert({
+      code: 'postgres_activity_maintainers',
+      name: 'PostgreSQL Activity Maintainers',
+    });
+    await GroupMembership.query().insert({ user_id: localUser.id, group_id: activityGroup.id });
+    await ModelAccess.query().insert({
+      group_id: activityGroup.id,
+      model_name: 'base.activity',
+      create: true,
+      write: true,
+    });
+    const createdActivity = await app.inject({
+      method: 'POST',
+      url: '/api/base.activity',
+      headers,
+      payload: {
+        summary: 'PostgreSQL customer follow-up',
+        resource_model: Partner.modelName,
+        resource_id: localPartner.id,
+      },
+    });
+    expect(createdActivity.statusCode, createdActivity.payload).toBe(201);
+    const createdActivityId = createdActivity.json<{ data: { id: number } }>().data.id;
+    expect(await Activity.query().findById(createdActivityId)).toMatchObject({
+      summary: 'PostgreSQL customer follow-up',
+      resource_model: Partner.modelName,
+      resource_id: localPartner.id,
+    });
+    const updatedActivity = await app.inject({
+      method: 'PATCH',
+      url: `/api/base.activity/${createdActivityId}`,
+      headers,
+      payload: { summary: 'PostgreSQL customer follow-up completed' },
+    });
+    expect(updatedActivity.statusCode, updatedActivity.payload).toBe(200);
+    expect(await Activity.query().findById(createdActivityId)).toMatchObject({
+      summary: 'PostgreSQL customer follow-up completed',
+    });
+    const deniedActivityUnlink = await app.inject({
+      method: 'DELETE',
+      url: `/api/base.activity/${createdActivityId}`,
+      headers,
+    });
+    expect(deniedActivityUnlink.statusCode).toBe(403);
+    expect(await Activity.query().findById(createdActivityId)).toMatchObject({
+      summary: 'PostgreSQL customer follow-up completed',
     });
 
     const organizationGroup = await AccessGroup.query().insert({

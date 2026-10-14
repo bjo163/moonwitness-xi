@@ -3,6 +3,7 @@ import knex, { type Knex } from 'knex';
 import type { FastifyInstance, InjectOptions } from 'fastify';
 import {
   AccessGroup,
+  Activity,
   AuditLog,
   Company,
   CompanyMembership,
@@ -1300,6 +1301,57 @@ describe('authentication and authorization', () => {
       expect(await PartnerCategory.query().findById(categoryId)).toMatchObject({ active: false });
 
       await GroupMembership.query().findById(membership.id).patch({ active: false });
+    });
+
+    it('persists granted activity writes and denies unlink without losing the record', async () => {
+      const group = await AccessGroup.query().insert({
+        code: 'activity_maintainers',
+        name: 'Activity Maintainers',
+      });
+      await GroupMembership.query().insert({ user_id: alice.user.id, group_id: group.id });
+      await ModelAccess.query().insert({
+        group_id: group.id,
+        model_name: 'base.activity',
+        create: true,
+        write: true,
+      });
+      const partner = await Partner.query().findById(alice.user.partner_id).throwIfNotFound();
+
+      const created = await as(alice.access_token, {
+        method: 'POST',
+        url: '/api/base.activity',
+        payload: {
+          summary: 'Review customer request',
+          resource_model: Partner.modelName,
+          resource_id: partner.id,
+        },
+      });
+      expect(created.statusCode, created.payload).toBe(201);
+      const activityId = created.json<{ data: { id: number } }>().data.id;
+      expect(await Activity.query().findById(activityId)).toMatchObject({
+        summary: 'Review customer request',
+        resource_model: Partner.modelName,
+        resource_id: partner.id,
+      });
+
+      const updated = await as(alice.access_token, {
+        method: 'PATCH',
+        url: `/api/base.activity/${activityId}`,
+        payload: { summary: 'Customer request reviewed' },
+      });
+      expect(updated.statusCode, updated.payload).toBe(200);
+      expect(await Activity.query().findById(activityId)).toMatchObject({
+        summary: 'Customer request reviewed',
+      });
+
+      const deniedUnlink = await as(alice.access_token, {
+        method: 'DELETE',
+        url: `/api/base.activity/${activityId}`,
+      });
+      expect(deniedUnlink.statusCode).toBe(403);
+      expect(await Activity.query().findById(activityId)).toMatchObject({
+        summary: 'Customer request reviewed',
+      });
     });
 
     it('keeps group-granted organization mutations inside the user company', async () => {
