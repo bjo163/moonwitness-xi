@@ -1,20 +1,21 @@
 # Panduan Roadmap MoonWitness
 
-Roadmap ini terdiri dari 148 kartu kerja. Jangan mencoba mengimplementasikan seluruh isi sekaligus. Pilih satu kartu yang prasyaratnya selesai, kerjakan sampai bukti penerimaannya lengkap, lalu lanjutkan kartu berikutnya.
+Roadmap ini terdiri dari 148 kartu kerja. Checklist `ROADMAP.md` tetap sumber status. Untuk pekerjaan aktif, mulai dari [audit 49 kartu terbuka dan jalur rilis](ACTIVE-PLAN.md): item lokal independen dikerjakan selagi hosted CI berjalan; approval dan akses eksternal tidak menghentikan pekerjaan lokal yang tidak bergantung padanya.
 
 ## Urutan membaca untuk agen baru
 
 1. Baca [master checklist](../../ROADMAP.md) untuk scope, keputusan pengguna dan status terbaru.
-2. Baca [EXECUTION.md](EXECUTION.md) untuk prosedur kerja, validasi, dan handoff.
-3. Pilih ID melalui [tasks.json](tasks.json). Index ini berisi judul, dependensi, file detail dan deliverable; status bukan disimpan di JSON.
-4. Buka kartu pada dokumen milestone di bawah dan baca sumber kode yang disebutkan.
-5. Untuk pekerjaan automation, baca [AUTOMATION-CONTRACTS.md](AUTOMATION-CONTRACTS.md).
-6. Untuk desain dan UI, baca [DESIGN-SPEC.md](DESIGN-SPEC.md).
-7. Untuk test, baca [TEST-SCENARIOS.md](TEST-SCENARIOS.md).
-8. Untuk Issues/auto-PR/commit-push, baca [ISSUE-SYNC-CONTRACT.md](ISSUE-SYNC-CONTRACT.md).
-9. Untuk otoritas field dan lifecycle Issues, baca [kebijakan issue sync](../engineering/issue-sync-policy.md).
-10. Schema dan validator silang roadmap/issue index ada di [task schema](task.schema.json) dan `pnpm automation:check:roadmap`.
-11. Salin [template evidence](evidence/TEMPLATE.md) untuk hasil pekerjaan.
+2. Baca [active release plan](ACTIVE-PLAN.md) untuk klasifikasi blocker, urutan jalur rilis, pekerjaan lokal, owner, acceptance, backlog dan estimasi.
+3. Baca [EXECUTION.md](EXECUTION.md) untuk prosedur kerja paralel, validasi, commit/push, dan handoff.
+4. Pilih ID melalui [tasks.json](tasks.json). Index ini berisi judul, dependensi, file detail dan deliverable; status bukan disimpan di JSON.
+5. Buka kartu pada dokumen milestone di bawah dan baca sumber kode yang disebutkan.
+6. Untuk pekerjaan automation, baca [AUTOMATION-CONTRACTS.md](AUTOMATION-CONTRACTS.md).
+7. Untuk desain dan UI, baca [DESIGN-SPEC.md](DESIGN-SPEC.md).
+8. Untuk test, baca [TEST-SCENARIOS.md](TEST-SCENARIOS.md).
+9. Untuk Issues/auto-PR/commit-push, baca [ISSUE-SYNC-CONTRACT.md](ISSUE-SYNC-CONTRACT.md).
+10. Untuk otoritas field dan lifecycle Issues, baca [kebijakan issue sync](../engineering/issue-sync-policy.md).
+11. Schema dan validator silang roadmap/issue index ada di [task schema](task.schema.json) dan `pnpm automation:check:roadmap`.
+12. Salin [template evidence](evidence/TEMPLATE.md) untuk hasil pekerjaan.
 
 ## Kartu kerja
 
@@ -36,15 +37,14 @@ Lihat juga [Issues dan delivery — M11.01–M11.15](11-issues-delivery.md): iss
 
 ## Gelombang pelaksanaan
 
-Nomor milestone bukan urutan serial mutlak. Gunakan dependsOn di index. Contoh: M1.06 harus menunggu M2.05 agar ruleset tidak mengunci repo sebelum check tersedia.
+Nomor milestone bukan urutan serial mutlak. Gunakan dependsOn di index. Contoh: M1.06 harus menunggu M2.05 agar ruleset tidak mengunci repo sebelum check tersedia. Hosted CI adalah verifikasi setelah push, bukan antrean untuk memulai local batch independen berikutnya.
 
-1. **Baseline:** M0.01, M0.03, M0.04 dapat dibaca paralel; lengkapi M0 lain dari hasil tersebut.
-2. **Kontrak dan infrastruktur:** scaffold reusable CI, strict integration, test fixtures, App setup runbook, dev bootstrap. Belum mengaktifkan required checks yang belum pernah berjalan.
-3. **Pengujian dan desain:** Board E2E, backend hardening, UI/asset foundations dan docs extraction dapat berjalan paralel dengan file ownership yang disepakati.
-4. **Integrasi produk:** migrasi Board ke UI package, katalog, docs portal, full CI dan security checks.
-5. **Release simulasi:** planner/version/changelog, writer coordination, fault injection, lalu rulesets dan promotion automation yang sudah terbukti.
-6. **Aktivasi:** verifikasi first stable decision, publication dan Pages; buktikan M10.07 tanpa deployment aplikasi.
-7. **Ekspansi:** implementasikan M9 setelah fondasi yang disebut dalam dependensinya siap. Acceptance platform tidak berarti semua addon masa depan sudah dibuat.
+1. **Core and access:** close critical persisted permission/tenant/seed gaps (M10.01) while refreshing Board + PostgreSQL user journey (M3.11/M9.06).
+2. **Security and docs:** disposition scanner/credential issues and operator readiness (M8.03/M8.11), validate user quickstart/output safety, and keep Pages publication behind the protected main gate.
+3. **Release machinery:** refresh clean-source version/changelog plan, exact-SHA policy, same-digest assets/SBOM/provenance, retry/failure behavior, and trusted event flow (M7/M10).
+4. **Protected promotion:** obtain fresh CODEOWNER approval, require all checks, verify exact main SHA and no app deployment, then prove Pages/release behavior only through their authorized workflows.
+5. **Issue/PR lifecycle:** finish local planner/render/idempotency/fault coverage while hosted issue writes and main activation remain separately gated (M11).
+6. **Post-release operations:** stable docs retention, recurring schedules/incident recovery, optional GitHub Projects and inbound issue proposals after their re-entry conditions in [ACTIVE-PLAN.md](ACTIVE-PLAN.md).
 
 ## Batas penyelesaian
 
