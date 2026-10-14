@@ -316,6 +316,55 @@ test('apply no-op succeeds without write permission or metadata mutations', asyn
   assert.equal(writes, 0);
 });
 
+test('replanning a freshly applied create produces a second apply with no writes', async () => {
+  const remoteIssues = [];
+  let createCalls = 0;
+  const client = {
+    listAll: async () => remoteIssues,
+    assertWritable: () => {},
+    ensureMetadata: async () => new Map([['M11', 11]]),
+    create: async (operation) => {
+      createCalls += 1;
+      const issue = {
+        number: 71,
+        title: operation.title,
+        body: operation.body,
+        state: 'open',
+        labels: operation.labels.map((name) => ({ name })),
+        milestone: { number: 11, title: 'M11' },
+      };
+      remoteIssues.push(issue);
+      return issue;
+    },
+    update: async () => assert.fail('freshly synchronized issue must not be updated'),
+  };
+
+  const firstResult = await applyIssuePlan({
+    plan: plan(),
+    client,
+    tasks: [task],
+    repositoryId,
+    sourceSha,
+  });
+  assert.equal(firstResult.length, 1);
+  assert.equal(firstResult[0].taskId, 'M11.03');
+  assert.equal(firstResult[0].issue.number, 71);
+
+  const repeatedPlan = plan(remoteIssues);
+  assert.equal(repeatedPlan.operations[0].operation, 'noop');
+  const secondResult = await applyIssuePlan({
+    plan: repeatedPlan,
+    client,
+    tasks: [task],
+    repositoryId,
+    sourceSha,
+  });
+
+  assert.deepEqual(secondResult, []);
+  assert.equal(createCalls, 1);
+  assert.equal(remoteIssues.length, 1);
+});
+
 test('apply validates conflicts before requiring write permission', async () => {
   const generated = plan().operations[0];
   const conflict = {
