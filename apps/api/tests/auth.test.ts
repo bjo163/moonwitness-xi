@@ -1459,6 +1459,64 @@ describe('authentication and authorization', () => {
       });
     });
 
+    it('scopes group-granted partner category links to the caller company', async () => {
+      const group = await AccessGroup.query().insert({
+        code: 'partner_category_link_maintainers',
+        name: 'Partner Category Link Maintainers',
+      });
+      await GroupMembership.query().insert({ user_id: alice.user.id, group_id: group.id });
+      await ModelAccess.query().insert({
+        group_id: group.id,
+        model_name: 'base.partner_category_link',
+        create: true,
+      });
+
+      const ownPartner = await Partner.query().findById(alice.user.partner_id).throwIfNotFound();
+      const foreignCompany = await Company.query().insert({
+        name: 'Category Link Foreign Company',
+      });
+      const foreignPartner = await Partner.query().insert({
+        name: 'Category Link Foreign Partner',
+        company_id: foreignCompany.id,
+      });
+      const category = await PartnerCategory.query().insert({
+        code: `alice-category-link-${Date.now()}`,
+        name: 'Alice category link',
+      });
+
+      const allowed = await as(alice.access_token, {
+        method: 'POST',
+        url: '/api/base.partner_category_link',
+        payload: { partner_id: ownPartner.id, category_id: category.id },
+      });
+      expect(allowed.statusCode, allowed.payload).toBe(201);
+      const allowedId = allowed.json<{ data: { id: number } }>().data.id;
+      expect(await PartnerCategoryLink.query().findById(allowedId)).toMatchObject({
+        partner_id: ownPartner.id,
+        category_id: category.id,
+      });
+
+      const denied = await as(alice.access_token, {
+        method: 'POST',
+        url: '/api/base.partner_category_link',
+        payload: { partner_id: foreignPartner.id, category_id: category.id },
+      });
+      expect([400, 403]).toContain(denied.statusCode);
+      expect(
+        await PartnerCategoryLink.query().findOne({
+          partner_id: foreignPartner.id,
+          category_id: category.id,
+        })
+      ).toBeUndefined();
+      await PartnerCategoryLink.query().delete().where('category_id', category.id);
+      await PartnerCategory.query().deleteById(category.id);
+      await Partner.query().deleteById(foreignPartner.id);
+      await Company.query().deleteById(foreignCompany.id);
+      await GroupMembership.query().delete().where({ user_id: alice.user.id, group_id: group.id });
+      await ModelAccess.query().delete().where('group_id', group.id);
+      await AccessGroup.query().deleteById(group.id);
+    });
+
     it('keeps group-granted organization mutations inside the user company', async () => {
       const company = await Company.query().findOne({ name: 'MoonWitness' }).throwIfNotFound();
       const foreignCompany = await Company.query().insert({ name: 'Organization Foreign Tenant' });

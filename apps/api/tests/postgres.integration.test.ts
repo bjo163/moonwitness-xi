@@ -16,6 +16,8 @@ import {
   ModelAccess,
   Language,
   Partner,
+  PartnerCategory,
+  PartnerCategoryLink,
   Tag,
   TagLink,
   Sequence,
@@ -1044,6 +1046,40 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       model_name: 'base.tag_link',
       create: true,
     });
+    await ModelAccess.query().insert({
+      group_id: activityGroup.id,
+      model_name: 'base.partner_category_link',
+      create: true,
+    });
+    const scopedCategory = await PartnerCategory.query().insertAndFetch({
+      code: `postgres-scoped-category-${randomUUID()}`,
+      name: 'PostgreSQL Scoped Category',
+    });
+    const allowedCategoryLink = await app.inject({
+      method: 'POST',
+      url: '/api/base.partner_category_link',
+      headers,
+      payload: { partner_id: localPartner.id, category_id: scopedCategory.id },
+    });
+    expect(allowedCategoryLink.statusCode, allowedCategoryLink.payload).toBe(201);
+    const allowedCategoryLinkId = allowedCategoryLink.json<{ data: { id: number } }>().data.id;
+    expect(await PartnerCategoryLink.query().findById(allowedCategoryLinkId)).toMatchObject({
+      partner_id: localPartner.id,
+      category_id: scopedCategory.id,
+    });
+    const deniedForeignCategoryLink = await app.inject({
+      method: 'POST',
+      url: '/api/base.partner_category_link',
+      headers,
+      payload: { partner_id: foreignPartner.id, category_id: scopedCategory.id },
+    });
+    expect([400, 403]).toContain(deniedForeignCategoryLink.statusCode);
+    expect(
+      await PartnerCategoryLink.query().findOne({
+        partner_id: foreignPartner.id,
+        category_id: scopedCategory.id,
+      })
+    ).toBeUndefined();
     const scopedTag = await Tag.query().insertAndFetch({ name: 'PostgreSQL Scoped Resource Tag' });
     const allowedLocalTagLink = await app.inject({
       method: 'POST',
