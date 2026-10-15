@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "apps/*/package.json and packages/*/package.json",
-  "sourceSha256": "81a06e43d8428b55b658b84c9bb9ea301c6b7e8cc82dbea89fcfdf8d70f87bc1",
+  "sourceSha256": "f55a459f43f03bd8be32afb0bfbfc12c0832981d293c9a2e6fa23bec361508cd",
   "packages": [
     {
       "name": "@moonwitness/api",
@@ -50,6 +50,12 @@
       "kind": "package",
       "version": "1.0.0-rc.1",
       "manifest": "packages/jobs"
+    },
+    {
+      "name": "@moonwitness/knowledge",
+      "kind": "package",
+      "version": "1.0.0-rc.1",
+      "manifest": "packages/knowledge"
     },
     {
       "name": "@moonwitness/logger",
