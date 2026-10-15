@@ -29,6 +29,26 @@ test('security scans avoid duplicate dev push runs while CI retains its issue-li
   }
 });
 
+test('final CI gate uses built-in Node checks without installing workspace dependencies', () => {
+  const gateJob = workflow.match(/ {2}ci-gate:[\s\S]*$/u)?.[0];
+  assert.ok(gateJob, 'CI should define its final gate job');
+  assert.doesNotMatch(gateJob, /setup-pnpm|pnpm install/u);
+  assert.match(gateJob, /actions\/setup-node@[0-9a-f]{40}/u);
+  assert.match(gateJob, /node-version: ['"]22['"]/u);
+  assert.match(
+    gateJob,
+    /node --test scripts\/ci-gate\.test\.mjs scripts\/ci-concurrency\.test\.mjs scripts\/scan-test-reports\.test\.mjs/u
+  );
+});
+
+test('CI planning pins the supported Node runtime without installing pnpm or workspace dependencies', () => {
+  const planJob = workflow.match(/ {2}plan:[\s\S]*?\n {2}quality:/u)?.[0];
+  assert.ok(planJob, 'CI should define its planning job');
+  assert.match(planJob, /actions\/setup-node@[0-9a-f]{40}/u);
+  assert.match(planJob, /node-version: ['"]22['"]/u);
+  assert.doesNotMatch(planJob, /setup-pnpm|pnpm install/u);
+});
+
 test('integration job supplies isolated credentials to the application restore drill', () => {
   const integrationJob = workflow.match(/ {2}integration:[\s\S]*?\n {2}browser:/u)?.[0];
   assert.ok(integrationJob, 'CI should define its integration job');
