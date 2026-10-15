@@ -80,12 +80,16 @@ function escapeMermaid(value) {
   return String(value).replaceAll('"', '#quot;').replaceAll('\n', ' ');
 }
 
-function hashSources(sources) {
+export function hashSources(sources) {
   const hash = createHash('sha256');
-  for (const source of [...sources].sort((left, right) => compareText(left.path, right.path))) {
+  // Hash inputs must have the same order across Node/ICU versions. localeCompare
+  // can collate paths differently between developer machines and CI runners.
+  for (const source of [...sources].sort((left, right) =>
+    left.path < right.path ? -1 : left.path > right.path ? 1 : 0
+  )) {
     hash.update(source.path.replaceAll('\\', '/'));
     hash.update('\0');
-    hash.update(source.contents);
+    hash.update(source.contents.replace(/\r\n?/gu, '\n'));
     hash.update('\0');
   }
   return hash.digest('hex');
