@@ -13,10 +13,12 @@ Baca [protokol eksekusi](EXECUTION.md) terlebih dahulu. Status resmi tetap di [m
 1. Cocokkan semua inventory features dengan actual tests dan remaining gaps.
 2. Sampling test harus membaca assertions, bukan nama file saja.
 3. Tetapkan owner/priority untuk gap dan jangan menandai mandatory gap sebagai selesai.
+4. Kelompokkan gap berdasarkan kontrak akses yang sama (misalnya tenant-owned relation, admin-only grant, append-only event, atau external storage). Jalankan satu set PostgreSQL positive/negative assertions untuk tiap keluarga kontrak; tambah kasus per-model hanya jika model itu memakai policy atau jalur mutasi yang berbeda.
+5. Untuk perubahan kecil, jalankan hanya tes yang membuktikan gap tersebut, typecheck/lint package terdampak, dan konsistensi roadmap bila evidence berubah. Jalankan suite penuh sekali pada kandidat rilis exact-SHA; jangan mengulangnya untuk perubahan dokumentasi atau kasus yang memakai kontrak sama.
 
 ### Verifikasi dan syarat selesai
 
-Setiap critical feature punya positive/negative assertions dan executed evidence.
+Setiap critical feature punya status coverage dan owner/prioritas untuk gap. Setiap keluarga kontrak release-critical punya positive dan negative assertions yang tersimpan di PostgreSQL serta executed evidence. Cakupan registry/metadata tidak dengan sendirinya mewajibkan mutasi sukses untuk semua model bila mereka memakai policy yang sama; kasus tambahan wajib menunjukkan risiko atau jalur implementasi yang berbeda. Hosted exact-SHA required checks dan persetujuan promosi tetap wajib sebelum item acceptance ditutup.
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M10.01.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
