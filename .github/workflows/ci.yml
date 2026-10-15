@@ -6,7 +6,7 @@ on:
   pull_request_review:
     types: [submitted, dismissed]
   push:
-    branches: [dev, main]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -421,7 +421,7 @@ jobs:
       - name: Install frozen workspace dependencies
         run: pnpm install --frozen-lockfile --no-runtime
       - name: Test CI gate decisions
-        run: pnpm test:ci-gate && pnpm test:artifact-safety
+        run: pnpm test:ci-gate && node --test scripts/ci-concurrency.test.mjs && pnpm test:artifact-safety
       - name: Write CI job summary
         if: always()
         env:

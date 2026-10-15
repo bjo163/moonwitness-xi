@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const workflow = readFileSync('.github/workflows/ci.yml', 'utf8');
+const codeqlWorkflow = readFileSync('.github/workflows/codeql.yml', 'utf8');
+const gitleaksWorkflow = readFileSync('.github/workflows/gitleaks.yml', 'utf8');
 
 test('CI cancels stale runs only within the same target branch and event type', () => {
   assert.match(
@@ -15,6 +17,13 @@ test('CI cancels stale runs only within the same target branch and event type', 
   assert.notEqual(group('dev', 'push'), group('dev', 'pull_request'));
   assert.notEqual(group('main', 'pull_request'), group('dev', 'push'));
   assert.equal(group('dev', 'push'), group('dev', 'push'));
+});
+
+test('dev pushes use promotion PR checks instead of duplicate push checks', () => {
+  for (const source of [workflow, codeqlWorkflow, gitleaksWorkflow]) {
+    assert.match(source, /^  pull_request:\r?\n    branches: \[dev, main\]$/mu);
+    assert.match(source, /^  push:\r?\n    branches: \[main\]$/mu);
+  }
 });
 
 test('integration job supplies isolated credentials to the application restore drill', () => {
