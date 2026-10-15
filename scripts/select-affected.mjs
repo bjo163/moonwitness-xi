@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { join, relative, resolve } from 'node:path';
 import { argv, cwd, env, stderr, stdout } from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -90,29 +90,62 @@ async function writePlan(result, jsonOutput) {
   stdout.write(jsonOutput ? JSON.stringify(result) : projects.join('\n'));
 }
 
-async function projectDependencies(project) {
-  let manifest;
-  try {
-    manifest = JSON.parse(await readFile(join(project.path, 'package.json'), 'utf8'));
-  } catch {
-    return [];
+export async function readWorkspaceProjects(root = cwd()) {
+  const workspaceYaml = await readFile(join(root, 'pnpm-workspace.yaml'), 'utf8');
+  const patterns = [];
+  let readingPackages = false;
+  for (const line of workspaceYaml.split(/\r?\n/u)) {
+    if (/^packages:\s*$/u.test(line)) {
+      readingPackages = true;
+      continue;
+    }
+    if (readingPackages && /^\S/u.test(line)) break;
+    if (!readingPackages) continue;
+    const pattern = /^\s+-\s+['"]?([^'"#]+)['"]?\s*$/u.exec(line)?.[1]?.trim();
+    if (pattern) patterns.push(pattern);
   }
-  return Object.entries({ ...manifest.dependencies, ...manifest.devDependencies })
-    .filter(([name, version]) => name.startsWith('@moonwitness/') && version === 'workspace:*')
-    .map(([name]) => name);
-}
+  if (patterns.length === 0) throw new Error('pnpm workspace packages are missing');
 
-function readWorkspaceProjects() {
-  const result = spawnSync('pnpm', ['list', '--recursive', '--depth', '-1', '--json'], {
-    encoding: 'utf8',
-  });
-  if (result.status === 0) return JSON.parse(result.stdout);
-  const fallback = spawnSync('pnpm.cmd', ['list', '--recursive', '--depth', '-1', '--json'], {
-    encoding: 'utf8',
-    shell: true,
-  });
-  if (fallback.status !== 0) throw new Error('pnpm workspace graph unavailable');
-  return JSON.parse(fallback.stdout);
+  const projects = [];
+  const names = new Set();
+  for (const pattern of patterns) {
+    const match = /^([^*]+)\/\*$/u.exec(pattern);
+    if (!match) throw new Error(`Unsupported pnpm workspace package pattern: ${pattern}`);
+    const packageDirectory = join(root, match[1]);
+    const entries = await readdir(packageDirectory, { withFileTypes: true });
+    entries.sort((left, right) => left.name.localeCompare(right.name));
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const packagePath = join(packageDirectory, entry.name);
+      let manifest;
+      try {
+        manifest = JSON.parse(await readFile(join(packagePath, 'package.json'), 'utf8'));
+      } catch (error) {
+        if (error?.code === 'ENOENT') continue;
+        throw error;
+      }
+      if (typeof manifest.name !== 'string' || manifest.name.length === 0) {
+        throw new Error(`Workspace package name is missing: ${packagePath}`);
+      }
+      if (names.has(manifest.name)) {
+        throw new Error(`Duplicate workspace package name: ${manifest.name}`);
+      }
+      names.add(manifest.name);
+      const dependencies = Object.entries({
+        ...manifest.dependencies,
+        ...manifest.devDependencies,
+      })
+        .filter(([name, version]) => name.startsWith('@moonwitness/') && version === 'workspace:*')
+        .map(([name]) => name)
+        .sort();
+      projects.push({
+        name: manifest.name,
+        path: relative(root, packagePath).replaceAll('\\', '/'),
+        dependencies,
+      });
+    }
+  }
+  return projects.sort((left, right) => left.name.localeCompare(right.name));
 }
 
 async function main() {
@@ -121,14 +154,7 @@ async function main() {
   const jsonOutput = argv.includes('--json');
   let workspaceProjects;
   try {
-    workspaceProjects = readWorkspaceProjects()
-      .filter((project) => project.name !== 'moonwitness-monorepo')
-      .map(async (project) => ({
-        ...project,
-        path: relative(cwd(), project.path).replaceAll('\\', '/'),
-        dependencies: await projectDependencies(project),
-      }));
-    workspaceProjects = await Promise.all(workspaceProjects);
+    workspaceProjects = await readWorkspaceProjects();
   } catch {
     stderr.write('Invalid pnpm workspace graph; using full CI scope.\n');
     await writePlan(

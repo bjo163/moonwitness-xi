@@ -1,6 +1,58 @@
 import assert, { deepEqual, equal } from 'node:assert/strict';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { test } from 'node:test';
-import { ciProjectsForAffectedPackages, expandWorkspaceDependencies } from './select-affected.mjs';
+import {
+  ciProjectsForAffectedPackages,
+  expandWorkspaceDependencies,
+  readWorkspaceProjects,
+} from './select-affected.mjs';
+
+test('reads workspace dependency closure directly from manifests without requiring pnpm install', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'moonwitness-affected-'));
+  try {
+    await writeFile(
+      join(root, 'pnpm-workspace.yaml'),
+      "packages:\n  - 'apps/*'\n  - 'packages/*'\n"
+    );
+    await mkdir(join(root, 'apps', 'api'), { recursive: true });
+    await mkdir(join(root, 'apps', 'logs'), { recursive: true });
+    await mkdir(join(root, 'packages', 'core'), { recursive: true });
+    await mkdir(join(root, 'packages', 'orm'), { recursive: true });
+    await writeFile(
+      join(root, 'apps', 'api', 'package.json'),
+      JSON.stringify({
+        name: '@moonwitness/api',
+        dependencies: { '@moonwitness/orm': 'workspace:*', fastify: '^5.0.0' },
+        devDependencies: { '@moonwitness/core': 'workspace:*' },
+      })
+    );
+    await writeFile(
+      join(root, 'packages', 'core', 'package.json'),
+      JSON.stringify({ name: '@moonwitness/core', dependencies: {} })
+    );
+    await writeFile(
+      join(root, 'packages', 'orm', 'package.json'),
+      JSON.stringify({
+        name: '@moonwitness/orm',
+        dependencies: { '@moonwitness/core': 'workspace:*' },
+      })
+    );
+
+    deepEqual(await readWorkspaceProjects(root), [
+      {
+        name: '@moonwitness/api',
+        path: 'apps/api',
+        dependencies: ['@moonwitness/core', '@moonwitness/orm'],
+      },
+      { name: '@moonwitness/core', path: 'packages/core', dependencies: [] },
+      { name: '@moonwitness/orm', path: 'packages/orm', dependencies: ['@moonwitness/core'] },
+    ]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 const workspace = [
   { name: '@moonwitness/types', dependencies: [] },

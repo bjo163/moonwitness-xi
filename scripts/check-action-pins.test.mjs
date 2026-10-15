@@ -88,6 +88,39 @@ test('keeps frozen dependency installation visible after toolchain setup', () =>
     ),
     false
   );
+  assert.equal(
+    workflowInstallsFrozenWorkspaceAfterSetup(
+      [
+        '  plan:',
+        '    steps:',
+        '      - uses: ./.github/actions/setup-pnpm',
+        '      - run: node scripts/select-affected.mjs',
+        '  quality:',
+        '    steps:',
+        '      - uses: ./.github/actions/setup-pnpm',
+        '      - name: Install frozen workspace dependencies',
+        '        run: pnpm install --frozen-lockfile --no-runtime',
+      ].join('\n'),
+      '.github/workflows/ci.yml'
+    ),
+    true
+  );
+  assert.equal(
+    workflowInstallsFrozenWorkspaceAfterSetup(
+      [
+        '  plan:',
+        '    steps:',
+        '      - uses: ./.github/actions/setup-pnpm',
+        '  quality:',
+        '    steps:',
+        '      - uses: ./.github/actions/setup-pnpm',
+        '      - name: Install frozen workspace dependencies',
+        '        run: pnpm install --frozen-lockfile --no-runtime',
+      ].join('\n'),
+      '.github/workflows/ci.yml'
+    ),
+    true
+  );
 });
 
 test('accepts immutable external actions with version comments and local actions', () => {

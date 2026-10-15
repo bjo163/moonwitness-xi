@@ -34,8 +34,6 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11.17.0'
-      - name: Install frozen workspace dependencies
-        run: pnpm install --frozen-lockfile --no-runtime
       - name: Select affected CI projects (promotion is always full)
         id: affected
         env:
@@ -48,7 +46,7 @@ jobs:
             echo 'plan={"mode":"full","reason":"full-validation","projects":["quality","integration","browser","containers","automation","ui"]}' >> "$GITHUB_OUTPUT"
           else
             base_sha="${BASE_SHA:-$(git rev-parse origin/main)}"
-            pnpm ci:affected "$base_sha" "$HEAD_SHA" --json
+            node scripts/select-affected.mjs "$base_sha" "$HEAD_SHA" --json
           fi
       - name: Validate Conventional Commit history
         env:
@@ -56,7 +54,7 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           base_sha="${BASE_SHA:-$(git rev-parse origin/main)}"
-          pnpm release:classify "$base_sha" "$HEAD_SHA" --summary
+          node scripts/classify-release-commits.mjs "$base_sha" "$HEAD_SHA" --summary
       - name: Classify promotion risk from commit history and diff
         id: risk
         env:

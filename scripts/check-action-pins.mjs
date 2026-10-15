@@ -65,9 +65,15 @@ export function pnpmSetupOrderValid(actionSource) {
   return nodeSetup >= 0 && pnpmSetup > nodeSetup;
 }
 
-export function workflowInstallsFrozenWorkspaceAfterSetup(source) {
+export function workflowInstallsFrozenWorkspaceAfterSetup(source, path = '') {
   const lines = source.split(/\r?\n/u);
+  const ciPlanOnly = path === '.github/workflows/ci.yml';
+  let inPlanJob = false;
   for (let index = 0; index < lines.length; index += 1) {
+    if (/^ {2}[A-Za-z0-9_-]+:\s*$/u.test(lines[index] ?? '')) {
+      inPlanJob = ciPlanOnly && lines[index].trim() === 'plan:';
+    }
+    if (inPlanJob) continue;
     if (!/^\s*- uses: \.\/\.github\/actions\/setup-pnpm\s*$/u.test(lines[index] ?? '')) continue;
     const setupIndent = (lines[index]?.match(/^\s*/u)?.[0] ?? '').length;
     const nextStep = lines.findIndex(
@@ -141,7 +147,7 @@ async function main() {
     if (
       source.path.startsWith('.github/workflows/') &&
       source.content.includes('uses: ./.github/actions/setup-pnpm') &&
-      !workflowInstallsFrozenWorkspaceAfterSetup(source.content)
+      !workflowInstallsFrozenWorkspaceAfterSetup(source.content, source.path)
     ) {
       findings.push({
         path: source.path,
