@@ -67,6 +67,38 @@ describe('local model artifact registry', () => {
     ).toBe(false);
   });
 
+  it('rejects credential-bearing HTTPS references and non-ISO review timestamps', () => {
+    expect(
+      isLocalModelRegistry(
+        registry([artifact({ sourceUrl: 'https://operator:secret@models.example.test/model' })])
+      )
+    ).toBe(false);
+    expect(
+      isLocalModelRegistry(
+        registry([
+          artifact({
+            license: {
+              ...artifact().license,
+              referenceUrl: 'https://user:token@licenses.example.test/MIT',
+            },
+          }),
+        ])
+      )
+    ).toBe(false);
+    expect(
+      isLocalModelRegistry(
+        registry([artifact({ license: { ...artifact().license, reviewedAt: '10' } })])
+      )
+    ).toBe(false);
+    expect(
+      isLocalModelRegistry(
+        registry([
+          artifact({ license: { ...artifact().license, reviewedAt: '2026-02-31T10:00:00Z' } }),
+        ])
+      )
+    ).toBe(false);
+  });
+
   it('verifies a reviewed artifact digest in external model storage', async () => {
     const root = await temporaryRoot();
     const workspace = path.join(root, 'workspace');

@@ -54,10 +54,59 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isHttpsUrl(value: string): boolean {
   try {
-    return new URL(value).protocol === 'https:';
+    const url = new URL(value);
+    return url.protocol === 'https:' && url.hostname.length > 0 && !url.username && !url.password;
   } catch {
     return false;
   }
+}
+
+function isIsoTimestamp(value: string): boolean {
+  const match =
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|[+-](\d{2}):(\d{2}))$/u.exec(
+      value
+    );
+  if (!match || !Number.isFinite(Date.parse(value))) return false;
+
+  const [
+    ,
+    yearText,
+    monthText,
+    dayText,
+    hourText,
+    minuteText,
+    secondText,
+    ,
+    offsetHour,
+    offsetMinute,
+  ] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  const second = Number(secondText);
+  const offsetIsValid =
+    offsetHour === undefined || (Number(offsetHour) <= 23 && Number(offsetMinute) <= 59);
+  if (
+    year < 1 ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    hour > 23 ||
+    minute > 59 ||
+    second > 59 ||
+    !offsetIsValid
+  ) {
+    return false;
+  }
+
+  const date = new Date(0);
+  date.setUTCFullYear(year, month - 1, day);
+  date.setUTCHours(hour, minute, second, 0);
+  return (
+    date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+  );
 }
 
 export function isLocalModelRegistry(value: unknown): value is LocalModelRegistry {
@@ -93,7 +142,7 @@ export function isLocalModelRegistry(value: unknown): value is LocalModelRegistr
       !isHttpsUrl(candidate.license.referenceUrl) ||
       typeof candidate.license.reviewed !== 'boolean' ||
       typeof candidate.license.reviewedAt !== 'string' ||
-      !Number.isFinite(Date.parse(candidate.license.reviewedAt)) ||
+      !isIsoTimestamp(candidate.license.reviewedAt) ||
       typeof candidate.license.reviewRef !== 'string' ||
       candidate.license.reviewRef.trim().length === 0 ||
       typeof candidate.file.path !== 'string' ||
