@@ -59,6 +59,7 @@ import { manifest as integrationManifest } from '@moonwitness/orm-integration';
 import {
   manifest as workflowManifest,
   expireDueWorkflows,
+  registerWorkflowExpiryHandler,
   startWorkflow,
   transitionWorkflow,
 } from '@moonwitness/orm-workflow';
@@ -521,7 +522,7 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     }
   }, 30000);
 
-  it('serializes concurrent addon installation during multi-replica startup', async () => {
+  it('serializes addon startup and runs workflow expiry through the PostgreSQL job worker', async () => {
     const concurrentSchema = `mw_lock_test_${randomUUID().replaceAll('-', '')}`;
     await adminDb.raw('create schema ??', [concurrentSchema]);
     const concurrentDb = knex({
@@ -668,6 +669,64 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       });
       expect(timeoutEvents).toHaveLength(1);
       expect(timeoutEvents[0]).toMatchObject({ sequence: 1, revision: 1, actor_id: null });
+
+      const unregisterWorkflowExpiry = registerWorkflowExpiryHandler();
+      try {
+        const scheduledWorkflowStartedAt = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
+        const scheduledWorkflow = await startWorkflow(concurrentDb, {
+          ...workflowStart,
+          idempotencyKey: `pg-worker-expiry-${randomUUID()}`,
+          now: scheduledWorkflowStartedAt,
+        });
+        const expiryJobId = await enqueueJob('workflow.expire_due', {});
+        expect(await runOneJob({ workerId: `workflow-expiry-${randomUUID()}` })).toBe(true);
+
+        const succeededExpiryJob = await Job.query().findById(expiryJobId).throwIfNotFound();
+        expect(succeededExpiryJob.status).toBe('succeeded');
+        const succeededExpiryRun = await JobRun.query()
+          .where('job_id', expiryJobId)
+          .first()
+          .throwIfNotFound();
+        expect(succeededExpiryRun.status).toBe('succeeded');
+        expect(JSON.parse(succeededExpiryRun.result ?? 'null')).toEqual({ expired: 1 });
+        await expect(
+          concurrentDb('workflow_instances').where({ id: scheduledWorkflow.id }).first()
+        ).resolves.toMatchObject({
+          status: 'timed_out',
+          current_state: 'timed_out',
+          revision: 1,
+        });
+        await expect(
+          concurrentDb('workflow_events').where({
+            instance_id: scheduledWorkflow.id,
+            action: 'timeout',
+            idempotency_key: `timeout:${scheduledWorkflow.id}`,
+          })
+        ).resolves.toMatchObject([{ sequence: 1, revision: 1, actor_id: null }]);
+
+        const noOpExpiryJobId = await enqueueJob('workflow.expire_due', {});
+        expect(await runOneJob({ workerId: `workflow-expiry-noop-${randomUUID()}` })).toBe(true);
+        const succeededNoOpJob = await Job.query().findById(noOpExpiryJobId).throwIfNotFound();
+        expect(succeededNoOpJob.status).toBe('succeeded');
+        const succeededNoOpRun = await JobRun.query()
+          .where('job_id', noOpExpiryJobId)
+          .first()
+          .throwIfNotFound();
+        expect(succeededNoOpRun.status).toBe('succeeded');
+        expect(JSON.parse(succeededNoOpRun.result ?? 'null')).toEqual({ expired: 0 });
+        await expect(
+          concurrentDb('workflow_instances').where({ id: scheduledWorkflow.id }).first()
+        ).resolves.toMatchObject({ status: 'timed_out', current_state: 'timed_out', revision: 1 });
+        await expect(
+          concurrentDb('workflow_events').where({
+            instance_id: scheduledWorkflow.id,
+            action: 'timeout',
+            idempotency_key: `timeout:${scheduledWorkflow.id}`,
+          })
+        ).resolves.toHaveLength(1);
+      } finally {
+        unregisterWorkflowExpiry();
+      }
 
       const handlerName = `test.pg-scheduler-${randomUUID()}`;
       const unregister = registerJobHandler({
