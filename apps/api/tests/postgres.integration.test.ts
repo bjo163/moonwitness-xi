@@ -806,6 +806,139 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
           data: { approvals: { action: string; decision: string; actor_id: number }[] };
         }>().data.approvals
       ).toMatchObject([{ action: 'approve', decision: 'approved', actor_id: adminUser.id }]);
+
+      const rejectedRequest = await workflowApp.inject({
+        method: 'POST',
+        url: '/api/request.purchase',
+        headers: headers(requesterToken),
+        payload: {
+          title: `PostgreSQL rejection flow ${suffix}`,
+          description: 'Verify persisted request rejection and notification.',
+          amount_minor: 42000,
+          currency_id: currency.id,
+          company_id: company.id,
+        },
+      });
+      expect(rejectedRequest.statusCode, rejectedRequest.payload).toBe(201);
+      const rejectedRequestId = rejectedRequest.json<{ data: { id: number } }>().data.id;
+      const rejectedStartKey = `pg-workflow-reject-start-${suffix}`;
+      const rejectedStart = await workflowApp.inject({
+        method: 'POST',
+        url: '/workflows/instances',
+        headers: headers(requesterToken),
+        payload: {
+          code: 'request.purchase_approval',
+          resource_model: 'request.purchase',
+          resource_id: rejectedRequestId,
+          idempotency_key: rejectedStartKey,
+        },
+      });
+      expect(rejectedStart.statusCode, rejectedStart.payload).toBe(201);
+      const rejectedInstanceId = rejectedStart.json<{ data: { id: number } }>().data.id;
+      const rejectedSubmit = await workflowApp.inject({
+        method: 'POST',
+        url: `/workflows/instances/${rejectedInstanceId}/actions`,
+        headers: headers(requesterToken),
+        payload: {
+          action: 'submit',
+          expected_revision: 0,
+          idempotency_key: `pg-workflow-reject-submit-${suffix}`,
+        },
+      });
+      expect(rejectedSubmit.statusCode, rejectedSubmit.payload).toBe(200);
+      const rejectionComment = 'Rejected in the PostgreSQL lifecycle test.';
+      const rejected = await workflowApp.inject({
+        method: 'POST',
+        url: `/workflows/instances/${rejectedInstanceId}/actions`,
+        headers: headers(adminToken),
+        payload: {
+          action: 'reject',
+          expected_revision: 1,
+          idempotency_key: `pg-workflow-admin-reject-${suffix}`,
+          comment: rejectionComment,
+        },
+      });
+      expect(rejected.statusCode, rejected.payload).toBe(200);
+      expect(
+        rejected.json<{
+          data: { currentState: string; status: string; revision: number };
+        }>().data
+      ).toMatchObject({ currentState: 'rejected', status: 'rejected', revision: 2 });
+      await expect(
+        workflowDb('workflow_instances').where({ id: rejectedInstanceId }).first()
+      ).resolves.toMatchObject({
+        company_id: company.id,
+        resource_model: 'request.purchase',
+        resource_id: rejectedRequestId,
+        started_by_id: requester.id,
+        current_state: 'rejected',
+        status: 'rejected',
+        revision: 2,
+      });
+      await expect(
+        workflowDb('workflow_approvals')
+          .where({ instance_id: rejectedInstanceId })
+          .select('action', 'decision', 'actor_id', 'comment')
+      ).resolves.toMatchObject([
+        {
+          action: 'reject',
+          decision: 'rejected',
+          actor_id: adminUser.id,
+          comment: rejectionComment,
+        },
+      ]);
+      const rejectionDetail = await workflowApp.inject({
+        method: 'GET',
+        url: `/workflows/instances/${rejectedInstanceId}`,
+        headers: headers(requesterToken),
+      });
+      expect(rejectionDetail.statusCode, rejectionDetail.payload).toBe(200);
+      expect(
+        rejectionDetail
+          .json<{
+            data: {
+              events: {
+                action: string;
+                from_state: string;
+                to_state: string;
+                revision: number;
+                comment: string | null;
+              }[];
+            };
+          }>()
+          .data.events.map(({ action, from_state, to_state, revision, comment }) => [
+            action,
+            from_state,
+            to_state,
+            revision,
+            comment,
+          ])
+      ).toEqual([
+        ['start', 'draft', 'draft', 0, null],
+        ['submit', 'draft', 'submitted', 1, null],
+        ['reject', 'submitted', 'rejected', 2, rejectionComment],
+      ]);
+      const rejectionNotifications = await workflowDb('outbox_events')
+        .where({
+          event_type: 'notification.deliver',
+          aggregate_model: 'notification.notification',
+          aggregate_id: requester.id,
+          company_id: company.id,
+          actor_id: adminUser.id,
+        })
+        .select('payload');
+      const matchingRejectionNotifications = rejectionNotifications.filter(({ payload }) => {
+        const notification = JSON.parse(payload) as {
+          templateCode?: string;
+          resource?: { id?: number; model?: string };
+        };
+        return (
+          notification.templateCode === 'request.rejected' &&
+          notification.resource?.model === 'request.purchase' &&
+          notification.resource.id === rejectedRequestId
+        );
+      });
+      expect(matchingRejectionNotifications).toHaveLength(1);
     } finally {
       try {
         if (workflowApp) await workflowApp.close();
