@@ -1,10 +1,10 @@
 # Jalur rilis aktif
 
-**Diperbarui: 2026-10-15 pada `dev` SHA `2cee8e98968e16f4cd7f2e31d9e805c7dc5bc0bb`.** Jalur rilis pertama adalah prioritas/dependensi di dalam tujuan penuh 148 kartu roadmap; ia tidak menggantikan penyelesaian `ROADMAP.md` dan `docs/roadmap/`. `pnpm roadmap:progress -- --format json` pada SHA ini mencatat 101/148 complete, 9 running, dan 38 todo; hitung ulang hanya ketika status task berubah. Kartu post-release tetap bagian goal dan dikerjakan setelah prasyaratnya tersedia. Catatan batch lama ada di [arsip eksekusi](EXECUTION-HISTORY-2026-10-15.md); estimasi lama 8–13 hari tidak dipakai karena mencampur pekerjaan wajib dan pengulangan verifikasi. Percepatan mengurangi pengulangan dan mengurutkan dependensi, bukan scope maupun acceptance.
+**Diperbarui: 2026-10-15 pada `dev` SHA `5585942d1b59c0f49bff693299c2c1b6546a2df1` (roadmap dirty saat pembaruan).** Goal penuh mencakup 148 M-series dan 65 K-series (213 task terindeks); M-series tetap utuh dan pekerjaan K-series terpisah. `pnpm roadmap:progress -- --format json` pada tree saat ini: 101 complete, 13 running, 97 todo, 2 blocked. Snapshot setelah commit harus diperbarui jika checklist/task-status berubah. Jalur rilis pertama adalah jalur prioritas, bukan pengganti roadmap. Percepatan mengurangi pengulangan dan mengurutkan dependensi; tidak mengurangi acceptance.
 
 ## Checkpoint percepatan terbaru — 2026-10-15
 
-Tujuan penuh 148 kartu tetap aktif. Untuk mempercepat penyelesaiannya, bedakan **kode lokal**, **bukti satu kandidat**, dan **aktivasi/approval eksternal**; jangan membuat test atau implementasi baru hanya karena checkbox masih terbuka.
+Goal penuh tetap aktif: 148 M-series master cards dan 65 K-series cards. Untuk mempercepatnya, bedakan **kode lokal**, **bukti satu kandidat**, dan **aktivasi/approval eksternal**; jangan membuat test atau implementasi baru hanya karena checkbox masih terbuka.
 
 - Batch terbaru menutup deduplikasi redelivery issue-intake secara lokal: kode `882d7d2c0fda0b786a2520bfa8303eea1d2d68e5` dan evidence/roadmap `2cee8e98968e16f4cd7f2e31d9e805c7dc5bc0bb` sudah ada di `origin/dev`. Roadmap suite 99/99, focused issue-intake/workflow-trust 40/40, workflow-trust 24/24, lint, format, actionlint dan action-pin checks lulus. Batasnya jelas: ledger Actions hanya menjamin dedup tujuh hari, gagal tertutup pada inventory tak lengkap, dan hosted pilot menunggu App/retention/promosi protected.
 - `M3.11`: Board PostgreSQL suite sudah lulus pada ketiga engine lokal; jangan mengulang matrix. Sisa penerimaan adalah scheduled hosted run dari `main` dan review artifact.
@@ -30,7 +30,7 @@ Tujuan penuh 148 kartu tetap aktif. Untuk mempercepat penyelesaiannya, bedakan *
 
 ## Perubahan cara mencapai goal agar cepat selesai
 
-Goal penuh tetap satu goal, tetapi antrean kerja dibagi tegas menjadi tiga jalur: **rilis pertama** (hanya dependency dan acceptance yang mencegah kandidat rilis), **lokal independen** (implementasi/perbaikan yang bisa dituntaskan tanpa akses pihak lain), dan **tertahan eksternal/post-release** (tidak boleh mengambil waktu dari dua jalur pertama). Jangan mengerjakan semua 148 kartu secara serial dan jangan menganggap setiap kartu butuh implementasi atau test baru: gunakan implementasi/evidence bersama jika memang memenuhi acceptance tiap kartu.
+Goal penuh tetap satu goal, tetapi antrean kerja dibagi tegas menjadi tiga jalur: **rilis pertama** (hanya dependency dan acceptance yang mencegah kandidat rilis), **lokal independen** (implementasi/perbaikan yang bisa dituntaskan tanpa akses pihak lain), dan **tertahan eksternal/post-release** (tidak boleh mengambil waktu dari dua jalur pertama). Jangan mengerjakan 213 task secara serial dan jangan menganggap setiap kartu butuh implementasi atau test baru: gunakan implementasi/evidence bersama jika memang memenuhi acceptance tiap kartu.
 
 - **Setiap sesi mulai dari satu snapshot:** `git status`, SHA `dev`, dan status checklist. Pilih satu kartu lokal dengan dependency siap serta acceptance gap terkecil yang berdampak pada rilis. Jangan menjalankan ulang inventarisasi besar atau mengulang planning semata-mata karena sesi baru dimulai.
 - **Batas kerja lokal:** satu perubahan fungsional yang bermakna per batch; kartu terkait boleh ditutup bersama jika bukti yang sama memenuhi seluruh acceptance. Bila pemeriksaan awal menemukan tidak ada gap lokal, catat blocker dan pindah pada sesi yang sama—jangan memperpanjang audit, membuat fixture/model/addon, atau menunggu hosted CI.
@@ -97,6 +97,22 @@ PostgreSQL canonical suite lulus 15/15 pada exact source `203d29a05fedcf8c3b34b2
 
 Goal rilis tetap aktif. Untuk menghindari empat hari kerja berputar, gunakan status `in_progress` sebagai daftar penerimaan yang belum lengkap, bukan instruksi untuk mengulang implementasi atau suite yang sudah lulus. Audit status/evidence sekali di awal batch; setelah itu kerja berdasarkan dependency dan gap acceptance berikut.
 
+### Keputusan metode per 2026-10-15
+
+- Jangan menunggu hosted CI untuk memulai task lokal independen. Satu batch lokal dikerjakan sampai diff reviewed dan commit/push `dev`; catat hasil CI belakangan dalam checkpoint, bukan sebagai gerbang antrean.
+- Gunakan satu pelaksana untuk file bersama (ROADMAP, tasks index/schema, lockfile, workflow atau root config). Paralelkan hanya audit read-only atau edit pada file yang tidak tumpang tindih; merge hasil sekali dan jalankan validasi gabungan sekali.
+- Sebelum test, cocokkan evidence dengan source SHA + input dependency. Bukti tetap reusable saat perubahan hanya docs/evidence. Setelah ada perubahan source, jalankan test paling sempit; naikkan ke test package/build/integration hanya bila boundary berubah atau hasil sempit gagal.
+- Jangan buat “evidence-only batch” untuk merekam hasil yang sudah dicatat. Tambahkan ringkasan di history/evidence yang memang menjadi deliverable perubahan; satukan pembaruan roadmap, validasi dan commit.
+- Satu failed lane boleh direproduksi satu kali secara terarah. Jika gagal kedua kali dengan penyebab lingkungan/akses, dokumentasikan blocker dan lanjutkan task lokal lain; jangan ulang full suite.
+- Tidak ada daftar tunggu polling CI. Snapshot GitHub cukup sekali per checkpoint atau setelah event/action nyata; unresolved permission, hosted workflow, approval dan remote write masuk blocker ber-owner.
+- Tetap wajib: lint/typecheck terdampak, tes keamanan yang berlaku, PostgreSQL acceptance yang belum reusable, required CI untuk kandidat exact-SHA dan CODEOWNER review. Tidak ada skip/bypass demi kecepatan.
+
+### Checkpoint lokal saat ini
+
+- Reconcile roadmap M/K: task index memuat 213 task (148 M-series + 65 K-series). Perbaikan progress report yang sebelumnya mengunci total lama dan Issue planner untuk format K-series lulus `pnpm test:roadmap` 109/109, `pnpm automation:check:roadmap` (213 task), focused issue/progress tests 40/40, Prettier, dan `git diff --check`.
+- Tinjauan dependency `@fastify/rate-limit` 11.2.0 → 11.2.1 tidak dipromosikan: unit/build/typecheck, PostgreSQL 15/15, Board E2E 23 passed (satu flaky lulus pada retry), docs portal 5/5, container smoke, image build, audit production dan Trivy 0.76.0 image scans tanpa CRITICAL lulus lokal. Workspace Trivy scan tidak selesai pada volume checkout Windows; perubahan dependency dikembalikan ke versi source. Bila dibuka lagi, jalankan di workflow resmi Ubuntu agar workspace dan kedua image dipindai bersama.
+- Aturan percepatan: jangan ulang gate lokal di atas jika source dan input tidak berubah. Untuk batch roadmap/docs jalankan roadmap tests + formatter/link check; untuk perubahan kode jalankan tes perilaku terkait + lint/typecheck package terdampak. Jalankan full required gates sekali pada kandidat exact-SHA.
+
 ### Aturan fast path mulai batch ini
 
 - **WIP lokal maksimum satu batch.** Pilih satu kartu atau satu kelompok kartu yang berbagi kode dan acceptance; jangan membuka audit baru sebelum batch itu punya hasil, diff yang direview, dan keputusan berikutnya.
@@ -142,4 +158,4 @@ M9.08 controlled size comparison tetap ditunda sampai ada baseline same-runner/t
 
 ### Definisi selesai goal
 
-Goal penuh belum selesai hanya karena implementasi lokal atau CI `dev` lulus, dan tidak selesai hanya dengan merilis subset awal. Selesai setelah seluruh 148 kartu master checklist punya acceptance/evidence yang sesuai, semua required owner/hosted blocker ditutup melalui akses dan gate resmi, promosi protected serta siklus version/release/docs/Pages/issue trace dibuktikan, dan tidak ada kartu yang diam-diam dipindahkan keluar dari scope. Post-release/backlog adalah urutan pengerjaan setelah rilis pertama, bukan pengecualian dari goal.
+Goal penuh belum selesai hanya karena implementasi lokal atau CI `dev` lulus, dan tidak selesai hanya dengan merilis subset awal. Selesai setelah seluruh 148 kartu M-series master checklist dan 65 kartu K-series memiliki acceptance/evidence yang sesuai, semua required owner/hosted blocker ditutup melalui akses dan gate resmi, promosi protected serta siklus version/release/docs/Pages/issue trace dibuktikan, dan tidak ada kartu yang diam-diam dipindahkan keluar dari scope. Post-release/backlog adalah urutan pengerjaan setelah rilis pertama, bukan pengecualian dari goal.
