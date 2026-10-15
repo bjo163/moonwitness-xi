@@ -14,6 +14,12 @@ cleanup() {
   local cleanup_status=0
   if (( exit_code != 0 )); then
     printf '::error title=Container smoke failed::Phase %s failed; inspect the authorized runner log for details.\n' "$phase"
+    local service_status
+    if service_status="$("${compose[@]}" ps --all --format 'table {{.Service}}\t{{.State}}\t{{.Health}}\t{{.ExitCode}}' 2>/dev/null)"; then
+      printf 'Container smoke service status (service/state/health/exit-code):\n%s\n' "$service_status"
+    else
+      printf 'Container smoke service status unavailable.\n'
+    fi
   fi
   trap - EXIT
   phase=cleanup
