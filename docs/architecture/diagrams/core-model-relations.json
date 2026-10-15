@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "addons": ["auth", "base", "jobs", "notification"],
   "generatedFrom": "core addon manifests and model field metadata; no seed values included",
-  "sourceSha256": "324092b0c36dbe212c5be5e905fd2eabb3274529b8d2e1c2faf182d39a6e3043",
+  "sourceSha256": "ea6dee018fe1f926fd43d8660ccead6b27619c7f55ad21473bfa3e151d2ebba0",
   "models": [
     {
       "name": "auth.refresh_token",
@@ -302,6 +302,13 @@
       "to": "base.company",
       "cardinality": "N:1",
       "kind": "belongsTo"
+    },
+    {
+      "from": "base.partner",
+      "field": "addresses",
+      "to": "base.partner_address",
+      "cardinality": "1:N",
+      "kind": "hasMany"
     },
     {
       "from": "base.partner",
