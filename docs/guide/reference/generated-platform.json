@@ -302,7 +302,8 @@
       "test:affected": "node --test scripts/select-affected.test.mjs",
       "test:architecture": "node --test scripts/architecture/*.test.mjs",
       "test:artifact-safety": "node --test scripts/scan-test-reports.test.mjs",
-      "test:assets": "pnpm assets:validate && node --test packages/assets/tests/*.test.mjs scripts/export-doc-assets.test.mjs && pnpm assets:check:docs",
+      "test:assets": "pnpm test:assets:source && pnpm assets:check:docs",
+      "test:assets:source": "pnpm assets:validate && node --test packages/assets/tests/*.test.mjs scripts/export-doc-assets.test.mjs",
       "test:board-budget": "node --test scripts/check-board-bundle.test.mjs",
       "test:board-csv": "node --experimental-strip-types --test scripts/board/csv-export.test.mjs",
       "test:ci-gate": "node --test scripts/ci-gate.test.mjs",
@@ -310,7 +311,7 @@
       "test:dependency-candidate": "node --test scripts/dependency-candidate.test.mjs scripts/smoke-containers.test.mjs",
       "test:dependency-plan": "node --test scripts/dependency-update-plan.test.mjs",
       "test:docs-navigation": "node --test scripts/check-doc-navigation.test.mjs",
-      "test:docs-portal": "pnpm docs:build && pnpm --filter @moonwitness/docs test",
+      "test:docs-portal": "pnpm --filter @moonwitness/docs test",
       "test:docs-publication": "node --test scripts/check-docs-publication.test.mjs scripts/write-docs-metadata.test.mjs scripts/classify-docs-change.test.mjs scripts/main-ci-policy.test.mjs scripts/maintenance-incident.test.mjs scripts/docs/versioned-site.test.mjs",
       "test:e2e": "node scripts/run-e2e.mjs",
       "test:e2e:diagnostics": "node --test scripts/e2e-preflight-report.test.mjs scripts/summarize-playwright-failures.test.mjs scripts/summarize-junit-failures.test.mjs scripts/ci-diagnostics.test.mjs scripts/ci/build-workspace-package.test.mjs scripts/ci/workspace-build-diagnostics.test.mjs scripts/docker-workspace-manifests.test.mjs scripts/package-manager.test.mjs scripts/ci-build-reuse.test.mjs",
@@ -4599,5 +4600,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "0aee65abd59694022566b5164ff8c46988627da84c7f0089b92020ace01b8372"
+  "generatedFromSha256": "02d350aef379d0bbec1da0bc5438849bf7a4933bf49225ed94c758dbba4b7630"
 }

@@ -1,6 +1,6 @@
 # Generated platform reference
 
-Source fingerprint: `0aee65abd59694022566b5164ff8c46988627da84c7f0089b92020ace01b8372`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
+Source fingerprint: `02d350aef379d0bbec1da0bc5438849bf7a4933bf49225ed94c758dbba4b7630`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
 
 ## Workspace packages and apps
 
@@ -137,6 +137,7 @@ Value categories are inferred from variable names and example syntax; requiredne
 - `pnpm test:architecture`
 - `pnpm test:artifact-safety`
 - `pnpm test:assets`
+- `pnpm test:assets:source`
 - `pnpm test:board-budget`
 - `pnpm test:board-csv`
 - `pnpm test:ci-gate`
