@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { readFile, writeFile } from 'node:fs/promises';
+import { readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { URL, fileURLToPath, pathToFileURL } from 'node:url';
@@ -17,6 +17,60 @@ const scheduledWorkflowExpectations = [
   { name: 'Gitleaks', workflowFile: 'gitleaks.yml', maximumAgeDays: 8 },
   { name: 'Monthly platform audit', workflowFile: 'platform-audit.yml', maximumAgeDays: 38 },
 ];
+
+export function auditWorkflowArtifactRetention(workflows, maximumRetentionDays = 90) {
+  if (!Array.isArray(workflows) || workflows.length === 0) {
+    return {
+      status: 'unknown',
+      maximumRetentionDays,
+      uploadStepCount: 0,
+      entries: [],
+      violations: ['No workflow files were supplied.'],
+    };
+  }
+
+  const entries = [];
+  const violations = [];
+  for (const workflow of workflows) {
+    const lines = workflow.content.split(/\r?\n/u);
+    for (let index = 0; index < lines.length; index += 1) {
+      const upload = /^(\s*)uses:\s*actions\/upload-artifact@/u.exec(lines[index]);
+      if (!upload) continue;
+      const stepIndent = upload[1].slice(0, Math.max(0, upload[1].length - 2));
+      let start = index;
+      while (start > 0 && !lines[start].startsWith(`${stepIndent}- `)) start -= 1;
+      let end = index + 1;
+      while (end < lines.length && !lines[end].startsWith(`${stepIndent}- `)) end += 1;
+      const block = lines.slice(start, end).join('\n');
+      const name = /^\s*-\s+name:\s*(.+?)\s*$/mu.exec(block)?.[1] ?? `upload at line ${index + 1}`;
+      const retentionLines = [...block.matchAll(/^[ \t]+retention-days:[ \t]*(\S+)[ \t]*$/gmu)];
+      const rawDays = retentionLines.length === 1 ? retentionLines[0][1] : undefined;
+      const days = rawDays && /^\d+$/u.test(rawDays) ? Number(rawDays) : undefined;
+      const valid =
+        retentionLines.length === 1 &&
+        days !== undefined &&
+        Number.isSafeInteger(days) &&
+        days >= 1 &&
+        days <= maximumRetentionDays;
+      const entry = { workflow: workflow.path, name, retentionDays: days ?? null, valid };
+      entries.push(entry);
+      if (!valid) {
+        violations.push(
+          `${workflow.path}: ${name} must declare exactly one integer retention-days from 1 to ${maximumRetentionDays}.`
+        );
+      }
+    }
+  }
+
+  if (entries.length === 0) violations.push('No actions/upload-artifact steps were found.');
+  return {
+    status: violations.length === 0 ? 'compliant' : 'noncompliant',
+    maximumRetentionDays,
+    uploadStepCount: entries.length,
+    entries,
+    violations,
+  };
+}
 
 function knownApiFailure(error) {
   const output = `${error.stderr ?? ''} ${error.message ?? ''}`;
@@ -246,6 +300,7 @@ export function buildPlatformAudit(input) {
     previous,
     nodeSchedule,
     supportReviewPolicy,
+    workflowArtifactRetention,
   } = input;
   const generatedTime = Date.parse(generatedAt);
   if (!repo || !/^[a-f0-9]{40}$/u.test(sourceSha) || !Number.isFinite(generatedTime)) {
@@ -324,6 +379,7 @@ export function buildPlatformAudit(input) {
           0
         );
   const supportReviews = evaluateRuntimeSupportReviews(supportReviewPolicy, generatedAt);
+  const retentionPolicy = workflowArtifactRetention ?? auditWorkflowArtifactRetention([], 90);
 
   return {
     schemaVersion: 1,
@@ -336,6 +392,7 @@ export function buildPlatformAudit(input) {
       !scheduledWorkflowInventoryUnknown &&
       workflowPermissionStatus === 'available' &&
       actionPermissionStatus === 'available' &&
+      retentionPolicy.status === 'compliant' &&
       packages?.status === 'available' &&
       billing?.status === 'available' &&
       nodeSupport?.end
@@ -343,6 +400,7 @@ export function buildPlatformAudit(input) {
         : 'partial',
     generatedAt,
     source: { repository: repo, sha: sourceSha, dirty: sourceDirty },
+    workflowArtifactRetention: retentionPolicy,
     coverage: {
       workflowRunWindowDays: 90,
       artifactInventoryStatus: artifactInventory.status,
@@ -477,6 +535,13 @@ export function buildPlatformAudit(input) {
             'Actions permission settings are unknown because one or more settings endpoints were unavailable.',
           ]
         : []),
+      ...(retentionPolicy.status === 'noncompliant'
+        ? retentionPolicy.violations.map((violation) => `Workflow artifact retention: ${violation}`)
+        : retentionPolicy.status === 'unknown'
+          ? [
+              'Workflow artifact retention policy is unknown because workflow source was unavailable.',
+            ]
+          : []),
       ...(!repository
         ? [
             'Repository metadata and retention settings are unknown because the repository API was unavailable.',
@@ -689,6 +754,19 @@ async function main() {
       'utf8'
     )
   );
+  const workflowDirectory = path.join(repositoryRoot, '.github/workflows');
+  const workflowFiles = (await readdir(workflowDirectory, { withFileTypes: true }))
+    .filter((entry) => entry.isFile() && /\.ya?ml$/u.test(entry.name))
+    .map((entry) => entry.name)
+    .sort();
+  const workflowArtifactRetention = auditWorkflowArtifactRetention(
+    await Promise.all(
+      workflowFiles.map(async (file) => ({
+        path: `.github/workflows/${file}`,
+        content: await readFile(path.join(workflowDirectory, file), 'utf8'),
+      }))
+    )
+  );
   const [artifacts, workflowRuns] = await Promise.all([
     readApiInventory(`repos/${repo}/actions/artifacts?per_page=100`, 'artifacts'),
     readApiInventory(
@@ -747,6 +825,7 @@ async function main() {
     previous,
     nodeSchedule,
     supportReviewPolicy,
+    workflowArtifactRetention,
   });
   if (nodeSchedule === null) {
     audit.runtimeSupport.node.status = 'unknown';

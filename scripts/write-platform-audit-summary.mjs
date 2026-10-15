@@ -16,6 +16,12 @@ export function renderPlatformAuditSummary(report) {
     '',
     `- Source: \`${report.source.sha}\``,
     `- Audit status: ${report.status ?? 'complete'}.`,
+    report.workflowArtifactRetention
+      ? `- Workflow artifact retention: ${report.workflowArtifactRetention.status}; ${report.workflowArtifactRetention.uploadStepCount} upload step(s), maximum ${report.workflowArtifactRetention.maximumRetentionDays} days.`
+      : '- Workflow artifact retention: unknown.',
+    ...(report.workflowArtifactRetention?.violations ?? []).map(
+      (violation) => `- Artifact retention violation: ${violation}`
+    ),
     artifactInventory.status === 'unknown'
       ? `- Active artifacts: unknown (${artifactInventory.reason}).`
       : `- Active artifacts: ${artifactInventory.count} (${artifactBytesSummary}); expiring within seven days: ${artifactInventory.expiringWithinSevenDays}.`,

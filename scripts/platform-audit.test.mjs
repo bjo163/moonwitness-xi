@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
   auditScheduledWorkflows,
+  auditWorkflowArtifactRetention,
   buildPlatformAudit,
   evaluateRuntimeSupportReviews,
   fetchScheduledWorkflowRuns,
@@ -29,6 +30,55 @@ const supportReviewPolicy = {
     },
   ],
 };
+
+test('workflow artifact uploads declare one bounded retention period', async () => {
+  const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const workflowDirectory = path.join(repositoryRoot, '.github/workflows');
+  const files = (await readdir(workflowDirectory, { withFileTypes: true }))
+    .filter((entry) => entry.isFile() && /\.ya?ml$/u.test(entry.name))
+    .map((entry) => entry.name)
+    .sort();
+  const result = auditWorkflowArtifactRetention(
+    await Promise.all(
+      files.map(async (file) => ({
+        path: file,
+        content: await readFile(path.join(workflowDirectory, file), 'utf8'),
+      }))
+    )
+  );
+  assert.equal(result.status, 'compliant', result.violations.join('\n'));
+  assert.ok(result.uploadStepCount > 0);
+  assert.ok(result.entries.every(({ retentionDays }) => retentionDays >= 1 && retentionDays <= 90));
+});
+
+test('retention policy fails closed for missing, duplicate, nonnumeric, or excessive periods', () => {
+  const result = auditWorkflowArtifactRetention(
+    [
+      {
+        path: 'missing.yml',
+        content: '      - name: Missing\n        uses: actions/upload-artifact@v6\n',
+      },
+      {
+        path: 'duplicate.yml',
+        content:
+          '      - name: Duplicate\n        uses: actions/upload-artifact@v6\n        with:\n          retention-days: 7\n          retention-days: 14\n',
+      },
+      {
+        path: 'invalid.yml',
+        content:
+          '      - name: Invalid\n        uses: actions/upload-artifact@v6\n        with:\n          retention-days: never\n',
+      },
+      {
+        path: 'excessive.yml',
+        content:
+          '      - name: Excessive\n        uses: actions/upload-artifact@v6\n        with:\n          retention-days: 91\n',
+      },
+    ],
+    90
+  );
+  assert.equal(result.status, 'noncompliant');
+  assert.equal(result.violations.length, 4);
+});
 
 test('checked-in support ledger covers every declared platform runtime', async () => {
   const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -608,6 +658,13 @@ test('artifact byte totals stay unknown when returned rows omit size metadata', 
 test('summary reports unknown capabilities and never implies cleanup executed', () => {
   const report = {
     source: { sha: 'c'.repeat(40) },
+    workflowArtifactRetention: {
+      status: 'compliant',
+      uploadStepCount: 12,
+      maximumRetentionDays: 90,
+      entries: [],
+      violations: [],
+    },
     inventory: {
       artifacts: { count: 2, bytes: 512, expiringWithinSevenDays: 1 },
       workflowRuns: {
@@ -640,6 +697,10 @@ test('summary reports unknown capabilities and never implies cleanup executed', 
   };
   const summary = renderPlatformAuditSummary(report);
   assert.match(summary, /Registry inventory: unknown; Actions billing: unknown/u);
+  assert.match(
+    summary,
+    /Workflow artifact retention: compliant; 12 upload step\(s\), maximum 90 days/u
+  );
   assert.match(summary, /0 allowlisted candidates; no delete capability/u);
   assert.match(summary, /Schedule Deep scheduled regression: missing-success/u);
   assert.match(summary, /Runtime review PostgreSQL \(16-alpine\): overdue/u);
