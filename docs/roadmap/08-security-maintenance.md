@@ -105,7 +105,7 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ### Langkah pelaksanaan
 
-1. Apply satu package candidate, regenerate lockfile dengan package manager yang dipin, lalu run relevant/full gate. Planner memilih exact wanted patch/minor bila tersedia; bila wanted sama dengan installed, latest stable patch/minor dapat dipilih sebagai safe target. Major/prerelease tetap report-only.
+1. Apply satu package candidate, regenerate lockfile dengan package manager yang dipin, lalu jalankan pemeriksaan cepat yang relevan terhadap package/dependents untuk diagnosis lokal. Jangan menambah loop lokal redundant: seluruh lint, format, typecheck, unit, PostgreSQL integration, E2E, UI catalog/budget, architecture, docs/portal dan security scan tetap wajib satu kali terhadap exact candidate SHA sebelum candidate boleh dipush. Major/prerelease tetap report-only.
 2. Sebelum push periksa dev head; recompute jika berubah.
 3. Tidak push kandidat gagal; report diff dan error untuk maintainer.
 
