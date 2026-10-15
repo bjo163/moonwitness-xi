@@ -280,7 +280,8 @@
       "ci:affected": "node scripts/select-affected.mjs",
       "dependency:candidate": "node scripts/dependency-candidate.mjs",
       "dependency:plan": "node scripts/dependency-update-plan.mjs",
-      "dev": "pnpm --filter @moonwitness/api dev",
+      "dev": "pnpm --filter @moonwitness/api --filter @moonwitness/board --parallel dev",
+      "dev:api": "pnpm --filter @moonwitness/api dev",
       "dev:board": "pnpm --filter @moonwitness/board dev",
       "docs:build": "pnpm docs:check && node scripts/docs/build-guide.mjs && pnpm --filter @moonwitness/docs portal:build",
       "docs:build:built": "pnpm docs:check:built && node scripts/docs/build-guide.mjs && pnpm --filter @moonwitness/docs portal:build:built",
@@ -4625,5 +4626,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "022f66d1ed65adf4843d0a320b6d14a1f5aa020fdbc7cf778feaaa3bb9258635"
+  "generatedFromSha256": "74412c2795325e378c9d6570bf127eac9cd7f7232a7c92ceabbda2adcf1918df"
 }
