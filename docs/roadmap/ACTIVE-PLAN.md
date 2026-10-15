@@ -1,6 +1,6 @@
 # Jalur rilis aktif
 
-**Diperbarui: 2026-10-15.** Jalur rilis pertama adalah prioritas/dependensi di dalam tujuan penuh 148 kartu roadmap; ia tidak menggantikan penyelesaian `ROADMAP.md` dan `docs/roadmap/`. Pada `dev` SHA `11a21dae8db79e7156df61cdfb193ae3adcfec6d`, checklist master mencatat 101/148 kartu selesai dan 47 masih terbuka (9 `in_progress`, 38 belum dimulai/menunggu dependensi). Kartu post-release tetap bagian goal dan harus dikerjakan setelah prasyaratnya tersedia. Catatan batch lama dipindahkan ke [arsip eksekusi](EXECUTION-HISTORY-2026-10-15.md); estimasi lama 8–13 hari tidak dipakai karena mencampur pekerjaan wajib dan pengulangan verifikasi. Percepatan hanya mengubah urutan/pengulangan, bukan scope maupun acceptance.
+**Diperbarui: 2026-10-15.** Jalur rilis pertama adalah prioritas/dependensi di dalam tujuan penuh 148 kartu roadmap; ia tidak menggantikan penyelesaian `ROADMAP.md` dan `docs/roadmap/`. Pada `dev` SHA `a12291515aab775107bf35cd57893a067d00d538`, checklist master mencatat 101/148 kartu selesai dan 47 masih terbuka (9 `in_progress`, 38 belum dimulai/menunggu dependensi). Kartu post-release tetap bagian goal dan harus dikerjakan setelah prasyaratnya tersedia. Catatan batch lama dipindahkan ke [arsip eksekusi](EXECUTION-HISTORY-2026-10-15.md); estimasi lama 8–13 hari tidak dipakai karena mencampur pekerjaan wajib dan pengulangan verifikasi. Percepatan hanya mengubah urutan/pengulangan, bukan scope maupun acceptance.
 
 ## Batas waktu dan aturan berhenti mengulang
 
@@ -52,13 +52,22 @@ Tidak satu pun blocker tersebut alasan untuk menahan pekerjaan lokal independen.
 
 Lihat daftar dan kondisi pembukaan kembali di [backlog yang ditunda](EXECUTION-BACKLOG.md). Kartu tetap tercatat pada roadmap; backlog ini mencegahnya menghambat rilis pertama.
 
-## Batch lokal berikutnya
+## Bukti reusable dan pemilihan batch berikutnya
 
-PostgreSQL canonical suite lulus 15/15 pada exact source `203d29a05fedcf8c3b34b2303fa71b9df5bb0681`; focused Chromium request journey lulus di source aplikasi `5cff67d`, yang tidak berubah sampai `203d29a`. Jangan ulang suite ini kecuali source aplikasi terkait berubah atau kandidat final memerlukan hosted exact-SHA acceptance. Jangan membuat fixture/model atau refresh plan baru hanya untuk menambah jumlah bukti. Berikutnya kerjakan blocker lokal yang source-nya benar-benar belum terpenuhi; jika sisanya menunggu owner/akses GitHub, tandai dependensinya dan lanjutkan task lokal lain. Setelah perubahan, jalankan cek terarah, review diff, commit dan push ke `dev`, catat SHA dan hasil; hosted CI tetap verifikasi asinkron.
+PostgreSQL canonical suite lulus 15/15 pada exact source `203d29a05fedcf8c3b34b2303fa71b9df5bb0681`; focused Chromium request journey lulus di source aplikasi `5cff67d`, yang tidak berubah sampai `203d29a`. Jangan ulang suite ini kecuali source aplikasi terkait berubah atau kandidat final memerlukan hosted exact-SHA acceptance. Jangan membuat fixture/model atau refresh plan baru hanya untuk menambah jumlah bukti. Untuk batch selanjutnya, pilih kartu lokal dengan gap acceptance paling kecil dan dependency sudah tersedia; bila seluruh gap lokal kartu itu ternyata sudah dibuktikan, pindahkan sisanya ke blocker/backlog dan lanjut tanpa memperpanjang audit. Setelah perubahan, jalankan cek terarah, review diff, commit dan push ke `dev`, catat SHA dan hasil; hosted CI tetap verifikasi asinkron.
 
 ## Goal eksekusi yang diperbarui — jalur tercepat tanpa mengurangi cakupan
 
 Goal rilis tetap aktif. Untuk menghindari empat hari kerja berputar, gunakan status `in_progress` sebagai daftar penerimaan yang belum lengkap, bukan instruksi untuk mengulang implementasi atau suite yang sudah lulus. Audit status/evidence sekali di awal batch; setelah itu kerja berdasarkan dependency dan gap acceptance berikut.
+
+### Aturan fast path mulai batch ini
+
+- **WIP lokal maksimum satu batch.** Pilih satu kartu atau satu kelompok kartu yang berbagi kode dan acceptance; jangan membuka audit baru sebelum batch itu punya hasil, diff yang direview, dan keputusan berikutnya.
+- **Urutan tiap batch:** tulis gap acceptance yang belum terbukti → ubah hanya area terkait → jalankan satu focused test dan lint/typecheck package terdampak bila kode berubah → review diff → commit/push `dev` → catat SHA dan hasil. Tes tambahan hanya jika hasil pertama gagal atau ada perubahan lintas batas yang belum dibuktikan.
+- **Bukti dipakai ulang.** Bukti valid selama source dan input yang diuji tidak berubah. SHA commit yang maju karena docs/evidence saja tidak membuat PostgreSQL, Board, security, atau browser suite perlu diulang. Untuk kandidat rilis, jalankan required exact-SHA gate sekali.
+- **Pindahkan pekerjaan tanpa jalur lokal keluar dari antrean aktif.** Jika satu-satunya gap adalah approval, hak akses, secret rotation, Pages/Release hosted run atau operator eksternal, catat pemilik, URL/kebutuhan akses, dampak, dan exit evidence pada blocker/backlog; lanjut ke kartu lokal independen. Jangan membuat simulasi tambahan untuk menggantikan aksi hosted.
+- **Batas berhenti eksplorasi.** Jangan menambah model, fixture, addon, benchmark, atau bukti naratif baru kecuali kartu tertentu membutuhkan perilaku itu dan ada acceptance terukur yang belum terpenuhi. Tutup pekerjaan berdasarkan bukti, bukan banyaknya command atau panjang evidence.
+- **Tidak ada antrean CI.** Setelah satu push, lanjutkan batch lokal berikutnya; ambil satu snapshot hosted saat checkpoint atau saat ada perubahan status/alert. Reproduksi hanya lane gagal yang konkret. Semua gate tetap harus lulus sebelum promosi.
 
 ### Release blockers (menahan promosi, bukan pekerjaan lokal)
 
