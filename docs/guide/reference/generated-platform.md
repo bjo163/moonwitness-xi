@@ -1,6 +1,6 @@
 # Generated platform reference
 
-Source fingerprint: `e146c1fbbce1e705981ee6a1563b81659e272507065ce9739537a3fb02e766b1`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
+Source fingerprint: `5ddd9752c6bbc22639cd7ee27de4c20206bf2e118b24e4facad783a4546fa8d3`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
 
 ## Workspace packages and apps
 
@@ -17,6 +17,7 @@ Source fingerprint: `e146c1fbbce1e705981ee6a1563b81659e272507065ce9739537a3fb02e
 | `@moonwitness/eslint-config`    | Package | 1.0.0-rc.1 | —                                                                                                                                                                                    |
 | `@moonwitness/jobs`             | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/knowledge`        | Package | 1.0.0-rc.1 | `build`, `test`, `typecheck`                                                                                                                                                         |
+| `@moonwitness/local-ai`         | Package | 1.0.0-rc.1 | `build`, `test`, `typecheck`                                                                                                                                                         |
 | `@moonwitness/logger`           | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/orm`              | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/orm-base`         | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
@@ -34,6 +35,7 @@ Source fingerprint: `e146c1fbbce1e705981ee6a1563b81659e272507065ce9739537a3fb02e
 | Name                         | Value category | Present in `.env.example` | Sensitive value redacted |
 | ---------------------------- | -------------- | ------------------------- | ------------------------ |
 | `ACCESS_TOKEN_TTL_SECONDS`   | secret         | Yes                       | Yes                      |
+| `AI_MODE`                    | string         | Yes                       | No                       |
 | `API_HOST`                   | string         | Yes                       | No                       |
 | `API_PORT`                   | integer        | Yes                       | No                       |
 | `ATTACHMENT_STORAGE_DIR`     | string         | Yes                       | No                       |
@@ -48,6 +50,8 @@ Source fingerprint: `e146c1fbbce1e705981ee6a1563b81659e272507065ce9739537a3fb02e
 | `JOBS_SCHEDULER_HEALTH_PORT` | integer        | Yes                       | No                       |
 | `JOBS_WORKER_HEALTH_PORT`    | integer        | Yes                       | No                       |
 | `JWT_SECRET`                 | secret         | Yes                       | Yes                      |
+| `LOCAL_AI_ENDPOINT`          | string         | Yes                       | No                       |
+| `LOCAL_AI_TIMEOUT_MS`        | integer        | Yes                       | No                       |
 | `LOG_DIR`                    | string         | Yes                       | No                       |
 | `LOG_FILE_NAME`              | string         | Yes                       | No                       |
 | `LOG_LEVEL`                  | string         | Yes                       | No                       |

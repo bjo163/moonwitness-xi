@@ -1887,7 +1887,9 @@
       "output": "Typed AI_MODE disabled|local provider with explicit loopback allowlist",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
-      "priority": "p0"
+      "priority": "p0",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/K7-001.md"
     },
     {
       "id": "K7-002",

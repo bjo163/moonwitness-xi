@@ -15,7 +15,7 @@ troubleshooting tersedia di [Developer guide](docs/guide/index.md).
 
 ## Generated workspace reference
 
-Monorepo version: `1.0.0-rc.1` · metadata fingerprint: `e146c1fbbce1e705981ee6a1563b81659e272507065ce9739537a3fb02e766b1`.
+Monorepo version: `1.0.0-rc.1` · metadata fingerprint: `5ddd9752c6bbc22639cd7ee27de4c20206bf2e118b24e4facad783a4546fa8d3`.
 
 | App/package                     | Kind    | Version      | Workspace scripts                                                                                                                                                                    |
 | ------------------------------- | ------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -30,6 +30,7 @@ Monorepo version: `1.0.0-rc.1` · metadata fingerprint: `e146c1fbbce1e705981ee6a
 | `@moonwitness/eslint-config`    | Package | `1.0.0-rc.1` | —                                                                                                                                                                                    |
 | `@moonwitness/jobs`             | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/knowledge`        | Package | `1.0.0-rc.1` | `build`, `test`, `typecheck`                                                                                                                                                         |
+| `@moonwitness/local-ai`         | Package | `1.0.0-rc.1` | `build`, `test`, `typecheck`                                                                                                                                                         |
 | `@moonwitness/logger`           | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/orm`              | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/orm-base`         | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                                                      |

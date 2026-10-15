@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import type { FastifyBaseLogger, FastifyInstance } from 'fastify';
+import { createLocalAiRuntime, type LocalAiRuntime } from '@moonwitness/local-ai';
 import { randomUUID } from 'node:crypto';
 import cors from '@fastify/cors';
 import sensible from '@fastify/sensible';
@@ -14,7 +15,7 @@ import { healthRoutes } from './routes/health.routes.js';
 import { jobsRoutes } from './routes/jobs.routes.js';
 import { notificationRoutes } from './routes/notification.routes.js';
 import { workflowRoutes } from './routes/workflow.routes.js';
-import { config } from './config/env.js';
+import { config, localAiConfig } from './config/env.js';
 import { LocalFileAttachmentStorage, type AttachmentStorage } from '@moonwitness/orm-storage';
 import { createDatabase } from './database/knex.js';
 import { databaseErrorCode, databaseErrorContext } from './database/errors.js';
@@ -32,6 +33,12 @@ import { manifest as requestAddon } from '@moonwitness/orm-request';
 import { createLogger, type LogLevel } from '@moonwitness/logger';
 import { isRecord } from '@moonwitness/types';
 import observabilityPlugin from './plugins/observability.plugin.js';
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    localAi: LocalAiRuntime;
+  }
+}
 
 function errorProperty(error: unknown, key: string): unknown {
   return isRecord(error) && key in error ? error[key] : undefined;
@@ -106,6 +113,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       },
     },
   });
+  app.decorate('localAi', createLocalAiRuntime(localAiConfig));
 
   app.addHook('onSend', async (request, reply, payload) => {
     reply.header('x-request-id', request.id);

@@ -63,6 +63,9 @@ importers:
       '@moonwitness/jobs':
         specifier: workspace:*
         version: link:../../packages/jobs
+      '@moonwitness/local-ai':
+        specifier: workspace:*
+        version: link:../../packages/local-ai
       '@moonwitness/logger':
         specifier: workspace:*
         version: link:../../packages/logger
@@ -432,6 +435,18 @@ importers:
       ajv-formats:
         specifier: ^3.0.1
         version: 3.0.1(ajv@8.20.0)
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.4
+        version: 26.6.4
+      typescript:
+        specifier: ~5.7.3
+        version: 5.7.3
+      vitest:
+        specifier: ^5.0.3
+        version: 5.0.3(@types/node@26.6.4)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+
+  packages/local-ai:
     devDependencies:
       '@types/node':
         specifier: ^26.6.4

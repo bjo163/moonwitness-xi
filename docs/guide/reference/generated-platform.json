@@ -88,6 +88,12 @@
       "scripts": ["build", "test", "typecheck"]
     },
     {
+      "name": "@moonwitness/local-ai",
+      "version": "1.0.0-rc.1",
+      "directory": "packages/local-ai",
+      "scripts": ["build", "test", "typecheck"]
+    },
+    {
       "name": "@moonwitness/logger",
       "version": "1.0.0-rc.1",
       "directory": "packages/logger",
@@ -208,6 +214,11 @@
       "test": "tsc -p tsconfig.check.json && vitest run"
     },
     "@moonwitness/knowledge": {
+      "build": "tsc -p tsconfig.json",
+      "test": "vitest run",
+      "typecheck": "tsc --noEmit -p tsconfig.test.json"
+    },
+    "@moonwitness/local-ai": {
       "build": "tsc -p tsconfig.json",
       "test": "vitest run",
       "typecheck": "tsc --noEmit -p tsconfig.test.json"
@@ -392,6 +403,12 @@
       "valueType": "secret"
     },
     {
+      "name": "AI_MODE",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "string"
+    },
+    {
       "name": "API_HOST",
       "configuredInExample": true,
       "secret": false,
@@ -474,6 +491,18 @@
       "configuredInExample": true,
       "secret": true,
       "valueType": "secret"
+    },
+    {
+      "name": "LOCAL_AI_ENDPOINT",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "string"
+    },
+    {
+      "name": "LOCAL_AI_TIMEOUT_MS",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "integer"
     },
     {
       "name": "LOG_DIR",
@@ -4626,5 +4655,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "e146c1fbbce1e705981ee6a1563b81659e272507065ce9739537a3fb02e766b1"
+  "generatedFromSha256": "5ddd9752c6bbc22639cd7ee27de4c20206bf2e118b24e4facad783a4546fa8d3"
 }
