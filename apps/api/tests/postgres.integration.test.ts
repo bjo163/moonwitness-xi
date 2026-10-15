@@ -1506,6 +1506,22 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       write: true,
       unlink: true,
     });
+    await ModelAccess.query().insert({
+      group_id: membershipAdminGroup.id,
+      model_name: 'base.model_access',
+      read: true,
+      create: true,
+      write: true,
+      unlink: true,
+    });
+    await ModelAccess.query().insert({
+      group_id: membershipAdminGroup.id,
+      model_name: 'base.group_membership',
+      read: true,
+      create: true,
+      write: true,
+      unlink: true,
+    });
     const deniedCompanyMembershipMutation = await app.inject({
       method: 'PATCH',
       url: `/api/base.company_membership/${companyMembership.id}`,
@@ -1518,6 +1534,46 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       company_id: localCompany.id,
       user_id: localUser.id,
     });
+
+    const deniedAccessGrantMutation = await app.inject({
+      method: 'PATCH',
+      url: `/api/base.model_access/${partnerGrant.id}`,
+      headers,
+      payload: { write: false, unlink: true },
+    });
+    expect(deniedAccessGrantMutation.statusCode).toBe(403);
+    expect(await ModelAccess.query().findById(partnerGrant.id)).toMatchObject({
+      group_id: userGroup.id,
+      model_name: 'base.partner',
+      create: true,
+      write: true,
+      unlink: false,
+    });
+
+    const elevationTargetGroup = await AccessGroup.query().insert({
+      code: 'postgres_partner_unlink_elevation',
+      name: 'PostgreSQL Partner Unlink Elevation',
+    });
+    await ModelAccess.query().insert({
+      group_id: elevationTargetGroup.id,
+      model_name: 'base.partner',
+      read: true,
+      write: true,
+      unlink: true,
+    });
+    const deniedGroupMembershipMutation = await app.inject({
+      method: 'POST',
+      url: '/api/base.group_membership',
+      headers,
+      payload: { user_id: localUser.id, group_id: elevationTargetGroup.id },
+    });
+    expect(deniedGroupMembershipMutation.statusCode).toBe(403);
+    expect(
+      await GroupMembership.query().findOne({
+        user_id: localUser.id,
+        group_id: elevationTargetGroup.id,
+      })
+    ).toBeUndefined();
 
     const revocableGroup = await AccessGroup.query().insert({
       code: 'postgres_revocable_partner_writers',
