@@ -110,7 +110,27 @@ test('the verified and scanned API and Board images are smoke-tested and handed 
   );
   assert.match(publish, /actions\/download-artifact@/u);
   assert.match(verify, /name: release-images-\$\{\{ github\.sha \}\}/u);
-  assert.match(publish, /name: release-images-\$\{\{ github\.sha \}\}/u);
+  assert.match(
+    verify,
+    /release_artifact_id: \$\{\{ steps\.upload_images\.outputs\.artifact-id \}\}/u
+  );
+  assert.match(
+    verify,
+    /release_artifact_digest: \$\{\{ steps\.upload_images\.outputs\.artifact-digest \}\}/u
+  );
+  for (const consumerJob of [
+    workflow.slice(workflow.indexOf('  attest-artifact:'), publishStart),
+    publish,
+  ]) {
+    assert.match(consumerJob, /repos\/\$GH_REPO\/actions\/artifacts\/\$EXPECTED_ARTIFACT_ID/u);
+    assert.match(consumerJob, /\.digest == \$digest/u);
+    assert.match(consumerJob, /\.workflow_run\.head_sha == \$sha/u);
+    assert.match(consumerJob, /\.workflow_run\.id == \$run/u);
+    assert.match(
+      consumerJob,
+      /artifact-ids: \$\{\{ needs\.verify\.outputs\.release_artifact_id \}\}/u
+    );
+  }
   assert.match(verify, /steps\.upload_images\.outputs\.artifact-digest/u);
   assert.match(publish, /sha256sum --check release-artifacts\.sha256/u);
   assert.match(publish, /\.apiImageId' release-image-manifest\.json/u);
