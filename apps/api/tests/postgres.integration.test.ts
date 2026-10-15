@@ -1988,6 +1988,8 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       group_id: activityGroup.id,
       model_name: 'base.partner_address',
       create: true,
+      write: true,
+      unlink: true,
     });
     const allowedAddress = await app.inject({
       method: 'POST',
@@ -2007,6 +2009,59 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       label: 'PostgreSQL Home',
       street: '1 Main Street',
     });
+    const allowedAddressWrite = await app.inject({
+      method: 'PATCH',
+      url: `/api/base.partner_address/${allowedAddressId}`,
+      headers,
+      payload: { label: 'PostgreSQL Updated Home', city: 'Surabaya' },
+    });
+    expect(allowedAddressWrite.statusCode, allowedAddressWrite.payload).toBe(200);
+    expect(await PartnerAddress.query().findById(allowedAddressId)).toMatchObject({
+      partner_id: localPartner.id,
+      label: 'PostgreSQL Updated Home',
+      city: 'Surabaya',
+    });
+    const addressBeforeForeignReassignment = await PartnerAddress.query()
+      .findById(allowedAddressId)
+      .throwIfNotFound();
+    const addressAuditBeforeForeignReassignment = await AuditLog.query()
+      .where({ model: 'base.partner_address', record_id: allowedAddressId })
+      .orderBy('id', 'asc');
+    const deniedAddressReassignment = await app.inject({
+      method: 'PATCH',
+      url: `/api/base.partner_address/${allowedAddressId}`,
+      headers,
+      payload: { partner_id: foreignPartner.id },
+    });
+    expect([400, 403]).toContain(deniedAddressReassignment.statusCode);
+    expect(await PartnerAddress.query().findById(allowedAddressId)).toMatchObject({
+      partner_id: localPartner.id,
+      label: addressBeforeForeignReassignment.label,
+      city: addressBeforeForeignReassignment.city,
+    });
+    await expect(
+      AuditLog.query()
+        .where({ model: 'base.partner_address', record_id: allowedAddressId })
+        .orderBy('id', 'asc')
+    ).resolves.toEqual(addressAuditBeforeForeignReassignment);
+    const allowedAddressUnlink = await app.inject({
+      method: 'DELETE',
+      url: `/api/base.partner_address/${allowedAddressId}`,
+      headers,
+    });
+    expect(allowedAddressUnlink.statusCode, allowedAddressUnlink.payload).toBe(200);
+    expect(await PartnerAddress.query().findById(allowedAddressId)).toMatchObject({
+      active: false,
+    });
+    await expect(
+      AuditLog.query()
+        .where({ model: 'base.partner_address', record_id: allowedAddressId })
+        .orderBy('id', 'asc')
+    ).resolves.toMatchObject([
+      { operation: 'create', actor_id: localUser.id },
+      { operation: 'write', actor_id: localUser.id },
+      { operation: 'archive', actor_id: localUser.id },
+    ]);
     const deniedForeignAddress = await app.inject({
       method: 'POST',
       url: '/api/base.partner_address',
@@ -2020,6 +2075,31 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     });
     expect([400, 403]).toContain(deniedForeignAddress.statusCode);
     expect(await PartnerAddress.query().findOne({ partner_id: foreignPartner.id })).toBeUndefined();
+    const foreignAddress = await PartnerAddress.query().insertAndFetch({
+      partner_id: foreignPartner.id,
+      label: 'PostgreSQL Foreign Home Fixture',
+      street: '2 Main Street',
+      city: 'Bandung',
+    });
+    const foreignAddressAuditBeforeUnlink = await AuditLog.query()
+      .where({ model: 'base.partner_address', record_id: foreignAddress.id })
+      .orderBy('id', 'asc');
+    const deniedForeignAddressUnlink = await app.inject({
+      method: 'DELETE',
+      url: `/api/base.partner_address/${foreignAddress.id}`,
+      headers,
+    });
+    expect(deniedForeignAddressUnlink.statusCode).toBe(404);
+    expect(await PartnerAddress.query().findById(foreignAddress.id)).toMatchObject({
+      partner_id: foreignPartner.id,
+      label: 'PostgreSQL Foreign Home Fixture',
+      active: true,
+    });
+    await expect(
+      AuditLog.query()
+        .where({ model: 'base.partner_address', record_id: foreignAddress.id })
+        .orderBy('id', 'asc')
+    ).resolves.toEqual(foreignAddressAuditBeforeUnlink);
     const scopedCategory = await PartnerCategory.query().insertAndFetch({
       code: `postgres-scoped-category-${randomUUID()}`,
       name: 'PostgreSQL Scoped Category',
