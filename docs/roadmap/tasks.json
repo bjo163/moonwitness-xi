@@ -1899,7 +1899,9 @@
       "output": "CPU/GPU/RAM/VRAM/disk and licensed model SHA/profile report",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
-      "priority": "p0"
+      "priority": "p0",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/K7-002.md"
     },
     {
       "id": "K7-003",

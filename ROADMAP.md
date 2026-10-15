@@ -272,7 +272,7 @@ Track approved through ADR 0004 on 2026-10-15. The existing 148 M-series tasks a
 - [ ] K6-004 Child protection and publication risk gates.
 - [ ] K6-005 Evidence-backed outcome verification.
 - [x] K7-001 Local AI runtime adapter contract with disabled default. Evidence: [K7-001](docs/roadmap/evidence/K7-001.md).
-- [ ] K7-002 Hardware survey and model artifact registry.
+- [ ] K7-002 Hardware survey and model artifact registry. Evidence: [K7-002](docs/roadmap/evidence/K7-002.md) (hardware and empty registry recorded; real artifact/license review remains open).
 - [ ] K7-003 Permission-scoped local retrieval and chunks.
 - [ ] K7-004 Staging-only structured suggestion workflow.
 - [ ] K7-005 Prompt injection and high-risk action isolation.

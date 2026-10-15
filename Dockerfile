@@ -18,6 +18,7 @@ COPY packages/corpus/package.json ./packages/corpus/package.json
 COPY packages/eslint-config/package.json ./packages/eslint-config/package.json
 COPY packages/jobs/package.json ./packages/jobs/package.json
 COPY packages/knowledge/package.json ./packages/knowledge/package.json
+COPY packages/local-ai/package.json ./packages/local-ai/package.json
 COPY packages/logger/package.json ./packages/logger/package.json
 COPY packages/orm-base/package.json ./packages/orm-base/package.json
 COPY packages/orm-integration/package.json ./packages/orm-integration/package.json

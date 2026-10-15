@@ -1,4 +1,11 @@
 export type LocalAiMode = 'disabled' | 'local';
+export {
+  isLocalModelRegistry,
+  verifyLocalModelArtifact,
+  type LocalModelArtifact,
+  type LocalModelRegistry,
+  type ModelArtifactVerification,
+} from './models.js';
 
 export interface LocalAiConfig {
   mode: LocalAiMode;
