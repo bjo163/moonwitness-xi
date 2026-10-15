@@ -400,73 +400,96 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       ],
     });
 
-    await installAddons(db, [legacy]);
-    const previousCounts = await Promise.all(
-      ['companies', 'partners', 'users'].map((table) => db(table).count({ count: '*' }).first())
+    // Earlier tests install base 1.0.0 in the shared schema; keep the 0.9.0 fixture isolated.
+    const legacySchema = `mw_legacy_upgrade_${randomUUID().replaceAll('-', '')}`;
+    await adminDb.raw('create schema ??', [legacySchema]);
+    const legacyDb = knex(
+      createPostgresKnexConfig(
+        connectionString!,
+        { poolMin: 0, poolMax: 4, acquireTimeoutMs: 5000, statementTimeoutMs: 30_000 },
+        { searchPath: [legacySchema] }
+      )
     );
 
-    await installAddons(db, [manifest, authManifest]);
-
-    const upgradedCounts = await Promise.all(
-      ['companies', 'partners', 'users'].map((table) => db(table).count({ count: '*' }).first())
-    );
-    expect(Number(upgradedCounts[0]?.count)).toBe(Number(previousCounts[0]?.count));
-    expect(Number(upgradedCounts[1]?.count)).toBeGreaterThanOrEqual(
-      Number(previousCounts[1]?.count)
-    );
-    expect(Number(upgradedCounts[2]?.count)).toBe(Number(previousCounts[2]?.count));
-    expect(await db('partners').where({ email: 'system@moonwitness.local' }).first()).toBeTruthy();
-    expect(
-      await db('partners').where({ email: 'superadmin@moonwitness.local' }).first()
-    ).toBeTruthy();
-    expect(
-      await db('companies').where({ email: 'company@moonwitness.local' }).first()
-    ).toBeTruthy();
-    const countryCount = await db('countries').count({ count: '*' }).first();
-    expect(Number(countryCount?.count)).toBe(249);
-    const company = await Company.query()
-      .findOne({ name: 'MoonWitness' })
-      .withGraphFetched('[country, currency, language]');
-    expect(company).toMatchObject({
-      country: { code: 'US' },
-      currency: { code: 'USD' },
-      language: { code: 'en-US' },
-      timezone: 'UTC',
-    });
-    const indexes = await adminDb('pg_indexes')
-      .where({ schemaname: schema, tablename: 'partners' })
-      .select('indexdef');
-    expect(indexes.some(({ indexdef }) => indexdef.includes('(company_id)'))).toBe(true);
-    expect(indexes.some(({ indexdef }) => indexdef.includes('(active, id)'))).toBe(true);
-    const admin = await User.query()
-      .findOne({ login: 'superadmin' })
-      .withGraphFetched('partner.company');
-    expect(admin?.partner?.company?.name).toBe('MoonWitness');
-    expect(await User.search_count([['active', '=', true]])).toBe(2);
-    await expect(
-      Partner.query().insert({ name: 'Broken link', company_id: 999999 })
-    ).rejects.toThrow();
-
-    await initializeSuperadminPassword('postgres-integration-password');
-    const session = await createAuthService({
-      refreshTokenSecret: POSTGRES_TEST_REFRESH_SECRET,
-    }).login('superadmin', 'postgres-integration-password');
-    const parallelRotations = await Promise.all(
-      Array.from({ length: 6 }, () =>
-        createAuthService({ refreshTokenSecret: POSTGRES_TEST_REFRESH_SECRET }).refresh(
-          session.refreshToken
+    try {
+      await installAddons(legacyDb, [legacy]);
+      const previousCounts = await Promise.all(
+        ['companies', 'partners', 'users'].map((table) =>
+          legacyDb(table).count({ count: '*' }).first()
         )
-      )
-    );
-    expect(parallelRotations).toHaveLength(6);
-    expect(new Set(parallelRotations.map(({ refreshToken }) => refreshToken)).size).toBe(6);
-    await expect(
-      createAuthService({ refreshTokenSecret: POSTGRES_TEST_REFRESH_SECRET }).refresh(
-        parallelRotations[0]!.refreshToken
-      )
-    ).resolves.toMatchObject({
-      userId: session.userId,
-    });
+      );
+
+      await installAddons(legacyDb, [manifest, authManifest]);
+
+      const upgradedCounts = await Promise.all(
+        ['companies', 'partners', 'users'].map((table) =>
+          legacyDb(table).count({ count: '*' }).first()
+        )
+      );
+      expect(Number(upgradedCounts[0]?.count)).toBe(Number(previousCounts[0]?.count));
+      expect(Number(upgradedCounts[1]?.count)).toBeGreaterThanOrEqual(
+        Number(previousCounts[1]?.count)
+      );
+      expect(Number(upgradedCounts[2]?.count)).toBe(Number(previousCounts[2]?.count));
+      expect(
+        await legacyDb('partners').where({ email: 'system@moonwitness.local' }).first()
+      ).toBeTruthy();
+      expect(
+        await legacyDb('partners').where({ email: 'superadmin@moonwitness.local' }).first()
+      ).toBeTruthy();
+      expect(
+        await legacyDb('companies').where({ email: 'company@moonwitness.local' }).first()
+      ).toBeTruthy();
+      const countryCount = await legacyDb('countries').count({ count: '*' }).first();
+      expect(Number(countryCount?.count)).toBe(249);
+      const company = await Company.query()
+        .findOne({ name: 'MoonWitness' })
+        .withGraphFetched('[country, currency, language]');
+      expect(company).toMatchObject({
+        country: { code: 'US' },
+        currency: { code: 'USD' },
+        language: { code: 'en-US' },
+        timezone: 'UTC',
+      });
+      const indexes = await adminDb('pg_indexes')
+        .where({ schemaname: legacySchema, tablename: 'partners' })
+        .select('indexdef');
+      expect(indexes.some(({ indexdef }) => indexdef.includes('(company_id)'))).toBe(true);
+      expect(indexes.some(({ indexdef }) => indexdef.includes('(active, id)'))).toBe(true);
+      const admin = await User.query()
+        .findOne({ login: 'superadmin' })
+        .withGraphFetched('partner.company');
+      expect(admin?.partner?.company?.name).toBe('MoonWitness');
+      expect(await User.search_count([['active', '=', true]])).toBe(2);
+      await expect(
+        Partner.query().insert({ name: 'Broken link', company_id: 999999 })
+      ).rejects.toThrow();
+
+      await initializeSuperadminPassword('postgres-integration-password');
+      const session = await createAuthService({
+        refreshTokenSecret: POSTGRES_TEST_REFRESH_SECRET,
+      }).login('superadmin', 'postgres-integration-password');
+      const parallelRotations = await Promise.all(
+        Array.from({ length: 6 }, () =>
+          createAuthService({ refreshTokenSecret: POSTGRES_TEST_REFRESH_SECRET }).refresh(
+            session.refreshToken
+          )
+        )
+      );
+      expect(parallelRotations).toHaveLength(6);
+      expect(new Set(parallelRotations.map(({ refreshToken }) => refreshToken)).size).toBe(6);
+      await expect(
+        createAuthService({ refreshTokenSecret: POSTGRES_TEST_REFRESH_SECRET }).refresh(
+          parallelRotations[0]!.refreshToken
+        )
+      ).resolves.toMatchObject({
+        userId: session.userId,
+      });
+    } finally {
+      await installAddons(db, [manifest, authManifest]);
+      await legacyDb.destroy();
+      await adminDb.raw('drop schema if exists ?? cascade', [legacySchema]);
+    }
   }, 30000);
 
   it('serializes concurrent addon installation during multi-replica startup', async () => {
