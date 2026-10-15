@@ -495,6 +495,15 @@ export function inspectTrustedCheckoutPolicies({
       findings.push('Issue intake must process only newly created issue comments.');
     if (!issueIntake.includes('permissions:\n  contents: read'))
       findings.push('Issue intake must grant the workflow token contents: read only.');
+    const intakeProposalJob = workflowJobBlocks(issueIntake).find((job) => job.name === 'proposal');
+    if (
+      !issueIntake.includes('run-name: Roadmap intake comment ${{ github.event.comment.id }}') ||
+      !intakeProposalJob?.source.includes('      actions: read') ||
+      !intakeProposalJob.source.includes('      contents: read')
+    )
+      findings.push(
+        'Issue intake deduplication must use comment-bound run names and Actions read permission only.'
+      );
     if (/^\s+(?:issues|contents|pull-requests|checks|actions):\s+write\s*$/mu.test(issueIntake))
       findings.push('Issue intake must not grant write permissions to workflow tokens.');
     const intakeCheckouts = checkoutSteps(issueIntake);
@@ -510,17 +519,33 @@ export function inspectTrustedCheckoutPolicies({
       issueIntake,
       'Require the least-privilege GitHub App permission verifier'
     );
+    const dedupe = namedWorkflowStep(issueIntake, 'Skip previously reported issue comment');
     const mintToken = namedWorkflowStep(issueIntake, 'Mint repository-scoped metadata-read token');
     const runIntake = namedWorkflowStep(
       issueIntake,
       'Verify actor and report a read-only proposal'
     );
+    const reportDuplicate = namedWorkflowStep(issueIntake, 'Report already processed comment');
     if (
       !requireToken?.includes('ROADMAP_INTAKE_APP_CLIENT_ID') ||
       !requireToken.includes('ROADMAP_INTAKE_APP_PRIVATE_KEY') ||
       !requireToken.includes('exit 2')
     )
       findings.push('Issue intake must fail clearly when its GitHub App credentials are missing.');
+    if (
+      !dedupe?.includes('issue-intake-dedupe.mjs') ||
+      !dedupe.includes('GITHUB_COMMENT_ID') ||
+      !dedupe.includes('GITHUB_COMMENT_CREATED_AT') ||
+      !dedupe.includes('GITHUB_RUN_ID') ||
+      !dedupe.includes('github.token') ||
+      !requireToken?.includes("steps.dedupe.outputs.skip != 'true'") ||
+      !mintToken?.includes("steps.dedupe.outputs.skip != 'true'") ||
+      !runIntake?.includes("steps.dedupe.outputs.skip != 'true'") ||
+      !reportDuplicate?.includes("steps.dedupe.outputs.skip == 'true'")
+    )
+      findings.push(
+        'Issue intake must check durable successful-run history before minting its verifier token.'
+      );
     if (
       !mintToken?.includes('actions/create-github-app-token@') ||
       !mintToken.includes('permission-metadata: read') ||
@@ -540,9 +565,11 @@ export function inspectTrustedCheckoutPolicies({
       );
     if (
       requireToken &&
+      dedupe &&
       mintToken &&
       runIntake &&
-      (issueIntake.indexOf(requireToken) > issueIntake.indexOf(mintToken) ||
+      (issueIntake.indexOf(dedupe) > issueIntake.indexOf(requireToken) ||
+        issueIntake.indexOf(requireToken) > issueIntake.indexOf(mintToken) ||
         issueIntake.indexOf(mintToken) > issueIntake.indexOf(runIntake))
     )
       findings.push(

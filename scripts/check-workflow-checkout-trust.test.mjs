@@ -258,7 +258,10 @@ test('issue intake policy rejects write scopes, unpinned checkout, and user text
     readFile(new NodeURL('./roadmap/run-issue-intake.mjs', import.meta.url), 'utf8'),
   ]);
   const unsafeWorkflow = issueIntake
-    .replace('      contents: read', '      contents: read\n      issues: write')
+    .replace(
+      '      contents: read',
+      '      contents: read\n      actions: write\n      issues: write'
+    )
     .replace('permission-metadata: read', 'permission-issues: write')
     .replace('ref: ${{ github.sha }}', 'ref: ${{ github.event.comment.body }}');
   const unsafeRunner = issueIntakeRunner.replace(
@@ -270,6 +273,15 @@ test('issue intake policy rejects write scopes, unpinned checkout, and user text
   assert.ok(findings.some((finding) => finding.includes('least-privilege GitHub App token')));
   assert.ok(findings.some((finding) => finding.includes('immutable event-SHA checkout')));
   assert.ok(findings.some((finding) => finding.includes('omit user text')));
+  const missingReadPermission = policies({
+    issueIntake: issueIntake.replace('      actions: read\n', ''),
+    issueIntakeRunner,
+  });
+  assert.ok(
+    missingReadPermission.some((finding) =>
+      finding.includes('comment-bound run names and Actions read permission')
+    )
+  );
 });
 
 test('scheduled regression incidents are main-only, isolated, and narrowly scoped', async () => {
