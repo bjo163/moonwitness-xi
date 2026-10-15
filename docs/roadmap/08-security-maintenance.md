@@ -186,7 +186,7 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ### Verifikasi dan syarat selesai
 
-Dry-run cleanup tidak memilih immutable releases; permissions drift ditampilkan.
+Dry-run cleanup tidak memilih immutable releases; permissions drift ditampilkan. The audit also checks every checked-in `actions/upload-artifact` step: one explicit integer retention between 1 and 90 days is required, and violations prevent a complete monthly status.
 
 Snapshot parsial 2026-10-05 ada di [evidence M8.10](evidence/M8.10.md). Implementasi audit berjalan lewat [`pnpm platform:audit`](../operations/platform-audit.md) dan scheduled workflow; jangan menandai milestone selesai sampai satu run hosted, baseline bulanan yang dapat dibandingkan, biaya/registry yang terukur atau terjelaskan, dan dry-run cleanup yang melindungi artifacts immutable tervalidasi.
 
