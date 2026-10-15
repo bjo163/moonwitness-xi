@@ -10,7 +10,7 @@ Untuk setiap batch, jalankan hanya tes yang membuktikan perilaku yang berubah, t
 
 `pnpm verify` sekarang menggunakan build hasil typecheck untuk suite unit/docs/architecture pada run yang sama. Pertahankan jalur tersebut; jangan menambahkan build ulang tanpa perubahan input atau runner baru. Jangan mengulang browser matrix lintas engine dan seluruh fixture otorisasi untuk kontrak yang sudah terbukti.
 
-Tes kebijakan automation di CI dibagi menjadi empat suite matrix paralel (`workflow`, `release`, `roadmap`, `platform`). Seluruh suite tetap menjadi satu job `automation` yang wajib sukses di `ci-gate`; perubahan ini hanya mengurangi antrean serial, bukan cakupan tes. CI, CodeQL, dan Gitleaks pada push hanya berjalan di `main`; push `dev` diverifikasi pada PR promosi, sehingga SHA yang sama tidak menjalankan scan push lalu PR dua kali. Trigger PR ke `dev`/`main`, push `main`, jadwal keamanan, dan `workflow_dispatch` tetap tersedia.
+Tes kebijakan automation di CI dibagi menjadi empat suite matrix paralel (`workflow`, `release`, `roadmap`, `platform`). Seluruh suite tetap menjadi satu job `automation` yang wajib sukses di `ci-gate`; perubahan ini hanya mengurangi antrean serial, bukan cakupan tes. CodeQL dan Gitleaks pada push hanya berjalan di `main`; pemeriksaan PR ke `dev`/`main`, push `main`, jadwal keamanan, dan pemicu manual tetap tersedia. CI push `dev` dipertahankan karena lifecycle sinkronisasi issue menunggu exact-SHA `ci-gate` event push. Menghilangkan duplikasi CI push/PR harus menunggu migrasi lifecycle ke technical gate PR yang mempertahankan pemisahan dari approval CODEOWNER; jangan menghapus run push sebelum itu.
 
 ## Jalur utama menuju rilis pertama
 
