@@ -61,6 +61,7 @@ export async function waitForCurrentDevPullRequestTechnicalGate({
     if (run) {
       const pullRequest = await readPullRequest(run.pull_request_number);
       if (!isExactDevMainPullRequest(pullRequest, sourceSha, repository, run.pull_request_number)) {
+        if ((await readDevHead()) !== sourceSha) return { status: 'stale' };
         throw new Error(
           `The CI run for ${sourceSha} is not tied to a same-repository dev-to-main pull request.`
         );

@@ -215,6 +215,45 @@ test('stops polling cleanly when dev advances while waiting for its exact PR gat
   assert.equal(workflowReads, 1);
 });
 
+test('treats a PR head change during exact-run validation as a stale no-op', async () => {
+  let headReads = 0;
+  const run = {
+    id: 9,
+    event: 'pull_request',
+    head_branch: 'dev',
+    head_sha: devSha,
+    status: 'in_progress',
+    pull_requests: [
+      {
+        number: 24,
+        head: { ref: 'dev', sha: devSha, repo: { full_name: 'bjo163/moonwitness-xi' } },
+        base: { ref: 'main', repo: { full_name: 'bjo163/moonwitness-xi' } },
+      },
+    ],
+  };
+  const result = await waitForCurrentDevPullRequestTechnicalGate({
+    repository: 'bjo163/moonwitness-xi',
+    sourceSha: devSha,
+    readDevHead: async () => (++headReads === 1 ? devSha : 'f'.repeat(40)),
+    readWorkflowRuns: async () => [{ workflow_runs: [run] }],
+    readPullRequest: async () => ({
+      number: 24,
+      head: {
+        ref: 'dev',
+        sha: 'f'.repeat(40),
+        repo: { full_name: 'bjo163/moonwitness-xi' },
+      },
+      base: { ref: 'main', repo: { full_name: 'bjo163/moonwitness-xi' } },
+    }),
+    readJobs: async () => assert.fail('stale run must not read gate jobs'),
+    sleep: async () => assert.fail('stale run must stop without another poll'),
+    now: () => 0,
+  });
+
+  assert.deepEqual(result, { status: 'stale' });
+  assert.equal(headReads, 2);
+});
+
 test('accepts the completed exact PR technical gate for lifecycle evidence', () => {
   const run = { id: 42, head_sha: devSha, status: 'completed' };
   assert.deepEqual(
