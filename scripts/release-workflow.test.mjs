@@ -125,7 +125,10 @@ test('the verified and scanned API and Board images are smoke-tested and handed 
     assert.match(consumerJob, /repos\/\$GH_REPO\/actions\/artifacts\/\$EXPECTED_ARTIFACT_ID/u);
     assert.match(consumerJob, /\.digest == \$digest/u);
     assert.match(consumerJob, /\.workflow_run\.head_sha == \$sha/u);
-    assert.match(consumerJob, /\.workflow_run\.id == \$run/u);
+    assert.match(consumerJob, /\(\.id \| tostring\) == \$id/u);
+    assert.match(consumerJob, /\(\.workflow_run\.id \| tostring\) == \$run/u);
+    assert.match(consumerJob, /\.expired == false/u);
+    assert.match(consumerJob, /\.name == \$name/u);
     assert.match(
       consumerJob,
       /artifact-ids: \$\{\{ needs\.verify\.outputs\.release_artifact_id \}\}/u

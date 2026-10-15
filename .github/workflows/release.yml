@@ -255,12 +255,12 @@ jobs:
           test -n "$EXPECTED_ARTIFACT_DIGEST"
           artifact="$(gh api "repos/$GH_REPO/actions/artifacts/$EXPECTED_ARTIFACT_ID")"
           jq -e \
-            --argjson id "$EXPECTED_ARTIFACT_ID" \
+            --arg id "$EXPECTED_ARTIFACT_ID" \
             --arg name "$EXPECTED_ARTIFACT_NAME" \
             --arg digest "sha256:$EXPECTED_ARTIFACT_DIGEST" \
             --arg sha "$EXPECTED_SOURCE_SHA" \
-            --argjson run "$EXPECTED_RUN_ID" \
-            '.id == $id and .name == $name and .expired == false and .digest == $digest and .workflow_run.head_sha == $sha and .workflow_run.id == $run' \
+            --arg run "$EXPECTED_RUN_ID" \
+            '(.id | tostring) == $id and .name == $name and .expired == false and .digest == $digest and .workflow_run.head_sha == $sha and (.workflow_run.id | tostring) == $run' \
             <<< "$artifact" >/dev/null
       - name: Download the verified release bundle
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
@@ -311,12 +311,12 @@ jobs:
           test -n "$EXPECTED_ARTIFACT_DIGEST"
           artifact="$(gh api "repos/$GH_REPO/actions/artifacts/$EXPECTED_ARTIFACT_ID")"
           jq -e \
-            --argjson id "$EXPECTED_ARTIFACT_ID" \
+            --arg id "$EXPECTED_ARTIFACT_ID" \
             --arg name "$EXPECTED_ARTIFACT_NAME" \
             --arg digest "sha256:$EXPECTED_ARTIFACT_DIGEST" \
             --arg sha "$EXPECTED_SOURCE_SHA" \
-            --argjson run "$EXPECTED_RUN_ID" \
-            '.id == $id and .name == $name and .expired == false and .digest == $digest and .workflow_run.head_sha == $sha and .workflow_run.id == $run' \
+            --arg run "$EXPECTED_RUN_ID" \
+            '(.id | tostring) == $id and .name == $name and .expired == false and .digest == $digest and .workflow_run.head_sha == $sha and (.workflow_run.id | tostring) == $run' \
             <<< "$artifact" >/dev/null
       - name: Download the images produced and verified by the release gate
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
