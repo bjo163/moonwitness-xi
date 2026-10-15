@@ -22,6 +22,10 @@ export interface DatasetReleaseInput {
   corpusVersion: string;
   snapshotPath: string;
   snapshot: DatasetReleaseSnapshot;
+  sourceRecipe: {
+    path: string;
+    sha256: string;
+  };
 }
 
 export interface DatasetReleaseManifest extends DatasetReleaseInput {
@@ -97,6 +101,12 @@ function validateInput(input: DatasetReleaseInput): void {
   }
   if (safeRelativePath(input.snapshotPath) === null) {
     throw new TypeError('snapshotPath must be a safe relative path');
+  }
+  if (
+    safeRelativePath(input.sourceRecipe.path) === null ||
+    !digestPattern.test(input.sourceRecipe.sha256)
+  ) {
+    throw new TypeError('sourceRecipe must pin a safe relative path and SHA-256 digest');
   }
 }
 
@@ -319,6 +329,14 @@ export async function createDatasetRelease(
 ): Promise<DatasetReleaseManifest> {
   validateInput(input);
   const root = path.resolve(storeDirectory);
+  if (
+    !(await assertExistingPath(root, input.sourceRecipe.path.split('/'), 'file')) ||
+    createHash('sha256')
+      .update(await readFile(path.join(root, ...input.sourceRecipe.path.split('/'))))
+      .digest('hex') !== input.sourceRecipe.sha256
+  ) {
+    throw new TypeError('source recipe is missing or does not match its pinned SHA-256 digest');
+  }
   await verifySnapshotDirectory(root, input.snapshotPath, input.snapshot);
   const current = await readActiveDatasetRelease(root, input.datasetId);
   const payload = releasePayload(input, current?.releaseId ?? null);
@@ -370,6 +388,36 @@ export async function createDatasetRelease(
   return manifest;
 }
 
+/** Read and verify an immutable release manifest without requiring its snapshot to be present. */
+export async function readDatasetRelease(
+  storeDirectory: string,
+  datasetId: string,
+  releaseId: string
+): Promise<DatasetReleaseManifest> {
+  if (!datasetIdPattern.test(datasetId) || !digestPattern.test(releaseId)) {
+    throw new TypeError('datasetId or releaseId is invalid');
+  }
+  const root = path.resolve(storeDirectory);
+  const segments = ['datasets', datasetId, 'releases', `${releaseId}.json`];
+  if (!(await assertExistingPath(root, segments, 'file'))) {
+    throw new TypeError('release manifest does not exist');
+  }
+  const manifest = JSON.parse(
+    await readFile(releasePath(root, datasetId, releaseId), 'utf8')
+  ) as DatasetReleaseManifest;
+  const { releaseId: declaredId, previousReleaseId, ...input } = manifest;
+  validateInput(input);
+  if (
+    manifest.datasetId !== datasetId ||
+    declaredId !== releaseId ||
+    !(previousReleaseId === null || digestPattern.test(previousReleaseId)) ||
+    releaseDigest(releasePayload(input, previousReleaseId)) !== releaseId
+  ) {
+    throw new TypeError('release manifest failed integrity validation');
+  }
+  return manifest;
+}
+
 /** Switch the active pointer only to an existing intact release; replacement is an atomic same-directory rename. */
 export async function activateDatasetRelease(
   storeDirectory: string,
@@ -383,26 +431,7 @@ export async function activateDatasetRelease(
   if (!Number.isFinite(Date.parse(activatedAt)))
     throw new TypeError('activatedAt must be a date-time');
   const root = path.resolve(storeDirectory);
-  if (
-    !(await assertExistingPath(
-      root,
-      ['datasets', datasetId, 'releases', `${releaseId}.json`],
-      'file'
-    ))
-  ) {
-    throw new TypeError('release manifest does not exist');
-  }
-  const manifest = JSON.parse(
-    await readFile(releasePath(root, datasetId, releaseId), 'utf8')
-  ) as DatasetReleaseManifest;
-  const { releaseId: declaredId, ...payload } = manifest;
-  if (
-    manifest.datasetId !== datasetId ||
-    declaredId !== releaseId ||
-    releaseDigest(payload) !== releaseId
-  ) {
-    throw new TypeError('release manifest failed integrity validation');
-  }
+  const manifest = await readDatasetRelease(root, datasetId, releaseId);
   await verifySnapshotDirectory(root, manifest.snapshotPath, manifest.snapshot);
   await ensureDirectoryTree(root, ['datasets', datasetId]);
   const pointer: ActiveDatasetRelease = {

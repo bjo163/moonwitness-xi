@@ -241,9 +241,9 @@ Track approved through ADR 0004 on 2026-10-15. The existing 148 M-series tasks a
 - [x] K1-007 Independent ontology/corpus schema versioning. Evidence: [K1-007](docs/roadmap/evidence/K1-007.md).
 - [x] K2-001 Deterministic offline ingestion adapter. Evidence: [K2-001](docs/roadmap/evidence/K2-001.md).
 - [x] K2-002 Content-addressed raw artifact store. Evidence: [K2-002](docs/roadmap/evidence/K2-002.md).
-- [ ] K2-003 Dataset release manifest and rollback pointers. Evidence: [K2-003](docs/roadmap/evidence/K2-003.md) (metadata/pointer slice; rebuild/replay remains open).
+- [x] K2-003 Dataset release manifest and rollback pointers. Evidence: [K2-003](docs/roadmap/evidence/K2-003.md).
 - [x] K2-004 Revelation identity versus canon/edition ontology. Evidence: [K2-004](docs/roadmap/evidence/K2-004.md).
-- [ ] K2-005 First rights-cleared Qur’an passage slice.
+- [x] K2-005 First rights-cleared Qur’an passage slice. Evidence: [K2-005](docs/roadmap/evidence/K2-005.md).
 - [ ] K2-006 Second-source textual witness sample with edition guard.
 - [ ] K2-007 Source/citation lookup API and SDK.
 - [ ] K2-008 Corpus offline rebuild and snapshot certification.

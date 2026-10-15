@@ -14,7 +14,7 @@ not a production benchmark or a compatibility promise.
 
 ## Model registry and storage policy
 
-[`packages/local-ai/model-registry.json`](../../packages/local-ai/model-registry.json)
+[`packages/local-ai/model-registry.json`](../../../packages/local-ai/model-registry.json)
 intentionally has no active artifact and an empty artifact list. The workspace
 scan found no `.gguf`, `.safetensors`, `.onnx`, `.pt`, or `.bin` model files in
 the project. No model was downloaded or selected, so this inventory makes no

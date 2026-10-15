@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -11,6 +12,7 @@ import {
   activateDatasetRelease,
   createDatasetRelease,
   readActiveDatasetRelease,
+  replayDatasetRelease,
   type DatasetReleaseInput,
 } from '../src/index.js';
 
@@ -27,13 +29,48 @@ async function release(
   version: string,
   marker: string
 ): Promise<DatasetReleaseInput> {
-  const records = [{ marker }];
+  const records = [
+    {
+      id: `mw:entity:${marker}`,
+      kind: 'Entity',
+      schema_version: 1,
+      lifecycle: 'draft',
+      created_at: '2026-10-16T10:00:00.000Z',
+      updated_at: '2026-10-16T10:00:00.000Z',
+      origin_ref: `urn:synthetic:${marker}`,
+      visibility: 'INTERNAL',
+      content_revision: 1,
+    },
+  ];
   const snapshot = createKnowledgeSnapshot({ records, aliases: [], sourceArtifacts: [] });
   const snapshotPath = `snapshots/${version}-${marker}`;
   const directory = path.join(root, snapshotPath);
   await mkdir(path.join(directory, 'records'), { recursive: true });
   await mkdir(path.join(directory, 'aliases'), { recursive: true });
   await mkdir(path.join(directory, 'source-artifacts'), { recursive: true });
+  await mkdir(path.join(root, 'sources'), { recursive: true });
+  await mkdir(path.join(root, 'recipes'), { recursive: true });
+  const sourcePath = `sources/${version}.json`;
+  const sourceBytes = Buffer.from(`${JSON.stringify(records)}\n`, 'utf8');
+  await writeFile(path.join(root, sourcePath), sourceBytes);
+  const recipePath = `recipes/${version}.json`;
+  const recipeBytes = Buffer.from(
+    `${JSON.stringify(
+      {
+        format: 'moonwitness-ingestion-recipe/v1',
+        recipeId: `synthetic-${version.replaceAll('.', '-')}`,
+        parser: 'json-record-array/v1',
+        source: {
+          path: sourcePath,
+          sha256: createHash('sha256').update(sourceBytes).digest('hex'),
+        },
+      },
+      null,
+      2
+    )}\n`,
+    'utf8'
+  );
+  await writeFile(path.join(root, recipePath), recipeBytes);
   await writeFile(path.join(directory, 'snapshot.json'), `${canonicalizeJson(snapshot)}\n`);
   await writeFile(
     path.join(directory, 'records', `${hashCanonicalJson(records[0])}.json`),
@@ -47,6 +84,10 @@ async function release(
     corpusVersion: '1.0.0',
     snapshotPath,
     snapshot,
+    sourceRecipe: {
+      path: recipePath,
+      sha256: createHash('sha256').update(recipeBytes).digest('hex'),
+    },
   };
 }
 
@@ -126,6 +167,83 @@ describe('immutable dataset releases and active pointers', () => {
       activateDatasetRelease(root, first.datasetId, 'f'.repeat(64), '2026-10-16T10:02:00.000Z')
     ).rejects.toThrow();
     expect(await readActiveDatasetRelease(root, first.datasetId)).toEqual(active);
+  });
+
+  it('replays a missing snapshot from its pinned recipe and source before switching releases', async () => {
+    const root = await storeRoot();
+    const first = await createDatasetRelease(root, await release(root, '1.0.0', 'a'));
+    const second = await createDatasetRelease(root, await release(root, '1.1.0', 'b'));
+    const activeSecond = await activateDatasetRelease(
+      root,
+      second.datasetId,
+      second.releaseId,
+      '2026-10-16T10:02:00.000Z'
+    );
+    await rm(path.join(root, first.snapshotPath), { recursive: true, force: true });
+
+    const restored = await replayDatasetRelease({
+      rootDirectory: root,
+      datasetId: first.datasetId,
+      releaseId: first.releaseId,
+      activatedAt: '2026-10-16T10:03:00.000Z',
+    });
+
+    expect(restored.releaseId).toBe(first.releaseId);
+    expect(restored.snapshotPath).toBe(first.snapshotPath);
+    expect(restored.releaseId).not.toBe(activeSecond.releaseId);
+    expect(await readActiveDatasetRelease(root, first.datasetId)).toEqual(restored);
+    const rebuiltSnapshot = JSON.parse(
+      await readFile(path.join(root, first.snapshotPath, 'snapshot.json'), 'utf8')
+    );
+    expect(rebuiltSnapshot.sha256).toBe(first.snapshot.sha256);
+    const repeated = await replayDatasetRelease({
+      rootDirectory: root,
+      datasetId: first.datasetId,
+      releaseId: first.releaseId,
+      activatedAt: '2026-10-16T10:04:00.000Z',
+    });
+    expect(repeated.releaseId).toBe(first.releaseId);
+    expect(await readActiveDatasetRelease(root, first.datasetId)).toEqual(repeated);
+  });
+
+  it('keeps the active release unchanged when a missing snapshot cannot be replayed', async () => {
+    const root = await storeRoot();
+    const first = await createDatasetRelease(root, await release(root, '1.0.0', 'a'));
+    const second = await createDatasetRelease(root, await release(root, '1.1.0', 'b'));
+    const activeSecond = await activateDatasetRelease(
+      root,
+      second.datasetId,
+      second.releaseId,
+      '2026-10-16T10:02:00.000Z'
+    );
+    await rm(path.join(root, first.snapshotPath), { recursive: true, force: true });
+    const recipeFile = path.join(root, first.sourceRecipe.path);
+    const sourceFile = path.join(root, 'sources/1.0.0.json');
+    const originalSource = await readFile(sourceFile);
+    await writeFile(sourceFile, `${originalSource.toString('utf8')} `);
+
+    await expect(
+      replayDatasetRelease({
+        rootDirectory: root,
+        datasetId: first.datasetId,
+        releaseId: first.releaseId,
+        activatedAt: '2026-10-16T10:03:00.000Z',
+      })
+    ).rejects.toThrow(/Source checksum mismatch/u);
+    await writeFile(sourceFile, originalSource);
+    await writeFile(recipeFile, 'tampered recipe\n');
+    await expect(
+      replayDatasetRelease({
+        rootDirectory: root,
+        datasetId: first.datasetId,
+        releaseId: first.releaseId,
+        activatedAt: '2026-10-16T10:04:00.000Z',
+      })
+    ).rejects.toThrow(/Pinned source recipe checksum mismatch/u);
+    expect(await readActiveDatasetRelease(root, first.datasetId)).toEqual(activeSecond);
+    await expect(readdir(path.join(root, first.snapshotPath))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
   });
 
   it('rejects invalid versions and malformed snapshot digests before writing files', async () => {

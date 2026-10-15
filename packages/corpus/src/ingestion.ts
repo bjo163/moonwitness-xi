@@ -7,7 +7,12 @@ import {
   parseCanonicalJson,
   validateKnowledgeRecord,
 } from '@moonwitness/knowledge';
-import { activateDatasetRelease, createDatasetRelease } from './dataset-release.js';
+import {
+  activateDatasetRelease,
+  createDatasetRelease,
+  readDatasetRelease,
+} from './dataset-release.js';
+import type { ActiveDatasetRelease } from './dataset-release.js';
 import type { DatasetReleaseSnapshot } from './dataset-release.js';
 import type { IngestionRecipe, IngestionReport, IngestionRequest } from './types.js';
 
@@ -233,9 +238,58 @@ export async function ingestDataset(request: IngestionRequest): Promise<Ingestio
       createdAt,
       snapshotPath: report.outputPath,
       snapshot: snapshot as DatasetReleaseSnapshot,
+      sourceRecipe: { path: request.recipePath, sha256: report.recipeSha256 },
     });
     await activateDatasetRelease(root, release.datasetId, release.releaseId, createdAt);
     report.releaseId = release.releaseId;
   }
   return report;
+}
+
+export interface ReplayDatasetReleaseRequest {
+  rootDirectory: string;
+  datasetId: string;
+  releaseId: string;
+  activatedAt: string;
+}
+
+/** Rebuild a missing immutable snapshot from its pinned local recipe before reactivating it. */
+export async function replayDatasetRelease(
+  request: ReplayDatasetReleaseRequest
+): Promise<ActiveDatasetRelease> {
+  const root = path.resolve(request.rootDirectory);
+  const manifest = await readDatasetRelease(root, request.datasetId, request.releaseId);
+  const snapshotPath = path.resolve(root, safeRelativePath(manifest.snapshotPath, 'snapshotPath'));
+
+  try {
+    await lstat(snapshotPath);
+    return activateDatasetRelease(root, request.datasetId, request.releaseId, request.activatedAt);
+  } catch (error) {
+    if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') throw error;
+  }
+
+  const recipeFile = await assertRegularFile(root, manifest.sourceRecipe.path, 'sourceRecipe.path');
+  const recipeBytes = await readFile(recipeFile);
+  if (sha256(recipeBytes) !== manifest.sourceRecipe.sha256) {
+    throw new TypeError('Pinned source recipe checksum mismatch; release was not rebuilt');
+  }
+  const preview = await ingestDataset({
+    rootDirectory: root,
+    recipePath: manifest.sourceRecipe.path,
+    outputPath: manifest.snapshotPath,
+    dryRun: true,
+  });
+  if (preview.snapshotSha256 !== manifest.snapshot.sha256) {
+    throw new TypeError('Replayed source does not match the immutable release snapshot');
+  }
+
+  const rebuilt = await ingestDataset({
+    rootDirectory: root,
+    recipePath: manifest.sourceRecipe.path,
+    outputPath: manifest.snapshotPath,
+  });
+  if (rebuilt.snapshotSha256 !== manifest.snapshot.sha256) {
+    throw new TypeError('Rebuilt snapshot does not match the immutable release snapshot');
+  }
+  return activateDatasetRelease(root, request.datasetId, request.releaseId, request.activatedAt);
 }

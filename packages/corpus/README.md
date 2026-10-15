@@ -45,6 +45,22 @@ replaced. `readRawArtifact` verifies the digest again before returning bytes.
 The store rejects malformed digests, symbolic links, and non-directory path
 segments. It stores bytes only; rights and publication decisions remain separate.
 
+## Pinned Qur’an passage slice
+
+`corpus/manifests/quran-passage-index.json` maps an exact edition and verse
+locator to a source-artifact manifest and one content-addressed source line.
+`readQuranPassage` loads only those local files, requires a structurally valid
+source-bytes manifest with permitted rights for the requested use, verifies the
+SHA-256 and byte length, and checks that the source line's locator matches the
+index. It returns the exact source bytes and the unmodified verse text. Unknown
+editions or locators, missing artifacts, checksum mismatches, and denied rights
+fail closed. The function does not make network requests.
+
+`importQuranPassage` stores the verified exact bytes in a local raw-artifact
+store. Reimporting the same bytes is idempotent; it never overwrites a corrupt
+blob. Rights clearance and attribution are recorded in the source manifest and
+notice file, and are not inferred from artifact availability.
+
 ## Private archive intake manifest
 
 `createPrivateArchiveImportManifest` records a user-supplied local archive's
@@ -62,9 +78,15 @@ remain gated by K5-002 and the accepted privacy policy.
 
 `createDatasetRelease` stores an immutable, content-addressed release manifest
 that binds a snapshot digest to independent ontology/corpus versions and the
-previously active release. `activateDatasetRelease` verifies the manifest
-digest before atomically replacing the active pointer; activating an older
-release performs rollback without deleting either manifest. Creating or
-activating metadata does not rebuild, copy, or publish dataset records. The
-caller remains responsible for retaining the source snapshot and raw artifacts
-until the offline rebuild/replay pipeline is implemented.
+previously active release. Ingestion also pins the recipe path and digest that
+produced the snapshot; the recipe in turn pins its local source path and digest.
+`activateDatasetRelease` verifies the manifest and snapshot before atomically
+replacing the active pointer; activating an older release performs rollback
+without deleting either manifest. `replayDatasetRelease` rebuilds a missing
+snapshot from its pinned local recipe, verifies the reconstructed digest, and
+only then activates it. A corrupt existing snapshot is never overwritten, and
+missing or changed source inputs fail closed while leaving the current pointer
+unchanged. The pipeline performs no network fetches. Source files must remain
+available in the repository or in an operator-managed local workspace; recipe
+pinning is an integrity check, not rights clearance or automatic source-byte
+retention.

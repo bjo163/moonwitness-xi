@@ -49,7 +49,7 @@
         {
           "title": "Hardware dan registry model AI lokal",
           "kind": "how-to",
-          "path": "docs/operations/local-ai-hardware.md"
+          "path": "docs/guide/how-to/local-ai-hardware.md"
         },
         { "title": "Keamanan", "kind": "how-to", "path": "docs/guide/how-to/security.md" },
         {

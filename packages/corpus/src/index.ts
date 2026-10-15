@@ -1,8 +1,10 @@
-export { ingestDataset } from './ingestion.js';
+export { ingestDataset, replayDatasetRelease } from './ingestion.js';
+export { importQuranPassage, readQuranPassage } from './quran-passage.js';
 export {
   activateDatasetRelease,
   createDatasetRelease,
   readActiveDatasetRelease,
+  readDatasetRelease,
   type ActiveDatasetRelease,
   type DatasetReleaseInput,
   type DatasetReleaseManifest,
@@ -24,3 +26,9 @@ export type {
   RawArtifactReceipt,
   ReadRawArtifactRequest,
 } from './raw-artifact-store.js';
+export type {
+  ImportQuranPassageRequest,
+  ImportedQuranPassage,
+  QuranPassage,
+  ReadQuranPassageRequest,
+} from './quran-passage.js';
