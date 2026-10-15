@@ -5,6 +5,7 @@ import { argv, cwd, env, stderr, stdout } from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 const requiredProjects = ['quality', 'integration', 'browser', 'containers', 'automation', 'ui'];
+const automationSuites = ['workflow', 'release', 'roadmap', 'platform'];
 const fullScopeFiles = new Set([
   '.github',
   'scripts',
@@ -103,13 +104,20 @@ export function requiresQualityLane(changedFiles, unclassifiedChanges = false) {
   );
 }
 
+export function automationSuitesForPlan(projects, mode) {
+  if (!projects.includes('automation')) return [];
+  return mode === 'full' ? automationSuites : ['roadmap'];
+}
+
 async function writePlan(result, jsonOutput) {
   const projects = result.projects;
+  const selectedAutomationSuites = automationSuitesForPlan(projects, result.mode);
+  result.automationSuites = selectedAutomationSuites;
   if (env.GITHUB_OUTPUT) {
     const { appendFile } = await import('node:fs/promises');
     await appendFile(
       env.GITHUB_OUTPUT,
-      `projects=${JSON.stringify(projects)}\nplan=${JSON.stringify(result)}\n`
+      `projects=${JSON.stringify(projects)}\nautomation-suites=${JSON.stringify(selectedAutomationSuites)}\nplan=${JSON.stringify(result)}\n`
     );
   }
   stdout.write(jsonOutput ? JSON.stringify(result) : projects.join('\n'));
