@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "apps/*/package.json and packages/*/package.json",
-  "sourceSha256": "440ed4470fc3b5c8208b6209cf86d66f192638173c0b8ac85a60a1290afbf889",
+  "sourceSha256": "1c616713d568faf477414d1a3363c07330a9a7ffebafd8ec6947e2ee6bcf2282",
   "packages": [
     {
       "name": "@moonwitness/api",
@@ -62,6 +62,12 @@
       "kind": "package",
       "version": "1.0.0-rc.1",
       "manifest": "packages/knowledge"
+    },
+    {
+      "name": "@moonwitness/local-ai",
+      "kind": "package",
+      "version": "1.0.0-rc.1",
+      "manifest": "packages/local-ai"
     },
     {
       "name": "@moonwitness/logger",
@@ -152,6 +158,12 @@
     {
       "from": "@moonwitness/api",
       "to": "@moonwitness/jobs",
+      "kind": "runtime",
+      "manifest": "apps/api"
+    },
+    {
+      "from": "@moonwitness/api",
+      "to": "@moonwitness/local-ai",
       "kind": "runtime",
       "manifest": "apps/api"
     },
