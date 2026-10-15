@@ -6,8 +6,18 @@ import { test } from 'node:test';
 import {
   ciProjectsForAffectedPackages,
   expandWorkspaceDependencies,
+  hasFullScopeChange,
   readWorkspaceProjects,
 } from './select-affected.mjs';
+
+test('shared automation configuration and the master roadmap select full validation', () => {
+  equal(hasFullScopeChange(['.github/workflows/ci.yml']), true);
+  equal(hasFullScopeChange(['scripts/select-affected.mjs']), true);
+  equal(hasFullScopeChange(['ROADMAP.md']), true);
+  equal(hasFullScopeChange(['.gitleaks.toml']), true);
+  equal(hasFullScopeChange(['.dockerignore']), true);
+  equal(hasFullScopeChange(['docs/guide.md']), false);
+});
 
 test('reads workspace dependency closure directly from manifests without requiring pnpm install', async () => {
   const root = await mkdtemp(join(tmpdir(), 'moonwitness-affected-'));
@@ -99,7 +109,6 @@ test('ORM changes expand to auth, jobs, API, and the Board transitively', () => 
     ].sort()
   );
   deepEqual(ciProjectsForAffectedPackages([...affected]).sort(), [
-    'automation',
     'browser',
     'containers',
     'integration',
@@ -130,18 +139,18 @@ test('an unrelated workspace remains outside the dependency closure', () => {
   equal(affected.has('@moonwitness/logger'), true);
 });
 
+test('automation and unrelated lanes are omitted when no workspace package is affected', () => {
+  deepEqual(ciProjectsForAffectedPackages([]), []);
+});
+
 test('catalog-only changes select UI quality and browser acceptance without unrelated database jobs', () => {
   const affected = expandWorkspaceDependencies(['@moonwitness/ui-catalog'], workspace);
-  deepEqual(ciProjectsForAffectedPackages([...affected]).sort(), ['automation', 'quality', 'ui']);
+  deepEqual(ciProjectsForAffectedPackages([...affected]).sort(), ['quality', 'ui']);
 });
 
 test('shared UI or SVG assets select UI package, catalog, and static asset validation', () => {
   const uiAffected = expandWorkspaceDependencies(['@moonwitness/ui'], workspace);
   assert.equal(uiAffected.has('@moonwitness/ui-catalog'), true);
-  deepEqual(ciProjectsForAffectedPackages([...uiAffected]).sort(), ['automation', 'quality', 'ui']);
-  deepEqual(ciProjectsForAffectedPackages(['@moonwitness/assets']).sort(), [
-    'automation',
-    'quality',
-    'ui',
-  ]);
+  deepEqual(ciProjectsForAffectedPackages([...uiAffected]).sort(), ['quality', 'ui']);
+  deepEqual(ciProjectsForAffectedPackages(['@moonwitness/assets']).sort(), ['quality', 'ui']);
 });

@@ -63,6 +63,16 @@ test('technical gate validates every required lane and stays independent from pr
   assert.match(gateJob, /check-promotion-approval\.mjs/u);
 });
 
+test('affected CI selector keeps full validation for shared config and master roadmap changes', () => {
+  const selector = readFileSync('scripts/select-affected.mjs', 'utf8');
+  assert.match(
+    selector,
+    /const requiredProjects = \['quality', 'integration', 'browser', 'containers', 'automation', 'ui'\]/u
+  );
+  assert.match(selector, /'ROADMAP\.md'/u);
+  assert.match(selector, /const projects = new Set\(\)/u);
+});
+
 test('CI planning pins the supported Node runtime without installing pnpm or workspace dependencies', () => {
   const planJob = workflow.match(/ {2}plan:[\s\S]*?\n {2}quality:/u)?.[0];
   assert.ok(planJob, 'CI should define its planning job');

@@ -35,8 +35,14 @@ test('rejects a missing required job', () => {
 test('accepts intentionally skipped jobs absent from a valid affected plan', () => {
   assert.equal(
     isCiGatePassing(
-      { ...successfulResults, integration: 'skipped', browser: 'skipped', containers: 'skipped' },
-      ['quality', 'automation'],
+      {
+        ...successfulResults,
+        integration: 'skipped',
+        browser: 'skipped',
+        containers: 'skipped',
+        automation: 'skipped',
+      },
+      ['quality'],
       'success'
     ),
     true
@@ -58,8 +64,11 @@ test('rejects any run whose affected plan failed', () => {
   assert.equal(isCiGatePassing(successfulResults, ['quality', 'automation'], 'failure'), false);
 });
 
-test('rejects a plan that omits the always-required automation job', () => {
-  assert.equal(isCiGatePassing(successfulResults, ['quality'], 'success'), false);
+test('accepts a package-specific plan without automation when its lane is skipped', () => {
+  assert.equal(
+    isCiGatePassing({ ...successfulResults, automation: 'skipped' }, ['quality'], 'success'),
+    true
+  );
 });
 
 test('rejects unknown jobs in the plan', () => {

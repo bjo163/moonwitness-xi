@@ -8,6 +8,11 @@ const requiredProjects = ['quality', 'integration', 'browser', 'containers', 'au
 const fullScopeFiles = new Set([
   '.github',
   'scripts',
+  'ROADMAP.md',
+  '.dockerignore',
+  '.env.example',
+  '.env.production.example',
+  '.gitleaks.toml',
   'package.json',
   '.gitignore',
   '.node-version',
@@ -17,12 +22,19 @@ const fullScopeFiles = new Set([
   'tsconfig.base.json',
   'eslint.config.js',
   'prettier.config.js',
+  '.prettierignore',
   '.prettierrc',
   '.prettierrc.json',
   'vitest.config.ts',
   'Dockerfile',
   'docker-compose.production.yml',
 ]);
+
+export function hasFullScopeChange(changedFiles) {
+  return changedFiles.some((path) =>
+    [...fullScopeFiles].some((root) => path === root || path.startsWith(`${root}/`))
+  );
+}
 
 function git(args) {
   const result = spawnSync('git', args, { encoding: 'utf8' });
@@ -54,7 +66,7 @@ export function expandWorkspaceDependencies(changedNames, projects) {
 
 export function ciProjectsForAffectedPackages(affectedPackages) {
   const affected = new Set(affectedPackages);
-  const projects = new Set(['automation']);
+  const projects = new Set();
   const uiPackages = new Set(['@moonwitness/assets', '@moonwitness/ui', '@moonwitness/ui-catalog']);
   const specializedPackages = new Set([...uiPackages, '@moonwitness/api', '@moonwitness/board']);
   if (affected.has('@moonwitness/board')) {
@@ -172,11 +184,7 @@ async function main() {
   }
 
   const changedFiles = changedPaths.split(/\r?\n/u).filter(Boolean);
-  if (
-    changedFiles.some((path) =>
-      [...fullScopeFiles].some((root) => path === root || path.startsWith(`${root}/`))
-    )
-  ) {
+  if (hasFullScopeChange(changedFiles)) {
     await writePlan(
       { mode: 'full', reason: 'shared-configuration', projects: requiredProjects },
       jsonOutput

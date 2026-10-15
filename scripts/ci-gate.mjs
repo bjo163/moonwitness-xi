@@ -9,7 +9,6 @@ const requiredJobs = ['quality', 'integration', 'browser', 'containers', 'automa
 export const isCiGatePassing = (results, selectedJobs = requiredJobs, planResult = 'success') =>
   planResult === 'success' &&
   Array.isArray(selectedJobs) &&
-  selectedJobs.includes('automation') &&
   selectedJobs.every((job) => requiredJobs.includes(job)) &&
   requiredJobs.every((job) =>
     selectedJobs.includes(job)
