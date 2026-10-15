@@ -22,6 +22,14 @@ const assetReconciler = await readFile(
   new globalThis.URL('./reconcile-release-assets.mjs', import.meta.url),
   'utf8'
 );
+const releaseLifecycle = await readFile(
+  new globalThis.URL('./github-release-lifecycle.mjs', import.meta.url),
+  'utf8'
+);
+const releaseLifecycleRunner = await readFile(
+  new globalThis.URL('./complete-github-release.mjs', import.meta.url),
+  'utf8'
+);
 const workflowDirectory = new globalThis.URL('../.github/workflows/', import.meta.url);
 const releasePlanner = await readFile(
   new globalThis.URL('./release-plan.mjs', import.meta.url),
@@ -169,11 +177,11 @@ test('tag releases publish SPDX SBOMs and attest artifact/image subjects before 
   assert.ok(attestationJob.indexOf('uses: actions/attest@') >= 0);
   assert.ok(
     publish.indexOf('Attest API image SPDX SBOM') <
-      publish.indexOf('Ensure a draft GitHub release exists')
+      publish.indexOf('Complete the same verified GitHub Release idempotently')
   );
   assert.ok(
     publish.indexOf('Attest Board image build provenance') <
-      publish.indexOf('Ensure a draft GitHub release exists')
+      publish.indexOf('Complete the same verified GitHub Release idempotently')
   );
 });
 
@@ -195,24 +203,15 @@ test('critical candidates fail verification and latest only advances for a newer
   assert.equal((publish.match(/docker push "\$image:latest"/gu) ?? []).length, 2);
   assert.equal((publish.match(/test "\$latest_digest" = "\$VERSION_DIGEST"/gu) ?? []).length, 2);
   assert.ok(
-    publish.indexOf('Ensure a draft GitHub release exists') <
-      publish.indexOf('Reconcile immutable release assets')
-  );
-  assert.ok(
-    publish.indexOf('Reconcile immutable release assets') <
-      publish.indexOf('Verify release assets before completing release')
-  );
-  assert.ok(
-    publish.indexOf('Verify release assets before completing release') <
+    publish.indexOf('Complete the same verified GitHub Release idempotently') <
       publish.indexOf('Advance stable API latest')
   );
-  assert.match(publish, /--prerelease --latest=false/u);
-  assert.match(publish, /--latest=false/u);
-  assert.match(publish, /gh release edit "\$TAG" --draft=false --latest/u);
-  assert.match(publish, /--draft --prerelease/u);
-  assert.match(publish, /--draft=false/u);
-  assert.match(publish, /gh release verify-asset/u);
-  assert.doesNotMatch(publish, /gh release upload .*--clobber/u);
+  assert.match(publish, /run: node scripts\/complete-github-release\.mjs/u);
+  assert.match(releaseLifecycleRunner, /'--draft',\s*'--latest=false'/u);
+  assert.match(releaseLifecycleRunner, /--prerelease/u);
+  assert.match(releaseLifecycleRunner, /release', 'verify-asset'/u);
+  assert.match(releaseLifecycleRunner, /release', 'edit'/u);
+  assert.doesNotMatch(releaseLifecycleRunner, /--clobber/u);
   assert.match(assetReconciler, /actual\?\.digest === expected\.digest/u);
   assert.match(assetReconciler, /isDraft: release\.draft/u);
   assert.match(assetReconciler, /if \(!existing && !isDraft\)/u);
@@ -237,9 +236,12 @@ test('release fault recovery preserves no-op plans and explicitly models hostile
   assert.match(imagePublisher, /manifest unknown/iu);
   assert.match(imagePublisher, /if \(!missingImageManifest\(error\)\) throw error/u);
   assert.match(publish, /remote_tag_sha/u);
-  assert.match(publish, /gh release view "\$TAG"/u);
   assert.match(publish, /sha256sum --check release-artifacts\.sha256/u);
-  assert.match(publish, /node scripts\/reconcile-release-assets\.mjs/u);
+  assert.match(publish, /node scripts\/complete-github-release\.mjs/u);
+  assert.match(releaseLifecycle, /getReleaseByTag\(tag\)/u);
+  assert.match(releaseLifecycle, /Unable to verify draft release creation/u);
+  assert.match(releaseLifecycle, /Unable to verify published release/u);
+  assert.match(releaseLifecycle, /reconcileReleaseAssets/u);
   assert.match(assetReconciler, /adapter\.listAssets\(releaseId\)/u);
   assert.match(
     assetReconciler,

@@ -399,51 +399,13 @@ jobs:
           sbom-path: release-images/release-board.spdx.json
           push-to-registry: true
           create-storage-record: false
-      - name: Ensure a draft GitHub release exists
-        id: draft_release
+      - name: Complete the same verified GitHub Release idempotently
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.ref_name }}
-          UPDATE_LATEST: ${{ steps.latest_policy.outputs.advance || 'false' }}
-        run: |
-          set -euo pipefail
-          if release="$(gh release view "$TAG" --json tagName,isDraft,isPrerelease 2>/dev/null)"; then
-            test "$(jq -r '.tagName' <<< "$release")" = "$TAG"
-            is_draft="$(jq -r '.isDraft' <<< "$release")"
-            if [[ "$TAG" == *-* ]]; then expected_prerelease=true; else expected_prerelease=false; fi
-            test "$(jq -r '.isPrerelease' <<< "$release")" = "$expected_prerelease"
-            echo "Reusing the existing GitHub Release for $TAG."
-          elif [[ "$TAG" == *-* ]]; then
-            gh release create "$TAG" --verify-tag --generate-notes --draft --prerelease --latest=false
-            is_draft=true
-          else
-            gh release create "$TAG" --verify-tag --generate-notes --draft --latest=false
-            is_draft=true
-          fi
-          echo "is_draft=$is_draft" >> "$GITHUB_OUTPUT"
-          echo "draft release ready for required asset reconciliation: $TAG"
-      - name: Reconcile immutable release assets
-        env:
-          GH_TOKEN: ${{ github.token }}
           GH_REPOSITORY: ${{ github.repository }}
           RELEASE_TAG: ${{ github.ref_name }}
-        run: node scripts/reconcile-release-assets.mjs
-      - name: Verify release assets before completing release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
           UPDATE_LATEST: ${{ steps.latest_policy.outputs.advance || 'false' }}
-        run: |
-          set -euo pipefail
-          gh release verify-asset "$TAG" release-images/release-api.spdx.json
-          gh release verify-asset "$TAG" release-images/release-board.spdx.json
-          if [[ "$TAG" == *-* ]]; then
-            gh release edit "$TAG" --draft=false --prerelease --latest=false
-          elif [[ "$UPDATE_LATEST" == 'true' ]]; then
-            gh release edit "$TAG" --draft=false --latest
-          else
-            gh release edit "$TAG" --draft=false --latest=false
-          fi
+        run: node scripts/complete-github-release.mjs
       - name: Advance stable API latest after release completion
         if: steps.latest_policy.outputs.advance == 'true'
         env:

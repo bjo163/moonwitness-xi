@@ -11,7 +11,7 @@ const TAG_PATTERN =
   /^v(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u;
 const DIGEST_PATTERN = /^sha256:[a-f0-9]{64}$/u;
 
-function validateReleaseAssets({ tag, releaseId, isDraft, files, adapter }) {
+export function validateReleaseAssets({ tag, releaseId, isDraft, files, adapter }) {
   if (typeof tag !== 'string' || !TAG_PATTERN.test(tag)) throw new Error('Invalid release tag');
   if (!Number.isSafeInteger(releaseId) || releaseId < 1) throw new Error('Invalid release ID');
   if (typeof isDraft !== 'boolean') throw new Error('Invalid release draft state');
