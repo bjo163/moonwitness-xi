@@ -43,13 +43,17 @@ jobs:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
           if [[ "$GITHUB_EVENT_NAME" == "pull_request_review" ]]; then
-            echo 'projects=[]' >> "$GITHUB_OUTPUT"
-            echo 'automation-suites=[]' >> "$GITHUB_OUTPUT"
-            echo 'plan={"mode":"review-approval","reason":"reuse-exact-head-technical-evidence","projects":[]}' >> "$GITHUB_OUTPUT"
+            {
+              printf '%s\n' 'projects=[]'
+              printf '%s\n' 'automation-suites=[]'
+              printf '%s\n' 'plan={"mode":"review-approval","reason":"reuse-exact-head-technical-evidence","projects":[]}'
+            } >> "$GITHUB_OUTPUT"
           elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" || "$BASE_REF" == "main" || "$GITHUB_REF" == "refs/heads/main" ]]; then
-            echo 'projects=["quality","integration","browser","containers","automation","ui"]' >> "$GITHUB_OUTPUT"
-            echo 'automation-suites=["workflow","release","roadmap","platform"]' >> "$GITHUB_OUTPUT"
-            echo 'plan={"mode":"full","reason":"full-validation","projects":["quality","integration","browser","containers","automation","ui"]}' >> "$GITHUB_OUTPUT"
+            {
+              printf '%s\n' 'projects=["quality","integration","browser","containers","automation","ui"]'
+              printf '%s\n' 'automation-suites=["workflow","release","roadmap","platform"]'
+              printf '%s\n' 'plan={"mode":"full","reason":"full-validation","projects":["quality","integration","browser","containers","automation","ui"]}'
+            } >> "$GITHUB_OUTPUT"
           else
             base_sha="${BASE_SHA:-$(git rev-parse origin/main)}"
             node scripts/select-affected.mjs "$base_sha" "$HEAD_SHA" --json
