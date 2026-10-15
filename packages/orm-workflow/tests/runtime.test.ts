@@ -76,7 +76,7 @@ describe('workflow addon', () => {
         .first()
     ).toMatchObject({ count: 1 });
     expect(
-      await database('_orm_addons').where({ name: 'workflow', version: '1.0.0' }).first()
+      await database('_orm_addons').where({ name: 'workflow', version: '1.1.0' }).first()
     ).toBeDefined();
     await installAddons(database, [baseManifest, jobsManifest, notificationManifest, manifest]);
     expect(await database('workflow_definitions').count({ count: '*' }).first()).toMatchObject({
@@ -242,6 +242,93 @@ describe('workflow addon', () => {
 
     expect(result).toMatchObject({ currentState: 'submitted', revision: 1, status: 'active' });
     expect(await database('workflow_events').where({ instance_id: started.id })).toHaveLength(2);
+  });
+
+  it('stores canonical transition payloads and checks them on idempotent replay', async () => {
+    const database = await setup();
+    const { systemId, adminId, companyId, resourceId } = await actors(database);
+    const started = await startWorkflow(database, {
+      code: 'sample.request_approval',
+      companyId,
+      actorId: systemId,
+      role: 'system',
+      resourceModel: 'base.partner',
+      resourceId,
+      idempotencyKey: 'payload-start-key-01',
+    });
+    const input = {
+      instanceId: started.id,
+      companyId,
+      actorId: adminId,
+      role: 'superadmin' as const,
+      action: 'submit',
+      expectedRevision: 0,
+      idempotencyKey: 'payload-action-key-01',
+      payload: { z: [1, true], a: { second: 'two', first: 'one' } },
+    };
+
+    await transitionWorkflow(database, input);
+    const stored = await database('workflow_events')
+      .where({ idempotency_key: input.idempotencyKey })
+      .first('payload');
+    expect(stored?.payload).toBe('{"a":{"first":"one","second":"two"},"z":[1,true]}');
+    await expect(
+      transitionWorkflow(database, {
+        ...input,
+        payload: { a: { first: 'one', second: 'two' }, z: [1, true] },
+      })
+    ).resolves.toMatchObject({ currentState: 'submitted', revision: 1 });
+    await expect(
+      transitionWorkflow(database, { ...input, payload: { changed: true } })
+    ).rejects.toMatchObject({ code: 'IDEMPOTENCY_CONFLICT' });
+    await expect(
+      transitionWorkflow(database, { ...input, payload: { invalid: undefined } })
+    ).rejects.toMatchObject({ code: 'INVALID_EVENT_PAYLOAD' });
+    let tooDeep: unknown = 'leaf';
+    for (let index = 0; index < 34; index += 1) tooDeep = [tooDeep];
+    await expect(
+      transitionWorkflow(database, { ...input, payload: tooDeep })
+    ).rejects.toMatchObject({ code: 'INVALID_EVENT_PAYLOAD' });
+    await expect(
+      transitionWorkflow(database, { ...input, payload: 'x'.repeat(65_537) })
+    ).rejects.toMatchObject({ code: 'INVALID_EVENT_PAYLOAD' });
+  });
+
+  it('adds the nullable event payload column while upgrading legacy workflow rows', async () => {
+    const database = await setup();
+    const { systemId, adminId, companyId, resourceId } = await actors(database);
+    const started = await startWorkflow(database, {
+      code: 'sample.request_approval',
+      companyId,
+      actorId: systemId,
+      role: 'system',
+      resourceModel: 'base.partner',
+      resourceId,
+      idempotencyKey: 'legacy-start-key-01',
+    });
+    await transitionWorkflow(database, {
+      instanceId: started.id,
+      companyId,
+      actorId: adminId,
+      role: 'superadmin',
+      action: 'submit',
+      expectedRevision: 0,
+      idempotencyKey: 'legacy-action-key-01',
+    });
+    await database('_orm_addons').where({ name: 'workflow' }).update({ version: '1.0.0' });
+    await database.schema.alterTable('workflow_events', (table) => table.dropColumn('payload'));
+
+    await installAddons(database, [baseManifest, jobsManifest, notificationManifest, manifest]);
+
+    const legacy = await database('workflow_events')
+      .where({ idempotency_key: 'legacy-action-key-01' })
+      .first('payload');
+    expect(legacy?.payload).toBeNull();
+    expect(
+      await database('_orm_addons').where({ name: 'workflow' }).first('version')
+    ).toMatchObject({
+      version: '1.1.0',
+    });
   });
 
   it('propagates start failures when no committed idempotency event exists', async () => {

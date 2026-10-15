@@ -49,6 +49,7 @@ export const WorkflowEvent = defineModel('workflow.event', {
     to_state: fields.string({ required: true }),
     revision: fields.integer({ required: true }),
     idempotency_key: fields.string({ required: true, unique: true, hidden: true }),
+    payload: fields.text({ hidden: true }),
     comment: fields.text(),
     created_at: fields.string({ required: true }),
   },

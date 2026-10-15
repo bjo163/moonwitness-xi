@@ -254,7 +254,7 @@ Track approved through ADR 0004 on 2026-10-15. The existing 148 M-series tasks a
 - [ ] K3-005 Research review and immutable decision event flow.
 - [ ] K3-006 Cross-domain explanation and alternative hypothesis API.
 - [ ] K3-007 Evidence-aware duplicate scoring candidates.
-- [ ] K4-001 Text segmentation and lexical metadata with offsets.
+- [x] K4-001 Text segmentation and lexical metadata with offsets. Evidence: [K4-001](docs/roadmap/evidence/K4-001.md).
 - [ ] K4-002 Polarity/speaker/quotation semantic annotation.
 - [ ] K4-003 Pure Asma source-derived proof of concept.
 - [ ] K4-004 Semantic RUH/HIZAB concept scope and mappings.

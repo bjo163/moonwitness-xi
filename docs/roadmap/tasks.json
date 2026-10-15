@@ -1700,6 +1700,8 @@
       "dependsOn": ["K3-001", "K3-004"],
       "output": "Human review workflow tied to source revision and event history",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/K3-005.md",
       "labels": ["local-ai-rebuild"],
       "priority": "p0"
     },
@@ -1710,6 +1712,8 @@
       "dependsOn": ["K3-002", "K3-004"],
       "output": "Explain edges, supporting/opposing refs, alternatives/uncertainty",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/K3-006.md",
       "labels": ["local-ai-rebuild"],
       "priority": "p0"
     },
@@ -1720,6 +1724,8 @@
       "dependsOn": ["K3-003", "K3-006"],
       "output": "Non-destructive duplicate suggestions with rationale and review state",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/K3-007.md",
       "labels": ["local-ai-rebuild"],
       "priority": "p0"
     },
@@ -1730,6 +1736,8 @@
       "dependsOn": ["K2-005", "K3-002"],
       "output": "Language/script-aware tokens, original byte/text offset mapping",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/K4-001.md",
       "labels": ["local-ai-rebuild"],
       "priority": "p0"
     },

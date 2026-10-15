@@ -39,3 +39,30 @@ export {
   type ResearchVisibility,
   type ReviewedResearchRelationProjection,
 } from './relation.js';
+export {
+  appendResearchReviewEvent,
+  summarizeResearchReviewHistory,
+  validateResearchReviewEvent,
+  type AppendResearchReviewInput,
+  type AppendResearchReviewResult,
+  type ResearchReviewActorRole,
+  type ResearchReviewEvent,
+  type ResearchReviewHistorySummary,
+  type ResearchReviewOutcome,
+  type ResearchReviewSubject,
+} from './review.js';
+export {
+  explainResearchRelation,
+  type ExplainedRelation,
+  type ResearchExplanationOptions,
+  type ResearchExplanationResult,
+} from './explanation.js';
+export {
+  findDuplicateCandidates,
+  type DuplicateCandidate,
+  type DuplicateCandidateInput,
+  type DuplicateCandidateKind,
+  type DuplicateCandidateResult,
+  type DuplicateVisibility,
+} from './duplicate-candidates.js';
+export { segmentText, type TextSegment, type TextSegmentKind } from './segmentation.js';
