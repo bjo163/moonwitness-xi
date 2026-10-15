@@ -1,13 +1,14 @@
 # Jalur rilis aktif
 
-Diperbarui 2026-10-15. Goal penuh: 213 task (148 M-series + 65 K-series); tidak ada task atau acceptance yang dihapus. Gunakan `pnpm roadmap:progress -- --format json` untuk jumlah terkini, bukan snapshot angka dalam dokumen.
+Diperbarui 2026-10-16. Goal penuh: 213 task (148 M-series + 65 K-series); tidak ada task atau acceptance yang dihapus. Gunakan `pnpm roadmap:progress -- --format json` untuk jumlah terkini, bukan snapshot angka dalam dokumen.
 
-## Checkpoint kerja saat ini — 2026-10-15
+## Checkpoint kerja saat ini — 2026-10-16
 
-- Batch security/docs sudah dipush pada `dev` SHA `567837b9a7a6a684e04d549da444a26ed7a9bccc`. CodeQL melaporkan no new alerts, secret scan lulus, dan hosted docs build lulus. Lane teknis PR lainnya masih berjalan saat checkpoint ini; periksa hasil terminal sekali sebelum memakai SHA ini sebagai kandidat promosi.
-- Dependency audit penuh dan produksi pada lockfile di basis batch sama-sama melaporkan tidak ada advisori yang diketahui. Planner dependensi tetap read-only; jangan membuka dependency-upgrade candidate baru sebelum slice release-critical ini ditutup.
-- PostgreSQL belum diperlukan untuk batch security/docs ini. Walau pengguna menyatakan database lokal siap, shell repo saat ini tidak memiliki `POSTGRES_TEST_URL`, `127.0.0.1:5432` tertutup, dan Docker service tidak dapat dimulai dari proses ini. Jangan memakai `DATABASE_URL` aplikasi untuk test; sebelum batch M9.03/M9.06 lokal, pemilik environment perlu menyalakan service dan memberikan URL database test terisolasi. Hosted integration tetap menjadi verifikasi exact-SHA yang berjalan.
-- Read-only `pnpm release:dry-run` pada SHA `567837b` menghasilkan candidate `2.0.0-rc.1` dengan 25 gate `not-run` dan enam acceptance artifact/SBOM/provenance yang masih hosted-only. Tidak ada file/tag/release/Pages/deployment yang dibuat.
+- Sebelum pembaruan dokumen ini, `origin/dev` dan checkout lokal sinkron di SHA `34c92939df88f0242a9a261247f83878671c344d`. Commit itu memuat koreksi evidence M10.05 `f59fb1d` dan perubahan K-series `K3-004`; perubahan checkpoint ini adalah docs-only dan belum menjadi kandidat hosted baru.
+- Untuk SHA persis `34c9293`, Gitleaks run [38787711411](https://github.com/bjo163/moonwitness-xi/actions/runs/38787711411) lulus, CodeQL [38787711400](https://github.com/bjo163/moonwitness-xi/actions/runs/38787711400) masih berjalan, dan CI PR [38787711387](https://github.com/bjo163/moonwitness-xi/actions/runs/38787711387) masih pending. Belum ada bukti terminal bagi container, PostgreSQL integration, atau browser pada SHA ini; M10.03/M10.05 tetap terbuka.
+- `pnpm roadmap:progress -- --format json` pada source SHA yang sama melaporkan 213 task: 127 complete, 15 running, dan 71 todo. Tidak menghapus task atau acceptance.
+- PostgreSQL test belum dapat dijalankan dari shell repo: `POSTGRES_TEST_URL` tidak tersedia dan probe TCP pada localhost ports 5432, 5433, 5434, 55432, dan 6432 gagal. Jangan memakai `DATABASE_URL` aplikasi untuk test. Minta pemilik environment memberi URL database test terisolasi yang dapat diakses proses ini; jangan menganggap klaim server siap sebagai konektivitas yang teruji.
+- Bukti dependency audit sebelumnya tetap berlaku pada source SHA yang dicatat di evidence-nya; jangan menyebutnya sebagai audit baru pada `34c9293` dan jangan membuka candidate upgrade sebelum jalur release-critical diputuskan.
 - Jangan menunggu hosted CI untuk memulai batch lokal independen setelah push. Jalankan full required release gates satu kali pada kandidat exact-SHA; reproduksi hanya lane yang benar-benar gagal.
 
 ## Satu metode kerja
