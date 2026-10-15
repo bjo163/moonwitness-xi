@@ -78,3 +78,10 @@ export {
   type SemanticSpan,
   type SemanticAnnotationValidation,
 } from './semantics.js';
+export {
+  projectAsmaAttributeCandidate,
+  type AsmaAnalysisMethod,
+  type AsmaAttributeCandidate,
+  type AsmaCandidateProjection,
+  type AsmaResearchProfile,
+} from './asma.js';

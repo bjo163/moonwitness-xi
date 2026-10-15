@@ -1759,6 +1759,8 @@
       "id": "K4-003",
       "title": "Pure Asma source-derived proof of concept",
       "milestone": "K4",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/K4-003.md",
       "dependsOn": ["K4-002", "K3-002"],
       "output": "Explicit Quran-primary profile, candidate divine-attribute relation extraction",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
