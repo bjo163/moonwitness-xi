@@ -14,6 +14,7 @@ const databaseUrl =
 const ci = env.CI === 'true';
 const browserMatrix = env.MW_E2E_BROWSER_MATRIX === 'true';
 const buildScript = resolve(repositoryRoot, 'scripts/build-api-workspace.mjs');
+const buildApiBeforeE2E = env.MW_E2E_USE_BUILT_API !== 'true';
 const flakyPolicyPath = resolve(repositoryRoot, 'docs/testing/flaky-tests.json');
 const flakyPolicyValue: unknown = JSON.parse(readFileSync(flakyPolicyPath, 'utf8'));
 if (
@@ -64,7 +65,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: `pnpm exec node "${buildScript}" && pnpm --filter @moonwitness/api dev`,
+      command: `${buildApiBeforeE2E ? `pnpm exec node "${buildScript}" && ` : ''}pnpm --filter @moonwitness/api dev`,
       cwd: repositoryRoot,
       url: `http://127.0.0.1:${apiPort}/readyz`,
       timeout: 120_000,

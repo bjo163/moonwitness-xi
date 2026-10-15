@@ -1,6 +1,6 @@
 # Jalur rilis aktif
 
-**Diperbarui: 2026-10-15.** Jalur rilis pertama adalah prioritas/dependensi di dalam tujuan penuh 148 kartu roadmap; ia tidak menggantikan penyelesaian `ROADMAP.md` dan `docs/roadmap/`. Pada `dev` SHA `a12291515aab775107bf35cd57893a067d00d538`, checklist master mencatat 101/148 kartu selesai dan 47 masih terbuka (9 `in_progress`, 38 belum dimulai/menunggu dependensi). Kartu post-release tetap bagian goal dan harus dikerjakan setelah prasyaratnya tersedia. Catatan batch lama dipindahkan ke [arsip eksekusi](EXECUTION-HISTORY-2026-10-15.md); estimasi lama 8–13 hari tidak dipakai karena mencampur pekerjaan wajib dan pengulangan verifikasi. Percepatan hanya mengubah urutan/pengulangan, bukan scope maupun acceptance.
+**Diperbarui: 2026-10-15.** Jalur rilis pertama adalah prioritas/dependensi di dalam tujuan penuh 148 kartu roadmap; ia tidak menggantikan penyelesaian `ROADMAP.md` dan `docs/roadmap/`. Pada `dev` SHA `8aa46cfb5ad6b1f7954bbab69f662e9479c25113`, checklist master mencatat 101/148 kartu selesai dan 47 masih terbuka (9 `in_progress`, 38 belum dimulai/menunggu dependensi). Kartu post-release tetap bagian goal dan harus dikerjakan setelah prasyaratnya tersedia. Catatan batch lama dipindahkan ke [arsip eksekusi](EXECUTION-HISTORY-2026-10-15.md); estimasi lama 8–13 hari tidak dipakai karena mencampur pekerjaan wajib dan pengulangan verifikasi. Percepatan hanya mengubah urutan/pengulangan, bukan scope maupun acceptance.
 
 ## Batas waktu dan aturan berhenti mengulang
 

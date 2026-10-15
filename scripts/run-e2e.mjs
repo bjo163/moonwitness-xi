@@ -11,6 +11,9 @@ import { resolvePackageManager } from './package-manager.mjs';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const config = resolve(root, 'apps/board/playwright.config.ts');
+const args = argv.slice(2);
+const built = args[0] === '--built';
+const playwrightArgs = built ? args.slice(1) : args;
 if (!env.POSTGRES_TEST_URL) {
   stderr.write('POSTGRES_TEST_URL is required for test:e2e.\n');
   exit(2);
@@ -78,13 +81,20 @@ if (!packageManager) {
 }
 
 await runPreflight('flaky-policy', 'node', ['scripts/check-flaky-policy.mjs']);
-await runPreflight('build-api', 'node', ['scripts/ci/build-workspace.mjs', '@moonwitness/api...']);
-await runPreflight(
-  'build-ui',
-  packageManager.command,
-  [...packageManager.prefixArgs, '--filter', '@moonwitness/ui', 'build'],
-  { ...env, ...(packageManager.shell ? { shell: true } : {}) }
-);
+if (built) {
+  stderr.write('Using the existing workspace build for Board E2E.\n');
+} else {
+  await runPreflight('build-api', 'node', [
+    'scripts/ci/build-workspace.mjs',
+    '@moonwitness/api...',
+  ]);
+  await runPreflight(
+    'build-ui',
+    packageManager.command,
+    [...packageManager.prefixArgs, '--filter', '@moonwitness/ui', 'build'],
+    { ...env, ...(packageManager.shell ? { shell: true } : {}) }
+  );
+}
 
 const e2ePassword = env.MW_E2E_SUPERADMIN_PASSWORD ?? 'e2e-only-password';
 await runPreflight(
@@ -116,11 +126,11 @@ const result = spawnSync(
     'test',
     '--config',
     'apps/board/playwright.config.ts',
-    ...argv.slice(2),
+    ...playwrightArgs,
   ],
   {
     cwd: root,
-    env,
+    env: { ...env, ...(built ? { MW_E2E_USE_BUILT_API: 'true' } : {}) },
     stdio: 'inherit',
     ...(packageManager.shell ? { shell: true } : {}),
   }

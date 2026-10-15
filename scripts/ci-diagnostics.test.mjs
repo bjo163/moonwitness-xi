@@ -106,14 +106,21 @@ test('unit runner executes each workspace package suite only once', () => {
 
 test('root workspace builds use the diagnostic wrapper and its tests run in CI', () => {
   assert.equal(rootPackage.scripts.build, 'node scripts/ci/build-workspace.mjs');
-  assert.match(
-    e2eRunner,
-    /runPreflight\('build-api', 'node', \['scripts\/ci\/build-workspace\.mjs', '@moonwitness\/api\.\.\.'\]\)/u
-  );
+  assert.match(e2eRunner, /runPreflight\('build-api', 'node'/u);
+  assert.match(e2eRunner, /'@moonwitness\/api\.\.\.'/u);
   assert.match(
     rootPackage.scripts['test:e2e:diagnostics'],
     /scripts\/ci\/workspace-build-diagnostics\.test\.mjs/u
   );
+});
+
+test('candidate Board E2E reuses the exact workspace build produced by typecheck', () => {
+  assert.equal(rootPackage.scripts['test:e2e:built'], 'node scripts/run-e2e.mjs --built');
+  assert.match(e2eRunner, /const built = args\[0\] === '--built'/u);
+  assert.match(e2eRunner, /if \(built\) \{[\s\S]*Using the existing workspace build/u);
+  assert.match(e2eRunner, /MW_E2E_USE_BUILT_API: 'true'/u);
+  const playwrightConfig = readFileSync('apps/board/playwright.config.ts', 'utf8');
+  assert.match(playwrightConfig, /MW_E2E_USE_BUILT_API !== 'true'/u);
 });
 
 test('documentation builds are isolated and portal failures annotate sanitized JUnit names', () => {

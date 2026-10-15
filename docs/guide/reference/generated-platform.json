@@ -314,6 +314,7 @@
       "test:docs-portal": "pnpm --filter @moonwitness/docs test",
       "test:docs-publication": "node --test scripts/check-docs-publication.test.mjs scripts/write-docs-metadata.test.mjs scripts/classify-docs-change.test.mjs scripts/main-ci-policy.test.mjs scripts/maintenance-incident.test.mjs scripts/docs/versioned-site.test.mjs",
       "test:e2e": "node scripts/run-e2e.mjs",
+      "test:e2e:built": "node scripts/run-e2e.mjs --built",
       "test:e2e:diagnostics": "node --test scripts/e2e-preflight-report.test.mjs scripts/summarize-playwright-failures.test.mjs scripts/summarize-junit-failures.test.mjs scripts/ci-diagnostics.test.mjs scripts/ci/build-workspace-package.test.mjs scripts/ci/workspace-build-diagnostics.test.mjs scripts/docker-workspace-manifests.test.mjs scripts/package-manager.test.mjs scripts/ci-build-reuse.test.mjs",
       "test:e2e:visual": "pnpm --filter @moonwitness/board exec playwright test e2e/visual-audit.spec.ts --config playwright.visual.config.ts",
       "test:e2e:visual:matrix": "node scripts/run-visual-matrix.mjs",
@@ -4600,5 +4601,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "1ddd074ddca5c063182ad7dc02e635b5061421d4c0777ba35f5eddd9f929b158"
+  "generatedFromSha256": "340ee1e3c3ef1d45ebac60cb98ff2072782388fcd081f11e6bd1644b77d0247d"
 }
