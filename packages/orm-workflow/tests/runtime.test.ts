@@ -272,6 +272,11 @@ describe('workflow addon', () => {
       .where({ idempotency_key: input.idempotencyKey })
       .first('payload');
     expect(stored?.payload).toBe('{"a":{"first":"one","second":"two"},"z":[1,true]}');
+    expect(new WorkflowEvent().$formatJson({ payload: stored?.payload, action: 'submit' })).toEqual(
+      {
+        action: 'submit',
+      }
+    );
     await expect(
       transitionWorkflow(database, {
         ...input,
@@ -282,16 +287,56 @@ describe('workflow addon', () => {
       transitionWorkflow(database, { ...input, payload: { changed: true } })
     ).rejects.toMatchObject({ code: 'IDEMPOTENCY_CONFLICT' });
     await expect(
-      transitionWorkflow(database, { ...input, payload: { invalid: undefined } })
+      transitionWorkflow(database, { ...input, payload: { invalid: undefined } as never })
     ).rejects.toMatchObject({ code: 'INVALID_EVENT_PAYLOAD' });
     let tooDeep: unknown = 'leaf';
     for (let index = 0; index < 34; index += 1) tooDeep = [tooDeep];
     await expect(
-      transitionWorkflow(database, { ...input, payload: tooDeep })
+      transitionWorkflow(database, { ...input, payload: tooDeep as never })
     ).rejects.toMatchObject({ code: 'INVALID_EVENT_PAYLOAD' });
     await expect(
-      transitionWorkflow(database, { ...input, payload: 'x'.repeat(65_537) })
+      transitionWorkflow(database, { ...input, payload: 'x'.repeat(65_537) as never })
     ).rejects.toMatchObject({ code: 'INVALID_EVENT_PAYLOAD' });
+  });
+
+  it('rolls back the workflow transition when its event payload cannot be persisted', async () => {
+    const database = await setup();
+    const { systemId, adminId, companyId, resourceId } = await actors(database);
+    const started = await startWorkflow(database, {
+      code: 'sample.request_approval',
+      companyId,
+      actorId: systemId,
+      role: 'system',
+      resourceModel: 'base.partner',
+      resourceId,
+      idempotencyKey: 'atomic-start-key-0001',
+    });
+    await database.raw(`
+      CREATE TRIGGER fail_submit_event
+      BEFORE INSERT ON workflow_events
+      WHEN NEW.action = 'submit'
+      BEGIN SELECT RAISE(ABORT, 'injected event failure'); END
+    `);
+
+    await expect(
+      transitionWorkflow(database, {
+        instanceId: started.id,
+        companyId,
+        actorId: adminId,
+        role: 'superadmin',
+        action: 'submit',
+        expectedRevision: 0,
+        idempotencyKey: 'atomic-action-key-0001',
+        payload: { reason: 'synthetic test' },
+      })
+    ).rejects.toThrow('injected event failure');
+
+    await expect(
+      database('workflow_instances').where({ id: started.id }).first('current_state', 'revision')
+    ).resolves.toMatchObject({ current_state: 'draft', revision: 0 });
+    await expect(
+      database('workflow_events').where({ idempotency_key: 'atomic-action-key-0001' })
+    ).resolves.toHaveLength(0);
   });
 
   it('adds the nullable event payload column while upgrading legacy workflow rows', async () => {

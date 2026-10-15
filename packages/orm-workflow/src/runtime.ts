@@ -78,7 +78,16 @@ export class WorkflowError extends Error {
   }
 }
 
-type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
+/** JSON-safe data recorded with a workflow event, never exposed by default ORM serialization. */
+export type WorkflowEventPayload =
+  | null
+  | boolean
+  | number
+  | string
+  | WorkflowEventPayload[]
+  | { [key: string]: WorkflowEventPayload };
+
+type JsonValue = WorkflowEventPayload;
 
 function canonicalJson(value: unknown): string {
   const normalize = (item: unknown, seen: Set<object>, depth: number): JsonValue => {
@@ -420,7 +429,7 @@ export interface TransitionWorkflowInput {
   readonly idempotencyKey: string;
   readonly comment?: string;
   /** Optional canonical JSON attached to this immutable transition event. */
-  readonly payload?: unknown;
+  readonly payload?: WorkflowEventPayload;
   readonly now?: Date;
 }
 
