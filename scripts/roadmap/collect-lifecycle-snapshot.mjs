@@ -1,4 +1,4 @@
-const requiredCheckNames = ['ci-gate'];
+const requiredCheckNames = ['ci-technical-gate'];
 const fullShaPattern = /^[a-f0-9]{40}$/u;
 const sourceLinePattern =
   /^\s*[-*]\s*(?:Source(?: code)? SHA|Source and final test SHA|Source commit pushed|Implementation commit|Local source SHA for test changes|Current source head(?: at evidence capture)?)\s*:\s*[^\r\n]*?\b([a-f0-9]{40})\b[^\r\n]*$/gimu;
@@ -41,17 +41,17 @@ export function selectExactDevPushCiRun(pages, sourceSha) {
 }
 
 /**
- * Convert the exact dev push workflow's ci-gate job into lifecycle check metadata.
+ * Convert the exact dev push workflow's technical gate into lifecycle check metadata.
  * @param {{id:number,head_sha:string}} run
  * @param {unknown} pages
  * @returns {{id:number,name:string,head_sha:string,status:'queued'|'in_progress'|'completed',conclusion:string|null}|undefined}
  */
-export function exactDevPushCiGate(run, pages) {
+export function exactDevPushTechnicalGate(run, pages) {
   const jobs = flattenGitHubPages(pages, 'jobs');
   const gates = jobs.filter(
     (job) =>
       job &&
-      job.name === 'ci-gate' &&
+      job.name === 'ci-technical-gate' &&
       Number.isSafeInteger(job.id) &&
       ['queued', 'in_progress', 'completed'].includes(job.status)
   );

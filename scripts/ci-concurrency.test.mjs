@@ -29,16 +29,27 @@ test('security scans avoid duplicate dev push runs while CI retains its issue-li
   }
 });
 
-test('final CI gate uses built-in Node checks without installing workspace dependencies', () => {
+test('technical gate validates every required lane and stays independent from promotion approval', () => {
+  const technicalJob = workflow.match(/ {2}ci-technical-gate:[\s\S]*?\n {2}ci-gate:/u)?.[0];
+  assert.ok(technicalJob, 'CI should define its technical gate');
+  assert.match(
+    technicalJob,
+    /needs: \[plan, quality, integration, browser, containers, automation, ui\]/u
+  );
+  assert.match(
+    technicalJob,
+    /node --test scripts\/ci-gate\.test\.mjs scripts\/ci-concurrency\.test\.mjs scripts\/scan-test-reports\.test\.mjs/u
+  );
+  assert.doesNotMatch(technicalJob, /CODEOWNER|check-promotion-approval/u);
+
   const gateJob = workflow.match(/ {2}ci-gate:[\s\S]*$/u)?.[0];
   assert.ok(gateJob, 'CI should define its final gate job');
   assert.doesNotMatch(gateJob, /setup-pnpm|pnpm install/u);
   assert.match(gateJob, /actions\/setup-node@[0-9a-f]{40}/u);
   assert.match(gateJob, /node-version: ['"]22['"]/u);
-  assert.match(
-    gateJob,
-    /node --test scripts\/ci-gate\.test\.mjs scripts\/ci-concurrency\.test\.mjs scripts\/scan-test-reports\.test\.mjs/u
-  );
+  assert.match(gateJob, /needs: .*ci-technical-gate/u);
+  assert.match(gateJob, /needs\.ci-technical-gate\.result/u);
+  assert.match(gateJob, /check-promotion-approval\.mjs/u);
 });
 
 test('CI planning pins the supported Node runtime without installing pnpm or workspace dependencies', () => {

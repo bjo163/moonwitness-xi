@@ -403,10 +403,43 @@ jobs:
         env:
           TRIVY_SCAN_OUTCOMES: '["${{ steps.trivy-workspace.outcome }}","${{ steps.trivy-api-image.outcome }}","${{ steps.trivy-board-image.outcome }}"]'
         run: node scripts/check-trivy-sarif.mjs trivy-results.sarif trivy-api-image.sarif trivy-board-image.sarif
+  ci-technical-gate:
+    name: ci-technical-gate
+    if: always()
+    needs: [plan, quality, integration, browser, containers, automation, ui]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Test technical gate policy
+        run: node --test scripts/ci-gate.test.mjs scripts/ci-concurrency.test.mjs scripts/scan-test-reports.test.mjs
+      - name: Require every mandatory technical lane to succeed
+        env:
+          PLAN_RESULT: ${{ needs.plan.result }}
+          SELECTED_JOBS: ${{ needs.plan.outputs.projects }}
+          QUALITY_RESULT: ${{ needs.quality.result }}
+          INTEGRATION_RESULT: ${{ needs.integration.result }}
+          BROWSER_RESULT: ${{ needs.browser.result }}
+          CONTAINERS_RESULT: ${{ needs.containers.result }}
+          AUTOMATION_RESULT: ${{ needs.automation.result }}
+          UI_RESULT: ${{ needs.ui.result }}
+        run: |
+          PLAN_RESULT="$PLAN_RESULT" \
+          SELECTED_JOBS="$SELECTED_JOBS" \
+          QUALITY_RESULT="$QUALITY_RESULT" \
+          INTEGRATION_RESULT="$INTEGRATION_RESULT" \
+          BROWSER_RESULT="$BROWSER_RESULT" \
+          CONTAINERS_RESULT="$CONTAINERS_RESULT" \
+          AUTOMATION_RESULT="$AUTOMATION_RESULT" \
+          UI_RESULT="$UI_RESULT" \
+          node scripts/ci-gate.mjs
   ci-gate:
     name: ci-gate
     if: always()
-    needs: [plan, quality, integration, browser, containers, automation, ui]
+    needs: [plan, quality, integration, browser, containers, automation, ui, ci-technical-gate]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -414,8 +447,6 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22'
-      - name: Test CI gate decisions
-        run: node --test scripts/ci-gate.test.mjs scripts/ci-concurrency.test.mjs scripts/scan-test-reports.test.mjs
       - name: Write CI job summary
         if: always()
         env:
@@ -438,25 +469,14 @@ jobs:
           UI_RESULT="$UI_RESULT" \
           node scripts/ci-gate.mjs || true
       - name: Require every mandatory job to succeed
+        if: always()
         env:
-          PLAN_RESULT: ${{ needs.plan.result }}
-          SELECTED_JOBS: ${{ needs.plan.outputs.projects }}
-          QUALITY_RESULT: ${{ needs.quality.result }}
-          INTEGRATION_RESULT: ${{ needs.integration.result }}
-          BROWSER_RESULT: ${{ needs.browser.result }}
-          CONTAINERS_RESULT: ${{ needs.containers.result }}
-          AUTOMATION_RESULT: ${{ needs.automation.result }}
-          UI_RESULT: ${{ needs.ui.result }}
+          TECHNICAL_GATE_RESULT: ${{ needs.ci-technical-gate.result }}
         run: |
-          PLAN_RESULT="$PLAN_RESULT" \
-          SELECTED_JOBS="$SELECTED_JOBS" \
-          QUALITY_RESULT="$QUALITY_RESULT" \
-          INTEGRATION_RESULT="$INTEGRATION_RESULT" \
-          BROWSER_RESULT="$BROWSER_RESULT" \
-          CONTAINERS_RESULT="$CONTAINERS_RESULT" \
-          AUTOMATION_RESULT="$AUTOMATION_RESULT" \
-          UI_RESULT="$UI_RESULT" \
-          node scripts/ci-gate.mjs
+          if [[ "$TECHNICAL_GATE_RESULT" != "success" ]]; then
+            echo "The technical CI gate result was '$TECHNICAL_GATE_RESULT'." >&2
+            exit 1
+          fi
       - name: Require fresh CODEOWNER approval for sensitive promotions
         if: needs.plan.outputs.approval-required == 'true'
         env:

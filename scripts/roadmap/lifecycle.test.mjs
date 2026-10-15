@@ -19,7 +19,7 @@ const completed = {
   sourceSha,
   devHeadSha: devSha,
   sourceInDev: true,
-  requiredChecks: [check('ci-gate'), check('CodeQL')],
+  requiredChecks: [check('ci-technical-gate'), check('CodeQL')],
 };
 
 test('planned and in-progress work remain open and are not mistaken for delivery', () => {
@@ -95,13 +95,15 @@ test('verified-dev requires current dev ancestry and every required check on exa
     /current dev head SHA/u
   );
   assert.equal(
-    evaluateTaskLifecycle({ ...completed, requiredChecks: [check('ci-gate', sourceSha)] })
+    evaluateTaskLifecycle({ ...completed, requiredChecks: [check('ci-technical-gate', sourceSha)] })
       .deliveryStage,
     'planned'
   );
   assert.equal(
-    evaluateTaskLifecycle({ ...completed, requiredChecks: [check('ci-gate', devSha, 'failure')] })
-      .shouldClose,
+    evaluateTaskLifecycle({
+      ...completed,
+      requiredChecks: [check('ci-technical-gate', devSha, 'failure')],
+    }).shouldClose,
     false
   );
   assert.equal(
@@ -109,8 +111,10 @@ test('verified-dev requires current dev ancestry and every required check on exa
     'planned'
   );
   assert.equal(
-    evaluateTaskLifecycle({ ...completed, requiredChecks: [check('ci-gate', devSha, null)] })
-      .deliveryStage,
+    evaluateTaskLifecycle({
+      ...completed,
+      requiredChecks: [check('ci-technical-gate', devSha, null)],
+    }).deliveryStage,
     'planned'
   );
   assert.equal(evaluateTaskLifecycle({ ...completed, requiredChecks: [] }).shouldClose, false);
@@ -202,7 +206,10 @@ test('rejects malformed identities, SHAs, check names, conclusions, and dependen
   assert.throws(() => evaluateTaskLifecycle({ ...completed, sourceSha: 'abc' }), /sourceSha/u);
   assert.throws(
     () =>
-      evaluateTaskLifecycle({ ...completed, requiredChecks: [check('ci-gate'), check('ci-gate')] }),
+      evaluateTaskLifecycle({
+        ...completed,
+        requiredChecks: [check('ci-technical-gate'), check('ci-technical-gate')],
+      }),
     /unique/u
   );
   assert.throws(
@@ -210,7 +217,7 @@ test('rejects malformed identities, SHAs, check names, conclusions, and dependen
       evaluateTaskLifecycle({
         ...completed,
         requiredChecks: [
-          check('ci-gate', devSha, 'queued'),
+          check('ci-technical-gate', devSha, 'queued'),
           { name: 'other', headSha: devSha, status: 'completed', conclusion: 'impossible' },
         ],
       }),

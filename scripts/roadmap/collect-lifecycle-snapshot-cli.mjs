@@ -7,7 +7,7 @@ import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   collectLifecycleSnapshot,
-  exactDevPushCiGate,
+  exactDevPushTechnicalGate,
   flattenGitHubPages,
   selectExactDevPushCiRun,
 } from './collect-lifecycle-snapshot.mjs';
@@ -29,7 +29,7 @@ async function ghJson(args) {
   return JSON.parse(stdout);
 }
 
-async function currentDevPushCiGate(repository, sourceSha) {
+async function currentDevPushTechnicalGate(repository, sourceSha) {
   const deadline = Date.now() + 25 * 60 * 1000;
   while (Date.now() < deadline) {
     const pages = await ghJson([
@@ -40,13 +40,13 @@ async function currentDevPushCiGate(repository, sourceSha) {
       const jobPages = await ghJson([
         `repos/${repository}/actions/runs/${run.id}/jobs?per_page=100`,
       ]);
-      const gate = exactDevPushCiGate(run, jobPages);
+      const gate = exactDevPushTechnicalGate(run, jobPages);
       if (gate?.status === 'completed') return [gate];
     }
     await delay(15_000);
   }
   throw new Error(
-    `The exact dev push ci-gate did not complete within 25 minutes for ${sourceSha}; no lifecycle snapshot was written.`
+    `The exact dev push ci-technical-gate did not complete within 25 minutes for ${sourceSha}; no lifecycle snapshot was written.`
   );
 }
 
@@ -116,7 +116,7 @@ async function main() {
     main: git(['rev-parse', 'refs/remotes/origin/main']),
   };
   const [checkRuns, releasePages] = await Promise.all([
-    currentDevPushCiGate(repository, branchHeads.dev),
+    currentDevPushTechnicalGate(repository, branchHeads.dev),
     ghJson([`repos/${repository}/releases?per_page=100`]),
   ]);
   const releases = flattenGitHubPages(releasePages);
