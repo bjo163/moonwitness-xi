@@ -13,6 +13,10 @@ const rootManifest = JSON.parse(
 const docsManifest = JSON.parse(
   await readFile(new URL('../apps/docs/package.json', import.meta.url), 'utf8')
 );
+const docsPlaywrightConfig = await readFile(
+  new URL('../apps/docs/playwright.config.ts', import.meta.url),
+  'utf8'
+);
 const uiCatalogManifest = JSON.parse(
   await readFile(new URL('../apps/ui-catalog/package.json', import.meta.url), 'utf8')
 );
@@ -42,6 +46,18 @@ test('CI reuses the validated workspace build only inside its quality job', () =
   assert.match(uiCatalogManifest.scripts.build, /@moonwitness\/ui build/u);
   assert.match(uiCatalogManifest.scripts['build:built'], /tsc -p tsconfig\.json && vite build/u);
   assert.doesNotMatch(uiCatalogManifest.scripts['build:built'], /@moonwitness\/ui build/u);
+});
+
+test('docs portal browser tests build the portal once in Playwright webServer', () => {
+  assert.equal(rootManifest.scripts['test:docs-portal'], 'pnpm --filter @moonwitness/docs test');
+  assert.match(
+    docsPlaywrightConfig,
+    /portal:build && pnpm --filter @moonwitness\/docs exec vite preview/u
+  );
+  assert.match(
+    rootManifest.scripts['docs:build:built'],
+    /docs:check:built[\s\S]*portal:build:built/u
+  );
 });
 
 test('built variants consume existing package output without invoking package builds', () => {

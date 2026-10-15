@@ -57,7 +57,7 @@
     "docs:build:built": "pnpm docs:check:built && node scripts/docs/build-guide.mjs && pnpm --filter @moonwitness/docs portal:build:built",
     "docs:publication:check": "node scripts/check-docs-publication.mjs apps/docs/dist",
     "docs:change:classify": "node scripts/classify-docs-change.mjs",
-    "test:docs-portal": "pnpm docs:build && pnpm --filter @moonwitness/docs test",
+    "test:docs-portal": "pnpm --filter @moonwitness/docs test",
     "test:docs-publication": "node --test scripts/check-docs-publication.test.mjs scripts/write-docs-metadata.test.mjs scripts/classify-docs-change.test.mjs scripts/main-ci-policy.test.mjs scripts/maintenance-incident.test.mjs scripts/docs/versioned-site.test.mjs",
     "test:versioned-docs": "node --test scripts/docs/versioned-site.test.mjs",
     "test:maintenance-incidents": "node --test scripts/maintenance-incident.test.mjs",
