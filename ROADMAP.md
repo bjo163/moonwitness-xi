@@ -237,8 +237,8 @@ Track approved through ADR 0004 on 2026-10-15. The existing 148 M-series tasks a
 - [x] K1-003 Source artifact and rights schemas. Evidence: [K1-003](docs/roadmap/evidence/K1-003.md).
 - [x] K1-004 PROV-based activity and evidence contracts. Evidence: [K1-004](docs/roadmap/evidence/K1-004.md).
 - [x] K1-005 Standalone offline knowledge validator CLI. Evidence: [K1-005](docs/roadmap/evidence/K1-005.md).
-- [ ] K1-006 Deterministic canonical JSON and snapshot hashing.
-- [ ] K1-007 Independent ontology/corpus schema versioning.
+- [x] K1-006 Deterministic canonical JSON and snapshot hashing. Evidence: [K1-006](docs/roadmap/evidence/K1-006.md).
+- [ ] K1-007 Independent ontology/corpus schema versioning (historical-record verification awaits K0-006 inventory). Evidence: [K1-007](docs/roadmap/evidence/K1-007.md).
 - [ ] K2-001 Deterministic offline ingestion adapter.
 - [ ] K2-002 Content-addressed raw artifact store.
 - [ ] K2-003 Dataset release manifest and rollback pointers.

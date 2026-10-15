@@ -134,10 +134,10 @@ The source planning bundle is `MOONWITNESS_XI_LOCAL_AI_REBUILD_PLAN_2026-10-15/`
 ## K1-007 — Independent ontology/corpus schema versioning
 
 - Priority: P0; risk: normal.
-- Depends on: `K1-005`.
+- Depends on: `K1-005`, `K0-006` for historical-record acceptance.
 - File scope: `ontology/versions/`, `docs/knowledge/`.
 - Deliverable: Version contract, semantic diff and compatibility matrix.
-- Acceptance: Old released records validate under declared schema or explicit migration; incompatible changes blocked.
+- Acceptance: Each available old released record validates under its declared immutable schema or has an explicit migration; incompatible changes are blocked. If no historical records are available, synthetic fixtures prove the gate but the task remains in progress until K0-006 establishes the inventory limitation and records the final disposition.
 - Verification target: `version upgrade/downgrade negative tests`. This is a target, not evidence that the command exists or has passed.
 
 ## K2-001 — Deterministic offline ingestion adapter

@@ -31,7 +31,7 @@ test('local and CI unit lanes run the offline knowledge CLI against the existing
   const runner = await readFile(new URL('./run-unit-tests.mjs', import.meta.url), 'utf8');
   assert.equal(
     rootManifest.scripts['test:knowledge-cli:built'],
-    'node --test scripts/knowledge/validate.test.mjs'
+    'node --test scripts/knowledge/validate.test.mjs scripts/knowledge/snapshot.test.mjs'
   );
   assert.match(rootManifest.scripts['test:unit:built'], /pnpm test:knowledge-cli:built/u);
   assert.match(runner, /run\(\['run', 'test:knowledge-cli:built'\]/u);

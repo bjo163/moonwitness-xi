@@ -1530,17 +1530,21 @@
       "output": "JCS-compatible hashing and stable manifest order; dataset digest",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
-      "priority": "p0"
+      "priority": "p0",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/K1-006.md"
     },
     {
       "id": "K1-007",
       "title": "Independent ontology/corpus schema versioning",
       "milestone": "K1",
-      "dependsOn": ["K1-005"],
+      "dependsOn": ["K1-005", "K0-006"],
       "output": "Version contract, semantic diff and compatibility matrix",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
-      "priority": "p0"
+      "priority": "p0",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/K1-007.md"
     },
     {
       "id": "K2-001",

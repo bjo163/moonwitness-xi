@@ -15,7 +15,7 @@ function compareCodePoints(left, right) {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
-async function loadJsonTree(root, relativeDirectory, issues) {
+async function loadJsonTree(root, relativeDirectory, issues, parseJson) {
   const absoluteDirectory = path.join(root, relativeDirectory);
   let entries;
   try {
@@ -48,14 +48,14 @@ async function loadJsonTree(root, relativeDirectory, issues) {
       continue;
     }
     if (entry.isDirectory()) {
-      files.push(...(await loadJsonTree(root, relativePath, issues)));
+      files.push(...(await loadJsonTree(root, relativePath, issues, parseJson)));
       continue;
     }
     if (!entry.isFile() || path.extname(entry.name).toLowerCase() !== '.json') continue;
     try {
       files.push({
         relativePath,
-        value: JSON.parse(await readFile(absolutePath, 'utf8')),
+        value: parseJson(await readFile(absolutePath, 'utf8')),
       });
     } catch (error) {
       issues.push(
@@ -70,7 +70,7 @@ async function loadJsonTree(root, relativeDirectory, issues) {
   return files;
 }
 
-async function loadRootJson(root, filename, issues) {
+async function loadRootJson(root, filename, issues, parseJson) {
   const absolutePath = path.join(root, filename);
   try {
     const details = await lstat(absolutePath);
@@ -78,7 +78,7 @@ async function loadRootJson(root, filename, issues) {
       issues.push(issue(filename, 'fileType', 'dataset manifest must be a regular file'));
       return undefined;
     }
-    return { relativePath: filename, value: JSON.parse(await readFile(absolutePath, 'utf8')) };
+    return { relativePath: filename, value: parseJson(await readFile(absolutePath, 'utf8')) };
   } catch (error) {
     if (error?.code === 'ENOENT') return undefined;
     issues.push(
@@ -116,9 +116,10 @@ function derivationIdentity(derivation) {
 }
 
 /** Validate the documented filesystem layout using the compiled local package. */
-export async function validateKnowledgeDataset(directory) {
+export async function validateKnowledgeDataset(directory, { includeData = false } = {}) {
   const {
     knowledgeRecordKinds,
+    parseCanonicalJson,
     resolveKnowledgeIdentity,
     validateCanonicalKnowledgeId,
     validateKnowledgeProvenanceGraph,
@@ -152,10 +153,10 @@ export async function validateKnowledgeDataset(directory) {
       counts: { records: 0, aliases: 0, sourceArtifacts: 0, provenanceActivities: 0 },
     };
   }
-  const recordFiles = await loadJsonTree(root, 'records', issues);
-  const aliasesFile = await loadRootJson(root, 'aliases.json', issues);
-  const artifactFiles = await loadJsonTree(root, 'source-artifacts', issues);
-  const provenanceFile = await loadRootJson(root, 'provenance.json', issues);
+  const recordFiles = await loadJsonTree(root, 'records', issues, parseCanonicalJson);
+  const aliasesFile = await loadRootJson(root, 'aliases.json', issues, parseCanonicalJson);
+  const artifactFiles = await loadJsonTree(root, 'source-artifacts', issues, parseCanonicalJson);
+  const provenanceFile = await loadRootJson(root, 'provenance.json', issues, parseCanonicalJson);
 
   if (recordFiles.length === 0) {
     issues.push(issue('records', 'required', 'dataset must contain JSON records in records/'));
@@ -440,6 +441,25 @@ export async function validateKnowledgeDataset(directory) {
   return {
     valid: issues.length === 0,
     issues,
+    ...(includeData && issues.length === 0
+      ? {
+          dataset: {
+            records: [...records.values()],
+            aliases,
+            sourceArtifacts: artifactFiles.map((file) => file.value),
+            ...(provenance
+              ? {
+                  provenance: {
+                    records: [...provenance.records].sort((a, b) => compareCodePoints(a.id, b.id)),
+                    activities: [...provenance.activities].sort((a, b) =>
+                      compareCodePoints(a.id, b.id)
+                    ),
+                  },
+                }
+              : {}),
+          },
+        }
+      : {}),
     counts: {
       records: records.size,
       aliases: aliases.length,

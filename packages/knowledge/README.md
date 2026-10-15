@@ -67,6 +67,28 @@ Use `--json` for machine-readable diagnostics. No approval, rights clearance,
 private-data consent, or publication authorization is inferred from a passing
 validation result. The validator fixture contains synthetic values only.
 
+## Canonical dataset snapshots
+
+After the package build, create a deterministic content digest for a validated
+dataset:
+
+```sh
+node scripts/knowledge/snapshot.mjs path/to/dataset
+```
+
+The command prints a manifest containing SHA-256 digests for each record, alias,
+source-artifact manifest, and provenance graph. Collection ordering, JSON object
+key ordering, and filenames do not affect the digest; array ordering inside a
+document remains meaningful. The command uses RFC 8785 canonical JSON, rejects
+duplicate JSON object names and invalid I-JSON values, and returns no digest for
+an invalid dataset. Snapshot hashes identify structural content; they do not
+establish source rights or prove that external bytes match metadata.
+
+`createKnowledgeSnapshot`, `canonicalizeJson`, `hashCanonicalJson`, and
+`parseCanonicalJson` are exported from the package root. The independent ontology
+and corpus version registry, compatibility contract, and migration gate are
+documented in [schema versioning](../../docs/knowledge/schema-versioning.md).
+
 ```sh
 pnpm --filter @moonwitness/knowledge build
 pnpm --filter @moonwitness/knowledge typecheck
