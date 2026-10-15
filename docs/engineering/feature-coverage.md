@@ -1,8 +1,10 @@
-# Feature coverage inventory (local rechecks through `ef23d43`; 2026-10-15)
+# Feature coverage inventory (local rechecks through `d28ddaa`; 2026-10-15)
 
 This report expands the initial [feature-to-test matrix](feature-matrix.md) with an explicit status, priority, accountable role, executed assertion references, and remaining gap for every inventory row. It is a coverage inventory, not a claim that every feature is release-ready.
 
 ## Latest exact-head execution
+
+- On PostgreSQL source `d28ddaa4ec2139d285502384211b816c49174dbe`, the focused tenant-isolation case passed through both REST and JSON-RPC: an own-company activity persisted, foreign-company JSON-RPC create was rejected without a row, and foreign-company reassignment was rejected without changing the existing row. Its setup login and tenant cases passed 2/2; 10 unrelated PostgreSQL tests were intentionally filtered. The same-source integration TypeScript compile, targeted ESLint, Prettier, and diff checks passed. Full PostgreSQL integration/performance had passed 13/13 on parent `c20fb1e` before the additional test-only assertions; the disposable databases were dropped and absence verified. This does not close the broader access matrix, retention policy, or hosted candidate acceptance.
 
 - On exact checked-out `dev` SHA `ef23d433e77357ddf74420fcd9f5a6c4298e446b`, PostgreSQL integration/performance passed 13/13 and CI-mode Board E2E passed 24/24 on Chromium with one worker. Both used independent disposable PostgreSQL 16.15 databases, dropped and verified absent after the run. API and Board build preflights passed. This refreshes local evidence only; hosted exact-candidate checks, the scheduled Firefox/WebKit PostgreSQL matrix, security disposition, and protected promotion remain open.
 
