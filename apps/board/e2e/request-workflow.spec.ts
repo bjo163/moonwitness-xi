@@ -18,7 +18,7 @@ interface ApiRecord<T> {
   data: T;
 }
 
-test('requester submits a seeded approval workflow and superadmin approves it in Board', async ({
+test('requester submits a request that superadmin approves or rejects in Board', async ({
   page,
 }) => {
   test.setTimeout(90_000);
@@ -105,6 +105,21 @@ test('requester submits a seeded approval workflow and superadmin approves it in
   const createdRequest = (await requestResponse.json()) as ApiRecord<CreatedRecord>;
   expect(createdRequest.data.create_uid).toBe(requesterProfile.data.id);
 
+  const rejectionRequestTitle = `Workflow Board rejection E2E ${suffix}`;
+  const rejectionRequestResponse = await page.request.post('/api/request.purchase', {
+    headers: requesterHeaders,
+    data: {
+      title: rejectionRequestTitle,
+      description: 'Verify the request rejection journey through the Board UI.',
+      amount_minor: 42000,
+      currency_id: currencies.data[0]!.id,
+      company_id: requesterProfile.data.company_id,
+    },
+  });
+  expect(rejectionRequestResponse.status()).toBe(201);
+  const rejectionRequest = (await rejectionRequestResponse.json()) as ApiRecord<CreatedRecord>;
+  expect(rejectionRequest.data.create_uid).toBe(requesterProfile.data.id);
+
   await page.goto(`/m/request.purchase/${createdRequest.data.id}`);
   const workflow = page.getByRole('region', { name: 'Approval workflow' });
   await expect(workflow).toBeVisible();
@@ -119,6 +134,13 @@ test('requester submits a seeded approval workflow and superadmin approves it in
   await expect(workflow.getByRole('list', { name: 'Approval history' })).toContainText(
     'Please review this purchase request.'
   );
+
+  await page.goto(`/m/request.purchase/${rejectionRequest.data.id}`);
+  const rejectionWorkflow = page.getByRole('region', { name: 'Approval workflow' });
+  await rejectionWorkflow.getByRole('button', { name: 'Start Purchase request approval' }).click();
+  await rejectionWorkflow.getByLabel('Review comment').fill('Please review this rejection case.');
+  await rejectionWorkflow.getByRole('button', { name: 'submit', exact: true }).click();
+  await expect(rejectionWorkflow.getByText(/Current state: submitted · Revision 1/u)).toBeVisible();
 
   await page.getByRole('button', { name: requesterLogin }).click();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();
@@ -176,6 +198,68 @@ test('requester submits a seeded approval workflow and superadmin approves it in
     expect.arrayContaining([
       expect.objectContaining({ action: 'submit', from_state: 'draft', to_state: 'submitted' }),
       expect.objectContaining({ action: 'approve', from_state: 'submitted', to_state: 'approved' }),
+    ])
+  );
+
+  await page
+    .getByRole('navigation', { name: 'Models' })
+    .getByRole('link', { name: 'Purchase Requests' })
+    .click();
+  await page.getByRole('row').filter({ hasText: rejectionRequestTitle }).click();
+  const reviewRejectionWorkflow = page.getByRole('region', { name: 'Approval workflow' });
+  await expect(
+    reviewRejectionWorkflow.getByText(/Current state: submitted · Revision 1/u)
+  ).toBeVisible();
+  await reviewRejectionWorkflow
+    .getByLabel('Review comment')
+    .fill('Rejected in the Board E2E review.');
+  await reviewRejectionWorkflow.getByRole('button', { name: 'reject', exact: true }).click();
+  await expect(
+    reviewRejectionWorkflow.getByText('rejected', { exact: true }).first()
+  ).toBeVisible();
+  await expect(
+    reviewRejectionWorkflow.getByText(/Current state: rejected · Revision 2/u)
+  ).toBeVisible();
+  await expect(
+    reviewRejectionWorkflow.getByRole('list', { name: 'Approval history' })
+  ).toContainText('Rejected in the Board E2E review.');
+
+  const rejectionInstancesResponse = await page.request.get('/workflows/instances', {
+    headers: reviewerHeaders,
+    params: {
+      limit: '10',
+      resource_model: 'request.purchase',
+      resource_id: String(rejectionRequest.data.id),
+    },
+  });
+  expect(rejectionInstancesResponse.status()).toBe(200);
+  const rejectionInstances = (await rejectionInstancesResponse.json()) as ApiRecord<
+    Array<{ id: number; current_state: string; status: string; revision: number }>
+  >;
+  expect(rejectionInstances.data).toContainEqual(
+    expect.objectContaining({ current_state: 'rejected', status: 'rejected', revision: 2 })
+  );
+  const rejectionInstance = rejectionInstances.data.find(
+    ({ current_state }) => current_state === 'rejected'
+  );
+  expect(rejectionInstance).toBeDefined();
+  const rejectionHistoryResponse = await page.request.get(
+    `/workflows/instances/${rejectionInstance!.id}`,
+    { headers: reviewerHeaders }
+  );
+  expect(rejectionHistoryResponse.status()).toBe(200);
+  const rejectionHistory = (await rejectionHistoryResponse.json()) as ApiRecord<{
+    events: Array<{ action: string; from_state: string; to_state: string; comment: string | null }>;
+  }>;
+  expect(rejectionHistory.data.events).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ action: 'submit', from_state: 'draft', to_state: 'submitted' }),
+      expect.objectContaining({
+        action: 'reject',
+        from_state: 'submitted',
+        to_state: 'rejected',
+        comment: 'Rejected in the Board E2E review.',
+      }),
     ])
   );
 });
