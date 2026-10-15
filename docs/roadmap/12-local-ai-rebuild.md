@@ -237,7 +237,7 @@ The source planning bundle is `MOONWITNESS_XI_LOCAL_AI_REBUILD_PLAN_2026-10-15/`
 - File scope: `packages/research/`, `ontology/mappings/`.
 - Deliverable: Match candidates, explicit accepted/rejected identity decisions.
 - Acceptance: Similarity never produces auto-sameAs; conflict is not overwritten.
-- Verification target: `homonym and multilingual alias fixtures`. This is a target, not evidence that the command exists or has passed.
+- Verification: [K3-003 evidence](evidence/K3-003.md): unresolved candidates, homonym/multilingual aliases, explicit reviewed decisions, retained contradictions, and rejected cross-candidate summaries.
 
 ## K3-004 — Typed reviewed relation graph projection
 

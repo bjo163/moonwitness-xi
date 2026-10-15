@@ -1677,7 +1677,9 @@
       "output": "Match candidates, explicit accepted/rejected identity decisions",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
-      "priority": "p0"
+      "priority": "p0",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/K3-003.md"
     },
     {
       "id": "K3-004",

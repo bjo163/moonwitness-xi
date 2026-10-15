@@ -249,7 +249,7 @@ Track approved through ADR 0004 on 2026-10-15. The existing 148 M-series tasks a
 - [x] K2-008 Corpus offline rebuild and snapshot certification. Evidence: [K2-008](docs/roadmap/evidence/K2-008.md).
 - [x] K3-001 Assertion with scope, polarity and epistemic status. Evidence: [K3-001](docs/roadmap/evidence/K3-001.md).
 - [x] K3-002 Evidence links and exact source selectors. Evidence: [K3-002](docs/roadmap/evidence/K3-002.md).
-- [ ] K3-003 Alias/identity reconciliation with human decision.
+- [x] K3-003 Alias/identity reconciliation with human decision. Evidence: [K3-003](docs/roadmap/evidence/K3-003.md).
 - [ ] K3-004 Typed reviewed relation graph projection.
 - [ ] K3-005 Research review and immutable decision event flow.
 - [ ] K3-006 Cross-domain explanation and alternative hypothesis API.
