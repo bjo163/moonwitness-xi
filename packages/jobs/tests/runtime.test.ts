@@ -437,9 +437,11 @@ describe('durable job runtime', () => {
       });
 
       expect(await enqueueDueCrons({ now })).toBe(1);
-      expect(await Job.query().where({ cron_id: cron.id })).toHaveLength(1);
+      const jobs = await Job.query().where({ cron_id: cron.id });
+      expect(jobs).toHaveLength(1);
+      expect(jobs[0]?.schedule_key).toBe(`cron:${cron.id}:2026-11-01T05:30:00.000Z`);
       const advanced = await Cron.query().findById(cron.id).throwIfNotFound();
-      expect(Date.parse(advanced.next_run_at)).toBeGreaterThan(now.getTime());
+      expect(advanced.next_run_at).toBe('2026-11-02T06:30:00.000Z');
     } finally {
       unregister();
     }
