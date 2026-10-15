@@ -24,8 +24,8 @@ Jika pelaksanaan sudah diminta, kerjakan kartu dalam scope yang diotorisasi. Tid
 3. **Verify locally:** jalankan tes paling relevan, lint/typecheck package terdampak, serta integration saat kontrak lintas-package berubah.
 4. **Review:** baca seluruh diff untuk secret, explicit `any`, unsafe assertion, debug, duplikasi, undocumented public change dan generated drift.
 5. **Record:** tulis actual command/result, tests yang tidak dapat dijalankan dan alasannya, dependency eksternal, serta source SHA. Jangan mencatat pass sebelum command benar-benar selesai.
-6. **Deliver batch:** commit atomik lokal; gabungkan perubahan terkait menjadi satu batch push ke `dev` tanpa force. Saat CI kandidat penuh berjalan, lanjutkan kerja/commit lokal dan antrekan push sampai run terminal; push perbaikan mendesak boleh mengganti kandidat dengan sadar. Verifikasi remote SHA dan catat run ID. Aturan ini menjadi acuan bila catatan lama meminta push per task.
-7. **Continue:** segera mulai batch independen berikutnya. Tunggu hanya ketika pekerjaan berikutnya benar-benar memakai output yang belum tersedia dari upstream CI, approval, atau remote write.
+6. **Deliver batch:** commit atomik lokal; gabungkan perubahan terkait menjadi satu batch push ke `dev` tanpa force. Verifikasi remote SHA dan catat run ID. Aturan ini menjadi acuan bila catatan lama meminta push per task.
+7. **Continue:** segera lanjutkan pekerjaan lokal independen tanpa menunggu hosted CI. Serialkan tindakan remote yang berbagi writer atau dapat membatalkan bukti: tunggu issue-sync apply selesai sebelum push yang memilih task berikutnya; jangan dispatch ulang stale batch setelah batas retry tercapai; jangan membuat PR/tag/release bersamaan. Untuk CI biasa, push batch berikutnya hanya jika batch itu siap dan ada alasan perubahan; push baru dengan sadar mengganti kandidat exact-SHA dan membatalkan penerimaan CI kandidat lama. Hosted CI memverifikasi hasil, bukan antrean untuk mulai kerja lokal.
 8. **Close:** centang master hanya setelah semua acceptance lengkap. Jika external activation belum terjadi, item tetap unchecked/partial dengan owner dan exit condition.
 
 ### Verification ladder untuk menghindari suite berulang
@@ -42,6 +42,13 @@ Jika pelaksanaan sudah diminta, kerjakan kartu dalam scope yang diotorisasi. Tid
 Jangan mengulang gate yang input, source terdampak, dan runtime-nya identik dengan bukti yang masih berlaku. Catat hubungan source SHA ke evidence; perubahan source yang tidak terkait tidak membatalkan semua evidence. Jika Windows tidak mendukung atau memperlambat scanner/container yang ditetapkan Linux, jalankan scan exact-source pada runner Linux resmi; jangan mengganti scanner atau menyatakan pass dari scan parsial.
 
 Version bump mengikuti release planner dan substantive release batch, bukan setiap commit. Jangan membuat empty commit atau memasukkan file pengguna yang tidak terkait. `main` hanya lewat protected PR setelah required checks dan review; jangan deploy aplikasi. Lihat [kontrak delivery](ISSUE-SYNC-CONTRACT.md).
+
+### Serialisasi Actions issue writer
+
+- Sebelum push, periksa apakah workflow Roadmap issue sync pada `dev` sedang berada di job apply. Jika ya, jangan push atau dispatch run lain yang menulis issue sampai job itu terminal; audit dan coding lokal tetap boleh berjalan.
+- Jika apply menunggu CI exact-SHA dan `dev` bergerak, ikuti hanya bounded recovery workflow yang tersedia. Jangan menaikkan retry cap atau mengulang workflow-dispatch manual setelah exhaustion. Pastikan log menyatakan apakah issue write sudah dicapai sebelum menyimpulkan status issue.
+- Setelah job terminal, periksa hasil issue projection dan CI SHA terbaru, lalu siapkan satu batch lokal yang sudah terverifikasi dan lakukan satu push. Hindari push evidence-only beruntun saat apply aktif.
+- Pengecualian: perbaikan mendesak boleh mengganti kandidat bila ada bug/security blocker; catat SHA lama yang tersupersede, dampak ke gate, dan pastikan apply lama fail-closed sebelum melanjutkan.
 
 ## 4. Perintah yang sudah tersedia pada baseline
 
