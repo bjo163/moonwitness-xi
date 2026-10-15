@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -73,6 +73,55 @@ describe('private archive import manifest', () => {
       createPrivateArchiveImportManifest(request(root, { workspaceRoot: root }))
     ).rejects.toThrow('rootDirectory must be outside the workspace');
     await expect(readdir(root)).resolves.toEqual(['archive.json']);
+  });
+
+  it('refuses an intake root nested anywhere inside the workspace', async () => {
+    const container = await mkdtemp(path.join(os.tmpdir(), 'moonwitness-private-workspace-'));
+    temporaryRoots.push(container);
+    const workspace = path.join(container, 'workspace');
+    const root = path.join(workspace, 'private', 'intake');
+    await mkdir(root, { recursive: true });
+    await writeFile(path.join(root, 'archive.json'), sourceBytes);
+
+    await expect(
+      createPrivateArchiveImportManifest(request(root, { workspaceRoot: workspace }))
+    ).rejects.toThrow('rootDirectory must be outside the workspace');
+    await expect(readdir(root)).resolves.toEqual(['archive.json']);
+  });
+
+  it('rejects source and manifest-parent symlinks', async ({ skip }) => {
+    const root = await rootFixture();
+    const sourceLink = path.join(root, 'source-link.json');
+    const outputTarget = path.join(root, 'actual-output');
+    const outputLink = path.join(root, 'output-link');
+    await mkdir(outputTarget);
+
+    try {
+      await symlink(path.join(root, 'archive.json'), sourceLink, 'file');
+      await symlink(outputTarget, outputLink, process.platform === 'win32' ? 'junction' : 'dir');
+    } catch (error) {
+      const code = error instanceof Error && 'code' in error ? error.code : undefined;
+      if (
+        process.platform === 'win32' &&
+        (code === 'EPERM' || code === 'EACCES' || code === 'ENOTSUP')
+      ) {
+        skip('The current Windows environment does not permit creating symbolic links');
+      }
+      throw error;
+    }
+
+    await expect(
+      createPrivateArchiveImportManifest(
+        request(root, {
+          sourcePath: 'source-link.json',
+          consent: consent({ sourcePath: 'source-link.json' }),
+        })
+      )
+    ).rejects.toThrow('cannot traverse symbolic links');
+    await expect(
+      createPrivateArchiveImportManifest(request(root, { manifestPath: 'output-link/intake.json' }))
+    ).rejects.toThrow('manifestPath parent directories must be real directories');
+    await expect(readdir(outputTarget)).resolves.toEqual([]);
   });
 
   it('records only source metadata and scoped consent for a local synthetic archive', async () => {
@@ -149,6 +198,14 @@ describe('private archive import manifest', () => {
     });
     expect(await readFile(path.join(root, 'manifests/intake.json'), 'utf8')).toBe(before);
     expect(first.manifestId).toBe('synthetic-intake-v1');
+  });
+
+  it('refuses to use the source file as the manifest destination', async () => {
+    const root = await rootFixture();
+    await expect(
+      createPrivateArchiveImportManifest(request(root, { manifestPath: 'archive.json' }))
+    ).rejects.toThrow('manifestPath must not overwrite the source');
+    await expect(readFile(path.join(root, 'archive.json'))).resolves.toEqual(sourceBytes);
   });
 
   it('rejects unbound manifest declarations and unknown fields', () => {
