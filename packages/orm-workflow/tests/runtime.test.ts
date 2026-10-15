@@ -76,7 +76,7 @@ describe('workflow addon', () => {
         .first()
     ).toMatchObject({ count: 1 });
     expect(
-      await database('_orm_addons').where({ name: 'workflow', version: '1.1.0' }).first()
+      await database('_orm_addons').where({ name: 'workflow', version: '1.2.0' }).first()
     ).toBeDefined();
     await installAddons(database, [baseManifest, jobsManifest, notificationManifest, manifest]);
     expect(await database('workflow_definitions').count({ count: '*' }).first()).toMatchObject({
@@ -299,6 +299,38 @@ describe('workflow addon', () => {
     ).rejects.toMatchObject({ code: 'INVALID_EVENT_PAYLOAD' });
   });
 
+  it('rejects workflow event updates and deletes through ORM and raw SQL', async () => {
+    const database = await setup();
+    const { systemId, companyId, resourceId } = await actors(database);
+    const started = await startWorkflow(database, {
+      code: 'sample.request_approval',
+      companyId,
+      actorId: systemId,
+      role: 'system',
+      resourceModel: 'base.partner',
+      resourceId,
+      idempotencyKey: 'immutable-start-0001',
+    });
+    const event = await database('workflow_events').where({ instance_id: started.id }).first('id');
+    if (!event) throw new Error('Workflow start event is missing');
+
+    await expect(
+      database('workflow_events').where({ id: event.id }).update({ action: 'rewritten' })
+    ).rejects.toThrow('Workflow events are append-only');
+    await expect(database('workflow_events').where({ id: event.id }).delete()).rejects.toThrow(
+      'Workflow events are append-only'
+    );
+    await expect(
+      WorkflowEvent.query(database).findById(event.id).patch({ action: 'rewritten' })
+    ).rejects.toThrow('Workflow events are append-only');
+    await expect(WorkflowEvent.query(database).deleteById(event.id)).rejects.toThrow(
+      'Workflow events are append-only'
+    );
+    await expect(
+      database('workflow_events').where({ id: event.id }).first('action')
+    ).resolves.toMatchObject({ action: 'start' });
+  });
+
   it('rolls back the workflow transition when its event payload cannot be persisted', async () => {
     const database = await setup();
     const { systemId, adminId, companyId, resourceId } = await actors(database);
@@ -372,7 +404,7 @@ describe('workflow addon', () => {
     expect(
       await database('_orm_addons').where({ name: 'workflow' }).first('version')
     ).toMatchObject({
-      version: '1.1.0',
+      version: '1.2.0',
     });
   });
 

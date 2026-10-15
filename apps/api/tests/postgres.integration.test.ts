@@ -888,6 +888,21 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
           idempotency_key: `start:${startPayload.idempotency_key}`,
         })
       ).resolves.toHaveLength(1);
+      const startEvent = await workflowDb('workflow_events')
+        .where({ idempotency_key: `start:${startPayload.idempotency_key}` })
+        .first('id', 'action', 'payload', 'revision');
+      if (!startEvent) throw new Error('PostgreSQL workflow start event is missing');
+      await expect(
+        workflowDb('workflow_events').where({ id: startEvent.id }).update({ action: 'tampered' })
+      ).rejects.toThrow();
+      await expect(
+        workflowDb('workflow_events').where({ id: startEvent.id }).delete()
+      ).rejects.toThrow();
+      await expect(
+        workflowDb('workflow_events')
+          .where({ id: startEvent.id })
+          .first('id', 'action', 'payload', 'revision')
+      ).resolves.toEqual(startEvent);
 
       const submitted = await workflowApp.inject({
         method: 'POST',
