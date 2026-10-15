@@ -9,6 +9,8 @@ export interface FieldOptions<T extends Scalar = Scalar> {
   unique?: boolean;
   /** Excludes the field from serialized records and generic query inputs. */
   hidden?: boolean;
+  /** Excludes the field from audit and outbox snapshots while keeping normal authorized reads. */
+  sensitive?: boolean;
   default?: T;
   /** Human-readable label for generated UIs; defaults to the humanized field name. */
   label?: string;

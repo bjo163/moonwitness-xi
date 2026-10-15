@@ -30,7 +30,13 @@ export function auditSnapshot(model: typeof BaseModel, record: unknown): JsonObj
   const modelHidden = new Set(model.hiddenFields ?? []);
   const snapshot: JsonObject = {};
   for (const [key, value] of Object.entries(source)) {
-    if (keys.has(key) && !modelHidden.has(key) && !isAuditSensitiveField(key) && isJsonValue(value))
+    if (
+      keys.has(key) &&
+      !modelHidden.has(key) &&
+      fields?.[key]?.sensitive !== true &&
+      !isAuditSensitiveField(key) &&
+      isJsonValue(value)
+    )
       snapshot[key] = value;
   }
   return snapshot;

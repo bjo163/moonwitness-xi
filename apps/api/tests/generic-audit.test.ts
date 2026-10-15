@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defineModel, fields } from '@moonwitness/orm';
+import { PartnerBank } from '@moonwitness/orm-base';
 import { auditSnapshot, isAuditSensitiveField } from '../src/routes/generic-audit.js';
 
 const CredentialProbe = defineModel('test.audit_credential_probe', {
@@ -17,6 +18,25 @@ const CredentialProbe = defineModel('test.audit_credential_probe', {
 });
 
 describe('generic audit snapshots', () => {
+  it('omits explicitly sensitive business fields but keeps safe fields', () => {
+    const accountNumber = 'private-account-number-sentinel';
+    const snapshot = auditSnapshot(PartnerBank, {
+      id: 9,
+      acc_number: accountNumber,
+      sanitized_acc_number: '••••7890',
+      acc_holder_name: 'Example Holder',
+      is_primary: true,
+    });
+
+    expect(snapshot).toEqual({
+      id: 9,
+      sanitized_acc_number: '••••7890',
+      acc_holder_name: 'Example Holder',
+      is_primary: true,
+    });
+    expect(JSON.stringify(snapshot)).not.toContain(accountNumber);
+  });
+
   it('excludes credential-like declared fields from audit and outbox snapshots', () => {
     const snapshot = auditSnapshot(CredentialProbe, {
       id: 41,

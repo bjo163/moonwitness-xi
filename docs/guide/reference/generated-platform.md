@@ -1,6 +1,6 @@
 # Generated platform reference
 
-Source fingerprint: `53a3da1917f8ba60faf90c75adfcc8f5efb2ea1cbe2922617cf569cb1bb9f6ce`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
+Source fingerprint: `257c453e2463fbd8a9fce3e0b27d33833d041b71be4a4312332fc52a14b6f66b`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
 
 ## Workspace packages and apps
 
@@ -9,7 +9,7 @@ Source fingerprint: `53a3da1917f8ba60faf90c75adfcc8f5efb2ea1cbe2922617cf569cb1bb
 | `@moonwitness/api`              | App     | 1.0.0-rc.1 | `attachments:reconcile`, `build`, `dev`, `jobs:outbox`, `jobs:scheduler`, `jobs:worker`, `reset:superadmin-password`, `revoke:auth-sessions`, `start`, `test`, `visual-audit:server` |
 | `@moonwitness/board`            | App     | 1.0.0-rc.1 | `build`, `dev`, `lint`, `preview`, `typecheck`                                                                                                                                       |
 | `@moonwitness/docs`             | App     | 1.0.0-rc.1 | `dev`, `portal:build`, `portal:build:built`, `preview`, `test`, `typecheck`                                                                                                          |
-| `@moonwitness/ui-catalog`       | App     | 1.0.0-rc.1 | `build`, `dev`, `preview`, `test`                                                                                                                                                    |
+| `@moonwitness/ui-catalog`       | App     | 1.0.0-rc.1 | `build`, `build:built`, `dev`, `preview`, `test`                                                                                                                                     |
 | `@moonwitness/assets`           | Package | 1.0.0-rc.1 | —                                                                                                                                                                                    |
 | `@moonwitness/auth`             | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/client`           | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
