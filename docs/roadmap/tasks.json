@@ -1566,7 +1566,9 @@
       "output": "Raw-byte immutable blob storage contract and SHA integrity",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
-      "priority": "p0"
+      "priority": "p0",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/K2-002.md"
     },
     {
       "id": "K2-003",

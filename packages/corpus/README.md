@@ -35,3 +35,12 @@ writing. Output is staged beside its destination and published by rename; an
 existing release path is immutable and cannot be overwritten. A failed parse,
 checksum, or record validation leaves the prior release untouched. Synthetic
 fixtures are used in tests; no historical or third-party corpus is bundled.
+
+## Content-addressed raw artifacts
+
+`putRawArtifact` stores exact bytes under `sha256/<first-two-hex>/<sha256>` in an
+existing store directory. The supplied digest must match the bytes. Repeating
+the same write is idempotent; a corrupt existing object is reported and never
+replaced. `readRawArtifact` verifies the digest again before returning bytes.
+The store rejects malformed digests, symbolic links, and non-directory path
+segments. It stores bytes only; rights and publication decisions remain separate.

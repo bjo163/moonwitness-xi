@@ -240,7 +240,7 @@ Track approved through ADR 0004 on 2026-10-15. The existing 148 M-series tasks a
 - [x] K1-006 Deterministic canonical JSON and snapshot hashing. Evidence: [K1-006](docs/roadmap/evidence/K1-006.md).
 - [ ] K1-007 Independent ontology/corpus schema versioning (historical-record verification awaits K0-006 inventory). Evidence: [K1-007](docs/roadmap/evidence/K1-007.md).
 - [x] K2-001 Deterministic offline ingestion adapter. Evidence: [K2-001](docs/roadmap/evidence/K2-001.md).
-- [ ] K2-002 Content-addressed raw artifact store.
+- [x] K2-002 Content-addressed raw artifact store. Evidence: [K2-002](docs/roadmap/evidence/K2-002.md).
 - [ ] K2-003 Dataset release manifest and rollback pointers.
 - [ ] K2-004 Revelation identity versus canon/edition ontology.
 - [ ] K2-005 First rights-cleared Qur’an passage slice.
