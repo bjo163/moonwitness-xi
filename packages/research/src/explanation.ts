@@ -1,5 +1,6 @@
 import {
   resolveResearchEvidenceReference,
+  validateResearchEvidenceReference,
   type ResearchEvidenceReference,
   type ResolvedEvidenceReference,
   type ResolvablePassage,
@@ -72,22 +73,51 @@ function summarizeRelation(relation: ResearchRelation): RelationSummary {
   };
 }
 
+function snapshotJson<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
 /** Resolve an explanation strictly from relation records and exact K3-002 local evidence selectors. */
 export async function explainResearchRelation(
   graph: ResearchGraphInput,
   relationId: string,
   options: ResearchExplanationOptions
 ): Promise<ResearchExplanationResult> {
-  if (!validateResearchGraph(graph).valid) return { status: 'not_found' };
-  const relation = graph.relations.find((candidate) => candidate.id === relationId);
+  let graphSnapshot: ResearchGraphInput;
+  let evidenceReferences: readonly ResearchEvidenceReference[];
+  let evidenceVisibility: Map<string, ResearchVisibility>;
+  let lookupPassage: ResearchExplanationOptions['lookupPassage'];
+  let readPolicy: ResearchExplanationOptions['canRead'];
+  try {
+    lookupPassage = options.lookupPassage;
+    readPolicy = options.canRead;
+    graphSnapshot = snapshotJson(graph);
+    evidenceReferences = snapshotJson(options.evidenceReferences);
+    evidenceVisibility = new Map(options.evidenceVisibility);
+  } catch {
+    return { status: 'not_found' };
+  }
+  if (
+    !validateResearchGraph(graphSnapshot).valid ||
+    !Array.isArray(evidenceReferences) ||
+    typeof lookupPassage !== 'function' ||
+    (readPolicy !== undefined && typeof readPolicy !== 'function')
+  ) {
+    return { status: 'not_found' };
+  }
+  if (evidenceReferences.some((reference) => !validateResearchEvidenceReference(reference).valid)) {
+    return { status: 'evidence_unavailable' };
+  }
+
+  const relation = graphSnapshot.relations.find((candidate) => candidate.id === relationId);
   if (!relation) return { status: 'not_found' };
-  const canRead = options.canRead ?? ((record) => record.visibility === 'PUBLIC_APPROVED');
+  const canRead = readPolicy ?? ((record) => record.visibility === 'PUBLIC_APPROVED');
   const alternatives = new Map<string, ResearchRelation>(
-    graph.relations.map((candidate) => [candidate.id, candidate])
+    graphSnapshot.relations.map((candidate) => [candidate.id, candidate])
   );
-  const nodes = new Map(graph.nodes.map((node) => [node.id, node]));
+  const nodes = new Map(graphSnapshot.nodes.map((node) => [node.id, node]));
   const relationReadable = (candidate: ResearchRelation) =>
-    canRead(candidate) &&
+    canRead(snapshotJson(candidate)) &&
     [candidate.subject_id, candidate.object_id, candidate.scope.reference_id].every((id) => {
       const visibility = nodes.get(id)?.visibility;
       return (
@@ -120,25 +150,25 @@ export async function explainResearchRelation(
   ]);
   if (requiredEvidenceIds.size === 0) return { status: 'evidence_unavailable' };
   const evidenceById = new Map<string, ResearchEvidenceReference>(
-    options.evidenceReferences.map((reference) => [reference.id, reference])
+    evidenceReferences.map((reference) => [reference.id, reference])
   );
-  if (evidenceById.size !== options.evidenceReferences.length) {
+  if (evidenceById.size !== evidenceReferences.length) {
     return { status: 'evidence_unavailable' };
   }
-  const resolved = new Map<string, ResolvedEvidenceReference>();
+  const referencesToResolve: ResearchEvidenceReference[] = [];
   for (const evidenceId of requiredEvidenceIds) {
     const reference = evidenceById.get(evidenceId);
     const assertion = reference ? nodes.get(reference.assertion_id) : undefined;
     const evidenceNode = nodes.get(evidenceId);
-    const visibility = options.evidenceVisibility.get(evidenceId);
+    const visibility = evidenceVisibility.get(evidenceId);
     if (
       !reference ||
       evidenceNode?.kind !== 'Evidence' ||
       assertion?.kind !== 'Assertion' ||
-      !canRead(assertion) ||
+      !canRead(snapshotJson(assertion)) ||
       visibility === undefined ||
       visibility !== evidenceNode.visibility ||
-      !canRead(evidenceNode) ||
+      !canRead(snapshotJson(evidenceNode)) ||
       [relation, ...selectedAlternatives].some(
         (candidate) =>
           (candidate.supporting_evidence_ids.includes(evidenceId) ||
@@ -149,10 +179,18 @@ export async function explainResearchRelation(
     ) {
       return { status: 'not_found' };
     }
+    referencesToResolve.push(reference);
+  }
+
+  const resolved = new Map<string, ResolvedEvidenceReference>();
+  for (const reference of referencesToResolve) {
     try {
       resolved.set(
-        evidenceId,
-        await resolveResearchEvidenceReference(reference, options.lookupPassage)
+        reference.id,
+        await resolveResearchEvidenceReference(reference, async (editionId, locator) => {
+          const passage = await lookupPassage(editionId, locator);
+          return passage === null ? null : snapshotJson(passage);
+        })
       );
     } catch {
       return { status: 'evidence_unavailable' };

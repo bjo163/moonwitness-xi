@@ -108,6 +108,14 @@ function options(
   };
 }
 
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
 function graph(
   relations: ResearchRelation[],
   evidenceReferences: ResearchEvidenceReference[],
@@ -344,5 +352,117 @@ describe('provenance-linked relation explanations', () => {
         'mw:evidence:tanzil-q7-46',
       ]);
     }
+  });
+
+  it('uses detached relation and evidence snapshots while passage lookup is pending', async () => {
+    const root = relation();
+    const refs = [quranEvidence()];
+    const inputGraph = graph([root], refs);
+    const passage = deferred<ResolvablePassage | null>();
+    const lookupStarted = deferred<void>();
+    const configured = options(refs);
+    configured.lookupPassage = async () => {
+      lookupStarted.resolve();
+      return passage.promise;
+    };
+
+    const pending = explainResearchRelation(inputGraph, root.id, configured);
+    await lookupStarted.promise;
+
+    root.predicate = 'related_to';
+    root.content_revision = 2;
+    root.supporting_evidence_ids[0] = 'mw:evidence:injected';
+    refs[0]!.id = 'mw:evidence:injected';
+    refs[0]!.direction = 'counterevidence';
+    refs[0]!.selector.content_sha256 = '0'.repeat(64);
+
+    passage.resolve(quranPassage);
+    const result = await pending;
+    expect(result).toMatchObject({
+      status: 'explained',
+      explanation: {
+        predicate: 'edition_of',
+        content_revision: 1,
+        supporting_evidence: [
+          {
+            direction: 'supporting',
+            evidence: {
+              id: 'mw:evidence:tanzil-q7-46',
+              direction: 'supporting',
+              selector: {
+                locator: 'Q7:46',
+                content_sha256: quranPassage.content_sha256,
+              },
+            },
+          },
+        ],
+      },
+    });
+  });
+
+  it('keeps alternative and visibility decisions bound to the pre-await snapshot', async () => {
+    const evidence = quranEvidence();
+    const counterevidence: ResearchEvidenceReference = {
+      ...quranEvidence('counterevidence'),
+      id: 'mw:evidence:synthetic-counter-snapshot',
+    };
+    const alternative = unreviewedRelation({
+      id: 'mw:relation:synthetic-alternative-snapshot',
+      predicate: 'related_to',
+      supporting_evidence_ids: [],
+      counterevidence_ids: [counterevidence.id],
+    });
+    const root = relation({
+      alternative_relation_ids: [alternative.id],
+      counterevidence_ids: [counterevidence.id],
+    });
+    const inputGraph = graph([root, alternative], [evidence, counterevidence]);
+    const visibility = new Map<string, ResearchVisibility>([
+      [evidence.id, 'PUBLIC_APPROVED'],
+      [counterevidence.id, 'PUBLIC_APPROVED'],
+    ]);
+    const passage = deferred<ResolvablePassage | null>();
+    const lookupStarted = deferred<void>();
+    let lookupCount = 0;
+    const configured = options([evidence, counterevidence], visibility);
+    configured.lookupPassage = async () => {
+      lookupCount += 1;
+      if (lookupCount === 1) {
+        lookupStarted.resolve();
+        return passage.promise;
+      }
+      return quranPassage;
+    };
+
+    const pending = explainResearchRelation(inputGraph, root.id, configured);
+    await lookupStarted.promise;
+
+    root.alternative_relation_ids = [];
+    root.visibility = 'RESTRICTED';
+    alternative.epistemic_status = 'withdrawn';
+    alternative.counterevidence_ids = [];
+    const evidenceNode = inputGraph.nodes.find((node) => node.id === counterevidence.id)!;
+    evidenceNode.visibility = 'CHILD_SENSITIVE';
+    visibility.set(counterevidence.id, 'CHILD_SENSITIVE');
+
+    passage.resolve(quranPassage);
+    const result = await pending;
+    expect(result).toMatchObject({
+      status: 'explained',
+      explanation: {
+        predicate: 'edition_of',
+        counterevidence: [{ evidence: { id: counterevidence.id } }],
+        alternatives: [
+          {
+            relation: {
+              id: alternative.id,
+              epistemic_status: 'supported',
+              predicate: 'related_to',
+            },
+            counterevidence: [{ evidence: { id: counterevidence.id } }],
+          },
+        ],
+      },
+    });
   });
 });
