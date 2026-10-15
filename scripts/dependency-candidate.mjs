@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { readFile, readdir, writeFile } from 'node:fs/promises';
+import { access, readFile, readdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve, relative } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -59,7 +59,14 @@ async function workspaceManifestPaths(root) {
   for (const pattern of patterns) {
     const directory = join(root, pattern.slice(0, -2));
     for (const entry of await readdir(directory, { withFileTypes: true })) {
-      if (entry.isDirectory()) manifests.push(join(directory, entry.name, 'package.json'));
+      if (!entry.isDirectory()) continue;
+      const manifestPath = join(directory, entry.name, 'package.json');
+      try {
+        await access(manifestPath);
+        manifests.push(manifestPath);
+      } catch (error) {
+        if (error?.code !== 'ENOENT') throw error;
+      }
     }
   }
   return manifests;

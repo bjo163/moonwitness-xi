@@ -25,6 +25,7 @@ function workspace() {
   git(root, 'config', 'user.email', 'candidate-test@example.test');
   mkdirSync(join(root, 'packages', 'fixture'), { recursive: true });
   mkdirSync(join(root, 'packages', 'fixture-two'), { recursive: true });
+  mkdirSync(join(root, 'apps', 'logs'), { recursive: true });
   writeFileSync(
     join(root, 'package.json'),
     JSON.stringify(
@@ -33,7 +34,7 @@ function workspace() {
       2
     ) + '\n'
   );
-  writeFileSync(join(root, 'pnpm-workspace.yaml'), 'packages:\n  - packages/*\n');
+  writeFileSync(join(root, 'pnpm-workspace.yaml'), 'packages:\n  - apps/*\n  - packages/*\n');
   writeFileSync(
     join(root, 'packages', 'fixture', 'package.json'),
     JSON.stringify(
