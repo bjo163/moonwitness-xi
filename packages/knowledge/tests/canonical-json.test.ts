@@ -71,6 +71,11 @@ describe('RFC 8785 canonical JSON', () => {
     expect(() => parseCanonicalJson('{"value":1e400}')).toThrow('Non-finite');
   });
 
+  it('scans long escaped strings without regex backtracking', () => {
+    const value = '"'.repeat(20_000);
+    expect(parseCanonicalJson(JSON.stringify(value))).toBe(value);
+  });
+
   it('hashes equal content identically while meaningful changes alter the digest', () => {
     expect(hashCanonicalJson({ z: 2, a: 1 })).toBe(hashCanonicalJson({ a: 1, z: 2 }));
     expect(hashCanonicalJson({ a: 1 })).not.toBe(hashCanonicalJson({ a: 2 }));

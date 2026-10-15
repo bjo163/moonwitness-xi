@@ -68,21 +68,38 @@ export function canonicalizeJson(value: unknown): string {
 export function parseCanonicalJson(text: string): unknown {
   const value: unknown = JSON.parse(text);
   const stack: Array<{ keys?: Set<string>; expectsKey: boolean }> = [];
-  const tokens =
-    text.match(/"(?:[^"\\]|\\[\s\S])*"|\{|\}|\[|\]|:|,|[^\s\x7b\x7d\x5b\x5d:,]+/gu) ?? [];
-  for (const token of tokens) {
-    const current = stack.at(-1);
-    if (token === '{') stack.push({ keys: new Set(), expectsKey: true });
-    else if (token === '[') stack.push({ expectsKey: false });
-    else if (token === '}' || token === ']') stack.pop();
-    else if (token === ',' && current?.keys) current.expectsKey = true;
-    else if (token === ':' && current) current.expectsKey = false;
-    else if (current?.keys && current.expectsKey && token.startsWith('"')) {
-      const key: unknown = JSON.parse(token);
-      if (typeof key !== 'string') throw new TypeError('Invalid JSON property name');
-      if (current.keys.has(key)) throw new TypeError(`Duplicate JSON property: ${key}`);
-      current.keys.add(key);
+  for (let index = 0; index < text.length;) {
+    const character = text[index];
+    if (/\s/u.test(character)) {
+      index += 1;
+      continue;
     }
+
+    if (character === '"') {
+      const start = index;
+      index += 1;
+      while (index < text.length && text[index] !== '"') {
+        index += text[index] === '\\' ? 2 : 1;
+      }
+      index += 1;
+
+      const current = stack.at(-1);
+      if (current?.keys && current.expectsKey) {
+        const key: unknown = JSON.parse(text.slice(start, index));
+        if (typeof key !== 'string') throw new TypeError('Invalid JSON property name');
+        if (current.keys.has(key)) throw new TypeError(`Duplicate JSON property: ${key}`);
+        current.keys.add(key);
+      }
+      continue;
+    }
+
+    const current = stack.at(-1);
+    if (character === '{') stack.push({ keys: new Set(), expectsKey: true });
+    else if (character === '[') stack.push({ expectsKey: false });
+    else if (character === '}' || character === ']') stack.pop();
+    else if (character === ',' && current?.keys) current.expectsKey = true;
+    else if (character === ':' && current) current.expectsKey = false;
+    index += 1;
   }
   canonicalizeJson(value);
   return value;

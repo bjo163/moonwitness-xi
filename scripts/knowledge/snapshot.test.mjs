@@ -65,7 +65,7 @@ test('duplicate decoded properties are rejected rather than silently hashed', as
   await withDataset(async (dataset) => {
     const filename = path.join(dataset, 'records/edition.json');
     const original = await readFile(filename, 'utf8');
-    await writeFile(filename, original.replace('{', '{"kind":"Edition",'));
+    await writeFile(filename, `{"kind":"Edition",${original.slice(1)}`);
     const result = snapshot(dataset);
     assert.equal(result.status, 1);
     assert.equal(result.stdout, '');
