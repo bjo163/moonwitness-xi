@@ -1,20 +1,9 @@
 import { buildApp } from './app.js';
 import { config } from './config/env.js';
 import { Registry } from '@moonwitness/orm';
-import { databaseErrorContext } from './database/errors.js';
+import { formatStartupFailure, startupErrorContext } from './startup-diagnostics.js';
 import { verifyDefaultBaseAccounts, verifyRequiredModels } from './startup-checks.js';
 import { gracefulShutdown } from './lifecycle/graceful-shutdown.js';
-
-function startupErrorContext(error: unknown): Record<string, string> {
-  const name =
-    typeof error === 'object' && error !== null && 'name' in error && typeof error.name === 'string'
-      ? error.name
-      : 'Error';
-  const code = databaseErrorContext(error);
-  if (Object.keys(code).length > 0) return { name, ...code };
-  const message = error instanceof Error ? error.message.slice(0, 300) : 'Unknown startup error';
-  return { name, message };
-}
 
 async function main() {
   try {
@@ -73,7 +62,7 @@ async function main() {
       process.once(signal, () => void shutdown(signal));
     }
   } catch (err) {
-    console.error('API startup failed:', startupErrorContext(err));
+    console.error(formatStartupFailure(err));
     process.exit(1);
   }
 }

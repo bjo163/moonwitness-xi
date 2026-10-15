@@ -13,6 +13,26 @@ const SHUTDOWN_PATTERN = /Graceful shutdown complete|API server shutdown complet
 const SAFE_SERVICE_NAMES = new Set(['api', 'board', 'postgres']);
 const SAFE_STATES = new Set(['created', 'dead', 'exited', 'paused', 'restarting', 'running']);
 const SAFE_HEALTH_STATES = new Set(['healthy', 'starting', 'unhealthy']);
+const SAFE_DIAGNOSTIC_IDENTIFIER = /^[A-Za-z0-9_.$-]{1,128}$/u;
+
+function safeDiagnosticMessage(value) {
+  if (typeof value !== 'string') return undefined;
+  return value
+    .replace(/\b(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?):\/\/[^\s"'`]+/giu, '[redacted-url]')
+    .replace(/\bBearer\s+[^\s,;]+/giu, 'Bearer [redacted]')
+    .replace(
+      /\b([A-Z0-9_]*(?:PASSWORD|SECRET|TOKEN|API_KEY|PRIVATE_KEY)[A-Z0-9_]*)\b\s*[:=]\s*[^\s,;]+/giu,
+      '$1=[redacted]'
+    )
+    .replace(/\b(authorization\s*[:=]\s*)[^\s,;]+/giu, '$1[redacted]')
+    .split('')
+    .map((character) => {
+      const code = character.charCodeAt(0);
+      return code < 32 || code === 127 ? ' ' : character;
+    })
+    .join('')
+    .slice(0, 300);
+}
 
 export function formatSafeServiceStatus(raw) {
   const records = [];
@@ -39,6 +59,44 @@ export function formatSafeServiceStatus(raw) {
     return [`${service}/${state}/${health}/${exitCode}`];
   });
   return summaries.length > 0 ? summaries.join(', ') : 'unavailable';
+}
+
+/** Extract only the API's allowlisted startup context from Compose output. */
+export function formatSafeStartupDiagnostic(raw) {
+  for (const line of raw.split(/\r?\n/u)) {
+    const jsonStart = line.indexOf('{');
+    if (jsonStart < 0) continue;
+    let record;
+    try {
+      record = JSON.parse(line.slice(jsonStart));
+    } catch {
+      continue;
+    }
+    if (!record || typeof record !== 'object' || record.event !== 'api_startup_failure') continue;
+    const context = record.context;
+    if (!context || typeof context !== 'object' || Array.isArray(context)) continue;
+    const fields = [];
+    if (typeof context.name === 'string' && /^[A-Za-z][A-Za-z0-9_.-]{0,79}$/u.test(context.name)) {
+      fields.push(`name=${context.name}`);
+    }
+    for (const key of ['code', 'category', 'constraint', 'table', 'column', 'schema']) {
+      const value = context[key];
+      if (
+        typeof value === 'string' &&
+        (key === 'code'
+          ? /^[A-Z0-9_]{1,32}$/u.test(value)
+          : key === 'category'
+            ? /^[a-z_]{1,64}$/u.test(value)
+            : SAFE_DIAGNOSTIC_IDENTIFIER.test(value))
+      ) {
+        fields.push(`${key}=${value}`);
+      }
+    }
+    const message = safeDiagnosticMessage(context.message);
+    if (message) fields.push(`message=${message}`);
+    if (fields.length > 0) return fields.join(' ');
+  }
+  return 'unavailable';
 }
 
 function command(args, { root, environment, capture = false }) {
@@ -116,9 +174,9 @@ export async function runContainerSmoke({
   request = responseText,
   pause = (duration) => delay(duration),
   getPort = availablePort,
-  reportFailure = (failedPhase, serviceStatus) => {
+  reportFailure = (failedPhase, serviceStatus, startupDiagnostic) => {
     process.stderr.write(
-      `::error title=Container smoke failed::Phase ${failedPhase} failed; service status: ${serviceStatus}.\n`
+      `::error title=Container smoke failed::Phase ${failedPhase} failed; service status: ${serviceStatus}; startup diagnostic: ${startupDiagnostic}.\n`
     );
   },
   processId = process.pid,
@@ -265,6 +323,7 @@ export async function runContainerSmoke({
   }
 
   let serviceStatus = 'unavailable';
+  let startupDiagnostic = 'unavailable';
   if (failure) {
     try {
       serviceStatus = formatSafeServiceStatus(
@@ -276,6 +335,17 @@ export async function runContainerSmoke({
       );
     } catch {
       // Preserve the original failure if the safe status query is unavailable.
+    }
+    try {
+      startupDiagnostic = formatSafeStartupDiagnostic(
+        execute([...composeArgs, 'logs', '--no-color', '--tail=100', 'api'], {
+          root,
+          environment: composeEnvironment,
+          capture: true,
+        })
+      );
+    } catch {
+      // Startup diagnostics are best-effort and never replace the smoke failure.
     }
   }
 
@@ -290,7 +360,7 @@ export async function runContainerSmoke({
   }
 
   if (failure) {
-    reportFailure(failure.phase, serviceStatus);
+    reportFailure(failure.phase, serviceStatus, startupDiagnostic);
     const detail = cleanupError ? ' Cleanup also failed.' : '';
     throw new Error(`Container smoke failed during ${failure.phase}.${detail}`, {
       cause: failure.error,

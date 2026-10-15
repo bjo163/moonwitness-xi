@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { formatSafeServiceStatus, runContainerSmoke } from './smoke-containers.mjs';
+import {
+  formatSafeServiceStatus,
+  formatSafeStartupDiagnostic,
+  runContainerSmoke,
+} from './smoke-containers.mjs';
 
-function harness({ request, status, reportFailure, environment } = {}) {
+function harness({ request, status, reportFailure, environment, logOutput } = {}) {
   const calls = [];
   const outputs = [];
   const options = [];
@@ -11,7 +15,7 @@ function harness({ request, status, reportFailure, environment } = {}) {
     calls.push(args);
     options.push(settings);
     if (args.includes('ps')) return status ?? '';
-    return args.includes('logs') ? 'Graceful shutdown complete' : '';
+    return args.includes('logs') ? (logOutput ?? 'Graceful shutdown complete') : '';
   };
   let port = 41000;
   return {
@@ -153,6 +157,51 @@ test('safe service status ignores raw fields and malformed output', () => {
     'api/running/healthy/0'
   );
   assert.equal(formatSafeServiceStatus('not-json with database credentials'), 'unavailable');
+});
+
+test('startup diagnostic parser keeps only allowlisted fields and redacts credentials', () => {
+  const raw =
+    'api-1 | {"event":"api_startup_failure","context":{"name":"DatabaseError","code":"ECONNREFUSED","message":"connect postgresql://postgres:secret@db/app JWT_SECRET=hidden","stack":"do not print","token":"hidden"}}';
+
+  const diagnostic = formatSafeStartupDiagnostic(raw);
+
+  assert.equal(
+    diagnostic,
+    'name=DatabaseError code=ECONNREFUSED message=connect [redacted-url] JWT_SECRET=[redacted]'
+  );
+  assert.doesNotMatch(diagnostic, /top-secret|hidden|stack=|token=|postgresql:\/\//iu);
+  assert.equal(
+    formatSafeStartupDiagnostic('api-1 | startup failed with raw password'),
+    'unavailable'
+  );
+});
+
+test('captures sanitized API startup context before removing the smoke containers', async () => {
+  const failures = [];
+  const fixture = harness({
+    request: async (url) =>
+      url.endsWith('/readyz')
+        ? { ok: false, body: 'unavailable' }
+        : { ok: true, body: 'MoonWitness Enterprise ORM API' },
+    logOutput:
+      'api-1 | {"event":"api_startup_failure","context":{"name":"DatabaseError","code":"ECONNREFUSED","message":"postgresql://postgres:secret@db/app"}}',
+    reportFailure: (phase, serviceStatus, startupDiagnostic) =>
+      failures.push({ phase, serviceStatus, startupDiagnostic }),
+  });
+
+  await assert.rejects(fixture.run(), /Container smoke failed during api_readiness/u);
+
+  assert.deepEqual(failures, [
+    {
+      phase: 'api_readiness',
+      serviceStatus: 'unavailable',
+      startupDiagnostic: 'name=DatabaseError code=ECONNREFUSED message=[redacted-url]',
+    },
+  ]);
+  const startupLogs = fixture.calls.findIndex((args) => args.includes('logs'));
+  const cleanup = fixture.calls.findIndex((args) => args.includes('down'));
+  assert.ok(startupLogs >= 0 && startupLogs < cleanup);
+  assert.doesNotMatch(JSON.stringify(failures), /secret/u);
 });
 
 test('preserves a smoke failure when cleanup also fails and reports the cleanup failure', async () => {
