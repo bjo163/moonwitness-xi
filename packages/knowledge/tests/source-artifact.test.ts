@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Ajv2020 } from 'ajv/dist/2020.js';
 import * as formatsModule from 'ajv-formats';
+import { validateSourceArtifactManifest } from '../src/index.js';
 import schema from '../schemas/source-artifact-manifest.schema.json' with { type: 'json' };
 import allowedScopedBytes from './fixtures/source-artifact/allowed-scoped-bytes.json' with { type: 'json' };
 import invalidPublicAnalysisOnly from './fixtures/source-artifact/invalid-public-analysis-only.json' with { type: 'json' };
@@ -19,6 +20,11 @@ formatsModule.default.default(ajv, { mode: 'full' });
 const validate = ajv.compile(schema);
 
 describe('source artifact rights manifest schema', () => {
+  it('exposes the shared offline manifest validator used by the dataset CLI', () => {
+    expect(validateSourceArtifactManifest(metadataUnknown)).toEqual({ valid: true, issues: [] });
+    expect(validateSourceArtifactManifest(invalidPublicUnknown)).toMatchObject({ valid: false });
+  });
+
   it('accepts metadata-only references when rights are unknown', () => {
     expect(validate(metadataUnknown)).toBe(true);
   });

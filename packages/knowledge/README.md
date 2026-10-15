@@ -38,7 +38,34 @@ representation. Public source bytes require a permitted, scoped decision, an
 exact SHA-256 and byte length, attribution, and a complaint-process owner.
 Unknown or restricted rights remain metadata-only at most. Structural
 validity does not establish legal permission or authorize a release;
-source-specific evidence and review remain mandatory.
+source-specific evidence and review remain mandatory. `validateSourceArtifactManifest`
+checks the schema and full date/URI formats without deciding whether the rights
+claims are true.
+
+## Standalone dataset validator
+
+After building the package, validate a local directory without calling an API,
+model, or network service:
+
+```sh
+pnpm --filter @moonwitness/knowledge build
+node scripts/knowledge/validate.mjs path/to/dataset
+```
+
+The dataset layout is `records/**/*.json` (one knowledge record per file),
+optional `aliases.json` (an array of `{ "namespace", "value", "targetId" }`),
+optional `source-artifacts/**/*.json` (source artifact manifests), and optional
+`provenance.json` (one PROV-inspired graph). Record and alias IDs are checked
+against the canonical registry; manifest editions must resolve to `Edition`
+records; provenance actors, sources, inputs, outputs, activities and derivation
+links must resolve. Duplicate IDs, alias conflicts, dangling references,
+malformed manifests and invalid record envelopes produce deterministic
+diagnostics and a nonzero exit. Source URIs are format-checked only and never
+fetched. Symbolic links below the dataset tree are rejected.
+
+Use `--json` for machine-readable diagnostics. No approval, rights clearance,
+private-data consent, or publication authorization is inferred from a passing
+validation result. The validator fixture contains synthetic values only.
 
 ```sh
 pnpm --filter @moonwitness/knowledge build

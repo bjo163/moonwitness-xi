@@ -27,6 +27,16 @@ const releaseWorkflow = await readFile(
   'utf8'
 );
 
+test('local and CI unit lanes run the offline knowledge CLI against the existing build', async () => {
+  const runner = await readFile(new URL('./run-unit-tests.mjs', import.meta.url), 'utf8');
+  assert.equal(
+    rootManifest.scripts['test:knowledge-cli:built'],
+    'node --test scripts/knowledge/validate.test.mjs'
+  );
+  assert.match(rootManifest.scripts['test:unit:built'], /pnpm test:knowledge-cli:built/u);
+  assert.match(runner, /run\(\['run', 'test:knowledge-cli:built'\]/u);
+});
+
 test('CI reuses the validated workspace build only inside its quality job', () => {
   const qualitySteps = ['pnpm typecheck', 'pnpm architecture:check:built', 'pnpm docs:build:built'];
   let previousIndex = -1;

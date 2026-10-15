@@ -206,5 +206,6 @@ for (const suite of suites) {
   run(args, `${suite.name} tests`);
 }
 
+run(['run', 'test:knowledge-cli:built'], 'Knowledge offline validator CLI');
 run(['exec', 'node', 'scripts/check-coverage.mjs'], 'Critical branch coverage');
 process.stdout.write(`JUnit reports written to ${path.relative(root, reportDirectory)}\n`);

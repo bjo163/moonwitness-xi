@@ -1518,7 +1518,9 @@
       "output": "CLI for local source records, IDs, rights, referential integrity",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
-      "priority": "p0"
+      "priority": "p0",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/K1-005.md"
     },
     {
       "id": "K1-006",

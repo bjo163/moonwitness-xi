@@ -1,3 +1,8 @@
+import { Ajv2020 } from 'ajv/dist/2020.js';
+import * as formatsModule from 'ajv-formats';
+import sourceArtifactManifestSchema from '../schemas/source-artifact-manifest.schema.json' with { type: 'json' };
+import type { KnowledgeValidationIssue, KnowledgeValidationResult } from './types.js';
+
 export type SourceRightsState =
   'unknown' | 'review_pending' | 'permitted' | 'restricted' | 'disputed' | 'withdrawn';
 
@@ -62,4 +67,34 @@ export type SourceBytesManifest = SourceArtifactManifestBase & {
 /** Structural types and schema only; this does not establish source permission. */
 export type SourceArtifactManifest = MetadataOnlySourceArtifactManifest | SourceBytesManifest;
 
-export { default as sourceArtifactManifestSchema } from '../schemas/source-artifact-manifest.schema.json' with { type: 'json' };
+export { sourceArtifactManifestSchema };
+
+const ajv = new Ajv2020({ allErrors: true, strict: true });
+formatsModule.default.default(ajv, { mode: 'full' });
+const validateManifest = ajv.compile(sourceArtifactManifestSchema);
+
+function pointerForIssue(
+  instancePath: string,
+  keyword: string,
+  params: Record<string, unknown>
+): string {
+  if (keyword === 'required' && typeof params.missingProperty === 'string') {
+    return `${instancePath}/${params.missingProperty.replaceAll('~', '~0').replaceAll('/', '~1')}`;
+  }
+  if (keyword === 'additionalProperties' && typeof params.additionalProperty === 'string') {
+    return `${instancePath}/${params.additionalProperty.replaceAll('~', '~0').replaceAll('/', '~1')}`;
+  }
+  return instancePath || '/';
+}
+
+/** Validate manifest structure only; this does not determine whether its rights claims are true. */
+export function validateSourceArtifactManifest(value: unknown): KnowledgeValidationResult {
+  if (validateManifest(value)) return { valid: true, issues: [] };
+
+  const issues: KnowledgeValidationIssue[] = (validateManifest.errors ?? []).map((error) => ({
+    path: pointerForIssue(error.instancePath, error.keyword, error.params),
+    keyword: error.keyword,
+    message: error.message ?? 'does not match the source artifact manifest contract',
+  }));
+  return { valid: false, issues };
+}
