@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -67,7 +67,11 @@ async function importFixture() {
   const workspaceRoot = path.join(container, 'workspace');
   const sourceRootDirectory = path.join(container, 'source');
   const rootDirectory = path.join(container, 'destination');
-  await Promise.all([mkdir(workspaceRoot), mkdir(sourceRootDirectory), mkdir(rootDirectory)]);
+  await Promise.all([
+    mkdir(workspaceRoot, { mode: 0o700 }),
+    mkdir(sourceRootDirectory, { mode: 0o700 }),
+    mkdir(rootDirectory, { mode: 0o700 }),
+  ]);
   await writeFile(path.join(sourceRootDirectory, 'archive.json'), sourceBytes);
   return {
     ...request(rootDirectory, { workspaceRoot }),
@@ -136,7 +140,7 @@ describe('private archive import manifest', () => {
     ).rejects.toThrow('cannot traverse symbolic links');
     await expect(
       createPrivateArchiveImportManifest(request(root, { manifestPath: 'output-link/intake.json' }))
-    ).rejects.toThrow('manifestPath parent directories must be real directories');
+    ).rejects.toThrow('manifestPath parent directories must be real private directories');
     await expect(readdir(outputTarget)).resolves.toEqual([]);
   });
 
@@ -237,6 +241,10 @@ describe('private archive import manifest', () => {
     expect(manifest.source.sha256).toBe(sourceSha256);
     expect(manifest.source.byteLength).toBe(sourceBytes.byteLength);
     expect(serialized).not.toContain(sourceBytes.toString('utf8'));
+    await expect(readdir(fixture.rootDirectory)).resolves.toEqual(['archive.json', 'manifests']);
+    await expect(readdir(path.join(fixture.rootDirectory, 'manifests'))).resolves.toEqual([
+      'intake.json',
+    ]);
   });
 
   it('does not copy denied or checksum-mismatched archives', async () => {
@@ -258,6 +266,28 @@ describe('private archive import manifest', () => {
     await expect(readdir(fixture.sourceRootDirectory)).resolves.toEqual(['archive.json']);
   });
 
+  it('refuses externally accessible intake roots on POSIX filesystems', async ({ skip }) => {
+    if (process.platform === 'win32') skip('Windows ACLs are not represented by POSIX mode bits');
+    const fixture = await importFixture();
+    await chmod(fixture.rootDirectory, 0o755);
+
+    await expect(importPrivateArchive(fixture)).rejects.toThrow('private to the current user');
+    await expect(readdir(fixture.rootDirectory)).resolves.toEqual([]);
+  });
+
+  it('refuses intake paths below a shared writable ancestor on POSIX filesystems', async ({
+    skip,
+  }) => {
+    if (process.platform === 'win32') skip('Windows ACLs are not represented by POSIX mode bits');
+    const fixture = await importFixture();
+    await chmod(path.dirname(fixture.rootDirectory), 0o777);
+
+    await expect(importPrivateArchive(fixture)).rejects.toThrow(
+      'unsafe writable directory ancestor'
+    );
+    await expect(readdir(fixture.rootDirectory)).resolves.toEqual([]);
+  });
+
   it('never overwrites an existing archive or removes it after a failed copy', async () => {
     const fixture = await importFixture();
     const destination = path.join(fixture.rootDirectory, 'archive.json');
@@ -277,6 +307,7 @@ describe('private archive import manifest', () => {
 
     await expect(importPrivateArchive(fixture)).rejects.toMatchObject({ code: 'EEXIST' });
     await expect(readdir(fixture.rootDirectory)).resolves.toEqual(['manifests']);
+    await expect(readdir(manifestDirectory)).resolves.toEqual(['intake.json']);
     await expect(readFile(path.join(manifestDirectory, 'intake.json'))).resolves.toEqual(
       existingManifest
     );

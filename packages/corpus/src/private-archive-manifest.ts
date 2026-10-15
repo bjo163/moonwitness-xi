@@ -1,8 +1,7 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { lstat, mkdir, open, realpath, rm, writeFile } from 'node:fs/promises';
+import { link, lstat, mkdir, open, realpath, rm } from 'node:fs/promises';
 import path from 'node:path';
-import { pipeline } from 'node:stream/promises';
 import { canonicalizeJson } from '@moonwitness/knowledge';
 import privateArchiveImportManifestSchema from '../schemas/private-archive-import-manifest.schema.json' with { type: 'json' };
 import {
@@ -145,6 +144,22 @@ async function resolveRegularFile(
   return absolutePath;
 }
 
+async function ensureSafeDirectoryAncestry(directory: string, label: string): Promise<void> {
+  if (process.platform === 'win32') return;
+  const filesystemRoot = path.parse(directory).root;
+  let current = directory;
+  while (true) {
+    const details = await lstat(current);
+    const permissions = details.mode & 0o7777;
+    const hasUnsafeSharedWrite = (permissions & 0o022) !== 0 && (permissions & 0o1000) === 0;
+    if (details.isSymbolicLink() || !details.isDirectory() || hasUnsafeSharedWrite) {
+      throw new TypeError(`${label} has an unsafe writable directory ancestor`);
+    }
+    if (current === filesystemRoot) break;
+    current = path.dirname(current);
+  }
+}
+
 async function resolveExternalDirectory(
   workspacePath: string,
   directoryPath: string,
@@ -163,23 +178,107 @@ async function resolveExternalDirectory(
   ) {
     throw new TypeError(`${label} must be outside the workspace`);
   }
+  if (process.platform !== 'win32' && (details.mode & 0o077) !== 0) {
+    throw new TypeError(`${label} must be private to the current user`);
+  }
+  await ensureSafeDirectoryAncestry(directory, label);
   return directory;
 }
 
-async function ensureSafeOutputParent(root: string, destination: string): Promise<void> {
+async function ensureSafeOutputParent(
+  root: string,
+  destination: string,
+  label = 'manifestPath'
+): Promise<void> {
   const relativeParent = path.relative(root, path.dirname(destination));
   let current = root;
   for (const segment of relativeParent === '' ? [] : relativeParent.split(path.sep)) {
     current = path.join(current, segment);
     try {
-      await mkdir(current);
+      await mkdir(current, { mode: 0o700 });
     } catch (error) {
       if (!(error instanceof Error) || !('code' in error) || error.code !== 'EEXIST') throw error;
     }
     const details = await lstat(current);
-    if (details.isSymbolicLink() || !details.isDirectory()) {
-      throw new TypeError('manifestPath parent directories must be real directories');
+    if (
+      details.isSymbolicLink() ||
+      !details.isDirectory() ||
+      (process.platform !== 'win32' && (details.mode & 0o077) !== 0)
+    ) {
+      throw new TypeError(`${label} parent directories must be real private directories`);
     }
+  }
+}
+
+async function createTemporaryFile(
+  destination: string,
+  writeContents: (handle: Awaited<ReturnType<typeof open>>) => Promise<void>
+): Promise<{ path: string; device: number; inode: number }> {
+  const temporaryPath = path.join(
+    path.dirname(destination),
+    `.mw-private-intake-${randomUUID()}.partial`
+  );
+  let handle: Awaited<ReturnType<typeof open>> | undefined;
+  try {
+    handle = await open(temporaryPath, 'wx', 0o600);
+    await writeContents(handle);
+    await handle.sync();
+    const details = await handle.stat();
+    await handle.close();
+    handle = undefined;
+    return { path: temporaryPath, device: details.dev, inode: details.ino };
+  } catch (error) {
+    if (handle) await handle.close().catch(() => undefined);
+    await rm(temporaryPath, { force: true }).catch(() => undefined);
+    throw error;
+  }
+}
+
+async function removePublishedFileIfOwned(
+  temporaryPath: string,
+  destination: string,
+  device: number,
+  inode: number
+): Promise<void> {
+  try {
+    const details = await lstat(destination);
+    if (
+      details.isFile() &&
+      details.dev === device &&
+      details.ino === inode &&
+      details.dev !== 0 &&
+      details.ino !== 0
+    ) {
+      await rm(destination);
+    }
+  } catch (error) {
+    if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') throw error;
+  } finally {
+    await rm(temporaryPath, { force: true });
+  }
+}
+
+async function writePrivateFileNoReplace(destination: string, contents: string): Promise<void> {
+  const temporary = await createTemporaryFile(destination, async (handle) => {
+    await handle.writeFile(contents, 'utf8');
+  });
+  let published = false;
+  try {
+    await link(temporary.path, destination);
+    published = true;
+    await rm(temporary.path, { force: true });
+  } catch (error) {
+    if (published) {
+      await removePublishedFileIfOwned(
+        temporary.path,
+        destination,
+        temporary.device,
+        temporary.inode
+      );
+    } else {
+      await rm(temporary.path, { force: true });
+    }
+    throw error;
   }
 }
 
@@ -251,7 +350,7 @@ export async function createPrivateArchiveImportManifest(
 
   const destination = path.resolve(root, manifestRelativePath);
   await ensureSafeOutputParent(root, destination);
-  await writeFile(destination, `${canonicalizeJson(manifest)}\n`, { flag: 'wx', mode: 0o600 });
+  await writePrivateFileNoReplace(destination, `${canonicalizeJson(manifest)}\n`);
   return manifest;
 }
 
@@ -290,22 +389,35 @@ export async function importPrivateArchive(
     destinationRoot,
     safeRelativePath(request.sourcePath, 'sourcePath')
   );
-  await ensureSafeOutputParent(destinationRoot, destination);
-  let destinationHandle: Awaited<ReturnType<typeof open>> | undefined;
-  let createdDestination = false;
+  await ensureSafeOutputParent(destinationRoot, destination, 'sourcePath');
+  let temporaryFile: { path: string; device: number; inode: number } | undefined;
+  let published = false;
   try {
-    destinationHandle = await open(destination, 'wx', 0o600);
-    createdDestination = true;
-    await pipeline(createReadStream(sourceFile), destinationHandle.createWriteStream());
-    destinationHandle = undefined;
-    const imported = await hashFile(destination);
+    temporaryFile = await createTemporaryFile(destination, async (handle) => {
+      for await (const chunk of createReadStream(sourceFile)) {
+        await handle.writeFile(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      }
+    });
+    const imported = await hashFile(temporaryFile.path);
     if (imported.sha256 !== source.sha256 || imported.byteLength !== source.byteLength) {
       throw new TypeError('Imported archive checksum does not match the supplied source');
     }
-    return await createPrivateArchiveImportManifest(request);
+    await link(temporaryFile.path, destination);
+    published = true;
+    await rm(temporaryFile.path, { force: true });
+    const manifest = await createPrivateArchiveImportManifest(request);
+    return manifest;
   } catch (error) {
-    if (destinationHandle) await destinationHandle.close().catch(() => undefined);
-    if (createdDestination) await rm(destination, { force: true });
+    if (published && temporaryFile) {
+      await removePublishedFileIfOwned(
+        temporaryFile.path,
+        destination,
+        temporaryFile.device,
+        temporaryFile.inode
+      );
+    } else if (temporaryFile) {
+      await rm(temporaryFile.path, { force: true });
+    }
     throw error;
   }
 }

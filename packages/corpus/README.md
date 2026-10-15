@@ -80,8 +80,12 @@ kind, export time, byte length, SHA-256, and source-scoped consent fields. It
 hashes the selected file locally and writes only the metadata manifest.
 `importPrivateArchive` additionally copies a consent-bound local file to a
 separate private intake directory. It uses exclusive creation, restrictive file
-permissions, verifies the copied digest, and removes bytes it created if
-verification or manifest creation fails. Both functions reject denied or
+permissions, stages complete files beside their destinations before atomic
+no-overwrite publication, verifies the copied digest, and removes only the
+published file identity it created if verification or manifest creation fails.
+On POSIX, intake directories must be owner-private and have no unsafe shared
+writable ancestors. Windows mode bits do not prove ACL isolation, so callers
+must supply directories protected to the current user. Both functions reject denied or
 withdrawn consent, source mismatch, unsafe paths, symbolic links, intake roots
 inside the workspace, and overwrites. The caller supplies the repository
 `workspaceRoot` and external local source/destination roots. These functions do

@@ -1808,7 +1808,7 @@
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
       "priority": "p0",
-      "status": "complete",
+      "status": "in_progress",
       "evidence": "docs/roadmap/evidence/K5-001.md"
     },
     {
