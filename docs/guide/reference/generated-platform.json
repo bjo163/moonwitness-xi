@@ -253,7 +253,7 @@
     },
     "@moonwitness/orm-knowledge": {
       "build": "tsc",
-      "test": "tsc -p tsconfig.check.json && vitest run"
+      "test": "vitest run"
     },
     "@moonwitness/orm-notification": {
       "build": "tsc",
@@ -5107,5 +5107,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "875e7e9e985971404312101008f4f0e1108ecb800e6877654252033113a6293c"
+  "generatedFromSha256": "fb0248b2916459173b8f3653edd872c7f087029ed17253858442ce6dd0460940"
 }

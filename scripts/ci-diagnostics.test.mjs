@@ -136,6 +136,7 @@ test('documentation builds are isolated and portal failures annotate sanitized J
     ['@moonwitness/orm-workflow', 'workflow'],
     ['@moonwitness/orm-request', 'requests'],
     ['@moonwitness/orm-storage', 'storage'],
+    ['@moonwitness/orm-knowledge', 'knowledge'],
   ];
 
   for (const [packageName, label] of documentedPackages) {
@@ -150,7 +151,10 @@ test('documentation builds are isolated and portal failures annotate sanitized J
   const docsBuildPackages = documentedPackages.map(([packageName]) => packageName);
   const requestPackageIndex = docsBuildPackages.indexOf('@moonwitness/orm-request');
   const workflowPackageIndex = docsBuildPackages.indexOf('@moonwitness/orm-workflow');
+  const storagePackageIndex = docsBuildPackages.indexOf('@moonwitness/orm-storage');
+  const knowledgePackageIndex = docsBuildPackages.indexOf('@moonwitness/orm-knowledge');
   assert.ok(workflowPackageIndex < requestPackageIndex);
+  assert.ok(storagePackageIndex < knowledgePackageIndex);
   for (const scriptName of ['docs:check', 'docs:generate']) {
     const script = rootPackage.scripts[scriptName];
     const workflowPosition = script.indexOf('pnpm --filter @moonwitness/orm-workflow build');
