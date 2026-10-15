@@ -27,6 +27,7 @@ COPY packages/orm-organization/package.json ./packages/orm-organization/package.
 COPY packages/orm/package.json ./packages/orm/package.json
 COPY packages/orm-request/package.json ./packages/orm-request/package.json
 COPY packages/orm-storage/package.json ./packages/orm-storage/package.json
+COPY packages/research/package.json ./packages/research/package.json
 COPY packages/types/package.json ./packages/types/package.json
 COPY packages/ui/package.json ./packages/ui/package.json
 COPY packages/orm-workflow/package.json ./packages/orm-workflow/package.json
