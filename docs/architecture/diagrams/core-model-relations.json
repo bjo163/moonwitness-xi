@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "addons": ["auth", "base", "jobs", "notification"],
   "generatedFrom": "core addon manifests and model field metadata; no seed values included",
-  "sourceSha256": "5a3b60d9edc25423036bf0ecb1536c86ee2b2884b7375cd5cf6eade90289ceb5",
+  "sourceSha256": "ea197f6aa733b9dc66c588fc8a20d450f43379f81d046d7f02f66cb5d1fb1960",
   "models": [
     {
       "name": "auth.refresh_token",
@@ -119,6 +119,18 @@
     {
       "name": "integration.webhook_endpoint",
       "table": "integration_webhook_endpoints"
+    },
+    {
+      "name": "knowledge.witness_correction",
+      "table": "knowledge_witness_corrections"
+    },
+    {
+      "name": "knowledge.witness_interpretation",
+      "table": "knowledge_witness_interpretations"
+    },
+    {
+      "name": "knowledge.witness_testimony",
+      "table": "knowledge_witness_testimonies"
     },
     {
       "name": "notification.notification",
@@ -440,6 +452,41 @@
       "from": "integration.webhook_endpoint",
       "field": "company",
       "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "knowledge.witness_correction",
+      "field": "recorded_by",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "knowledge.witness_correction",
+      "field": "testimony",
+      "to": "knowledge.witness_testimony",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "knowledge.witness_interpretation",
+      "field": "recorded_by",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "knowledge.witness_interpretation",
+      "field": "testimony",
+      "to": "knowledge.witness_testimony",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "knowledge.witness_testimony",
+      "field": "created_by",
+      "to": "base.user",
       "cardinality": "N:1",
       "kind": "belongsTo"
     },

@@ -1,6 +1,6 @@
 # Generated model and addon reference
 
-Source fingerprint: `fcda9afa60bc2c49118ea5d374a73f6baae1eeb1875da170de3ba69b5eb50f66`. Seed values and field defaults are intentionally omitted.
+Source fingerprint: `875e7e9e985971404312101008f4f0e1108ecb800e6877654252033113a6293c`. Seed values and field defaults are intentionally omitted.
 
 ## Addon `auth`
 
@@ -284,6 +284,66 @@ Models: 4; declared views: 0; menu entries: 0; seed rows: 1.
 | ---------- | ----- | ----- | -------: | ---------- |
 
 - Seed coverage: `base.cron` has 1 declared seed row(s); seed values are not included.
+
+## Addon `knowledge`
+
+Version: `1.0.0`; dependencies: `base`.
+
+Models: 3; declared views: 3; menu entries: 3; seed rows: 6.
+
+| Model                              | Table                               | Field                     | Kind      | Required | Optional | Default    | Relation                      |
+| ---------------------------------- | ----------------------------------- | ------------------------- | --------- | -------- | -------- | ---------- | ----------------------------- |
+| `knowledge.witness_correction`     | `knowledge_witness_corrections`     | `asserted_time_precision` | enum      | No       | Yes      | [redacted] | —                             |
+| `knowledge.witness_correction`     | `knowledge_witness_corrections`     | `asserted_time_text`      | string    | Yes      | No       | No         | —                             |
+| `knowledge.witness_correction`     | `knowledge_witness_corrections`     | `correction_text`         | text      | Yes      | No       | No         | —                             |
+| `knowledge.witness_correction`     | `knowledge_witness_corrections`     | `reason`                  | text      | Yes      | No       | No         | —                             |
+| `knowledge.witness_correction`     | `knowledge_witness_corrections`     | `recorded_by`             | belongsTo | Yes      | No       | No         | `base.user`                   |
+| `knowledge.witness_correction`     | `knowledge_witness_corrections`     | `sequence`                | integer   | Yes      | No       | No         | —                             |
+| `knowledge.witness_correction`     | `knowledge_witness_corrections`     | `source_digest`           | string    | Yes      | No       | No         | —                             |
+| `knowledge.witness_correction`     | `knowledge_witness_corrections`     | `source_label`            | string    | Yes      | No       | No         | —                             |
+| `knowledge.witness_correction`     | `knowledge_witness_corrections`     | `source_locator`          | string    | Yes      | No       | No         | —                             |
+| `knowledge.witness_correction`     | `knowledge_witness_corrections`     | `testimony`               | belongsTo | Yes      | No       | No         | `knowledge.witness_testimony` |
+| `knowledge.witness_correction`     | `knowledge_witness_corrections`     | `uncertainty_note`        | text      | No       | Yes      | No         | —                             |
+| `knowledge.witness_interpretation` | `knowledge_witness_interpretations` | `assertion_ref`           | string    | Yes      | No       | No         | —                             |
+| `knowledge.witness_interpretation` | `knowledge_witness_interpretations` | `epistemic_status`        | enum      | No       | Yes      | [redacted] | —                             |
+| `knowledge.witness_interpretation` | `knowledge_witness_interpretations` | `evidence_ref`            | string    | Yes      | No       | No         | —                             |
+| `knowledge.witness_interpretation` | `knowledge_witness_interpretations` | `interpretation_text`     | text      | Yes      | No       | No         | —                             |
+| `knowledge.witness_interpretation` | `knowledge_witness_interpretations` | `method_label`            | string    | Yes      | No       | No         | —                             |
+| `knowledge.witness_interpretation` | `knowledge_witness_interpretations` | `method_version`          | string    | Yes      | No       | No         | —                             |
+| `knowledge.witness_interpretation` | `knowledge_witness_interpretations` | `recorded_by`             | belongsTo | Yes      | No       | No         | `base.user`                   |
+| `knowledge.witness_interpretation` | `knowledge_witness_interpretations` | `testimony`               | belongsTo | Yes      | No       | No         | `knowledge.witness_testimony` |
+| `knowledge.witness_interpretation` | `knowledge_witness_interpretations` | `visibility`              | enum      | No       | Yes      | [redacted] | —                             |
+| `knowledge.witness_testimony`      | `knowledge_witness_testimonies`     | `created_by`              | belongsTo | Yes      | No       | No         | `base.user`                   |
+| `knowledge.witness_testimony`      | `knowledge_witness_testimonies`     | `external_key`            | string    | Yes      | No       | No         | —                             |
+| `knowledge.witness_testimony`      | `knowledge_witness_testimonies`     | `original_text`           | text      | Yes      | No       | No         | —                             |
+| `knowledge.witness_testimony`      | `knowledge_witness_testimonies`     | `received_time_precision` | enum      | No       | Yes      | [redacted] | —                             |
+| `knowledge.witness_testimony`      | `knowledge_witness_testimonies`     | `received_time_text`      | string    | Yes      | No       | No         | —                             |
+| `knowledge.witness_testimony`      | `knowledge_witness_testimonies`     | `source_digest`           | string    | Yes      | No       | No         | —                             |
+| `knowledge.witness_testimony`      | `knowledge_witness_testimonies`     | `source_label`            | string    | Yes      | No       | No         | —                             |
+| `knowledge.witness_testimony`      | `knowledge_witness_testimonies`     | `source_locator`          | string    | Yes      | No       | No         | —                             |
+| `knowledge.witness_testimony`      | `knowledge_witness_testimonies`     | `uncertainty_note`        | text      | No       | Yes      | No         | —                             |
+| `knowledge.witness_testimony`      | `knowledge_witness_testimonies`     | `visibility`              | enum      | No       | Yes      | [redacted] | —                             |
+
+### Menus and seed coverage
+
+| Menu model                         | Label                   | Group     | Sequence | Visibility       |
+| ---------------------------------- | ----------------------- | --------- | -------: | ---------------- |
+| `knowledge.witness_correction`     | Witness Corrections     | Knowledge |       81 | Development mode |
+| `knowledge.witness_interpretation` | Witness Interpretations | Knowledge |       82 | Development mode |
+| `knowledge.witness_testimony`      | Witness Testimony       | Knowledge |       80 | Development mode |
+
+- Seed coverage: `base.model_access` has 3 declared seed row(s); seed values are not included.
+- Seed coverage: `knowledge.witness_correction` has 1 declared seed row(s); seed values are not included.
+- Seed coverage: `knowledge.witness_interpretation` has 1 declared seed row(s); seed values are not included.
+- Seed coverage: `knowledge.witness_testimony` has 1 declared seed row(s); seed values are not included.
+
+### Seeded model access rules
+
+| Group reference   | Model                              | Read | Create | Write | Delete |
+| ----------------- | ---------------------------------- | ---- | ------ | ----- | ------ |
+| `base.group_user` | `knowledge.witness_correction`     | No   | No     | No    | No     |
+| `base.group_user` | `knowledge.witness_interpretation` | No   | No     | No    | No     |
+| `base.group_user` | `knowledge.witness_testimony`      | No   | No     | No    | No     |
 
 ## Addon `notification`
 

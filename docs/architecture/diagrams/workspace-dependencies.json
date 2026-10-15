@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "apps/*/package.json and packages/*/package.json",
-  "sourceSha256": "10c58ece2a36050941ed6b9df861fad7a2d3568689adc90cc0b1873523b6f3f3",
+  "sourceSha256": "ad65913b88028b28d3ec6261f3b875874ea77ceea575ba66483d37b9f90eefff",
   "packages": [
     {
       "name": "@moonwitness/api",
@@ -92,6 +92,12 @@
       "kind": "package",
       "version": "1.0.0-rc.1",
       "manifest": "packages/orm-integration"
+    },
+    {
+      "name": "@moonwitness/orm-knowledge",
+      "kind": "package",
+      "version": "1.0.0-rc.1",
+      "manifest": "packages/orm-knowledge"
     },
     {
       "name": "@moonwitness/orm-notification",
@@ -340,6 +346,18 @@
       "to": "@moonwitness/types",
       "kind": "runtime",
       "manifest": "packages/orm-integration"
+    },
+    {
+      "from": "@moonwitness/orm-knowledge",
+      "to": "@moonwitness/orm",
+      "kind": "runtime",
+      "manifest": "packages/orm-knowledge"
+    },
+    {
+      "from": "@moonwitness/orm-knowledge",
+      "to": "@moonwitness/orm-base",
+      "kind": "runtime",
+      "manifest": "packages/orm-knowledge"
     },
     {
       "from": "@moonwitness/orm-notification",

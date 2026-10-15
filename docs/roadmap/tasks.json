@@ -1831,7 +1831,9 @@
       "output": "First-person testimony plus correction chain, separate interpretation and evidence links",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
-      "priority": "p0"
+      "priority": "p0",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/K5-003.md"
     },
     {
       "id": "K5-004",

@@ -33,6 +33,15 @@ await mkdir(reportDirectory, { recursive: true });
 
 for (const args of [
   ...(built ? [] : [['build']]),
+  [
+    '--filter',
+    '@moonwitness/orm-knowledge',
+    'exec',
+    'vitest',
+    'run',
+    'tests/postgres.integration.test.ts',
+    '--reporter=default',
+  ],
   ['--filter', '@moonwitness/api', 'exec', 'tsc', '--noEmit', '-p', 'tsconfig.integration.json'],
   [
     '--filter',

@@ -14,6 +14,7 @@ import * as storage from '../../packages/orm-storage/dist/index.js';
 import * as workflow from '../../packages/orm-workflow/dist/index.js';
 import * as request from '../../packages/orm-request/dist/index.js';
 import * as integration from '../../packages/orm-integration/dist/index.js';
+import * as witness from '../../packages/orm-knowledge/dist/index.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const requireFromApi = createRequire(path.join(root, 'apps/api/package.json'));
@@ -29,6 +30,7 @@ const addonPackages = [
   { directory: 'orm-workflow', module: workflow, manifest: workflow.manifest },
   { directory: 'orm-request', module: request, manifest: request.manifest },
   { directory: 'orm-integration', module: integration, manifest: integration.manifest },
+  { directory: 'orm-knowledge', module: witness, manifest: witness.manifest },
 ];
 const addonManifests = addonPackages.map(({ manifest }) => manifest);
 const modelName = (model) => model.modelName;
@@ -168,6 +170,7 @@ describe('workspace addon conformance', () => {
       { id: 'workflow.definition_sample_request_v1', field: 'name' },
       { id: 'request.example_laptop', field: 'description' },
       { id: 'orm-integration.endpoint_example_disabled', field: 'name' },
+      { id: 'knowledge.synthetic_witness_001_interpretation_001', field: 'interpretation_text' },
     ];
     const dataAddonNames = addonPackages
       .filter(({ manifest }) => (manifest.data?.length ?? 0) > 0)
