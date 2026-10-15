@@ -1,10 +1,10 @@
 # Inventory MoonWitness
 
-Source audit refreshed on `dev` at `97eb36369e4f07454b0d5244a0959cb370264364` (2026-10-11). This is a source inventory, not proof that every route/role/data combination behaves correctly. The generated package/model references are maintained by `pnpm docs:generate` and checked in CI.
+Source audit refreshed on `dev` at `17bc4dae7e6a27c04bf907f46f626331647a3cf1` (2026-10-16). This is a source inventory, not proof that every route/role/data combination behaves correctly. The generated package/model references are maintained by `pnpm docs:generate` and checked in CI.
 
 ## Workspace and public package surfaces
 
-The pnpm workspace has 4 applications and 16 packages (20 workspace children; 21 projects including the root). `pnpm audit:workspace` counted 438 TypeScript/JavaScript source files, no runtime import cycles, and no workspace dependency cycles. Its two file-level import cycles include type-only back-edges and are documented in [the refactor map](refactor-map.md). The repository also has `apps/logs`, `packages/addons`, and `packages/illustrations` directories that are not separate pnpm projects; a directory alone is not counted as a package.
+The pnpm workspace has 4 applications and 20 packages (24 workspace children; 25 projects including the root). `pnpm audit:workspace` counted 540 TypeScript/JavaScript source files, no runtime import cycles, and no workspace dependency cycles. It reports two file-level local import cycles; inspect their type/runtime edges in [the refactor map](refactor-map.md). The repository also has `apps/logs`, `packages/addons`, and `packages/illustrations` directories that are not separate pnpm projects; a directory alone is not counted as a package.
 
 | Workspace                       | Kind    | Public surface / purpose                                                                                                   |
 | ------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------- |
@@ -16,6 +16,9 @@ The pnpm workspace has 4 applications and 16 packages (20 workspace children; 21
 | `@moonwitness/ui`               | Package | Typed React controls/charts, icons, explicit component subpaths and package-owned CSS/tokens.                              |
 | `@moonwitness/types`            | Package | Shared DTO, API route, domain, JSON-RPC and configuration types.                                                           |
 | `@moonwitness/client`           | Package | Typed HTTP client and query/domain support.                                                                                |
+| `@moonwitness/corpus`           | Package | Deterministic offline corpus ingestion.                                                                                    |
+| `@moonwitness/knowledge`        | Package | Offline typed core knowledge record contracts and validation.                                                              |
+| `@moonwitness/local-ai`         | Package | Opt-in loopback-only local AI runtime contract.                                                                            |
 | `@moonwitness/orm`              | Package | ORM, model/addon contracts, programmatic schema/seed, registry and query support.                                          |
 | `@moonwitness/orm-base`         | Package | Base identity/contact/localization/company/access models and stable example seeds.                                         |
 | `@moonwitness/orm-organization` | Package | Organization/company-scoped addon models and seeds.                                                                        |
@@ -24,6 +27,7 @@ The pnpm workspace has 4 applications and 16 packages (20 workspace children; 21
 | `@moonwitness/orm-request`      | Package | Request management addon models and seeds.                                                                                 |
 | `@moonwitness/orm-storage`      | Package | Storage metadata addon models and seeds.                                                                                   |
 | `@moonwitness/orm-workflow`     | Package | Workflow addon models and seeds.                                                                                           |
+| `@moonwitness/research`         | Package | Typed, scoped assertions and research validation.                                                                          |
 | `@moonwitness/auth`             | Package | Authentication/session services and addon contract.                                                                        |
 | `@moonwitness/jobs`             | Package | Durable jobs, scheduler, outbox runtime and worker contracts.                                                              |
 | `@moonwitness/logger`           | Package | Structured logging and secret/error redaction.                                                                             |
@@ -52,7 +56,7 @@ API route sources are under `apps/api/src/routes/`; generic model operations are
 | Notifications               | `notification.routes.ts` | Inbox and account notification preferences.                                                           |
 | Workflow/request operations | `workflow.routes.ts`     | Workflow/request actions and approval transitions.                                                    |
 
-Startup (`apps/api/src/index.ts`) verifies registered required models, seeded default base accounts and PostgreSQL connectivity before listening. Route registration is centralized in `apps/api/src/app.ts`; runtime route logging can enumerate method/path from the built Fastify app. Authorization must be assessed across user role, active company, model and action; merely seeing a route or a positive test does not prove its negative cases.
+Startup (`apps/api/src/server.ts`) imports configuration and application modules inside its guarded bootstrap, verifies registered required models, seeded default base accounts and PostgreSQL connectivity before listening. Route registration is centralized in `apps/api/src/app.ts`; runtime route logging can enumerate method/path from the built Fastify app. Authorization must be assessed across user role, active company, model and action; merely seeing a route or a positive test does not prove its negative cases.
 
 ## Board user flows and reusable visual system
 
@@ -71,9 +75,9 @@ ORM addon installation uses programmatic model metadata and database operations;
 ## Verification and automation inventory
 
 - `pnpm verify` runs root lint, format, workspace build/typecheck, configured unit suites, addon conformance, UI/assets/charts and accessibility contracts, Board route-aware bundle budgets, release-policy tests, architecture verification and docs/Pages production build. It does not itself run live PostgreSQL integration, PostgreSQL-backed Board E2E, remote release/promotion, or Linux container runtime smoke.
-- `.github/workflows/ci.yml` defines parallel quality/integration/Board/UI/automation/container lanes and an aggregate gate. The current `.github/workflows` directory contains 20 workflow files, including visual/browser matrix, docs links and Pages, security scans, dependency candidates, promotion, release planning/preparation/publication, main-to-dev sync, platform audit, roadmap issue planning/apply, and read-only maintainer issue intake. The intake workflow is source-configured on `dev` and still requires GitHub App repository variables/secrets plus default-branch promotion before hosted activation.
+- `.github/workflows/ci.yml` defines parallel quality/integration/Board/UI/automation/container lanes and an aggregate gate. The current `.github/workflows` directory contains 21 workflow files, including visual/browser matrix, docs links and Pages, security scans, dependency candidates, promotion, release planning/preparation/publication, main-to-dev sync, platform audit, roadmap issue planning/apply, and read-only maintainer issue intake. The intake workflow is source-configured on `dev` and still requires GitHub App repository variables/secrets plus default-branch promotion before hosted activation.
 - PR/promotion checks must be read against the exact current SHA. Previous green CI is not inherited by a changed head. Fresh CODEOWNER approval, GitHub settings, default-branch workflow discovery, token permissions and hosted workflows are external state; local source cannot prove activation.
-- Latest full local verification recorded in [M10.03 evidence](../roadmap/evidence/M10.03.md) passed on `9df3205b3350e8fb906674c943a00d7743ae246c`; it is historical relative to this source audit. On audit SHA `97eb363`, current focused checks pass: `pnpm audit:workspace`, `pnpm architecture:check` (14 artifacts, 20 workspace children, 41 addon models, 66 relations), `pnpm test:addon-conformance` (2/2), and API startup checks (3/3). GitHub CI, PostgreSQL/browser/container runtime and promotion are separate exact-SHA checks; the current `97eb363` CI had not completed at this observation.
+- Latest full local verification recorded in [M10.03 evidence](../roadmap/evidence/M10.03.md) passed on `9df3205b3350e8fb906674c943a00d7743ae246c`; it is historical relative to this source audit. On audit SHA `17bc4da`, focused checks pass: `pnpm audit:workspace` (24 workspace children, 540 source files, no runtime/workspace dependency cycles), generated architecture validation (41 addon models, 67 relations), and docs reference generation/link checks. The per-addon conformance and API startup test evidence is recorded in their own current task evidence; GitHub CI, PostgreSQL/browser/container runtime and promotion are separate exact-SHA checks.
 
 ## Remaining source questions and acceptance boundaries
 
