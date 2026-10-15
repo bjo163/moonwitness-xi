@@ -1,8 +1,15 @@
 import { spawnSync } from 'node:child_process';
-import { env, stderr, exit } from 'node:process';
+import { argv, env, stderr, exit } from 'node:process';
 import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { resolvePackageManager } from './package-manager.mjs';
+
+const args = argv.slice(2);
+const built = args.length === 1 && args[0] === '--built';
+if (args.length > 0 && !built) {
+  stderr.write('Usage: run-postgres-tests.mjs [--built]\n');
+  exit(2);
+}
 
 const connectionString = env.POSTGRES_TEST_URL;
 if (!connectionString) {
@@ -25,7 +32,7 @@ const reportDirectory = resolve('test-results/junit');
 await mkdir(reportDirectory, { recursive: true });
 
 for (const args of [
-  ['build'],
+  ...(built ? [] : [['build']]),
   ['--filter', '@moonwitness/api', 'exec', 'tsc', '--noEmit', '-p', 'tsconfig.integration.json'],
   [
     '--filter',

@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
+import process from 'node:process';
 import test from 'node:test';
-import { URL } from 'node:url';
+import { fileURLToPath, URL } from 'node:url';
 
 const rootManifest = JSON.parse(
   await readFile(new URL('../package.json', import.meta.url), 'utf8')
@@ -65,8 +67,25 @@ test('built variants consume existing package output without invoking package bu
     /scripts\/docs\/build-guide\.mjs/u
   );
 
+  assert.equal(rootManifest.scripts['test:integration'], 'node scripts/run-postgres-tests.mjs');
+  assert.equal(
+    rootManifest.scripts['test:integration:built'],
+    'node scripts/run-postgres-tests.mjs --built'
+  );
   const releaseVerification =
     releaseWorkflow.split('  verify:\n')[1]?.split('\n  publish:\n')[0] ?? '';
   assert.match(releaseVerification, /run: pnpm typecheck[\s\S]*run: pnpm docs:check:built/u);
   assert.match(releaseVerification, /run: pnpm docs:check:built[\s\S]*run: pnpm test:unit:built/u);
+  assert.match(releaseVerification, /run: pnpm typecheck[\s\S]*run: pnpm test:integration:built/u);
+});
+
+test('built PostgreSQL mode is recognized and still requires an explicit test database', () => {
+  const result = spawnSync(process.execPath, ['scripts/run-postgres-tests.mjs', '--built'], {
+    cwd: fileURLToPath(new URL('..', import.meta.url)),
+    encoding: 'utf8',
+    env: { ...process.env, POSTGRES_TEST_URL: '' },
+  });
+  assert.equal(result.status, 2);
+  assert.match(result.stderr, /POSTGRES_TEST_URL is required/u);
+  assert.doesNotMatch(result.stderr, /Usage:/u);
 });

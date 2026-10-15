@@ -18,6 +18,7 @@
     "test:unit:ci": "node scripts/run-unit-tests.mjs",
     "test:board-csv": "node --experimental-strip-types --test scripts/board/csv-export.test.mjs",
     "test:integration": "node scripts/run-postgres-tests.mjs",
+    "test:integration:built": "node scripts/run-postgres-tests.mjs --built",
     "test:restore-drill": "node scripts/verify-application-restore.mjs",
     "assets:generate": "node packages/assets/scripts/generate.mjs && node packages/assets/scripts/generate-illustrations.mjs && node scripts/export-doc-assets.mjs",
     "assets:generate:illustrations": "node packages/assets/scripts/generate-illustrations.mjs && node scripts/export-doc-assets.mjs",

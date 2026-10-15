@@ -118,7 +118,7 @@ jobs:
       - if: github.ref_type != 'tag' || (github.event_name == 'workflow_dispatch' && !inputs.publish)
         run: pnpm test:unit:built
       - if: github.ref_type != 'tag' || (github.event_name == 'workflow_dispatch' && !inputs.publish)
-        run: pnpm test:integration
+        run: pnpm test:integration:built
       - name: Build the release images once with immutable source metadata
         env:
           RELEASE_VERSION: ${{ steps.version.outputs.version }}

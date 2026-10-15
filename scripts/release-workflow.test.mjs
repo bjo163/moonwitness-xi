@@ -63,7 +63,7 @@ test('tag releases reuse exact-SHA main CI while dry runs keep full local verifi
     'pnpm docs:check:built',
     'pnpm --filter @moonwitness/board lint',
     'pnpm test:unit:built',
-    'pnpm test:integration',
+    'pnpm test:integration:built',
   ];
   const reusableCiCondition =
     "github.ref_type != 'tag' || (github.event_name == 'workflow_dispatch' && !inputs.publish)";
