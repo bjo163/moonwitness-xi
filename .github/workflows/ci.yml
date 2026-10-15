@@ -87,9 +87,9 @@ jobs:
       - name: Check route-aware Board bundle budgets
         run: pnpm board:budget
       - run: pnpm test:architecture
-      - run: pnpm architecture:check
+      - run: pnpm architecture:check:built
       - run: pnpm assets:check:docs
-      - run: pnpm docs:build
+      - run: pnpm docs:build:built
       - name: Lint Board
         run: pnpm --filter @moonwitness/board lint
 

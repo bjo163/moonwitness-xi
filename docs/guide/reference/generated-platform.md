@@ -1,6 +1,6 @@
 # Generated platform reference
 
-Source fingerprint: `bd6cb23e8a4dad014f54d017dff5b1ceb0f234ee9f9be810fcca1fdc8f7aac2e`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
+Source fingerprint: `53a3da1917f8ba60faf90c75adfcc8f5efb2ea1cbe2922617cf569cb1bb9f6ce`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
 
 ## Workspace packages and apps
 
@@ -8,7 +8,7 @@ Source fingerprint: `bd6cb23e8a4dad014f54d017dff5b1ceb0f234ee9f9be810fcca1fdc8f7
 | ------------------------------- | ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `@moonwitness/api`              | App     | 1.0.0-rc.1 | `attachments:reconcile`, `build`, `dev`, `jobs:outbox`, `jobs:scheduler`, `jobs:worker`, `reset:superadmin-password`, `revoke:auth-sessions`, `start`, `test`, `visual-audit:server` |
 | `@moonwitness/board`            | App     | 1.0.0-rc.1 | `build`, `dev`, `lint`, `preview`, `typecheck`                                                                                                                                       |
-| `@moonwitness/docs`             | App     | 1.0.0-rc.1 | `dev`, `portal:build`, `preview`, `test`, `typecheck`                                                                                                                                |
+| `@moonwitness/docs`             | App     | 1.0.0-rc.1 | `dev`, `portal:build`, `portal:build:built`, `preview`, `test`, `typecheck`                                                                                                          |
 | `@moonwitness/ui-catalog`       | App     | 1.0.0-rc.1 | `build`, `dev`, `preview`, `test`                                                                                                                                                    |
 | `@moonwitness/assets`           | Package | 1.0.0-rc.1 | —                                                                                                                                                                                    |
 | `@moonwitness/auth`             | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
@@ -70,6 +70,7 @@ Value categories are inferred from variable names and example syntax; requiredne
 ## Root commands
 
 - `pnpm architecture:check`
+- `pnpm architecture:check:built`
 - `pnpm architecture:generate`
 - `pnpm assets:check:docs`
 - `pnpm assets:export:docs`
@@ -94,9 +95,12 @@ Value categories are inferred from variable names and example syntax; requiredne
 - `pnpm dev`
 - `pnpm dev:board`
 - `pnpm docs:build`
+- `pnpm docs:build:built`
 - `pnpm docs:change:classify`
 - `pnpm docs:check`
+- `pnpm docs:check:built`
 - `pnpm docs:examples:check`
+- `pnpm docs:examples:check:built`
 - `pnpm docs:generate`
 - `pnpm docs:links`
 - `pnpm docs:links:external`
