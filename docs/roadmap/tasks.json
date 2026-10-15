@@ -1688,6 +1688,8 @@
       "dependsOn": ["K3-002", "K3-003"],
       "output": "Allowed relation vocabulary and adjacency queries",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/K3-004.md",
       "labels": ["local-ai-rebuild"],
       "priority": "p0"
     },

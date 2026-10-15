@@ -21,3 +21,21 @@ export {
   type ResolvedEvidenceReference,
   researchEvidenceSelectorSchema,
 } from './evidence.js';
+export {
+  queryReviewedResearchAdjacency,
+  researchRelationSchema,
+  validateResearchGraph,
+  validateResearchRelation,
+  type ResearchAdjacencyEdge,
+  type ResearchAdjacencyOptions,
+  type ResearchAdjacencyResult,
+  type ResearchEpistemicStatus,
+  type ResearchGraphInput,
+  type ResearchGraphNode,
+  type ResearchGraphNodeKind,
+  type ResearchRelation,
+  type ResearchRelationPredicate,
+  type ResearchReviewStatus,
+  type ResearchVisibility,
+  type ReviewedResearchRelationProjection,
+} from './relation.js';
