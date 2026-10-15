@@ -1,4 +1,5 @@
 import { Ajv2020 } from 'ajv/dist/2020.js';
+import * as formatsModule from 'ajv-formats';
 import knowledgeRecordSchema from '../schemas/knowledge-record.schema.json' with { type: 'json' };
 import type {
   KnowledgeRecord,
@@ -7,12 +8,7 @@ import type {
 } from './types.js';
 
 const ajv = new Ajv2020({ allErrors: true, strict: true });
-ajv.addFormat('date-time', {
-  type: 'string',
-  validate: (value: string) =>
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value) &&
-    !Number.isNaN(Date.parse(value)),
-});
+formatsModule.default.default(ajv, { mode: 'full' });
 
 const validateRecord = ajv.compile<KnowledgeRecord>(knowledgeRecordSchema);
 

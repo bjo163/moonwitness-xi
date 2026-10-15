@@ -35,8 +35,10 @@ export type KnowledgeVisibility = (typeof knowledgeVisibilityValues)[number];
 export type KnowledgeLifecycle = 'draft' | 'candidate' | 'active' | 'superseded' | 'withdrawn';
 
 /**
- * Shared envelope only. Identity grammar, source rights and provenance are
- * defined by later K1 tasks and deliberately are not inferred here.
+ * Shared structural envelope only. The JSON Schema is authoritative for value
+ * bounds and runtime validity; call `validateKnowledgeRecord` before treating
+ * an untrusted value as a valid record. Identity grammar, source rights and
+ * provenance are defined by later K1 tasks and deliberately are not inferred.
  */
 export interface KnowledgeRecordBase {
   id: string;

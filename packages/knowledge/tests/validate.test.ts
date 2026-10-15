@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isKnowledgeRecord, validateKnowledgeRecord } from '../src/index.js';
+import { isKnowledgeRecord, knowledgeRecordKinds, validateKnowledgeRecord } from '../src/index.js';
 import type { KnowledgeRecord } from '../src/types.js';
 
 const validConcept = {
@@ -15,9 +15,8 @@ const validConcept = {
 } satisfies KnowledgeRecord;
 
 describe('knowledge record envelope', () => {
-  it('accepts each core kernel kind with explicit non-public classification', () => {
-    const record = { ...validConcept, kind: 'Assertion' } satisfies KnowledgeRecord;
-
+  it.each(knowledgeRecordKinds)('accepts the core kernel kind %s', (kind) => {
+    const record = { ...validConcept, kind } satisfies KnowledgeRecord;
     expect(validateKnowledgeRecord(record)).toEqual({ valid: true, issues: [] });
     expect(isKnowledgeRecord(record)).toBe(true);
   });
@@ -41,6 +40,12 @@ describe('knowledge record envelope', () => {
       issues: expect.arrayContaining([expect.objectContaining({ path: '/visibility' })]),
     });
     expect(validateKnowledgeRecord({ ...validConcept, created_at: 'not-a-date' })).toMatchObject({
+      valid: false,
+      issues: expect.arrayContaining([expect.objectContaining({ path: '/created_at' })]),
+    });
+    expect(
+      validateKnowledgeRecord({ ...validConcept, created_at: '2026-02-30T00:00:00Z' })
+    ).toMatchObject({
       valid: false,
       issues: expect.arrayContaining([expect.objectContaining({ path: '/created_at' })]),
     });

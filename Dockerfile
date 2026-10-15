@@ -16,6 +16,7 @@ COPY packages/auth/package.json ./packages/auth/package.json
 COPY packages/client/package.json ./packages/client/package.json
 COPY packages/eslint-config/package.json ./packages/eslint-config/package.json
 COPY packages/jobs/package.json ./packages/jobs/package.json
+COPY packages/knowledge/package.json ./packages/knowledge/package.json
 COPY packages/logger/package.json ./packages/logger/package.json
 COPY packages/orm-base/package.json ./packages/orm-base/package.json
 COPY packages/orm-integration/package.json ./packages/orm-integration/package.json
