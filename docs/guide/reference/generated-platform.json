@@ -4035,7 +4035,7 @@
     },
     {
       "name": "workflow",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "depends": ["base", "jobs", "notification"],
       "models": [
         {
@@ -4242,6 +4242,16 @@
               "optional": false,
               "hasDefault": false,
               "relation": "workflow.instance"
+            },
+            {
+              "name": "payload",
+              "kind": "text",
+              "column": "payload",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
             },
             {
               "name": "revision",
@@ -4684,5 +4694,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "8879d2b9fafbf410aa0b795f5319507999637c49b6fb6c78a8683fcc711d3338"
+  "generatedFromSha256": "8a91c02af4d89fbc623563779bbb9ca5755134bfc6f0dcb8fee0b1cb6a6452a8"
 }

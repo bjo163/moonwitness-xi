@@ -1745,6 +1745,8 @@
       "id": "K4-002",
       "title": "Polarity/speaker/quotation semantic annotation",
       "milestone": "K4",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/K4-002.md",
       "dependsOn": ["K4-001", "K3-001"],
       "output": "Structured direction, negation, quoted speaker/context schema",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",

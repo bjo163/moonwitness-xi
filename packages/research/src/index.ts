@@ -66,3 +66,15 @@ export {
   type DuplicateVisibility,
 } from './duplicate-candidates.js';
 export { segmentText, type TextSegment, type TextSegmentKind } from './segmentation.js';
+export {
+  projectResearchSemanticAnnotation,
+  validateResearchSemanticAnnotation,
+  type ResearchSemanticAnnotation,
+  type SemanticAssertionProjection,
+  type SemanticContextMode,
+  type SemanticCue,
+  type SemanticCueKind,
+  type SemanticPolarity,
+  type SemanticSpan,
+  type SemanticAnnotationValidation,
+} from './semantics.js';

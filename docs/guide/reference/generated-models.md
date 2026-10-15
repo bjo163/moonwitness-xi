@@ -1,6 +1,6 @@
 # Generated model and addon reference
 
-Source fingerprint: `8879d2b9fafbf410aa0b795f5319507999637c49b6fb6c78a8683fcc711d3338`. Seed values and field defaults are intentionally omitted.
+Source fingerprint: `8a91c02af4d89fbc623563779bbb9ca5755134bfc6f0dcb8fee0b1cb6a6452a8`. Seed values and field defaults are intentionally omitted.
 
 ## Addon `auth`
 
@@ -481,7 +481,7 @@ Models: 1; declared views: 1; menu entries: 1; seed rows: 7.
 
 ## Addon `workflow`
 
-Version: `1.0.0`; dependencies: `base`, `jobs`, `notification`.
+Version: `1.1.0`; dependencies: `base`, `jobs`, `notification`.
 
 Models: 4; declared views: 4; menu entries: 4; seed rows: 6.
 
@@ -505,6 +505,7 @@ Models: 4; declared views: 4; menu entries: 4; seed rows: 6.
 | `workflow.event`      | `workflow_events`      | `from_state`          | string    | Yes      | No       | No         | —                     |
 | `workflow.event`      | `workflow_events`      | `idempotency_key`     | string    | Yes      | No       | No         | —                     |
 | `workflow.event`      | `workflow_events`      | `instance`            | belongsTo | Yes      | No       | No         | `workflow.instance`   |
+| `workflow.event`      | `workflow_events`      | `payload`             | text      | No       | Yes      | No         | —                     |
 | `workflow.event`      | `workflow_events`      | `revision`            | integer   | Yes      | No       | No         | —                     |
 | `workflow.event`      | `workflow_events`      | `sequence`            | integer   | Yes      | No       | No         | —                     |
 | `workflow.event`      | `workflow_events`      | `to_state`            | string    | Yes      | No       | No         | —                     |

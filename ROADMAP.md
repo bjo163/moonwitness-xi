@@ -255,7 +255,7 @@ Track approved through ADR 0004 on 2026-10-15. The existing 148 M-series tasks a
 - [ ] K3-006 Cross-domain explanation and alternative hypothesis API.
 - [ ] K3-007 Evidence-aware duplicate scoring candidates.
 - [x] K4-001 Text segmentation and lexical metadata with offsets. Evidence: [K4-001](docs/roadmap/evidence/K4-001.md).
-- [ ] K4-002 Polarity/speaker/quotation semantic annotation.
+- [x] K4-002 Polarity/speaker/quotation semantic annotation. Evidence: [K4-002](docs/roadmap/evidence/K4-002.md).
 - [ ] K4-003 Pure Asma source-derived proof of concept.
 - [ ] K4-004 Semantic RUH/HIZAB concept scope and mappings.
 - [ ] K4-005 Four-tradition cross-reference alignment candidates.
