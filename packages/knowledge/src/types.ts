@@ -22,7 +22,7 @@ export const knowledgeRecordKinds = [
 
 export type KnowledgeRecordKind = (typeof knowledgeRecordKinds)[number];
 
-/** Classification values remain a proposed policy projection until K0-005 review. */
+/** Classification values implement the accepted K0-005 vocabulary only. */
 export const knowledgeVisibilityValues = [
   'PUBLIC_APPROVED',
   'INTERNAL',

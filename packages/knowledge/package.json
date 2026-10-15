@@ -11,7 +11,8 @@
       "import": "./dist/src/index.js"
     },
     "./schema": "./dist/schemas/knowledge-record.schema.json",
-    "./provenance-schema": "./dist/schemas/provenance-graph.schema.json"
+    "./provenance-schema": "./dist/schemas/provenance-graph.schema.json",
+    "./source-artifact-schema": "./dist/schemas/source-artifact-manifest.schema.json"
   },
   "files": [
     "dist"

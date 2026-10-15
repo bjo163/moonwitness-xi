@@ -1,6 +1,8 @@
-# Proposed source rights and ingestion policy
+# Source rights and ingestion policy
 
-- Status: proposed; rights steward and maintainer review required
+- Status: accepted policy; source-specific clearance remains required
+- Rights steward and maintainer: `bjo163` (designated by the repository maintainer)
+- Accepted: 2026-10-15, maintainer approval recorded in the execution task
 - Related task: K0-004
 - Related decision: [ADR 0004](../decisions/0004-knowledge-rebuild-centralization.md)
 - Scope: provenance and redistribution gates for corpus/source artifacts
@@ -91,12 +93,18 @@ gates pass.
 
 ## Approval gates and current gaps
 
-- **Named rights steward:** unassigned in the inspected workspace; must be
-  assigned by maintainers before source-specific byte ingestion/publication.
+- **Named rights steward:** `bjo163` is assigned for policy ownership and
+  source-rights review. A source-specific decision is still required before
+  any source bytes are ingested or published.
 - **Qualified legal review:** required when source terms, jurisdiction, or
   redistribution permission are uncertain. No legal interpretation is made
   here.
 - **Source-specific clearance:** still required for every edition and release;
   acceptance of this general policy would not clear a source.
-- **Implementation:** no corpus manifest schema, importer, storage, takedown
-  automation, or publication path is implemented or authorized by this draft.
+- **Implementation:** K1-003 supplies a structural artifact manifest schema.
+  Importer, storage, takedown automation and publication remain separately
+  scoped downstream work; policy acceptance does not activate them.
+
+Approval of this policy establishes the repository's general decision rules;
+it is not a legal opinion, source-specific license clearance, or authorization
+to ingest, redistribute, or train on any particular source.

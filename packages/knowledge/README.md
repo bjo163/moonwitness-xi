@@ -28,8 +28,17 @@ actors to `prov:Agent` / `prov:wasAssociatedWith`, used inputs and sources to
 `prov:used`, and generated records to `prov:wasGeneratedBy`. Method IDs and
 versions are explicit XI contract fields; this package does not claim to be an
 RDF runtime or infer causation from timestamps. Rights clearance remains a
-separate gate. Visibility values are provisional pending K0-005 review; records
+separate gate. Visibility values follow the accepted K0-005 vocabulary; records
 must state a visibility explicitly. Fixtures and tests use synthetic data only.
+
+The source artifact manifest schema at
+`schemas/source-artifact-manifest.schema.json` records artifact identity, exact
+edition, locale, rights decision, attribution, and intended publication
+representation. Public source bytes require a permitted, scoped decision, an
+exact SHA-256 and byte length, attribution, and a complaint-process owner.
+Unknown or restricted rights remain metadata-only at most. Structural
+validity does not establish legal permission or authorize a release;
+source-specific evidence and review remain mandatory.
 
 ```sh
 pnpm --filter @moonwitness/knowledge build

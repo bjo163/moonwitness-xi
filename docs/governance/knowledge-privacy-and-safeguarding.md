@@ -1,6 +1,8 @@
-# Proposed knowledge privacy, consent, and safeguarding policy
+# Knowledge privacy, consent, and safeguarding policy
 
-- Status: proposed; named privacy/data and safeguarding owners must review
+- Status: accepted policy; import and publication workflows remain gated
+- Data/privacy steward and safeguarding owner: `bjo163` (designated by the repository maintainer)
+- Accepted: 2026-10-15, maintainer approval recorded in the execution task
 - Related task: K0-005
 - Related decision: [ADR 0004](../decisions/0004-knowledge-rebuild-centralization.md)
 - Scope: witness, account-export, case, and child-sensitive knowledge records
@@ -12,7 +14,7 @@ records in implementation fixtures.
 
 ## Classification and default access
 
-Use the following proposed classifications, compatible with ADR 0004:
+Use the following classifications, compatible with ADR 0004:
 
 | Classification    | Default access and handling                                                                                                                               |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -75,7 +77,8 @@ location, or media through a general public form. Use synthetic child fixtures
 only. A future authorized child-protection workflow needs a named safeguarding
 owner, restricted access and storage, a response/escalation procedure,
 minimization and retention decisions, and specialist review before collection
-or publication. No such workflow or owner was verified during this task.
+or publication. The safeguarding owner is assigned, but no such workflow has
+been authorized or implemented.
 
 ## Revocation and incident response
 
@@ -101,8 +104,8 @@ guessable attachment IDs, public/search/preview/log/prompt leaks, self-approval,
 and revocation from derived indexes. A passing synthetic test does not
 authorize real-data use.
 
-Before a private import or public projection, maintainers must name and obtain
-approval from:
+Before a private import or public projection, the assigned owners must approve
+the specific workflow and obtain any additional required review from:
 
 - a data/privacy steward responsible for classification, consent, minimization,
   retention, revocation, and access reviews;
@@ -111,6 +114,8 @@ approval from:
 - qualified privacy/legal counsel when a real sensitive case or jurisdictional
   obligation requires interpretation.
 
-These roles are unassigned in the inspected workspace. This draft makes no
-claim of GDPR, child-protection, or other legal compliance and authorizes no
-real private or child-sensitive data import.
+The data/privacy steward and safeguarding owner are assigned to `bjo163` for
+policy ownership. A publication reviewer must still be identified for each
+proposed public projection. This policy makes no claim of GDPR,
+child-protection, or other legal compliance and authorizes no real private or
+child-sensitive data import.

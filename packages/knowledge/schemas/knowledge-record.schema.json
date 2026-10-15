@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://moonwitness.dev/schemas/knowledge-record.schema.json",
   "title": "MoonWitness XI core knowledge record envelope",
-  "description": "Structural contract only. Visibility classifications remain subject to K0-005 review; this schema does not authorize source bytes or publication.",
+  "description": "Structural contract only. Visibility uses the accepted K0-005 vocabulary; this schema does not authorize source bytes or publication.",
   "type": "object",
   "additionalProperties": false,
   "required": [

@@ -1423,7 +1423,7 @@
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
       "priority": "p0",
-      "status": "blocked",
+      "status": "complete",
       "evidence": "docs/roadmap/evidence/K0-004.md"
     },
     {
@@ -1435,7 +1435,7 @@
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
       "priority": "p0",
-      "status": "blocked",
+      "status": "complete",
       "evidence": "docs/roadmap/evidence/K0-005.md"
     },
     {
@@ -1446,7 +1446,9 @@
       "output": "Per-source repo/file/hash/license/old-id/target-decision inventory",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
-      "priority": "p0"
+      "priority": "p0",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/K0-006.md"
     },
     {
       "id": "K0-007",
@@ -1492,7 +1494,9 @@
       "output": "Artifact, edition, rights/attribution/locale/ref manifest type",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
-      "priority": "p0"
+      "priority": "p0",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/K1-003.md"
     },
     {
       "id": "K1-004",
