@@ -7,7 +7,6 @@
       "title": "Inventarisasi package, model, endpoint, view, menu, akses, seed, scheduler, worker, outbox, import/export, dan attachment yang benar-benar tersedia.",
       "milestone": "M0",
       "status": "complete",
-      "evidence": "docs/roadmap/evidence/M0.01.md",
       "dependsOn": [],
       "output": "docs/engineering/inventory.md",
       "detailFile": "docs/roadmap/00-baseline.md",
