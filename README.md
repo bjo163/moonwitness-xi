@@ -368,6 +368,11 @@ POSTGRES_TEST_URL=postgresql://postgres:postgres@127.0.0.1:5432/moonwitness_test
 Selanjutnya `pnpm test` menjalankan tes SQLite dan integrasi PostgreSQL. Tanpa variabel
 tersebut, tes PostgreSQL akan dilewati.
 
+Untuk pengembangan, pilih test sesuai file dan perilaku yang berubah sebelum menjalankan
+suite penuh. Lihat [panduan verifikasi lokal](docs/testing/FLAKY-TESTS.md#choose-the-smallest-useful-local-check)
+untuk cara menjalankan satu test Board tanpa mengulang build/preflight yang sudah lulus,
+serta batasan yang memastikan shortcut lokal tidak menggantikan gate CI.
+
 ## Deploy
 
 Build API dan board dari root dengan `pnpm build`. Jalankan API menggunakan
