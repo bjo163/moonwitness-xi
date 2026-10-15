@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "apps/*/package.json and packages/*/package.json",
-  "sourceSha256": "f55a459f43f03bd8be32afb0bfbfc12c0832981d293c9a2e6fa23bec361508cd",
+  "sourceSha256": "440ed4470fc3b5c8208b6209cf86d66f192638173c0b8ac85a60a1290afbf889",
   "packages": [
     {
       "name": "@moonwitness/api",
@@ -32,6 +32,12 @@
       "kind": "package",
       "version": "1.0.0-rc.1",
       "manifest": "packages/client"
+    },
+    {
+      "name": "@moonwitness/corpus",
+      "kind": "package",
+      "version": "1.0.0-rc.1",
+      "manifest": "packages/corpus"
     },
     {
       "name": "@moonwitness/docs",
@@ -238,6 +244,12 @@
       "to": "@moonwitness/ui",
       "kind": "runtime",
       "manifest": "apps/board"
+    },
+    {
+      "from": "@moonwitness/corpus",
+      "to": "@moonwitness/knowledge",
+      "kind": "runtime",
+      "manifest": "packages/corpus"
     },
     {
       "from": "@moonwitness/docs",

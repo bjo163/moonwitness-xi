@@ -162,6 +162,12 @@ const suites = [
     typecheck: true,
     typecheckConfig: 'tsconfig.test.json',
   },
+  {
+    name: 'corpus',
+    packageName: '@moonwitness/corpus',
+    typecheck: true,
+    typecheckConfig: 'tsconfig.test.json',
+  },
 ];
 
 for (const suite of suites) {

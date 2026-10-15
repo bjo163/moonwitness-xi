@@ -14,6 +14,7 @@ COPY apps/ui-catalog/package.json ./apps/ui-catalog/package.json
 COPY packages/assets/package.json ./packages/assets/package.json
 COPY packages/auth/package.json ./packages/auth/package.json
 COPY packages/client/package.json ./packages/client/package.json
+COPY packages/corpus/package.json ./packages/corpus/package.json
 COPY packages/eslint-config/package.json ./packages/eslint-config/package.json
 COPY packages/jobs/package.json ./packages/jobs/package.json
 COPY packages/knowledge/package.json ./packages/knowledge/package.json
