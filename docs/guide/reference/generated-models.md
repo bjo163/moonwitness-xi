@@ -1,6 +1,6 @@
 # Generated model and addon reference
 
-Source fingerprint: `257c453e2463fbd8a9fce3e0b27d33833d041b71be4a4312332fc52a14b6f66b`. Seed values and field defaults are intentionally omitted.
+Source fingerprint: `c40615c10a338515c76f58be7750e7e03370275621b671ae62f37290c589f23e`. Seed values and field defaults are intentionally omitted.
 
 ## Addon `auth`
 
@@ -97,6 +97,7 @@ Models: 22; declared views: 22; menu entries: 22; seed rows: 736.
 | `base.model_access`          | `model_access`           | `read`                 | boolean   | No       | Yes      | [redacted] | —                       |
 | `base.model_access`          | `model_access`           | `unlink`               | boolean   | No       | Yes      | [redacted] | —                       |
 | `base.model_access`          | `model_access`           | `write`                | boolean   | No       | Yes      | [redacted] | —                       |
+| `base.partner`               | `partners`               | `addresses`            | hasMany   | No       | Yes      | No         | `base.partner_address`  |
 | `base.partner`               | `partners`               | `city`                 | string    | No       | Yes      | No         | —                       |
 | `base.partner`               | `partners`               | `company`              | belongsTo | No       | Yes      | No         | `base.company`          |
 | `base.partner`               | `partners`               | `country`              | belongsTo | No       | Yes      | No         | `base.country`          |
