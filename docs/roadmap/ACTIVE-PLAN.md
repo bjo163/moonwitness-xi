@@ -1,6 +1,6 @@
 # Jalur rilis aktif
 
-**Diperbarui: 2026-10-15; baseline lokal PostgreSQL tercatat pada `dev` SHA `2b4de58c4fcb9bb09f19c38ec9583209e00d95e3`.** Goal penuh mencakup 148 M-series dan 65 K-series (213 task terindeks); M-series tetap utuh dan pekerjaan K-series terpisah. `pnpm roadmap:progress -- --format json` saat ini: 105 complete, 11 running, 95 todo, 2 blocked. Snapshot tepat-SHA diperbarui setelah batch ini. Jalur rilis pertama adalah jalur prioritas, bukan pengganti roadmap. Percepatan mengurangi pengulangan dan mengurutkan dependensi; tidak mengurangi acceptance.
+**Diperbarui: 2026-10-15; baseline lokal PostgreSQL tercatat pada `dev` SHA `2b4de58c4fcb9bb09f19c38ec9583209e00d95e3`.** Goal penuh mencakup 148 M-series dan 65 K-series (213 task terindeks); M-series tetap utuh dan pekerjaan K-series terpisah. `pnpm roadmap:progress -- --format json` saat ini: 106 complete, 11 running, 94 todo, 2 blocked. K1-004 sudah diterima secara lokal; K1-003 dan task turunannya tetap menunggu approval hak sumber K0-004. Snapshot tepat-SHA diperbarui setelah batch ini. Jalur rilis pertama adalah jalur prioritas, bukan pengganti roadmap. Percepatan mengurangi pengulangan dan mengurutkan dependensi; tidak mengurangi acceptance.
 
 ## Temuan bottleneck yang terukur — 2026-10-15
 

@@ -59,4 +59,28 @@ describe('knowledge record envelope', () => {
       ],
     });
   });
+
+  it('accepts complete derivation metadata and rejects missing method versions', () => {
+    const derived = {
+      ...validConcept,
+      derivation: {
+        activity_id: 'mw:provenance-activity:synthetic-run',
+        input_ids: ['mw:content:synthetic-input'],
+        method_id: 'mw:method:synthetic-extraction',
+        method_version: '1.0.0',
+      },
+    };
+    expect(validateKnowledgeRecord(derived)).toEqual({ valid: true, issues: [] });
+    expect(
+      validateKnowledgeRecord({
+        ...derived,
+        derivation: { ...derived.derivation, method_version: '' },
+      })
+    ).toMatchObject({
+      valid: false,
+      issues: expect.arrayContaining([
+        expect.objectContaining({ path: '/derivation/method_version' }),
+      ]),
+    });
+  });
 });

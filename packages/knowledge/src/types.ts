@@ -34,11 +34,19 @@ export const knowledgeVisibilityValues = [
 export type KnowledgeVisibility = (typeof knowledgeVisibilityValues)[number];
 export type KnowledgeLifecycle = 'draft' | 'candidate' | 'active' | 'superseded' | 'withdrawn';
 
+/** Per-record derivation link; graph-level resolution is performed separately. */
+export interface KnowledgeDerivation {
+  activity_id: string;
+  input_ids: string[];
+  method_id: string;
+  method_version: string;
+}
+
 /**
  * Shared structural envelope only. The JSON Schema is authoritative for value
  * bounds and runtime validity; call `validateKnowledgeRecord` before treating
- * an untrusted value as a valid record. Identity grammar, source rights and
- * provenance are defined by later K1 tasks and deliberately are not inferred.
+ * an untrusted value as a valid record. Derivation references are resolved by
+ * `validateKnowledgeProvenanceGraph`; this shape does not imply source rights.
  */
 export interface KnowledgeRecordBase {
   id: string;
@@ -50,6 +58,7 @@ export interface KnowledgeRecordBase {
   origin_ref: string;
   visibility: KnowledgeVisibility;
   content_revision: number;
+  derivation?: KnowledgeDerivation;
 }
 
 export type KnowledgeRecord = {

@@ -1502,7 +1502,9 @@
       "output": "Actor/source/activity/time/derivation provenance envelope",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
-      "priority": "p0"
+      "priority": "p0",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/K1-004.md"
     },
     {
       "id": "K1-005",

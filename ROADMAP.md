@@ -235,7 +235,7 @@ Track approved through ADR 0004 on 2026-10-15. The existing 148 M-series tasks a
 - [x] K1-001 Knowledge record types and JSON schemas. Evidence: [K1-001](docs/roadmap/evidence/K1-001.md).
 - [x] K1-002 Canonical ID/alias grammar and resolver. Evidence: [K1-002](docs/roadmap/evidence/K1-002.md).
 - [ ] K1-003 Source artifact and rights schemas.
-- [ ] K1-004 PROV-based activity and evidence contracts.
+- [x] K1-004 PROV-based activity and evidence contracts. Evidence: [K1-004](docs/roadmap/evidence/K1-004.md).
 - [ ] K1-005 Standalone offline knowledge validator CLI.
 - [ ] K1-006 Deterministic canonical JSON and snapshot hashing.
 - [ ] K1-007 Independent ontology/corpus schema versioning.
