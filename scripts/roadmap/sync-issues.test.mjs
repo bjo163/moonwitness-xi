@@ -149,6 +149,12 @@ test('issue sync workflow bounds changed-task and backlog writes to an exact dev
   assert.match(applyJob, /fetch-depth: 0/u);
   assert.match(applyJob, /refs\/remotes\/origin\/dev/u);
   assert.match(applyJob, /collect-lifecycle-snapshot-cli\.mjs/u);
+  assert.match(applyJob, /if \[\[ ! -s "\$snapshot_file" \]\]/u);
+  assert.match(
+    applyJob,
+    /dev source advanced after lifecycle collection; skipping this stale issue-sync event/u
+  );
+  assert.match(applyJob, /git fetch origin dev --no-recurse-submodules/u);
   assert.match(applyJob, /--lifecycle-snapshot/u);
 });
 

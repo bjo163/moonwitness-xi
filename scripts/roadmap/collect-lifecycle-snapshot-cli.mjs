@@ -40,18 +40,26 @@ async function ghJsonObject(args) {
   return JSON.parse(stdout);
 }
 
-async function currentDevPullRequestTechnicalGate(repository, sourceSha) {
-  const deadline = Date.now() + 25 * 60 * 1000;
+export async function waitForCurrentDevPullRequestTechnicalGate({
+  repository,
+  sourceSha,
+  readDevHead,
+  readWorkflowRuns,
+  readPullRequest,
+  readJobs,
+  sleep = delay,
+  now = Date.now,
+  onHeartbeat = () => {},
+  timeoutMs = 25 * 60 * 1000,
+}) {
+  const deadline = now() + timeoutMs;
   let lastHeartbeat = 0;
-  while (Date.now() < deadline) {
-    const pages = await ghJson([
-      `repos/${repository}/actions/workflows/ci.yml/runs?branch=dev&event=pull_request&per_page=100`,
-    ]);
+  while (now() < deadline) {
+    if ((await readDevHead()) !== sourceSha) return { status: 'stale' };
+    const pages = await readWorkflowRuns();
     const run = selectExactDevPullRequestCiRun(pages, sourceSha);
     if (run) {
-      const pullRequest = await ghJsonObject([
-        `repos/${repository}/pulls/${run.pull_request_number}`,
-      ]);
+      const pullRequest = await readPullRequest(run.pull_request_number);
       if (!isExactDevMainPullRequest(pullRequest, sourceSha, repository, run.pull_request_number)) {
         throw new Error(
           `The CI run for ${sourceSha} is not tied to a same-repository dev-to-main pull request.`
@@ -59,20 +67,21 @@ async function currentDevPullRequestTechnicalGate(repository, sourceSha) {
       }
     }
     if (run?.status === 'completed') {
-      const jobPages = await ghJson([
-        `repos/${repository}/actions/runs/${run.id}/jobs?per_page=100`,
-      ]);
-      return completedExactDevPullRequestTechnicalGate(run, jobPages);
+      const jobPages = await readJobs(run.id);
+      return {
+        status: 'ready',
+        checkRuns: completedExactDevPullRequestTechnicalGate(run, jobPages),
+      };
     }
-    const now = Date.now();
-    if (now - lastHeartbeat >= 60_000) {
+    const currentTime = now();
+    if (currentTime - lastHeartbeat >= 60_000) {
       const runStatus = run ? `run ${run.id} is ${run.status}` : 'no exact-source PR run found yet';
-      process.stdout.write(
-        `Waiting for the exact dev-to-main PR technical gate at ${sourceSha}: ${runStatus}.\n`
+      onHeartbeat(
+        `Waiting for the exact dev-to-main PR technical gate at ${sourceSha}: ${runStatus}.`
       );
-      lastHeartbeat = now;
+      lastHeartbeat = currentTime;
     }
-    await delay(15_000);
+    await sleep(15_000);
   }
   throw new Error(
     `The exact dev-to-main PR ci-technical-gate did not complete within 25 minutes for ${sourceSha}; no lifecycle snapshot was written.`
@@ -144,10 +153,29 @@ async function main() {
     dev: git(['rev-parse', 'refs/remotes/origin/dev']),
     main: git(['rev-parse', 'refs/remotes/origin/main']),
   };
-  const [checkRuns, releasePages] = await Promise.all([
-    currentDevPullRequestTechnicalGate(repository, branchHeads.dev),
+  const [gateResult, releasePages] = await Promise.all([
+    waitForCurrentDevPullRequestTechnicalGate({
+      repository,
+      sourceSha: branchHeads.dev,
+      readDevHead: async () =>
+        (await ghJsonObject([`repos/${repository}/git/ref/heads/dev`])).object?.sha,
+      readWorkflowRuns: () =>
+        ghJson([
+          `repos/${repository}/actions/workflows/ci.yml/runs?branch=dev&event=pull_request&per_page=100`,
+        ]),
+      readPullRequest: (number) => ghJsonObject([`repos/${repository}/pulls/${number}`]),
+      readJobs: (runId) => ghJson([`repos/${repository}/actions/runs/${runId}/jobs?per_page=100`]),
+      onHeartbeat: (message) => process.stdout.write(`${message}\n`),
+    }),
     ghJson([`repos/${repository}/releases?per_page=100`]),
   ]);
+  if (gateResult.status === 'stale') {
+    process.stdout.write(
+      `Skipping stale issue-sync event: dev advanced beyond ${branchHeads.dev}.\n`
+    );
+    return;
+  }
+  const checkRuns = gateResult.checkRuns;
   const releases = flattenGitHubPages(releasePages);
   const snapshot = await collectLifecycleSnapshot({
     tasks: index.tasks,
@@ -172,6 +200,14 @@ async function main() {
     commitExists: hasCommit,
     isAncestor,
   });
+  if (
+    (await ghJsonObject([`repos/${repository}/git/ref/heads/dev`])).object?.sha !== branchHeads.dev
+  ) {
+    process.stdout.write(
+      `Skipping stale issue-sync event: dev advanced beyond ${branchHeads.dev}.\n`
+    );
+    return;
+  }
   const outputPath = path.join(repositoryRoot, '.roadmap-lifecycle-snapshot.json');
   await writeFile(outputPath, `${JSON.stringify(snapshot, null, 2)}\n`, 'utf8');
   process.stdout.write(

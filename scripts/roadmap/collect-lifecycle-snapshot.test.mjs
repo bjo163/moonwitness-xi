@@ -11,6 +11,7 @@ import {
   selectExactDevPullRequestCiRun,
 } from './collect-lifecycle-snapshot.mjs';
 import { projectLifecycleSnapshot } from './lifecycle-snapshot.mjs';
+import { waitForCurrentDevPullRequestTechnicalGate } from './collect-lifecycle-snapshot-cli.mjs';
 
 const sourceSha = 'a'.repeat(40);
 const planSha = 'b'.repeat(40);
@@ -187,6 +188,31 @@ test('fails immediately when a completed PR CI run omits its technical gate', ()
       ]),
     /did not report a completed ci-technical-gate/u
   );
+});
+
+test('stops polling cleanly when dev advances while waiting for its exact PR gate', async () => {
+  let headReads = 0;
+  let workflowReads = 0;
+  const result = await waitForCurrentDevPullRequestTechnicalGate({
+    repository: 'bjo163/moonwitness-xi',
+    sourceSha: devSha,
+    readDevHead: async () => (++headReads === 1 ? devSha : 'f'.repeat(40)),
+    readWorkflowRuns: async () => {
+      workflowReads += 1;
+      return [{ workflow_runs: [] }];
+    },
+    readPullRequest: async () => assert.fail('no exact-source run should be selected'),
+    readJobs: async () => assert.fail('no exact-source run should be selected'),
+    sleep: async () => {},
+    now: (() => {
+      let time = 0;
+      return () => (time += 1);
+    })(),
+  });
+
+  assert.deepEqual(result, { status: 'stale' });
+  assert.equal(headReads, 2);
+  assert.equal(workflowReads, 1);
 });
 
 test('accepts the completed exact PR technical gate for lifecycle evidence', () => {

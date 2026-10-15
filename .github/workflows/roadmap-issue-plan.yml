@@ -173,6 +173,15 @@ jobs:
           trap 'rm -f "$snapshot_file"' EXIT
           export SOURCE_SHA
           node scripts/roadmap/collect-lifecycle-snapshot-cli.mjs
+          if [[ ! -s "$snapshot_file" ]]; then
+            echo 'The dev source advanced while waiting for its PR gate; skipping this stale issue-sync event.'
+            exit 0
+          fi
+          git fetch origin dev --no-recurse-submodules
+          if [[ "$(git rev-parse refs/remotes/origin/dev)" != "$SOURCE_SHA" ]]; then
+            echo 'The dev source advanced after lifecycle collection; skipping this stale issue-sync event.'
+            exit 0
+          fi
           node scripts/roadmap/sync-issues.mjs --quiet --apply --task-ids "$TASK_IDS" --lifecycle-snapshot "$snapshot_file"
         env:
           GITHUB_TOKEN: ${{ github.token }}
