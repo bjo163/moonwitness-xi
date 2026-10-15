@@ -157,6 +157,9 @@ jobs:
       - name: Test versioned documentation contracts
         if: matrix.suite == 'roadmap'
         run: pnpm test:versioned-docs
+      - name: Check roadmap documentation formatting
+        if: matrix.suite == 'roadmap'
+        run: pnpm exec prettier --check 'docs/roadmap/**/*.md'
 
   integration:
     name: integration

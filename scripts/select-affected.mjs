@@ -93,6 +93,16 @@ export function ciProjectsForAffectedPackages(affectedPackages, changedFiles = [
   return [...projects];
 }
 
+export function requiresQualityLane(changedFiles, unclassifiedChanges = false) {
+  return (
+    unclassifiedChanges ||
+    changedFiles.some(
+      (path) =>
+        (path.startsWith('docs/') || path === 'README.md') && !path.startsWith('docs/roadmap/')
+    )
+  );
+}
+
 async function writePlan(result, jsonOutput) {
   const projects = result.projects;
   if (env.GITHUB_OUTPUT) {
@@ -209,10 +219,7 @@ async function main() {
       !path.startsWith('docs/') &&
       path !== 'README.md'
   );
-  if (
-    changedFiles.some((path) => path.startsWith('docs/') || path === 'README.md') ||
-    unclassifiedChanges
-  ) {
+  if (requiresQualityLane(changedFiles, unclassifiedChanges)) {
     if (!ciProjects.includes('quality')) ciProjects.push('quality');
   }
 
