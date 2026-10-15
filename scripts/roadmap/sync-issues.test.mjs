@@ -94,8 +94,8 @@ test('issue sync workflow bounds changed-task and backlog writes to an exact dev
   assert.match(planJob, /checks: read/u);
   assert.doesNotMatch(planJob, /issues: write/u);
   assert.match(planJob, /fetch-depth: 0/u);
-  assert.match(planJob, /collect-lifecycle-snapshot-cli\.mjs/u);
-  assert.match(planJob, /--lifecycle-snapshot/u);
+  assert.doesNotMatch(planJob, /collect-lifecycle-snapshot-cli\.mjs/u);
+  assert.doesNotMatch(planJob, /--lifecycle-snapshot/u);
   assert.match(planJob, /trap 'rm -f/u);
   assert.match(
     applyJob,
@@ -119,6 +119,7 @@ test('issue sync workflow bounds changed-task and backlog writes to an exact dev
   assert.match(applyJob, /fetch-depth: 0/u);
   assert.match(applyJob, /refs\/remotes\/origin\/dev/u);
   assert.match(applyJob, /collect-lifecycle-snapshot-cli\.mjs/u);
+  assert.match(applyJob, /--lifecycle-snapshot/u);
 });
 
 test('managed issue update preserves maintainer notes outside the generated block', () => {

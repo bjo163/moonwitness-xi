@@ -86,10 +86,9 @@ jobs:
         id: reconcile
         run: |
           set -euo pipefail
-          snapshot_file=.roadmap-lifecycle-snapshot.json
           audit_file=.roadmap-issue-audit.json
           plan_file=.roadmap-issue-plan.json
-          trap 'rm -f "$snapshot_file" "$audit_file" "$plan_file"' EXIT
+          trap 'rm -f "$audit_file" "$plan_file"' EXIT
           git fetch origin dev main --tags --no-recurse-submodules
           source_sha="$(git rev-parse HEAD)"
           if [[ "$GITHUB_EVENT_NAME" == 'schedule' && "$source_sha" != "$(git rev-parse refs/remotes/origin/dev)" ]]; then
@@ -103,7 +102,6 @@ jobs:
           echo "source_sha=$source_sha" >> "$GITHUB_OUTPUT"
           export SOURCE_SHA="$source_sha"
           node scripts/roadmap/audit-issues.mjs --quiet --output "$audit_file"
-          node scripts/roadmap/collect-lifecycle-snapshot-cli.mjs
           args=(--quiet)
           if [[ "$GITHUB_EVENT_NAME" == 'push' ]]; then
             TASK_IDS="$TASK_IDS_AUTO"
@@ -111,7 +109,7 @@ jobs:
           if [[ -n "$TASK_IDS" ]]; then
             args+=(--task-ids "$TASK_IDS")
           fi
-          node scripts/roadmap/sync-issues.mjs "${args[@]}" --lifecycle-snapshot "$snapshot_file" --output "$plan_file"
+          node scripts/roadmap/sync-issues.mjs "${args[@]}" --output "$plan_file"
           if [[ "$GITHUB_EVENT_NAME" == 'schedule' || "$BACKFILL_NEXT_BATCH" == 'true' ]]; then
             backfill_ids="$(node scripts/roadmap/select-issue-sync-batch.mjs "$plan_file")"
             echo "backfill_task_ids=$backfill_ids" >> "$GITHUB_OUTPUT"
