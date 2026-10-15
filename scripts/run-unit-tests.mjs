@@ -88,8 +88,6 @@ function run(args, label) {
 
 run(['run', 'test:unit-runner-policy'], 'Unit runner CI ownership policy');
 run(['build'], 'Build');
-run(['run', 'test:board-budget'], 'Board bundle budget contract');
-run(['run', 'board:budget'], 'Board production bundle budget');
 run(['exec', 'node', '--test', 'scripts/roadmap/addon-conformance.test.mjs'], 'Addon conformance');
 for (const check of getUnitRunnerCheckPlan({
   githubActions: process.env.GITHUB_ACTIONS === 'true',

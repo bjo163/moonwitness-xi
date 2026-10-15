@@ -1,5 +1,15 @@
 const checks = [
   {
+    name: 'Board bundle budget contract',
+    args: ['run', 'test:board-budget'],
+    ciOwner: 'quality',
+  },
+  {
+    name: 'Board production bundle budget',
+    args: ['run', 'board:budget'],
+    ciOwner: 'quality',
+  },
+  {
     name: 'Versioned documentation',
     args: ['run', 'test:versioned-docs'],
     ciOwner: 'automation',
