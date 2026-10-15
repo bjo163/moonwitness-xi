@@ -89,6 +89,45 @@ describe('knowledge witness records addon', () => {
     });
   });
 
+  it('rejects raw SQL updates and deletes for every witness record type', async () => {
+    await installAddons(db, [baseManifest, manifest]);
+    const testimony = await WitnessTestimony.query().findOne({
+      external_key: 'synthetic-witness-001',
+    });
+    const correction = await WitnessCorrection.query().findOne({ sequence: 1 });
+    const interpretation = await WitnessInterpretation.query().first();
+    const rows = [
+      { table: 'knowledge_witness_testimonies', id: testimony?.id, column: 'original_text' },
+      { table: 'knowledge_witness_corrections', id: correction?.id, column: 'correction_text' },
+      {
+        table: 'knowledge_witness_interpretations',
+        id: interpretation?.id,
+        column: 'interpretation_text',
+      },
+    ] as const;
+
+    for (const row of rows) {
+      await expect(
+        db(row.table)
+          .where({ id: row.id })
+          .update({ [row.column]: 'raw SQL replacement' })
+      ).rejects.toThrow('Knowledge witness records are append-only');
+      await expect(db(row.table).where({ id: row.id }).delete()).rejects.toThrow(
+        'Knowledge witness records are append-only'
+      );
+    }
+
+    expect(await WitnessTestimony.query().findById(testimony?.id)).toMatchObject({
+      original_text: 'Synthetic example: the meeting began sometime in spring.',
+    });
+    expect(await WitnessCorrection.query().findById(correction?.id)).toMatchObject({
+      correction_text: 'Synthetic correction: the meeting began after noon.',
+    });
+    expect(await WitnessInterpretation.query().findById(interpretation?.id)).toMatchObject({
+      interpretation_text: 'Synthetic hypothesis: the meeting likely began after noon.',
+    });
+  });
+
   it('validates correction chain sequence and complete source provenance', async () => {
     await installAddons(db, [baseManifest, manifest]);
     const testimony = await WitnessTestimony.query().findOne({
@@ -121,21 +160,28 @@ describe('knowledge witness records addon', () => {
     ).toBe(false);
   });
 
-  it('rejects duplicate correction sequence in the database', async () => {
+  it('serializes concurrent correction inserts with the database unique constraint', async () => {
     await installAddons(db, [baseManifest, manifest]);
     const original = await WitnessCorrection.query().findOne({ sequence: 1 });
-    await expect(
-      WitnessCorrection.query().insert({
-        testimony_id: original?.testimony_id,
-        sequence: 1,
-        correction_text: 'Duplicate',
-        reason: 'Synthetic duplicate sequence test.',
-        source_label: 'Synthetic test',
-        source_locator: 'fixture://duplicate',
-        source_digest: digest,
-        asserted_time_text: 'unknown',
-        recorded_by_id: original?.recorded_by_id,
-      })
-    ).rejects.toThrow();
+    const attempts = await Promise.allSettled(
+      [1, 2].map(() =>
+        db('knowledge_witness_corrections').insert({
+          testimony_id: original?.testimony_id,
+          sequence: 2,
+          correction_text: 'Concurrent synthetic correction.',
+          reason: 'Synthetic concurrent sequence test.',
+          source_label: 'Synthetic test',
+          source_locator: 'fixture://concurrent-correction',
+          source_digest: digest,
+          asserted_time_text: 'unknown',
+          recorded_by_id: original?.recorded_by_id,
+        })
+      )
+    );
+    expect(attempts.filter((attempt) => attempt.status === 'fulfilled')).toHaveLength(1);
+    expect(attempts.filter((attempt) => attempt.status === 'rejected')).toHaveLength(1);
+    expect(
+      await WitnessCorrection.query().where({ testimony_id: original?.testimony_id, sequence: 2 })
+    ).toHaveLength(1);
   });
 });

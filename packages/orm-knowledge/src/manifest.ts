@@ -1,15 +1,56 @@
-import { defineAddon, ref, seed } from '@moonwitness/orm';
+import { defineAddon, ref, seed, type Addon } from '@moonwitness/orm';
 import { ModelAccess } from '@moonwitness/orm-base';
 import { WitnessCorrection, WitnessInterpretation, WitnessTestimony } from './models.js';
 import { views } from './views.js';
 
 const syntheticDigest = 'a'.repeat(64);
 
+const installAppendOnlyGuards: NonNullable<Addon['setup']> = async (trx) => {
+  const tables = [
+    'knowledge_witness_testimonies',
+    'knowledge_witness_corrections',
+    'knowledge_witness_interpretations',
+  ] as const;
+  const client = String(trx.client.config.client);
+
+  if (client === 'pg') {
+    await trx.raw(`
+      CREATE OR REPLACE FUNCTION moonwitness_reject_knowledge_witness_mutation()
+      RETURNS trigger AS $$
+      BEGIN
+        RAISE EXCEPTION 'Knowledge witness records are append-only';
+      END;
+      $$ LANGUAGE plpgsql
+    `);
+    for (const table of tables) {
+      const trigger = `${table}_append_only`;
+      await trx.raw('DROP TRIGGER IF EXISTS ?? ON ??', [trigger, table]);
+      await trx.raw(
+        'CREATE TRIGGER ?? BEFORE UPDATE OR DELETE ON ?? FOR EACH ROW EXECUTE FUNCTION moonwitness_reject_knowledge_witness_mutation()',
+        [trigger, table]
+      );
+    }
+    return;
+  }
+
+  if (client === 'better-sqlite3' || client === 'sqlite3') {
+    for (const table of tables) {
+      await trx.raw(
+        `CREATE TRIGGER IF NOT EXISTS ${table}_reject_update BEFORE UPDATE ON ${table} BEGIN SELECT RAISE(ABORT, 'Knowledge witness records are append-only'); END`
+      );
+      await trx.raw(
+        `CREATE TRIGGER IF NOT EXISTS ${table}_reject_delete BEFORE DELETE ON ${table} BEGIN SELECT RAISE(ABORT, 'Knowledge witness records are append-only'); END`
+      );
+    }
+  }
+};
+
 export const manifest = defineAddon({
   name: 'knowledge',
   version: '1.0.0',
   depends: ['base'],
   models: [WitnessTestimony, WitnessCorrection, WitnessInterpretation],
+  setup: installAppendOnlyGuards,
   data: [
     seed(WitnessTestimony, 'knowledge.synthetic_witness_001', {
       external_key: 'synthetic-witness-001',
