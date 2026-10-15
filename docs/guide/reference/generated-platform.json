@@ -396,7 +396,7 @@
       "test:release-workflow": "node --test scripts/release-workflow.test.mjs scripts/release-loop.test.mjs scripts/github-release-lifecycle.test.mjs scripts/release-artifact-identity.test.mjs",
       "test:render-changelog": "node --test scripts/render-changelog.test.mjs",
       "test:restore-drill": "node scripts/verify-application-restore.mjs",
-      "test:roadmap": "node --test scripts/roadmap/validate-roadmap.test.mjs scripts/roadmap/sync-issues.test.mjs scripts/roadmap/changed-task-ids.test.mjs scripts/roadmap/select-issue-sync-batch.test.mjs scripts/roadmap/lifecycle.test.mjs scripts/roadmap/lifecycle-snapshot.test.mjs scripts/roadmap/collect-lifecycle-snapshot.test.mjs scripts/roadmap/issue-intake.test.mjs scripts/roadmap/progress-dashboard.test.mjs scripts/roadmap/progress-workflow.test.mjs scripts/roadmap/audit-issues.test.mjs",
+      "test:roadmap": "node --test scripts/roadmap/validate-roadmap.test.mjs scripts/roadmap/sync-issues.test.mjs scripts/roadmap/changed-task-ids.test.mjs scripts/roadmap/select-issue-sync-batch.test.mjs scripts/roadmap/lifecycle.test.mjs scripts/roadmap/lifecycle-snapshot.test.mjs scripts/roadmap/collect-lifecycle-snapshot.test.mjs scripts/roadmap/resume-stale-issue-sync.test.mjs scripts/roadmap/issue-intake.test.mjs scripts/roadmap/progress-dashboard.test.mjs scripts/roadmap/progress-workflow.test.mjs scripts/roadmap/audit-issues.test.mjs",
       "test:secrets": "node --test scripts/check-gitleaks-config.test.mjs",
       "test:security-policy": "node --test scripts/security-scan-policy.test.mjs scripts/check-trivy-sarif.test.mjs",
       "test:ubuntu-runner-candidate": "node --test scripts/check-ubuntu-runner-candidate.test.mjs",
@@ -5107,5 +5107,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "fb0248b2916459173b8f3653edd872c7f087029ed17253858442ce6dd0460940"
+  "generatedFromSha256": "4e8c7dffe5674b19e805bd2d092adbf638040311ebbc488b3852ead70e5e903e"
 }
