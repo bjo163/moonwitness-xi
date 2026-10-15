@@ -5,9 +5,11 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   createPrivateArchiveImportManifest,
+  importPrivateArchive,
   validatePrivateArchiveImportManifest,
   type PrivateArchiveImportConsent,
   type PrivateArchiveImportRequest,
+  type ImportPrivateArchiveRequest,
 } from '../src/index.js';
 
 const temporaryRoots: string[] = [];
@@ -57,6 +59,20 @@ function request(rootDirectory: string, overrides: Partial<PrivateArchiveImportR
     consent: consent(),
     ...overrides,
   } satisfies PrivateArchiveImportRequest;
+}
+
+async function importFixture() {
+  const container = await mkdtemp(path.join(os.tmpdir(), 'moonwitness-private-copy-'));
+  temporaryRoots.push(container);
+  const workspaceRoot = path.join(container, 'workspace');
+  const sourceRootDirectory = path.join(container, 'source');
+  const rootDirectory = path.join(container, 'destination');
+  await Promise.all([mkdir(workspaceRoot), mkdir(sourceRootDirectory), mkdir(rootDirectory)]);
+  await writeFile(path.join(sourceRootDirectory, 'archive.json'), sourceBytes);
+  return {
+    ...request(rootDirectory, { workspaceRoot }),
+    sourceRootDirectory,
+  } satisfies ImportPrivateArchiveRequest;
 }
 
 afterEach(async () => {
@@ -206,6 +222,64 @@ describe('private archive import manifest', () => {
       createPrivateArchiveImportManifest(request(root, { manifestPath: 'archive.json' }))
     ).rejects.toThrow('manifestPath must not overwrite the source');
     await expect(readFile(path.join(root, 'archive.json'))).resolves.toEqual(sourceBytes);
+  });
+
+  it('copies a consent-bound local synthetic archive into external storage', async () => {
+    const fixture = await importFixture();
+    const manifest = await importPrivateArchive(fixture);
+    const importedBytes = await readFile(path.join(fixture.rootDirectory, 'archive.json'));
+    const serialized = await readFile(
+      path.join(fixture.rootDirectory, 'manifests/intake.json'),
+      'utf8'
+    );
+
+    expect(importedBytes).toEqual(sourceBytes);
+    expect(manifest.source.sha256).toBe(sourceSha256);
+    expect(manifest.source.byteLength).toBe(sourceBytes.byteLength);
+    expect(serialized).not.toContain(sourceBytes.toString('utf8'));
+  });
+
+  it('does not copy denied or checksum-mismatched archives', async () => {
+    const fixture = await importFixture();
+    await expect(
+      importPrivateArchive({ ...fixture, consent: consent({ state: 'denied' }) })
+    ).rejects.toThrow('granted');
+    await expect(
+      importPrivateArchive({ ...fixture, consent: consent({ sourceSha256: '0'.repeat(64) }) })
+    ).rejects.toThrow('checksum');
+    await expect(readdir(fixture.rootDirectory)).resolves.toEqual([]);
+  });
+
+  it('requires distinct external source and destination roots', async () => {
+    const fixture = await importFixture();
+    await expect(
+      importPrivateArchive({ ...fixture, rootDirectory: fixture.sourceRootDirectory })
+    ).rejects.toThrow('must be different directories');
+    await expect(readdir(fixture.sourceRootDirectory)).resolves.toEqual(['archive.json']);
+  });
+
+  it('never overwrites an existing archive or removes it after a failed copy', async () => {
+    const fixture = await importFixture();
+    const destination = path.join(fixture.rootDirectory, 'archive.json');
+    const existingBytes = Buffer.from('existing synthetic archive', 'utf8');
+    await writeFile(destination, existingBytes);
+
+    await expect(importPrivateArchive(fixture)).rejects.toMatchObject({ code: 'EEXIST' });
+    await expect(readFile(destination)).resolves.toEqual(existingBytes);
+  });
+
+  it('removes newly copied bytes when manifest creation fails', async () => {
+    const fixture = await importFixture();
+    const manifestDirectory = path.join(fixture.rootDirectory, 'manifests');
+    await mkdir(manifestDirectory);
+    const existingManifest = Buffer.from('preserve existing manifest', 'utf8');
+    await writeFile(path.join(manifestDirectory, 'intake.json'), existingManifest);
+
+    await expect(importPrivateArchive(fixture)).rejects.toMatchObject({ code: 'EEXIST' });
+    await expect(readdir(fixture.rootDirectory)).resolves.toEqual(['manifests']);
+    await expect(readFile(path.join(manifestDirectory, 'intake.json'))).resolves.toEqual(
+      existingManifest
+    );
   });
 
   it('rejects unbound manifest declarations and unknown fields', () => {

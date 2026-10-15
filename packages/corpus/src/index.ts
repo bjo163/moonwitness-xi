@@ -21,10 +21,12 @@ export {
 } from './dataset-release.js';
 export { putRawArtifact, readRawArtifact } from './raw-artifact-store.js';
 export {
+  importPrivateArchive,
   createPrivateArchiveImportManifest,
   validatePrivateArchiveImportManifest,
   privateArchiveImportManifestSchema,
   type PrivateArchiveImportConsent,
+  type ImportPrivateArchiveRequest,
   type PrivateArchiveImportManifest,
   type PrivateArchiveImportRequest,
   type PrivateArchiveSourceKind,

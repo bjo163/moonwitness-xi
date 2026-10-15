@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { lstat, mkdir, realpath, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, open, realpath, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { pipeline } from 'node:stream/promises';
 import { canonicalizeJson } from '@moonwitness/knowledge';
 import privateArchiveImportManifestSchema from '../schemas/private-archive-import-manifest.schema.json' with { type: 'json' };
 import {
@@ -54,6 +55,10 @@ export interface PrivateArchiveImportRequest {
   exportedAt: string;
   recordedAt: string;
   consent: PrivateArchiveImportConsent;
+}
+
+export interface ImportPrivateArchiveRequest extends PrivateArchiveImportRequest {
+  sourceRootDirectory: string;
 }
 
 export { privateArchiveImportManifestSchema };
@@ -140,6 +145,27 @@ async function resolveRegularFile(
   return absolutePath;
 }
 
+async function resolveExternalDirectory(
+  workspacePath: string,
+  directoryPath: string,
+  label: string
+): Promise<string> {
+  const candidate = path.resolve(directoryPath);
+  const details = await lstat(candidate);
+  if (details.isSymbolicLink() || !details.isDirectory()) {
+    throw new TypeError(`${label} must be a real local directory`);
+  }
+  const [directory, workspace] = await Promise.all([realpath(candidate), realpath(workspacePath)]);
+  const relative = path.relative(workspace, directory);
+  if (
+    relative === '' ||
+    (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative))
+  ) {
+    throw new TypeError(`${label} must be outside the workspace`);
+  }
+  return directory;
+}
+
 async function ensureSafeOutputParent(root: string, destination: string): Promise<void> {
   const relativeParent = path.relative(root, path.dirname(destination));
   let current = root;
@@ -179,24 +205,11 @@ export async function createPrivateArchiveImportManifest(
   if (!request.consent || request.consent.state !== 'granted') {
     throw new TypeError('A granted, source-scoped consent decision is required');
   }
-  const rootCandidate = path.resolve(request.rootDirectory);
-  const rootDetails = await lstat(rootCandidate);
-  if (rootDetails.isSymbolicLink() || !rootDetails.isDirectory()) {
-    throw new TypeError('rootDirectory must be a real local directory');
-  }
-  const [root, workspace] = await Promise.all([
-    realpath(rootCandidate),
-    realpath(request.workspaceRoot),
-  ]);
-  const relativeRoot = path.relative(workspace, root);
-  if (
-    relativeRoot === '' ||
-    (relativeRoot !== '..' &&
-      !relativeRoot.startsWith(`..${path.sep}`) &&
-      !path.isAbsolute(relativeRoot))
-  ) {
-    throw new TypeError('rootDirectory must be outside the workspace');
-  }
+  const root = await resolveExternalDirectory(
+    request.workspaceRoot,
+    request.rootDirectory,
+    'rootDirectory'
+  );
 
   const sourceRelativePath = safeRelativePath(request.sourcePath, 'sourcePath');
   const manifestRelativePath = safeRelativePath(request.manifestPath, 'manifestPath');
@@ -238,6 +251,61 @@ export async function createPrivateArchiveImportManifest(
 
   const destination = path.resolve(root, manifestRelativePath);
   await ensureSafeOutputParent(root, destination);
-  await writeFile(destination, `${canonicalizeJson(manifest)}\n`, { flag: 'wx' });
+  await writeFile(destination, `${canonicalizeJson(manifest)}\n`, { flag: 'wx', mode: 0o600 });
   return manifest;
+}
+
+/** Copy an approved local archive into external storage and bind its manifest to the copied bytes. */
+export async function importPrivateArchive(
+  request: ImportPrivateArchiveRequest
+): Promise<PrivateArchiveImportManifest> {
+  if (!request.consent || request.consent.state !== 'granted') {
+    throw new TypeError('A granted, source-scoped consent decision is required');
+  }
+  if (
+    request.consent.sourcePath !== request.sourcePath ||
+    request.consent.sourceKind !== request.sourceKind
+  ) {
+    throw new TypeError('Consent must be scoped to the exact local source path and kind');
+  }
+
+  const [sourceRoot, destinationRoot] = await Promise.all([
+    resolveExternalDirectory(
+      request.workspaceRoot,
+      request.sourceRootDirectory,
+      'sourceRootDirectory'
+    ),
+    resolveExternalDirectory(request.workspaceRoot, request.rootDirectory, 'rootDirectory'),
+  ]);
+  if (sourceRoot === destinationRoot) {
+    throw new TypeError('sourceRootDirectory and rootDirectory must be different directories');
+  }
+  const sourceFile = await resolveRegularFile(sourceRoot, request.sourcePath, 'sourcePath');
+  const source = await hashFile(sourceFile);
+  if (source.sha256 !== request.consent.sourceSha256) {
+    throw new TypeError('Consent source checksum does not match the supplied archive');
+  }
+
+  const destination = path.resolve(
+    destinationRoot,
+    safeRelativePath(request.sourcePath, 'sourcePath')
+  );
+  await ensureSafeOutputParent(destinationRoot, destination);
+  let destinationHandle: Awaited<ReturnType<typeof open>> | undefined;
+  let createdDestination = false;
+  try {
+    destinationHandle = await open(destination, 'wx', 0o600);
+    createdDestination = true;
+    await pipeline(createReadStream(sourceFile), destinationHandle.createWriteStream());
+    destinationHandle = undefined;
+    const imported = await hashFile(destination);
+    if (imported.sha256 !== source.sha256 || imported.byteLength !== source.byteLength) {
+      throw new TypeError('Imported archive checksum does not match the supplied source');
+    }
+    return await createPrivateArchiveImportManifest(request);
+  } catch (error) {
+    if (destinationHandle) await destinationHandle.close().catch(() => undefined);
+    if (createdDestination) await rm(destination, { force: true });
+    throw error;
+  }
 }

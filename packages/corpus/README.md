@@ -77,15 +77,19 @@ remains valid and no text bytes need to be checked in.
 
 `createPrivateArchiveImportManifest` records a user-supplied local archive's
 kind, export time, byte length, SHA-256, and source-scoped consent fields. It
-hashes the selected file locally, writes only the metadata manifest, and refuses
-denied or withdrawn consent, a source mismatch, unsafe paths, symbolic links,
-workspace-local intake roots, and manifest overwrites. The caller must provide
-the repository `workspaceRoot` and keep the source plus manifest in a private
-local `rootDirectory` outside it. The function does not parse, copy, upload, or
-publish archive contents; never commit real account, witness, or consent data.
-Validation only checks declared structure and source binding; it does not prove
-that consent is authentic or legally sufficient. Retention, revocation, and any
-real-data import remain gated by K5-002 and the accepted privacy policy.
+hashes the selected file locally and writes only the metadata manifest.
+`importPrivateArchive` additionally copies a consent-bound local file to a
+separate private intake directory. It uses exclusive creation, restrictive file
+permissions, verifies the copied digest, and removes bytes it created if
+verification or manifest creation fails. Both functions reject denied or
+withdrawn consent, source mismatch, unsafe paths, symbolic links, intake roots
+inside the workspace, and overwrites. The caller supplies the repository
+`workspaceRoot` and external local source/destination roots. These functions do
+not parse, upload, or publish archive contents; tests use synthetic bytes only.
+Never commit real account, witness, or consent data. Validation checks declared
+structure and source binding; it does not prove consent is authentic or legally
+sufficient. Retention, revocation, and any real-data workflow remain gated by
+K5-002 and the accepted privacy policy.
 
 ## Dataset release pointers
 
