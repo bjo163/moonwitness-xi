@@ -1,13 +1,13 @@
 # Panduan Roadmap MoonWitness
 
-Roadmap ini terdiri dari 148 kartu kerja. Checklist `ROADMAP.md` tetap sumber status. Untuk pekerjaan aktif, mulai dari [audit 49 kartu terbuka dan jalur rilis](ACTIVE-PLAN.md): item lokal independen dikerjakan selagi hosted CI berjalan; approval dan akses eksternal tidak menghentikan pekerjaan lokal yang tidak bergantung padanya.
+Roadmap ini terdiri dari 148 kartu kerja. Checklist `ROADMAP.md` tetap sumber status. Mulai dari [jalur rilis aktif](ACTIVE-PLAN.md) untuk melihat gate yang benar-benar menahan rilis dan [backlog tertunda](EXECUTION-BACKLOG.md) untuk item yang tetap dilacak tetapi tidak perlu menghambat rilis pertama. Riwayat batch lama ada di [arsip eksekusi](EXECUTION-HISTORY-2026-10-15.md).
 
 ## Urutan membaca untuk agen baru
 
 1. Baca [master checklist](../../ROADMAP.md) untuk scope, keputusan pengguna dan status terbaru.
-2. Baca [active release plan](ACTIVE-PLAN.md) untuk klasifikasi blocker, urutan jalur rilis, pekerjaan lokal, owner, acceptance, backlog dan estimasi.
+2. Baca [jalur rilis aktif](ACTIVE-PLAN.md), lalu cek [backlog tertunda](EXECUTION-BACKLOG.md) untuk syarat membuka pekerjaan opsional kembali.
 3. Baca [EXECUTION.md](EXECUTION.md) untuk prosedur kerja paralel, validasi, commit/push, dan handoff.
-4. Pilih ID melalui [tasks.json](tasks.json). Index ini berisi judul, dependensi, file detail dan deliverable; status bukan disimpan di JSON.
+4. Pilih ID melalui [tasks.json](tasks.json). Index ini berisi judul, dependensi, file detail dan deliverable. Status checklist berada di `ROADMAP.md`.
 5. Buka kartu pada dokumen milestone di bawah dan baca sumber kode yang disebutkan.
 6. Untuk pekerjaan automation, baca [AUTOMATION-CONTRACTS.md](AUTOMATION-CONTRACTS.md).
 7. Untuk desain dan UI, baca [DESIGN-SPEC.md](DESIGN-SPEC.md).
