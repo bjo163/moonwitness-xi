@@ -55,10 +55,10 @@ test('publishes the interactive shared UI catalog from the docs site', async ({ 
   await expect(catalogLink).toHaveAttribute('href', '/moonwitness-xi/components/');
   await catalogLink.click();
   await expect(page).toHaveURL(/\/moonwitness-xi\/components\/$/u);
-  await expect(page.getByText('Every screen.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'One system. Every screen.' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Use dark theme' })).toBeVisible();
   await page.reload();
-  await expect(page.getByText('Every screen.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'One system. Every screen.' })).toBeVisible();
 });
 
 test('search is keyboard reachable and routes to matching guide pages', async ({ page }) => {

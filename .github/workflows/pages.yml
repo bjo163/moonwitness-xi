@@ -514,8 +514,10 @@ jobs:
       group: repository-write-coordinator
       cancel-in-progress: false
     permissions:
+      contents: read
       issues: write
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Upsert the documentation publication incident
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -537,8 +539,10 @@ jobs:
       group: repository-write-coordinator
       cancel-in-progress: false
     permissions:
+      contents: read
       issues: write
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Resolve the documentation publication incident after successful deploy
         env:
           GITHUB_TOKEN: ${{ github.token }}
