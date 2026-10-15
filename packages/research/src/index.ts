@@ -85,3 +85,13 @@ export {
   type AsmaCandidateProjection,
   type AsmaResearchProfile,
 } from './asma.js';
+export {
+  validateConceptProfile,
+  validateConceptProfileWithEvidence,
+  type ConceptProfileEvidenceAccess,
+  type ConceptProfileReviewStatus,
+  type ConceptProfileValidationIssue,
+  type ConceptProfileValidationResult,
+  type TrustedConceptEvidenceResolution,
+  type TrustedConceptEvidenceResolver,
+} from './concept-profile.js';

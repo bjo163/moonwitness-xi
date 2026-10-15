@@ -257,7 +257,7 @@ Track approved through ADR 0004 on 2026-10-15. The existing 148 M-series tasks a
 - [x] K4-001 Text segmentation and lexical metadata with offsets. Evidence: [K4-001](docs/roadmap/evidence/K4-001.md).
 - [x] K4-002 Polarity/speaker/quotation semantic annotation. Evidence: [K4-002](docs/roadmap/evidence/K4-002.md).
 - [ ] K4-003 Pure Asma source-derived proof of concept. Evidence: [K4-003](docs/roadmap/evidence/K4-003.md).
-- [ ] K4-004 Semantic RUH/HIZAB concept scope and mappings. Evidence: [K4-004](docs/roadmap/evidence/K4-004.md).
+- [ ] K4-004 Semantic RUH/HIZAB concept scope and mappings. Evidence: [K4-004](docs/roadmap/evidence/K4-004.md) (profile and trusted evidence-validation contract in progress; source-backed mappings remain open).
 - [ ] K4-005 Four-tradition cross-reference alignment candidates.
 - [ ] K4-006 Semantics benchmark and drift ledger.
 - [ ] K5-001 Local-only memory/archive ingestion manifest. Evidence: [K5-001](docs/roadmap/evidence/K5-001.md).
