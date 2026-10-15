@@ -950,6 +950,7 @@
       "title": "Uji race, partial publish, upload gagal, token expired, tidak ada perubahan releasable, dan kegagalan sinkronisasi branch.",
       "milestone": "M7",
       "dependsOn": ["M7.13", "M7.08"],
+      "status": "in_progress",
       "output": "Release fault-injection suite",
       "detailFile": "docs/roadmap/07-release.md",
       "evidence": "docs/roadmap/evidence/M7.14.md"
@@ -1154,6 +1155,7 @@
       "title": "Semua fitur inventarisasi punya status coverage; gap eksplisit mempunyai pemilik dan prioritas.",
       "milestone": "M10",
       "dependsOn": ["M0.02", "M3.08", "M4.16"],
+      "status": "in_progress",
       "output": "Final feature coverage report",
       "detailFile": "docs/roadmap/10-acceptance.md",
       "evidence": "docs/roadmap/evidence/M10.01.md"
@@ -1203,6 +1205,7 @@
       "title": "Simulasi gagal membuktikan promosi/release diblokir; rerun tidak membuat duplikasi atau workflow loop.",
       "milestone": "M10",
       "dependsOn": ["M7.14"],
+      "status": "in_progress",
       "output": "Automation failure acceptance report",
       "detailFile": "docs/roadmap/10-acceptance.md",
       "evidence": "docs/roadmap/evidence/M10.06.md"
