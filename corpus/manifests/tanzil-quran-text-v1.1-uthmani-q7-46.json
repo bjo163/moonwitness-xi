@@ -19,12 +19,7 @@
   },
   "rights": {
     "state": "permitted",
-    "allowed_uses": [
-      "read_analyze",
-      "store",
-      "quote_excerpt",
-      "redistribute_full"
-    ],
+    "allowed_uses": ["read_analyze", "store", "quote_excerpt", "redistribute_full"],
     "reviewer": "bjo163",
     "decision_date": "2026-10-16",
     "evidence_ref": "docs/roadmap/evidence/K2-005.md#source-specific-rights-decision",
