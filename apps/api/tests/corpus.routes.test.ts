@@ -8,9 +8,9 @@ describe('corpus API contract', () => {
   afterEach(() => vi.unstubAllEnvs());
 
   it('resolves the configured container corpus directory to the data root', () => {
-    const corpusDirectory = 'C:/runtime/app/corpus';
+    const corpusDirectory = path.join(process.cwd(), 'runtime', 'app', 'corpus');
     vi.stubEnv('MOONWITNESS_CORPUS_ROOT', corpusDirectory);
-    expect(resolveCorpusDataRoot()).toBe(path.normalize('C:/runtime/app'));
+    expect(resolveCorpusDataRoot()).toBe(path.join(process.cwd(), 'runtime', 'app'));
   });
 
   it('publishes typed source and passage response variants and documented failures', async () => {

@@ -210,7 +210,7 @@ The source planning bundle is `MOONWITNESS_XI_LOCAL_AI_REBUILD_PLAN_2026-10-15/`
 - File scope: `scripts/knowledge/`, `docs/roadmap/evidence/`.
 - Deliverable: Offline CLI proof and source-reconstruction report.
 - Acceptance: Network disabled; bit-identical manifests; import errors measured, not suppressed.
-- Verification target: `offline empty-cache fixture, broken-source retry tests`. This is a target, not evidence that the command exists or has passed.
+- Verification: [K2-008 evidence](evidence/K2-008.md): empty-output rebuild, network-denied fixture, byte-identical indexes/manifests/artifacts, and visible source-corruption retry report.
 
 ## K3-001 — Assertion with scope, polarity and epistemic status
 
@@ -219,7 +219,7 @@ The source planning bundle is `MOONWITNESS_XI_LOCAL_AI_REBUILD_PLAN_2026-10-15/`
 - File scope: `packages/research/`, `ontology/core/`.
 - Deliverable: Typed assertion records with explicit review/uncertainty.
 - Acceptance: Quoted claim/negation/context cannot become global fact; missing != false.
-- Verification target: `positive/negative assertion tests`. This is a target, not evidence that the command exists or has passed.
+- Verification: [K3-001 evidence](evidence/K3-001.md): positive/negative assertions, required quoted-speaker context, forbidden global scope, review/epistemic states, and explicit missing lookup result.
 
 ## K3-002 — Evidence links and exact source selectors
 
@@ -228,7 +228,7 @@ The source planning bundle is `MOONWITNESS_XI_LOCAL_AI_REBUILD_PLAN_2026-10-15/`
 - File scope: `packages/research/`, `apps/api/`.
 - Deliverable: Evidence references to canonical passage/range/content hash.
 - Acceptance: No invented citations; dangling selector rejected; counterevidence supported.
-- Verification target: `G1 citation resolution and mismatched hash tests`. This is a target, not evidence that the command exists or has passed.
+- Verification: [K3-002 evidence](evidence/K3-002.md): exact local source/edition/locator/hash checks, quote/range validation, counterevidence direction, and authenticated API contract.
 
 ## K3-003 — Alias/identity reconciliation with human decision
 

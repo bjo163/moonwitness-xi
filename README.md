@@ -15,7 +15,7 @@ troubleshooting tersedia di [Developer guide](docs/guide/index.md).
 
 ## Generated workspace reference
 
-Monorepo version: `1.0.0-rc.1` · metadata fingerprint: `eaa2cfad9047a8c7797a350458ebe28cad496ad3de6c277e9f4223a329f8aa6b`.
+Monorepo version: `1.0.0-rc.1` · metadata fingerprint: `8879d2b9fafbf410aa0b795f5319507999637c49b6fb6c78a8683fcc711d3338`.
 
 | App/package                     | Kind    | Version      | Workspace scripts                                                                                                                                                                    |
 | ------------------------------- | ------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -40,6 +40,7 @@ Monorepo version: `1.0.0-rc.1` · metadata fingerprint: `eaa2cfad9047a8c7797a350
 | `@moonwitness/orm-request`      | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/orm-storage`      | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/orm-workflow`     | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/research`         | Package | `1.0.0-rc.1` | `build`, `test`, `typecheck`                                                                                                                                                         |
 | `@moonwitness/types`            | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/ui`               | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                                                      |
 

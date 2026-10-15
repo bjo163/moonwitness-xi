@@ -246,9 +246,9 @@ Track approved through ADR 0004 on 2026-10-15. The existing 148 M-series tasks a
 - [x] K2-005 First rights-cleared Qur’an passage slice. Evidence: [K2-005](docs/roadmap/evidence/K2-005.md).
 - [x] K2-006 Second-source textual witness sample with edition guard. Evidence: [K2-006](docs/roadmap/evidence/K2-006.md).
 - [x] K2-007 Source/citation lookup API and SDK. Evidence: [K2-007](docs/roadmap/evidence/K2-007.md).
-- [ ] K2-008 Corpus offline rebuild and snapshot certification.
-- [ ] K3-001 Assertion with scope, polarity and epistemic status.
-- [ ] K3-002 Evidence links and exact source selectors.
+- [x] K2-008 Corpus offline rebuild and snapshot certification. Evidence: [K2-008](docs/roadmap/evidence/K2-008.md).
+- [x] K3-001 Assertion with scope, polarity and epistemic status. Evidence: [K3-001](docs/roadmap/evidence/K3-001.md).
+- [x] K3-002 Evidence links and exact source selectors. Evidence: [K3-002](docs/roadmap/evidence/K3-002.md).
 - [ ] K3-003 Alias/identity reconciliation with human decision.
 - [ ] K3-004 Typed reviewed relation graph projection.
 - [ ] K3-005 Research review and immutable decision event flow.

@@ -1,6 +1,6 @@
 # Generated API route reference
 
-Extracted from literal Fastify route declarations. Source fingerprint: `eaa2cfad9047a8c7797a350458ebe28cad496ad3de6c277e9f4223a329f8aa6b`. Generic handler request payloads are not inferred where the source does not declare a static schema.
+Extracted from literal Fastify route declarations. Source fingerprint: `8879d2b9fafbf410aa0b795f5319507999637c49b6fb6c78a8683fcc711d3338`. Generic handler request payloads are not inferred where the source does not declare a static schema.
 
 | Method | Path                                       |
 | ------ | ------------------------------------------ |
@@ -31,6 +31,7 @@ Extracted from literal Fastify route declarations. Source fingerprint: `eaa2cfad
 | GET    | `/api/corpus/passages/:editionId/:locator` |
 | GET    | `/api/corpus/sources/:sourceId`            |
 | GET    | `/api/models`                              |
+| POST   | `/api/research/evidence/resolve`           |
 | POST   | `/auth/login`                              |
 | POST   | `/auth/logout`                             |
 | GET    | `/auth/me`                                 |

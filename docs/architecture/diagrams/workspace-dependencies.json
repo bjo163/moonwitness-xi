@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "apps/*/package.json and packages/*/package.json",
-  "sourceSha256": "1c616713d568faf477414d1a3363c07330a9a7ffebafd8ec6947e2ee6bcf2282",
+  "sourceSha256": "10c58ece2a36050941ed6b9df861fad7a2d3568689adc90cc0b1873523b6f3f3",
   "packages": [
     {
       "name": "@moonwitness/api",
@@ -124,6 +124,12 @@
       "manifest": "packages/orm-workflow"
     },
     {
+      "name": "@moonwitness/research",
+      "kind": "package",
+      "version": "1.0.0-rc.1",
+      "manifest": "packages/research"
+    },
+    {
       "name": "@moonwitness/types",
       "kind": "package",
       "version": "1.0.0-rc.1",
@@ -152,6 +158,12 @@
     {
       "from": "@moonwitness/api",
       "to": "@moonwitness/auth",
+      "kind": "runtime",
+      "manifest": "apps/api"
+    },
+    {
+      "from": "@moonwitness/api",
+      "to": "@moonwitness/corpus",
       "kind": "runtime",
       "manifest": "apps/api"
     },
@@ -218,6 +230,12 @@
     {
       "from": "@moonwitness/api",
       "to": "@moonwitness/orm-workflow",
+      "kind": "runtime",
+      "manifest": "apps/api"
+    },
+    {
+      "from": "@moonwitness/api",
+      "to": "@moonwitness/research",
       "kind": "runtime",
       "manifest": "apps/api"
     },
@@ -424,6 +442,12 @@
       "to": "@moonwitness/types",
       "kind": "runtime",
       "manifest": "packages/orm-workflow"
+    },
+    {
+      "from": "@moonwitness/research",
+      "to": "@moonwitness/knowledge",
+      "kind": "runtime",
+      "manifest": "packages/research"
     },
     {
       "from": "@moonwitness/ui-catalog",

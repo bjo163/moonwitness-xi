@@ -1641,7 +1641,9 @@
       "output": "Offline CLI proof and source-reconstruction report",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
-      "priority": "p0"
+      "priority": "p0",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/K2-008.md"
     },
     {
       "id": "K3-001",
@@ -1651,7 +1653,9 @@
       "output": "Typed assertion records with explicit review/uncertainty",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
-      "priority": "p0"
+      "priority": "p0",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/K3-001.md"
     },
     {
       "id": "K3-002",
@@ -1661,7 +1665,9 @@
       "output": "Evidence references to canonical passage/range/content hash",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
-      "priority": "p0"
+      "priority": "p0",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/K3-002.md"
     },
     {
       "id": "K3-003",
