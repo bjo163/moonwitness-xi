@@ -345,7 +345,7 @@
       "test:flaky-policy": "node --test scripts/flaky-policy.test.mjs scripts/playwright-flake-reporter.test.mjs",
       "test:integration": "node scripts/run-postgres-tests.mjs",
       "test:integration:built": "node scripts/run-postgres-tests.mjs --built",
-      "test:knowledge-cli:built": "node --test scripts/knowledge/validate.test.mjs scripts/knowledge/snapshot.test.mjs scripts/knowledge/legacy-inventory.test.mjs scripts/knowledge/ingest.test.mjs",
+      "test:knowledge-cli:built": "node --test scripts/knowledge/validate.test.mjs scripts/knowledge/snapshot.test.mjs scripts/knowledge/legacy-inventory.test.mjs scripts/knowledge/ingest.test.mjs scripts/knowledge/revelation-identity.test.mjs",
       "test:maintenance-incidents": "node --test scripts/maintenance-incident.test.mjs",
       "test:package-manager": "node --test scripts/package-manager.test.mjs",
       "test:platform-audit": "node --test scripts/platform-audit.test.mjs",
@@ -4625,5 +4625,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "38613865ac8ce8b2da75d127d2d0399b8f77cb4d6a2fe901c3e3d571c93c14d0"
+  "generatedFromSha256": "022f66d1ed65adf4843d0a320b6d14a1f5aa020fdbc7cf778feaaa3bb9258635"
 }

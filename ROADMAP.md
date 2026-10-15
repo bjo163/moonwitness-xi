@@ -242,7 +242,7 @@ Track approved through ADR 0004 on 2026-10-15. The existing 148 M-series tasks a
 - [x] K2-001 Deterministic offline ingestion adapter. Evidence: [K2-001](docs/roadmap/evidence/K2-001.md).
 - [x] K2-002 Content-addressed raw artifact store. Evidence: [K2-002](docs/roadmap/evidence/K2-002.md).
 - [ ] K2-003 Dataset release manifest and rollback pointers.
-- [ ] K2-004 Revelation identity versus canon/edition ontology.
+- [x] K2-004 Revelation identity versus canon/edition ontology. Evidence: [K2-004](docs/roadmap/evidence/K2-004.md).
 - [ ] K2-005 First rights-cleared Qur’an passage slice.
 - [ ] K2-006 Second-source textual witness sample with edition guard.
 - [ ] K2-007 Source/citation lookup API and SDK.

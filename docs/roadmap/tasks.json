@@ -1588,7 +1588,9 @@
       "output": "Explicit identity/relation classes for Qur’an/Taurat/Zabur/Injil and available textual witnesses",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
-      "priority": "p0"
+      "priority": "p0",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/K2-004.md"
     },
     {
       "id": "K2-005",
