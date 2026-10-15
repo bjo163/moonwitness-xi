@@ -11,7 +11,10 @@ import {
   selectExactDevPullRequestCiRun,
 } from './collect-lifecycle-snapshot.mjs';
 import { projectLifecycleSnapshot } from './lifecycle-snapshot.mjs';
-import { waitForCurrentDevPullRequestTechnicalGate } from './collect-lifecycle-snapshot-cli.mjs';
+import {
+  waitForCurrentDevPullRequestTechnicalGate,
+  writeSnapshotIfDevHeadIsCurrent,
+} from './collect-lifecycle-snapshot-cli.mjs';
 
 const sourceSha = 'a'.repeat(40);
 const planSha = 'b'.repeat(40);
@@ -213,6 +216,20 @@ test('stops polling cleanly when dev advances while waiting for its exact PR gat
   assert.deepEqual(result, { status: 'stale' });
   assert.equal(headReads, 2);
   assert.equal(workflowReads, 1);
+});
+
+test('does not write a collected snapshot if dev advances after collection', async () => {
+  let writes = 0;
+  const written = await writeSnapshotIfDevHeadIsCurrent({
+    sourceSha: devSha,
+    readDevHead: async () => 'f'.repeat(40),
+    writeSnapshot: async () => {
+      writes += 1;
+    },
+  });
+
+  assert.equal(written, false);
+  assert.equal(writes, 0);
 });
 
 test('treats a PR head change during exact-run validation as a stale no-op', async () => {

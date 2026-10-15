@@ -273,6 +273,43 @@ test('apply refuses stale plans and performs serial writes only for explicit ope
   );
 });
 
+test('apply rechecks dev immediately before an issue write after metadata preparation', async () => {
+  let devHead = sourceSha;
+  let sourceChecks = 0;
+  let issueWrites = 0;
+  const client = {
+    listAll: async () => [],
+    assertWritable: () => {},
+    ensureMetadata: async () => {
+      devHead = 'f'.repeat(40);
+      return new Map();
+    },
+    create: async () => {
+      issueWrites += 1;
+    },
+    update: async () => {
+      issueWrites += 1;
+    },
+  };
+
+  await assert.rejects(
+    applyIssuePlan({
+      plan: plan(),
+      client,
+      tasks: [task],
+      repositoryId,
+      sourceSha,
+      assertSourceCurrent: async () => {
+        sourceChecks += 1;
+        if (devHead !== sourceSha) throw new Error('dev advanced; refusing stale issue writes');
+      },
+    }),
+    /refusing stale issue writes/u
+  );
+  assert.equal(sourceChecks, 2);
+  assert.equal(issueWrites, 0);
+});
+
 test('apply stops before metadata or issue writes when permission is revoked after planning', async () => {
   const generated = plan().operations[0];
   const currentIssue = {
@@ -738,6 +775,34 @@ test('public read-only planning needs no token and writes fail closed without on
   );
   await assert.rejects(client.ensureMetadata([task]), /GITHUB_TOKEN is required/u);
   assert.equal(calls.length, 4);
+});
+
+test('GitHub adapter revalidates the source before every mutating API request', async () => {
+  let current = true;
+  const calls = [];
+  const client = createGitHubIssuesClient({
+    token: 'test-token',
+    owner: 'owner',
+    repo: 'repo',
+    assertSourceCurrent: async () => {
+      if (!current) throw new Error('dev advanced; refusing stale issue writes');
+    },
+    fetchImpl: async (url, init = {}) => {
+      calls.push({ url: String(url), method: init.method ?? 'GET' });
+      return { ok: true, status: 200, json: async () => ({ number: 1 }) };
+    },
+  });
+
+  await client.create({ title: 'fresh', body: 'first write' });
+  current = false;
+  await assert.rejects(
+    client.update({ issueNumber: 1, title: 'stale', body: 'second write' }),
+    /refusing stale issue writes/u
+  );
+  assert.deepEqual(
+    calls.map(({ method }) => method),
+    ['POST']
+  );
 });
 
 test('GitHub adapter closes an issue only when a lifecycle operation explicitly requests it', async () => {

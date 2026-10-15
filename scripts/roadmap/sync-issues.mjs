@@ -412,6 +412,7 @@ export function createGitHubIssuesClient({
   sleepImpl = sleep,
   now = Date.now,
   maxRetryDelayMs = 60_000,
+  assertSourceCurrent,
 }) {
   const base = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues`;
   function assertWritable() {
@@ -419,7 +420,10 @@ export function createGitHubIssuesClient({
   }
   async function request(url, init = {}) {
     const method = init.method ?? 'GET';
-    if (method !== 'GET') assertWritable();
+    if (method !== 'GET') {
+      assertWritable();
+      await assertSourceCurrent?.();
+    }
     const canRetry = method === 'GET';
     for (let attempt = 0; ; attempt += 1) {
       let response;
@@ -609,6 +613,7 @@ export async function applyIssuePlan({
   cardDetailsByTask,
   lifecycleByTask,
   lifecycleSnapshotGeneratedAt,
+  assertSourceCurrent,
 }) {
   const freshIssues = await client.listAll();
   const fresh = planIssueSync({
@@ -631,6 +636,7 @@ export async function applyIssuePlan({
   if (lifecycleByTask && lifecycleSnapshotGeneratedAt)
     assertLifecycleSnapshotFresh(lifecycleSnapshotGeneratedAt);
   client.assertWritable?.();
+  await assertSourceCurrent?.();
   const milestoneNumbers = client.ensureMetadata ? await client.ensureMetadata(tasks) : new Map();
   const operations = fresh.operations.map((operation) => ({
     ...operation,
@@ -641,6 +647,7 @@ export async function applyIssuePlan({
     if (operation.operation === 'create') {
       // On ambiguous create failure, re-read the stable marker before retrying.
       try {
+        await assertSourceCurrent?.();
         results.push({ taskId: operation.taskId, issue: await client.create(operation) });
       } catch (error) {
         const retryPlan = planIssueSync({
@@ -720,6 +727,7 @@ export async function applyIssuePlan({
         labels: [...mergedLabels.values()].sort(),
         assignees: [...mergedAssignees].sort(),
       };
+      await assertSourceCurrent?.();
       results.push({ taskId: operation.taskId, issue: await client.update(reconciled) });
     }
   }
@@ -790,7 +798,18 @@ async function main() {
     sha ??
     execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repositoryRoot, encoding: 'utf8' }).trim();
   const token = process.env.GITHUB_TOKEN;
-  const client = createGitHubIssuesClient({ token, owner, repo });
+  const assertSourceCurrent = async () => {
+    const remoteDevSha = execFileSync(
+      'gh',
+      ['api', `repos/${owner}/${repo}/git/ref/heads/dev`, '--jq', '.object.sha'],
+      { cwd: repositoryRoot, encoding: 'utf8', env: process.env }
+    ).trim();
+    if (remoteDevSha !== sourceSha)
+      throw new Error(
+        `The dev source advanced from ${sourceSha} to ${remoteDevSha}; refusing stale issue writes.`
+      );
+  };
+  const client = createGitHubIssuesClient({ token, owner, repo, assertSourceCurrent });
   const issues = await client.listAll();
   const validAssignees = await client.validateAssignees(tasks);
   const repositoryUrl = `https://github.com/${owner}/${repo}`;
@@ -825,6 +844,7 @@ async function main() {
     cardDetailsByTask,
     lifecycleByTask,
     lifecycleSnapshotGeneratedAt: lifecycleSnapshot?.generatedAt,
+    assertSourceCurrent,
   });
   const metadata = await client.listMetadata();
   plan.metadata = {

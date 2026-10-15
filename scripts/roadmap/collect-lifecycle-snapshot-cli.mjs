@@ -89,6 +89,12 @@ export async function waitForCurrentDevPullRequestTechnicalGate({
   );
 }
 
+export async function writeSnapshotIfDevHeadIsCurrent({ sourceSha, readDevHead, writeSnapshot }) {
+  if ((await readDevHead()) !== sourceSha) return false;
+  await writeSnapshot();
+  return true;
+}
+
 function isAncestor(sourceSha, branchHeadSha) {
   try {
     execFileSync('git', ['merge-base', '--is-ancestor', sourceSha, branchHeadSha], {
@@ -201,16 +207,23 @@ async function main() {
     commitExists: hasCommit,
     isAncestor,
   });
-  if (
-    (await ghJsonObject([`repos/${repository}/git/ref/heads/dev`])).object?.sha !== branchHeads.dev
-  ) {
+  const snapshotWritten = await writeSnapshotIfDevHeadIsCurrent({
+    sourceSha: branchHeads.dev,
+    readDevHead: async () =>
+      (await ghJsonObject([`repos/${repository}/git/ref/heads/dev`])).object?.sha,
+    writeSnapshot: async () =>
+      writeFile(
+        path.join(repositoryRoot, '.roadmap-lifecycle-snapshot.json'),
+        `${JSON.stringify(snapshot, null, 2)}\n`,
+        'utf8'
+      ),
+  });
+  if (!snapshotWritten) {
     process.stdout.write(
       `Skipping stale issue-sync event: dev advanced beyond ${branchHeads.dev}.\n`
     );
     return;
   }
-  const outputPath = path.join(repositoryRoot, '.roadmap-lifecycle-snapshot.json');
-  await writeFile(outputPath, `${JSON.stringify(snapshot, null, 2)}\n`, 'utf8');
   process.stdout.write(
     `Collected read-only lifecycle snapshot for ${snapshot.tasks.length} tasks at ${snapshot.sourceSha}.\n`
   );
