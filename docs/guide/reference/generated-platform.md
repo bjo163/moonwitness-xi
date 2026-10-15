@@ -1,6 +1,6 @@
 # Generated platform reference
 
-Source fingerprint: `340ee1e3c3ef1d45ebac60cb98ff2072782388fcd081f11e6bd1644b77d0247d`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
+Source fingerprint: `81236ed4bbaf5b42c5a26032368a75805b18ec42bc2f7fbcfe17d243541062ca`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
 
 ## Workspace packages and apps
 
@@ -15,6 +15,7 @@ Source fingerprint: `340ee1e3c3ef1d45ebac60cb98ff2072782388fcd081f11e6bd1644b77d
 | `@moonwitness/client`           | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/eslint-config`    | Package | 1.0.0-rc.1 | —                                                                                                                                                                                    |
 | `@moonwitness/jobs`             | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/knowledge`        | Package | 1.0.0-rc.1 | `build`, `test`, `typecheck`                                                                                                                                                         |
 | `@moonwitness/logger`           | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/orm`              | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/orm-base`         | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
@@ -122,6 +123,7 @@ Value categories are inferred from variable names and example syntax; requiredne
 - `pnpm release:classify`
 - `pnpm release:dry-run`
 - `pnpm release:plan`
+- `pnpm release:preflight:built`
 - `pnpm release:prepare`
 - `pnpm release:verify-attestations`
 - `pnpm reset:superadmin-password`

@@ -7,6 +7,8 @@ import { fileURLToPath, URL } from 'node:url';
 const checks = [
   ['Workspace Docker manifests', ['--test', 'scripts/docker-workspace-manifests.test.mjs']],
   ['Architecture artifacts', ['scripts/architecture/generate-diagrams.mjs', '--check']],
+  ['Generated documentation', ['scripts/docs/generate-reference.mjs', '--check']],
+  ['README workspace inventory', ['scripts/docs/update-readme.mjs', '--check']],
   ['Roadmap contracts', ['scripts/roadmap/validate-roadmap.mjs']],
 ];
 
