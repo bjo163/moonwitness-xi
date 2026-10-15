@@ -127,7 +127,11 @@ test('requester submits a seeded approval workflow and superadmin approves it in
   await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the board' }).click();
   await expect(page).not.toHaveURL(/\/login$/u);
-  await page.goto(`/m/request.purchase/${createdRequest.data.id}`);
+  const purchaseRequests = page
+    .getByRole('navigation', { name: 'Models' })
+    .getByRole('link', { name: 'Purchase Requests' });
+  await purchaseRequests.click();
+  await page.getByRole('row').filter({ hasText: requestTitle }).click();
   const reviewerSession = await page.evaluate(
     () => JSON.parse(localStorage.getItem('mw-board-session') ?? 'null') as BoardSession | null
   );
