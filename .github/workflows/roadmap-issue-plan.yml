@@ -129,7 +129,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     concurrency:
-      group: repository-write-coordinator
+      group: roadmap-issue-sync
       cancel-in-progress: false
     permissions:
       actions: read

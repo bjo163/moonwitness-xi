@@ -261,7 +261,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     concurrency:
-      group: repository-write-coordinator
+      group: release-asset-updates
       cancel-in-progress: false
     permissions:
       contents: write

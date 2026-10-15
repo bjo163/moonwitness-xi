@@ -18,7 +18,7 @@ test('release preparation is manual, restricted to dev, and guards the expected 
     source,
     /README\.md\|apps\/\*\/package\.json\|packages\/\*\/package\.json\|docs\/\*/u
   );
-  assert.match(source, /group: repository-write-coordinator/u);
+  assert.match(source, /group: dev-branch-updates/u);
   assert.doesNotMatch(source, /refs\/heads\/release/u);
 });
 

@@ -14,6 +14,27 @@ const repositoryWriteScopes = new Set([
   'pull-requests',
 ]);
 
+const requiredWriteConcurrencyGroups = new Map([
+  ['promote.yml:*', 'promotion-pr-metadata'],
+  ['refresh-promotion-report.yml:*', 'promotion-pr-metadata'],
+  ['sync-main-to-dev.yml:*', 'dev-branch-updates'],
+  ['release-prepare.yml:prepare', 'dev-branch-updates'],
+  ['dependency-candidate.yml:publish', 'dev-branch-updates'],
+  ['roadmap-issue-plan.yml:apply', 'roadmap-issue-sync'],
+  ['release.yml:publish', 'release-asset-updates'],
+  ['pages.yml:store-versioned-docs', 'release-asset-updates'],
+  ['pages.yml:compose-site', 'pages-site-compose'],
+  ['pages.yml:deploy', 'pages-site-deployment'],
+  ['pages.yml:report-failure', 'maintenance-incident-documentation'],
+  ['pages.yml:resolve-failure', 'maintenance-incident-documentation'],
+  ['browser-matrix.yml:report-failure', 'maintenance-incident-browser-regression'],
+  ['browser-matrix.yml:resolve-failure', 'maintenance-incident-browser-regression'],
+  ['deep-regression.yml:report-failure', 'maintenance-incident-deep-regression'],
+  ['deep-regression.yml:resolve-failure', 'maintenance-incident-deep-regression'],
+  ['platform-audit.yml:report-failure', 'maintenance-incident-platform-audit'],
+  ['platform-audit.yml:resolve-failure', 'maintenance-incident-platform-audit'],
+]);
+
 function workflowJobBlocks(source) {
   const jobsIndex = source.search(/^jobs:\s*$/mu);
   if (jobsIndex < 0) return [];
@@ -36,10 +57,16 @@ export function inspectRepositoryWriteCoordination(workflows) {
       .map((match) => match.groups.scope)
       .filter((scope) => repositoryWriteScopes.has(scope));
     const workflowGrantsWriteAll = /^permissions:\s*write-all\s*$/mu.test(workflowHeader);
+    const workflowConcurrency = /^concurrency:\s*\r?\n(?<block>(?:\s+[^\r\n]*\r?\n?)+)/mu.exec(
+      workflowHeader
+    )?.groups?.block;
+    const workflowGroup = /^\s+group:\s*(?<group>[^\s]+)\s*$/mu.exec(workflowConcurrency ?? '')
+      ?.groups?.group;
+    const workflowCancelInProgress = /^\s+cancel-in-progress:\s*(?<value>\S+)\s*$/mu.exec(
+      workflowConcurrency ?? ''
+    )?.groups?.value;
     const workflowCoordinatesWrites =
-      /^concurrency:\s*\r?\n\s+group:\s*repository-write-coordinator\s*\r?\n\s+cancel-in-progress:\s*false\s*$/mu.test(
-        workflowHeader
-      );
+      Boolean(workflowGroup) && workflowCancelInProgress === 'false';
 
     for (const job of workflowJobBlocks(source)) {
       const hasJobPermissions = /^(?: ){4}permissions:(?:\s+write-all)?\s*$/mu.test(job.source);
@@ -61,13 +88,32 @@ export function inspectRepositoryWriteCoordination(workflows) {
       )
         continue;
 
-      const jobCoordinatesWrites =
-        /^(?: ){4}concurrency:\s*\r?\n\s{6}group:\s*repository-write-coordinator\s*\r?\n\s{6}cancel-in-progress:\s*false\s*$/mu.test(
-          job.source
-        );
+      const jobConcurrency =
+        /^(?: ){4}concurrency:\s*\r?\n(?<block>(?:\s{6}[^\r\n]*\r?\n?)+)/mu.exec(job.source)?.groups
+          ?.block;
+      const jobGroup = /^\s{6}group:\s*(?<group>[^\s]+)\s*$/mu.exec(jobConcurrency ?? '')?.groups
+        ?.group;
+      const jobCancelInProgress = /^\s{6}cancel-in-progress:\s*(?<value>\S+)\s*$/mu.exec(
+        jobConcurrency ?? ''
+      )?.groups?.value;
+      const jobCoordinatesWrites = Boolean(jobGroup) && jobCancelInProgress === 'false';
       if (!workflowCoordinatesWrites && !jobCoordinatesWrites) {
         findings.push(
-          `${name} job "${job.name}" can write repository state but does not use the shared non-cancelling write coordinator.`
+          `${name} job "${job.name}" can write repository state but has no non-cancelling concurrency group.`
+        );
+        continue;
+      }
+      const expectedGroup =
+        requiredWriteConcurrencyGroups.get(`${name}:${job.name}`) ??
+        requiredWriteConcurrencyGroups.get(`${name}:*`);
+      const actualGroup = jobCoordinatesWrites ? jobGroup : workflowGroup;
+      if (!expectedGroup) {
+        findings.push(
+          `${name} job "${job.name}" is missing an explicit resource-specific concurrency policy.`
+        );
+      } else if (actualGroup !== expectedGroup) {
+        findings.push(
+          `${name} job "${job.name}" must use the resource concurrency group "${expectedGroup}".`
         );
       }
     }
@@ -524,11 +570,11 @@ export function inspectTrustedCheckoutPolicies({
     if (!source.includes(expectedFailure) || !source.includes(expectedRecovery))
       findings.push(`${name} incident reporting and recovery must be limited to main runs.`);
     if (
-      (source.match(/group: repository-write-coordinator/gu) ?? []).length !== 2 ||
+      (source.match(/group: maintenance-incident-/gu) ?? []).length !== 2 ||
       (source.match(/issues: write/gu) ?? []).length !== 2
     )
       findings.push(
-        `${name} incident writes must use the shared coordinator and issues-only write scope.`
+        `${name} incident writes must use a category-specific coordinator and issues-only write scope.`
       );
     const checkouts = checkoutSteps(source);
     if (

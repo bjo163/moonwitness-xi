@@ -122,7 +122,7 @@ test('accepts immutable event-SHA checkout and trusted dispatch restrictions', (
   assert.deepEqual(policies(), []);
 });
 
-test('all repository-writing workflow jobs share the non-cancelling write coordinator', async () => {
+test('all repository-writing workflow jobs use their non-cancelling resource lock', async () => {
   const workflowDirectory = new NodeURL('../.github/workflows/', import.meta.url);
   const files = (await readdir(workflowDirectory))
     .filter((file) => file.endsWith('.yml') || file.endsWith('.yaml'))
@@ -140,8 +140,8 @@ test('all repository-writing workflow jobs share the non-cancelling write coordi
     source:
       name === 'dependency-candidate.yml'
         ? source.replace(
-            '      group: repository-write-coordinator\n      cancel-in-progress: false\n',
-            '      group: dependency-candidate-publish\n      cancel-in-progress: true\n'
+            '      group: dev-branch-updates\n      cancel-in-progress: false\n',
+            '      group: dev-branch-updates\n      cancel-in-progress: true\n'
           )
         : source,
   }));
@@ -175,6 +175,57 @@ jobs:
   assert.match(
     inspectRepositoryWriteCoordination([{ name: 'broad.yml', source: broad }])[0],
     /broad\.yml job "publish"/u
+  );
+});
+
+test('write workflows use separate resource locks while keeping conflicting writes together', async () => {
+  const cases = [
+    ['promote.yml', 'promotion-pr-metadata'],
+    ['refresh-promotion-report.yml', 'promotion-pr-metadata'],
+    ['sync-main-to-dev.yml', 'dev-branch-updates'],
+    ['release-prepare.yml', 'dev-branch-updates'],
+    ['roadmap-issue-plan.yml', 'roadmap-issue-sync'],
+    ['release.yml', 'release-asset-updates'],
+    ['pages.yml', 'release-asset-updates'],
+    ['pages.yml', 'pages-site-deployment'],
+    ['pages.yml', 'maintenance-incident-documentation'],
+    ['browser-matrix.yml', 'maintenance-incident-browser-regression'],
+    ['deep-regression.yml', 'maintenance-incident-deep-regression'],
+    ['platform-audit.yml', 'maintenance-incident-platform-audit'],
+  ];
+  const sources = await Promise.all(
+    cases.map(async ([name, group]) => ({
+      name,
+      group,
+      source: await readFile(new NodeURL(`../.github/workflows/${name}`, import.meta.url), 'utf8'),
+    }))
+  );
+  for (const { name, group, source } of sources) {
+    assert.match(source, new RegExp(`group: ${group}\\n\\s+cancel-in-progress: false`, 'u'), name);
+  }
+  assert.equal(
+    sources.find(({ name, group }) => name === 'release.yml' && group === 'release-asset-updates')
+      ?.group,
+    sources.find(({ name, group }) => name === 'pages.yml' && group === 'release-asset-updates')
+      ?.group,
+    'release publishing and versioned documentation uploads share an asset lock'
+  );
+
+  const unsafePages = sources.map(({ name, source }) => ({
+    name,
+    source:
+      name === 'pages.yml'
+        ? source.replace(
+            '      group: pages-site-deployment\n      cancel-in-progress: false',
+            '      group: uncoordinated-pages-deployment\n      cancel-in-progress: false'
+          )
+        : source,
+  }));
+  assert.ok(
+    inspectRepositoryWriteCoordination(unsafePages).some((finding) =>
+      finding.includes('pages.yml job "deploy"')
+    ),
+    'the policy rejects a deployment moved out of its shared Pages resource lock'
   );
 });
 

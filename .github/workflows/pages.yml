@@ -373,7 +373,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:
-      group: repository-write-coordinator
+      group: release-asset-updates
       cancel-in-progress: false
     permissions:
       contents: write
@@ -428,7 +428,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     concurrency:
-      group: repository-write-coordinator
+      group: pages-site-compose
       cancel-in-progress: false
     permissions:
       contents: read
@@ -488,7 +488,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     concurrency:
-      group: repository-write-coordinator
+      group: pages-site-deployment
       cancel-in-progress: false
     permissions:
       pages: write
@@ -509,7 +509,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     concurrency:
-      group: repository-write-coordinator
+      group: maintenance-incident-documentation
       cancel-in-progress: false
     permissions:
       contents: read
@@ -537,7 +537,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     concurrency:
-      group: repository-write-coordinator
+      group: maintenance-incident-documentation
       cancel-in-progress: false
     permissions:
       contents: read

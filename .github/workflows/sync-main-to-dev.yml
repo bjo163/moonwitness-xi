@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: repository-write-coordinator
+  group: dev-branch-updates
   cancel-in-progress: false
 
 jobs:

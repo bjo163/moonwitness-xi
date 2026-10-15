@@ -113,7 +113,7 @@ test('issue sync workflow bounds changed-task and backlog writes to an exact dev
   assert.match(applyJob, /Issue sync apply is limited to five task IDs/u);
   assert.match(applyJob, /issues: write/u);
   assert.match(applyJob, /checks: read/u);
-  assert.match(applyJob, /group: repository-write-coordinator/u);
+  assert.match(applyJob, /group: roadmap-issue-sync/u);
   assert.match(applyJob, /needs: \[plan\]/u);
   assert.match(applyJob, /persist-credentials: false/u);
   assert.match(applyJob, /fetch-depth: 0/u);
