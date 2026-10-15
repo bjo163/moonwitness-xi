@@ -163,6 +163,35 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     expect(result.rows[0]?.statement_timeout).toBe('30s');
   });
 
+  it('keeps PostgreSQL audit records append-only through ORM updates and deletes', async () => {
+    await installAddons(db, [manifest]);
+    const event = await AuditLog.query().insertAndFetch({
+      model: 'base.partner',
+      record_id: 1,
+      operation: 'create',
+      changes: '{"name":"Original"}',
+    });
+
+    await expect(
+      AuditLog.query().findById(event.id).patch({ changes: '{"name":"Tampered"}' })
+    ).rejects.toThrow('Audit log records are append-only');
+    await expect(
+      AuditLog.query().patch({ changes: '{"name":"Tampered"}' }).where('id', event.id)
+    ).rejects.toThrow('Audit log records are append-only');
+    await expect(AuditLog.query().findById(event.id).delete()).rejects.toThrow(
+      'Audit log records are append-only'
+    );
+    await expect(AuditLog.query().delete().where('id', event.id)).rejects.toThrow(
+      'Audit log records are append-only'
+    );
+    await expect(AuditLog.query().findById(event.id)).resolves.toMatchObject({
+      model: 'base.partner',
+      record_id: 1,
+      operation: 'create',
+      changes: '{"name":"Original"}',
+    });
+  }, 30000);
+
   it('recovers a persisted PostgreSQL outbox lease after a worker restart', async () => {
     await installAddons(db, [manifest, jobsManifest]);
     const suffix = randomUUID().replaceAll('-', '').slice(0, 12);
