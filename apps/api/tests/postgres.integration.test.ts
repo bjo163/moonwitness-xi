@@ -1466,6 +1466,12 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       headers: { ...headers, 'x-company-id': String(localCompany.id) },
     });
     expect(allowedCompanyMembership.statusCode).toBe(200);
+    const deniedZeroCompanyId = await app.inject({
+      method: 'GET',
+      url: `/api/base.partner/${localPartner.id}`,
+      headers: { ...headers, 'x-company-id': '0' },
+    });
+    expect(deniedZeroCompanyId.statusCode).toBe(403);
     const companyMembership = await CompanyMembership.query()
       .findOne({ user_id: localUser.id, company_id: localCompany.id })
       .throwIfNotFound();
