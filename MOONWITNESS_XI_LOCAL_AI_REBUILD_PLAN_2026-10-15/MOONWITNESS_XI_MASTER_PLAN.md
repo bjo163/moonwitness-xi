@@ -1,10 +1,10 @@
 # MOONWITNESS XI — MASTER REBUILD PLAN
 
-**Edition:** Local-AI implementation blueprint v1.0 — planning baseline  
-**Prepared:** 2026-10-15 (Asia/Jakarta)  
-**Target repository:** `https://github.com/bjo163/moonwitness-xi`  
-**Status:** FINALIZED PLANNING BASELINE; **not yet implemented, committed, deployed, or release-certified**.  
-**Decision:** One canonical code repository and one coherent knowledge architecture. Legacy repositories are reference/import candidates, **not runtime dependencies**.  
+**Edition:** Local-AI implementation blueprint v1.0 — planning baseline
+**Prepared:** 2026-10-15 (Asia/Jakarta)
+**Target repository:** `https://github.com/bjo163/moonwitness-xi`
+**Status:** FINALIZED PLANNING BASELINE; **not yet implemented, committed, deployed, or release-certified**.
+**Decision:** One canonical code repository and one coherent knowledge architecture. Legacy repositories are reference/import candidates, **not runtime dependencies**.
 **Primary execution environment:** self-hosted/local AI coding agent; optional local inference runtime. **No cloud LLM required.**
 
 > **Operating principle:** Preserve sources → establish identities → validate ontology → form claims with evidence → review → derive semantic analysis → act → verify outcome → publish safely. The local AI is an assistant, not an epistemic authority or an automatic release manager.

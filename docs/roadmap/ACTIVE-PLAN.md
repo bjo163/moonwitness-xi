@@ -1,6 +1,6 @@
 # Jalur rilis aktif
 
-**Diperbarui: 2026-10-15 pada `dev` SHA `5585942d1b59c0f49bff693299c2c1b6546a2df1` (roadmap dirty saat pembaruan).** Goal penuh mencakup 148 M-series dan 65 K-series (213 task terindeks); M-series tetap utuh dan pekerjaan K-series terpisah. `pnpm roadmap:progress -- --format json` pada tree saat ini: 101 complete, 13 running, 97 todo, 2 blocked. Snapshot setelah commit harus diperbarui jika checklist/task-status berubah. Jalur rilis pertama adalah jalur prioritas, bukan pengganti roadmap. Percepatan mengurangi pengulangan dan mengurutkan dependensi; tidak mengurangi acceptance.
+**Diperbarui: 2026-10-15 pada `dev` SHA `b3404d619ae5b0d901018bc4a47e91559c923035`.** Goal penuh mencakup 148 M-series dan 65 K-series (213 task terindeks); M-series tetap utuh dan pekerjaan K-series terpisah. `pnpm roadmap:progress -- --format json` pada tree saat ini: 101 complete, 13 running, 97 todo, 2 blocked. Snapshot setelah commit harus diperbarui jika checklist/task-status berubah. Jalur rilis pertama adalah jalur prioritas, bukan pengganti roadmap. Percepatan mengurangi pengulangan dan mengurutkan dependensi; tidak mengurangi acceptance.
 
 ## Checkpoint percepatan terbaru — 2026-10-15
 
@@ -106,6 +106,17 @@ Goal rilis tetap aktif. Untuk menghindari empat hari kerja berputar, gunakan sta
 - Satu failed lane boleh direproduksi satu kali secara terarah. Jika gagal kedua kali dengan penyebab lingkungan/akses, dokumentasikan blocker dan lanjutkan task lokal lain; jangan ulang full suite.
 - Tidak ada daftar tunggu polling CI. Snapshot GitHub cukup sekali per checkpoint atau setelah event/action nyata; unresolved permission, hosted workflow, approval dan remote write masuk blocker ber-owner.
 - Tetap wajib: lint/typecheck terdampak, tes keamanan yang berlaku, PostgreSQL acceptance yang belum reusable, required CI untuk kandidat exact-SHA dan CODEOWNER review. Tidak ada skip/bypass demi kecepatan.
+
+### Protokol percepatan v2
+
+- **Kerjakan outcome vertikal, bukan kartu satu per satu.** Ambil 3–5 task siap yang berbagi perilaku, owner file, dan acceptance; satu implementasi boleh menutup beberapa kartu hanya jika buktinya mencakup acceptance masing-masing. Jangan pecah perubahan kecil menjadi banyak commit atau banyak siklus setup.
+- **Batasi investigasi sebelum bertindak.** Audit awal maksimal 20 menit dan satu bukti utama per kartu. Setelah menemukan gap konkret, implementasikan. Jika tidak ada gap lokal, tulis bukti yang sudah ada dan dependency yang masih kurang; pindahkan sisanya ke blocker/backlog lalu pilih task siap berikutnya.
+- **Pilih task dengan nilai penutupan tertinggi.** Dahulukan ready P0/release blocker yang punya perubahan lokal; setelah itu pilih kumpulan task dengan acceptance bersama. Jangan memulai kartu yang masih menunggu dependency, owner approval, hardware atau credential jika ada task independen yang siap.
+- **Gunakan paralel hanya jika mengurangi wall time.** Paralelkan audit read-only atau batch di worktree terisolasi dengan daftar file dan acceptance yang berbeda. Jangan paralelkan edit ke ROADMAP, task index/schema, lockfile, workflow yang sama, atau shared checkout; jika batas file beririsan, satu pelaksana yang menulis.
+- **Gunakan verification ladder, bukan full suite per commit.** Docs/roadmap: formatter + validator/test roadmap + link checker yang terdampak. Package: focused test + lint + typecheck package. Perubahan kontrak lintas package/database: tambahkan integration yang relevan. Kandidat release exact-SHA: satu kali semua required gates. SHA docs-only tidak membatalkan bukti runtime.
+- **Beri batas pada kegagalan lingkungan.** Reproduksi lane gagal satu kali dengan command lebih sempit. Jika tetap terhambat karena OS, service, registry, credential atau akses remote, jangan polling/retry tanpa perubahan kondisi: rekam command, hasil, pemilik eksternal dan next trigger; lanjut ke batch lokal lain. Gate tetap harus lulus sebelum promosi.
+- **Kurangi antrean review eksternal.** Kumpulkan permintaan approval/akses menjadi satu daftar checkpoint dengan owner, link, exact permission dan acceptance. Periksa ulang sekali per checkpoint atau saat event berubah; tidak ada ping/poll berulang untuk status yang sama.
+- **Selesaikan setiap vertical slice.** Jalankan pemeriksaan, review seluruh diff, commit dan push `dev`, verifikasi remote SHA; kemudian mulai slice ready berikutnya meski hosted CI sebelumnya masih berjalan. Satu reporter memegang staging/commit/push agar batch paralel tidak saling menimpa.
 
 ### Checkpoint lokal saat ini
 

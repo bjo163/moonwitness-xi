@@ -1,7 +1,7 @@
 # MOONWITNESS XI — LOCAL AI EXECUTION RUNBOOK
 
-**Companion files:** `MOONWITNESS_XI_MASTER_PLAN.md` (constitution, domain scope), `MOONWITNESS_XI_TASKS.json` (machine-readable dependency DAG), `MOONWITNESS_XI_BACKLOG.md` (human-readable work breakdown).  
-**Execution target:** user-controlled checkout of `bjo163/moonwitness-xi` on `dev`.  
+**Companion files:** `MOONWITNESS_XI_MASTER_PLAN.md` (constitution, domain scope), `MOONWITNESS_XI_TASKS.json` (machine-readable dependency DAG), `MOONWITNESS_XI_BACKLOG.md` (human-readable work breakdown).
+**Execution target:** user-controlled checkout of `bjo163/moonwitness-xi` on `dev`.
 **Status:** planning protocol; **this handoff has not modified the repository**.
 
 ## A. Non-negotiable operating rules

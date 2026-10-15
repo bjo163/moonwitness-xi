@@ -28,6 +28,19 @@ Jika pelaksanaan sudah diminta, kerjakan kartu dalam scope yang diotorisasi. Tid
 7. **Continue:** segera mulai batch independen berikutnya. Tunggu hanya ketika pekerjaan berikutnya benar-benar memakai output yang belum tersedia dari upstream CI, approval, atau remote write.
 8. **Close:** centang master hanya setelah semua acceptance lengkap. Jika external activation belum terjadi, item tetap unchecked/partial dengan owner dan exit condition.
 
+### Verification ladder untuk menghindari suite berulang
+
+| Jenis perubahan                    | Gate lokal yang cukup untuk batch                                | Naikkan ke gate lebih luas hanya jika                                                                 |
+| ---------------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Docs, roadmap, evidence            | Prettier pada file berubah, validator/test roadmap, link checker | Generator/output docs atau public guide berubah                                                       |
+| Script satu package / planner      | Test file/script terkait dan lint/typecheck yang tersedia        | Kontrak lintas package atau parser/input publik berubah                                               |
+| API, ORM, auth, seed               | Test perilaku paling sempit + lint/typecheck package             | Query, transaksi, permission, seed atau schema programmatic berubah; tambahkan PostgreSQL integration |
+| Board UI                           | Component/page test + Board lint/typecheck                       | User journey, routing atau server contract berubah; jalankan E2E terkait                              |
+| Dependency, runtime, shared build  | Install frozen + focused tests + build affected workspace        | Candidate exact-SHA; jalankan required suite/security/container sekali                                |
+| Release, workflow, security policy | Policy/unit tests untuk workflow/script yang berubah             | Kandidat exact-SHA; jalankan semua required hosted gates tanpa bypass                                 |
+
+Jangan mengulang gate yang input, source terdampak, dan runtime-nya identik dengan bukti yang masih berlaku. Catat hubungan source SHA ke evidence; perubahan source yang tidak terkait tidak membatalkan semua evidence. Jika Windows tidak mendukung atau memperlambat scanner/container yang ditetapkan Linux, jalankan scan exact-source pada runner Linux resmi; jangan mengganti scanner atau menyatakan pass dari scan parsial.
+
 Version bump mengikuti release planner dan substantive release batch, bukan setiap commit. Jangan membuat empty commit atau memasukkan file pengguna yang tidak terkait. `main` hanya lewat protected PR setelah required checks dan review; jangan deploy aplikasi. Lihat [kontrak delivery](ISSUE-SYNC-CONTRACT.md).
 
 ## 4. Perintah yang sudah tersedia pada baseline
