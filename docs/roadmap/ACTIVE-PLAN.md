@@ -2,6 +2,16 @@
 
 **Diperbarui: 2026-10-15; baseline lokal PostgreSQL tercatat pada `dev` SHA `2b4de58c4fcb9bb09f19c38ec9583209e00d95e3`.** Goal penuh mencakup 148 M-series dan 65 K-series (213 task terindeks); M-series tetap utuh dan pekerjaan K-series terpisah. `pnpm roadmap:progress -- --format json` saat ini: 106 complete, 11 running, 94 todo, 2 blocked. K1-004 sudah diterima secara lokal; K1-003 dan task turunannya tetap menunggu approval hak sumber K0-004. Snapshot tepat-SHA diperbarui setelah batch ini. Jalur rilis pertama adalah jalur prioritas, bukan pengganti roadmap. Percepatan mengurangi pengulangan dan mengurutkan dependensi; tidak mengurangi acceptance.
 
+## Metode aktif yang disetujui — 2026-10-15
+
+Prioritas goal: tuntaskan jalur rilis inti API/Board, akses, seed/setup, PostgreSQL, panduan penggunaan dan required gates. Ekspansi knowledge/AI serta addon opsional tetap di backlog sampai dependency/approval siap; jangan menjadikannya syarat tambahan rilis inti. Goal penuh tetap tercatat.
+
+- Satu batch perilaku dengan acceptance jelas; commit lokal atomik, push sekali per batch. Saat kandidat CI berjalan, lanjutkan lokal dan antrekan push agar run tidak dibatalkan.
+- Gunakan verification ladder di EXECUTION.md sebagai sumber aturan. Jangan mengulang full verify, matrix visual/DB atau audit menyeluruh tanpa perubahan input terkait.
+- Setelah build package terdampak, jalankan `pnpm release:preflight:built` sebelum push kandidat: manifest Docker, diagram arsitektur dan kontrak roadmap. Command hanya membaca; generated drift diperbaiki sebelum push. Ini tidak menggantikan typecheck, lint, test perilaku, security atau approval wajib.
+- Satu kandidat stabil untuk required hosted gates. Catat hasil gagal dan reproduksi lane terkait; pekerjaan lokal independen terus berjalan. Tidak ada promosi main atau deployment produksi sebelum syarat rilis terpenuhi.
+- Batasi pekerjaan aktif menjadi satu pelaksana untuk file bersama; paralel hanya pada kepemilikan file yang terpisah. Jangan audit ulang item yang sudah memiliki bukti valid; blocker eksternal memiliki owner dan syarat buka kembali.
+
 ## Temuan bottleneck yang terukur — 2026-10-15
 
 - PR promosi #51 memakai CI penuh karena targetnya `main`. Run `38738130172` pada SHA `413a994` berjalan 3 menit 47 detik lalu berakhir `cancelled` ketika head PR sudah maju ke `2b4de58`; beberapa lane telah menyelesaikan setup, install dependency, instal Chromium, container build/scan, dan mulai tes. Dengan `cancel-in-progress: true`, push baru membuang kerja lama dan memulai kandidat penuh lagi.

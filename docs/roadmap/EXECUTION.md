@@ -24,7 +24,7 @@ Jika pelaksanaan sudah diminta, kerjakan kartu dalam scope yang diotorisasi. Tid
 3. **Verify locally:** jalankan tes paling relevan, lint/typecheck package terdampak, serta integration saat kontrak lintas-package berubah.
 4. **Review:** baca seluruh diff untuk secret, explicit `any`, unsafe assertion, debug, duplikasi, undocumented public change dan generated drift.
 5. **Record:** tulis actual command/result, tests yang tidak dapat dijalankan dan alasannya, dependency eksternal, serta source SHA. Jangan mencatat pass sebelum command benar-benar selesai.
-6. **Deliver batch:** commit dan push ke `dev` tanpa force, verifikasi remote SHA. Hosted CI berjalan setelah push; ambil run ID dan tambahkan hasil saat terminal. Jangan tahan batch lokal independen karena CI berjalan.
+6. **Deliver batch:** commit atomik lokal; gabungkan perubahan terkait menjadi satu batch push ke `dev` tanpa force. Saat CI kandidat penuh berjalan, lanjutkan kerja/commit lokal dan antrekan push sampai run terminal; push perbaikan mendesak boleh mengganti kandidat dengan sadar. Verifikasi remote SHA dan catat run ID. Aturan ini menjadi acuan bila catatan lama meminta push per task.
 7. **Continue:** segera mulai batch independen berikutnya. Tunggu hanya ketika pekerjaan berikutnya benar-benar memakai output yang belum tersedia dari upstream CI, approval, atau remote write.
 8. **Close:** centang master hanya setelah semua acceptance lengkap. Jika external activation belum terjadi, item tetap unchecked/partial dengan owner dan exit condition.
 
