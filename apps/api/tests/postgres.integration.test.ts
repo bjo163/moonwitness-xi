@@ -1336,6 +1336,7 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
 
   it('enforces PostgreSQL company isolation for partner list, count, relations and foreign references', async () => {
     if (!app) throw new Error('PostgreSQL API app is not initialized');
+    const currentApp = app;
 
     const localCompany = await Company.query().findOne({ name: 'MoonWitness' }).throwIfNotFound();
     const localPartner = await Partner.query().insertAndFetch({
@@ -1735,6 +1736,18 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       create: true,
       write: true,
     });
+    const rpc = (args: unknown[]) =>
+      currentApp.inject({
+        method: 'POST',
+        url: '/jsonrpc',
+        headers,
+        payload: {
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'call',
+          params: { service: 'object', method: 'execute_kw', args },
+        },
+      });
     await ModelAccess.query().insert({
       group_id: activityGroup.id,
       model_name: 'base.tag_link',
@@ -1859,6 +1872,58 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     expect(
       await Activity.query().findOne({ summary: 'Must not reference a foreign PostgreSQL partner' })
     ).toBeUndefined();
+    const rpcActivity = await rpc([
+      'base.activity',
+      'create',
+      [
+        {
+          summary: 'PostgreSQL JSON-RPC tenant activity',
+          resource_model: Partner.modelName,
+          resource_id: localPartner.id,
+        },
+      ],
+    ]);
+    expect(rpcActivity.statusCode, rpcActivity.payload).toBe(200);
+    expect(rpcActivity.json()).not.toHaveProperty('error');
+    const rpcActivityId = rpcActivity.json<{ result: number }>().result;
+    expect(await Activity.query().findById(rpcActivityId)).toMatchObject({
+      summary: 'PostgreSQL JSON-RPC tenant activity',
+      resource_model: Partner.modelName,
+      resource_id: localPartner.id,
+    });
+    const deniedRpcForeignActivity = await rpc([
+      'base.activity',
+      'create',
+      [
+        {
+          summary: 'Must not JSON-RPC reference a foreign PostgreSQL partner',
+          resource_model: Partner.modelName,
+          resource_id: foreignPartner.id,
+        },
+      ],
+    ]);
+    expect(deniedRpcForeignActivity.statusCode).toBe(200);
+    expect(deniedRpcForeignActivity.json<{ error: { message: string } }>().error.message).toBe(
+      'Invalid related record reference'
+    );
+    expect(
+      await Activity.query().findOne({
+        summary: 'Must not JSON-RPC reference a foreign PostgreSQL partner',
+      })
+    ).toBeUndefined();
+    const deniedRpcForeignReassignment = await rpc([
+      'base.activity',
+      'write',
+      [[rpcActivityId], { resource_id: foreignPartner.id }],
+    ]);
+    expect(deniedRpcForeignReassignment.statusCode).toBe(200);
+    expect(deniedRpcForeignReassignment.json<{ error: { message: string } }>().error.message).toBe(
+      'Invalid related record reference'
+    );
+    expect(await Activity.query().findById(rpcActivityId)).toMatchObject({
+      resource_model: Partner.modelName,
+      resource_id: localPartner.id,
+    });
     const archivedActivityParent = await Tag.query().insertAndFetch({
       name: 'PostgreSQL Archived Activity Parent',
     });
