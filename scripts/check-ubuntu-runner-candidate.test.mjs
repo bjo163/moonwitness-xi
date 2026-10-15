@@ -13,6 +13,19 @@ test('Ubuntu candidate workflow compares supported and candidate images across c
     'utf8'
   );
   assert.deepEqual(validateUbuntuRunnerCandidate(source), []);
+  const quality = source.split('  quality:\n')[1]?.split('\n  postgres-integration:\n')[0] ?? '';
+  const buildReuseSequence = [
+    'run: pnpm typecheck',
+    'run: pnpm test:unit:built',
+    'run: pnpm architecture:check:built',
+    'run: pnpm docs:build:built',
+  ];
+  let previousIndex = -1;
+  for (const step of buildReuseSequence) {
+    const currentIndex = quality.indexOf(step);
+    assert.ok(currentIndex > previousIndex, `${step} must reuse the earlier typecheck build`);
+    previousIndex = currentIndex;
+  }
 });
 
 test('actionlint compatibility exception is limited to the published Ubuntu 26.04 label', async () => {
@@ -40,7 +53,7 @@ jobs:
       - run: printf 'Runner image: %s\\n' "$ImageOS $ImageVersion"
       - run: pnpm install --frozen-lockfile --no-runtime
       - run: pnpm typecheck
-      - run: pnpm test:unit
+      - run: pnpm test:unit:built
       - run: pnpm test:integration
       - uses: ./.github/actions/setup-pnpm
         with:

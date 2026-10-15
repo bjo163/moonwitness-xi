@@ -22,7 +22,9 @@ export function validateUbuntuRunnerCandidate(source) {
   for (const [label, required] of [
     ['frozen workspace install', 'pnpm install --frozen-lockfile --no-runtime'],
     ['quality checks', 'pnpm typecheck'],
-    ['unit tests', 'pnpm test:unit'],
+    ['unit tests', 'pnpm test:unit:built'],
+    ['built architecture checks', 'pnpm architecture:check:built'],
+    ['built documentation checks', 'pnpm docs:build:built'],
     ['PostgreSQL integration tests', 'pnpm test:integration'],
     ['PostgreSQL service', 'image: postgres:16-alpine'],
     ['Node 22 toolchain', "node-version: '22'"],
