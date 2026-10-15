@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { readFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import process from 'node:process';
 import test from 'node:test';
 import { fileURLToPath, URL } from 'node:url';
@@ -88,4 +90,48 @@ test('built PostgreSQL mode is recognized and still requires an explicit test da
   assert.equal(result.status, 2);
   assert.match(result.stderr, /POSTGRES_TEST_URL is required/u);
   assert.doesNotMatch(result.stderr, /Usage:/u);
+});
+
+test('built PostgreSQL mode reuses package output while running type and integration checks', async () => {
+  const temporaryDirectory = await mkdtemp(join(tmpdir(), 'moonwitness-postgres-runner-'));
+  try {
+    const packageManagerStub = join(temporaryDirectory, 'pnpm.mjs');
+    await writeFile(
+      packageManagerStub,
+      "import { appendFile } from 'node:fs/promises'; await appendFile(process.env.COMMAND_LOG, JSON.stringify({ args: process.argv.slice(2), postgresRequired: process.env.REQUIRE_POSTGRES_TESTS }) + '\\n');\n",
+      'utf8'
+    );
+
+    for (const mode of ['--built', 'standalone']) {
+      const commandLog = join(temporaryDirectory, `${mode}.jsonl`);
+      const result = spawnSync(
+        process.execPath,
+        [
+          fileURLToPath(new URL('./run-postgres-tests.mjs', import.meta.url)),
+          ...(mode === 'standalone' ? [] : [mode]),
+        ],
+        {
+          cwd: fileURLToPath(new URL('..', import.meta.url)),
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            COMMAND_LOG: commandLog,
+            POSTGRES_TEST_URL: 'postgresql://postgres:postgres@localhost/moonwitness_test',
+            npm_execpath: packageManagerStub,
+          },
+        }
+      );
+      assert.equal(result.status, 0, result.stderr);
+      const commands = (await readFile(commandLog, 'utf8'))
+        .trim()
+        .split(/\r?\n/u)
+        .map((line) => JSON.parse(line));
+      assert.equal(commands[0]?.args[0], mode === 'standalone' ? 'build' : '--filter');
+      assert.ok(commands.some(({ args }) => args.includes('tsc')));
+      assert.ok(commands.some(({ args }) => args.includes('vitest')));
+      assert.ok(commands.every(({ postgresRequired }) => postgresRequired === 'true'));
+    }
+  } finally {
+    await rm(temporaryDirectory, { recursive: true, force: true });
+  }
 });
