@@ -33,7 +33,7 @@ test('technical CI runs once per dev SHA through its PR; main pushes remain full
   const planJob = workflow.match(/ {2}plan:[\s\S]*?\n {2}quality:/u)?.[0];
   assert.ok(planJob, 'CI should keep planning promotion risk for every event');
   assert.match(planJob, /GITHUB_EVENT_NAME" == "pull_request_review"/u);
-  assert.match(planJob, /echo 'projects=\[\]'/u);
+  assert.match(planJob, /printf '%s\\n' 'projects=\[\]'/u);
 });
 
 test('roadmap lifecycle may read PR identity without gaining pull request write access', () => {

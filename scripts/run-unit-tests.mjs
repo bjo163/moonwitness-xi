@@ -156,12 +156,25 @@ const suites = [
     typecheck: true,
     coverage: ['src/validation.ts'],
   },
+  {
+    name: 'knowledge',
+    packageName: '@moonwitness/knowledge',
+    typecheck: true,
+    typecheckConfig: 'tsconfig.test.json',
+  },
 ];
 
 for (const suite of suites) {
   if (suite.typecheck) {
     run(
-      ['--filter', suite.packageName, 'exec', 'tsc', '-p', 'tsconfig.check.json'],
+      [
+        '--filter',
+        suite.packageName,
+        'exec',
+        'tsc',
+        '-p',
+        suite.typecheckConfig ?? 'tsconfig.check.json',
+      ],
       `${suite.name} typecheck`
     );
   }

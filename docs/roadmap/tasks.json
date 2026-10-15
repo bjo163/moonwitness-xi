@@ -1457,7 +1457,7 @@
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
       "priority": "p0",
-      "status": "complete",
+      "status": "in_progress",
       "evidence": "docs/roadmap/evidence/K0-007.md"
     },
     {
@@ -1468,7 +1468,9 @@
       "output": "Typed core record contracts and JSON Schema 2020-12",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
-      "priority": "p0"
+      "priority": "p0",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/K1-001.md"
     },
     {
       "id": "K1-002",

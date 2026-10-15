@@ -231,8 +231,8 @@ Track approved through ADR 0004 on 2026-10-15. The existing 148 M-series tasks a
 - [ ] K0-004 Legal rights and source ingestion policy. Evidence: [K0-004](docs/roadmap/evidence/K0-004.md).
 - [ ] K0-005 Witness privacy consent and minor-safety policy. Evidence: [K0-005](docs/roadmap/evidence/K0-005.md).
 - [ ] K0-006 Legacy knowledge inventory and migration ledger.
-- [x] K0-007 Task lifecycle and local-agent trust contract. Evidence: [K0-007](docs/roadmap/evidence/K0-007.md).
-- [ ] K1-001 Knowledge record types and JSON schemas.
+- [ ] K0-007 Task lifecycle and local-agent trust contract. Evidence: [K0-007](docs/roadmap/evidence/K0-007.md).
+- [ ] K1-001 Knowledge record types and JSON schemas. Evidence: [K1-001](docs/roadmap/evidence/K1-001.md).
 - [ ] K1-002 Canonical ID/alias grammar and resolver.
 - [ ] K1-003 Source artifact and rights schemas.
 - [ ] K1-004 PROV-based activity and evidence contracts.

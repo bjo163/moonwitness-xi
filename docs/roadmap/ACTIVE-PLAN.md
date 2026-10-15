@@ -1,6 +1,14 @@
 # Jalur rilis aktif
 
-**Diperbarui: 2026-10-15 pada `dev` SHA `b3404d619ae5b0d901018bc4a47e91559c923035`.** Goal penuh mencakup 148 M-series dan 65 K-series (213 task terindeks); M-series tetap utuh dan pekerjaan K-series terpisah. `pnpm roadmap:progress -- --format json` pada tree saat ini: 101 complete, 13 running, 97 todo, 2 blocked. Snapshot setelah commit harus diperbarui jika checklist/task-status berubah. Jalur rilis pertama adalah jalur prioritas, bukan pengganti roadmap. Percepatan mengurangi pengulangan dan mengurutkan dependensi; tidak mengurangi acceptance.
+**Diperbarui: 2026-10-15 pada `dev` SHA `2b4de58c4fcb9bb09f19c38ec9583209e00d95e3` (roadmap/evidence sedang diselaraskan).** Goal penuh mencakup 148 M-series dan 65 K-series (213 task terindeks); M-series tetap utuh dan pekerjaan K-series terpisah. `pnpm roadmap:progress -- --format json` saat ini: 103 complete, 11 running, 97 todo, 2 blocked. Snapshot tepat-SHA diperbarui setelah batch ini. Jalur rilis pertama adalah jalur prioritas, bukan pengganti roadmap. Percepatan mengurangi pengulangan dan mengurutkan dependensi; tidak mengurangi acceptance.
+
+## Temuan bottleneck yang terukur — 2026-10-15
+
+- PR promosi #51 memakai CI penuh karena targetnya `main`. Run `38738130172` pada SHA `413a994` berjalan 3 menit 47 detik lalu berakhir `cancelled` ketika head PR sudah maju ke `2b4de58`; beberapa lane telah menyelesaikan setup, install dependency, instal Chromium, container build/scan, dan mulai tes. Dengan `cancel-in-progress: true`, push baru membuang kerja lama dan memulai kandidat penuh lagi. Run baru untuk `2b4de58` sedang menjalankan browser dan PostgreSQL; pakai hasil run exact-SHA ini sebagai verifikasi kandidat.
+- Tetap buat commit kecil/atomik untuk riwayat review dan rollback. Namun ketika PR promosi terbuka, kumpulkan beberapa commit yang berbagi sumber/dependensi menjadi satu vertical slice sebelum push. Saat full candidate CI sedang berjalan, lanjutkan coding dan commit lokal independen, tetapi antrekan push sampai run selesai supaya tidak membatalkan bukti yang sedang dikumpulkan. Jika perubahan mendesak harus dipush, terima bahwa full verification akan mulai ulang pada head baru.
+- Jangan samakan “boleh lanjut bekerja” dengan “perlu push setiap task”. Lanjutkan implementasi lokal tanpa menunggu CI; jadikan batas push sebagai batas batch yang masuk akal. Setiap push tetap menghasilkan SHA dan menjalankan checks; release kandidat tetap harus melewati semua required gates.
+- Untuk perubahan lokal, satu focused behavior test atau validator plus typecheck/lint terdampak sudah cukup. Jangan ulang unit, build, full browser, PostgreSQL, visual matrix, security scan, atau docs portal jika source yang dicakup tidak berubah. Satu run exact-SHA kandidat menggantikan verifikasi kandidat terpisah per kartu.
+- Pada source `2b4de58`, `pnpm test:integration` telah membangun workspace dan lulus 15/15 PostgreSQL integration/performance tests terhadap PostgreSQL 16.15 dalam 120.97 detik. Suite memakai schema acak yang dibersihkan; jangan mengulang pada batch dokumen.
 
 ## Checkpoint percepatan terbaru — 2026-10-15
 
