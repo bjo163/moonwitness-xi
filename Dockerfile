@@ -22,6 +22,7 @@ COPY packages/local-ai/package.json ./packages/local-ai/package.json
 COPY packages/logger/package.json ./packages/logger/package.json
 COPY packages/orm-base/package.json ./packages/orm-base/package.json
 COPY packages/orm-integration/package.json ./packages/orm-integration/package.json
+COPY packages/orm-knowledge/package.json ./packages/orm-knowledge/package.json
 COPY packages/orm-notification/package.json ./packages/orm-notification/package.json
 COPY packages/orm-organization/package.json ./packages/orm-organization/package.json
 COPY packages/orm/package.json ./packages/orm/package.json
