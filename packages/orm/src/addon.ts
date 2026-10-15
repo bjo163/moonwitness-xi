@@ -175,7 +175,7 @@ function addField(
   if (field.unique) builder.unique();
   if (field.values) builder.checkIn([...field.values]);
   const targetModel = resolveTargetModel(field.target);
-  if (targetModel && includeForeignKey)
+  if (field.kind === 'belongsTo' && targetModel && includeForeignKey)
     builder.references('id').inTable(targetModel.tableName).onDelete('RESTRICT');
 }
 
@@ -365,6 +365,9 @@ export async function installAddons(db: Knex, addons: readonly Addon[]): Promise
     (model) => model.modelName,
     (model) =>
       Object.values(model.fields).flatMap((field) => {
+        // Only belongsTo fields create foreign keys from this model's table.
+        // hasMany references point the other way and must not create a cycle.
+        if (field.kind !== 'belongsTo') return [];
         const targetModel = resolveTargetModel(field.target);
         return targetModel && targetModel.modelName !== model.modelName
           ? [targetModel.modelName]

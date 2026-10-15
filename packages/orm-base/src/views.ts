@@ -56,6 +56,7 @@ export const views = [
         },
         { title: 'Contact Details', fields: ['email', 'phone', 'mobile', 'website'] },
         { title: 'Address', fields: ['street', 'city', 'state', 'postal_code', 'country'] },
+        { title: 'Addresses', fields: ['addresses'] },
         { title: 'Classification', fields: ['is_customer', 'is_supplier'] },
         { title: 'Internal Notes', fields: ['notes'] },
       ],

@@ -17,6 +17,7 @@ interface FormViewProps {
   model: string;
   views: ResolvedViews;
   recordId?: number; // undefined = create mode
+  initialValues?: Record<string, unknown>;
   onBack: () => void;
   onSaved?: (id: number) => void;
 }
@@ -34,7 +35,7 @@ export function FormView(props: FormViewProps) {
   }
   return (
     <FormEditor
-      key={`${props.model}:${props.recordId ?? 'new'}`}
+      key={`${props.model}:${props.recordId ?? 'new'}:${JSON.stringify(props.initialValues ?? {})}`}
       {...props}
       initialRecord={initialRecord}
     />
@@ -45,6 +46,7 @@ function FormEditor({
   model,
   views,
   recordId,
+  initialValues,
   onBack,
   onSaved,
   initialRecord,
@@ -54,11 +56,14 @@ function FormEditor({
 
   const [formData, setFormData] = useState<Record<string, unknown>>(() => {
     if (initialRecord) return { ...initialRecord };
-    return Object.fromEntries(
-      views.fields
-        .filter((field) => field.default !== undefined)
-        .map((field) => [field.name, field.default])
-    );
+    return {
+      ...Object.fromEntries(
+        views.fields
+          .filter((field) => field.default !== undefined)
+          .map((field) => [field.name, field.default])
+      ),
+      ...initialValues,
+    };
   });
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -369,7 +374,12 @@ function FormEditor({
                   if (field.type === 'one2many') {
                     return (
                       <div key={field.name} className="sm:col-span-2 pt-2">
-                        <One2ManyWidget field={field} parentId={recordId} isCreate={isCreate} />
+                        <One2ManyWidget
+                          field={field}
+                          parentModel={model}
+                          parentId={recordId}
+                          isCreate={isCreate}
+                        />
                       </div>
                     );
                   }

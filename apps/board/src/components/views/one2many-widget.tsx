@@ -9,11 +9,12 @@ import { FieldCell } from './fields';
 
 interface One2ManyWidgetProps {
   field: FieldMeta;
+  parentModel: string;
   parentId?: number;
   isCreate: boolean;
 }
 
-export function One2ManyWidget({ field, parentId, isCreate }: One2ManyWidgetProps) {
+export function One2ManyWidget({ field, parentModel, parentId, isCreate }: One2ManyWidgetProps) {
   const targetModel = field.relation;
   const foreignKey = field.foreignKey ?? 'partner_id';
 
@@ -35,6 +36,12 @@ export function One2ManyWidget({ field, parentId, isCreate }: One2ManyWidgetProp
   );
 
   const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const createParams = new URLSearchParams({
+    relation_parent_model: parentModel,
+    relation_parent_id: String(parentId),
+    relation_field: foreignKey,
+  });
 
   const columns = useMemo(() => {
     if (!targetViews?.list?.columns || !targetViews?.fields) return [];
@@ -84,7 +91,7 @@ export function One2ManyWidget({ field, parentId, isCreate }: One2ManyWidgetProp
           size="xs"
           className="gap-1 font-mono text-xs hover:bg-lime hover:text-on-accent"
         >
-          <Link to={`/m/${targetModel}/new`}>
+          <Link to={`/m/${targetModel}/new?${createParams.toString()}`}>
             <Plus className="size-3.5" /> Add New
           </Link>
         </Button>

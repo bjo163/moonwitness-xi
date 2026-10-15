@@ -77,13 +77,12 @@ test('record forms validate, edit relations, scope state by country, archive, re
   });
   expect(duplicatePartner.status()).toBe(409);
 
-  await page.goto('/m/base.partner_address/new');
+  await page.goto(`/m/base.partner/${partnerId}`);
+  await expect(page.getByRole('heading', { name: 'Addresses' })).toBeVisible();
+  await page.getByRole('link', { name: 'Add New' }).click();
   await expect(page.getByRole('heading', { name: 'New Partner Address' })).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'Address Type' })).toContainText('Other');
-
-  await page.getByLabel('Partner').click();
-  await page.getByPlaceholder('Search partner…').fill(`${partnerName} Updated`);
-  await page.getByRole('option', { name: new RegExp(partnerName) }).click();
+  await expect(page.getByLabel('Partner')).toContainText(`#${partnerId}`);
   await page.getByLabel('Label').fill(`Primary ${suffix}`);
   await page.getByRole('textbox', { name: 'Street *', exact: true }).fill('1 Example Street');
   await page.getByRole('textbox', { name: 'City *', exact: true }).fill('Jakarta');
@@ -107,8 +106,19 @@ test('record forms validate, edit relations, scope state by country, archive, re
   await page.getByRole('option', { name: /California/u }).click();
 
   await page.getByRole('button', { name: 'Save Record' }).click();
-  await expect(page).toHaveURL(/\/m\/base\.partner_address\/\d+$/u);
-  const addressId = Number(new URL(page.url()).pathname.split('/').at(-1));
+  await expect(page).toHaveURL(new RegExp(`/m/base\\.partner/${partnerId}$`, 'u'));
+  await expect(page.getByRole('cell', { name: `Primary ${suffix}` })).toBeVisible();
+  const savedAddressList = await page.request.get('/api/base.partner_address', {
+    headers: authorization,
+    params: { domain: JSON.stringify([['label', '=', `Primary ${suffix}`]]) },
+  });
+  expect(savedAddressList.status()).toBe(200);
+  const createdAddresses = (await savedAddressList.json()) as {
+    data: Array<CreatedRecord & { partner_id: number }>;
+  };
+  expect(createdAddresses.data).toHaveLength(1);
+  const addressId = createdAddresses.data[0].id;
+  expect(createdAddresses.data[0].partner_id).toBe(partnerId);
   const savedAddressResponse = await page.request.get(`/api/base.partner_address/${addressId}`, {
     headers: authorization,
     params: { with: 'partner,country,state' },
@@ -157,6 +167,7 @@ test('record forms validate, edit relations, scope state by country, archive, re
   });
   expect(deniedDelete.status()).toBe(403);
 
+  await page.goto(`/m/base.partner_address/${addressId}`);
   page.once('dialog', (dialog) => void dialog.accept());
   await page.getByRole('button', { name: 'Archive', exact: true }).click();
   await expect(page).toHaveURL(/\/m\/base\.partner_address$/u);

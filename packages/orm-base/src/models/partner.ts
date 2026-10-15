@@ -7,6 +7,10 @@ function parentPartnerModel(): typeof BaseModel {
   return Partner;
 }
 
+function partnerAddressModel(): typeof BaseModel {
+  return PartnerAddress;
+}
+
 export const Partner = defineModel('base.partner', {
   table: 'partners',
   order: 'name asc',
@@ -29,6 +33,10 @@ export const Partner = defineModel('base.partner', {
     is_customer: fields.boolean({ default: true, label: 'Is Customer' }),
     is_supplier: fields.boolean({ default: false, label: 'Is Vendor' }),
     notes: fields.text({ label: 'Internal Notes' }),
+    addresses: fields.hasMany(partnerAddressModel, {
+      foreignKey: 'partner_id',
+      label: 'Addresses',
+    }),
   },
 });
 
@@ -76,11 +84,6 @@ export const PartnerAddress = defineModel('base.partner_address', {
 
 Partner.relationMappings = {
   ...Partner.relationMappings,
-  addresses: {
-    relation: Partner.HasManyRelation,
-    modelClass: PartnerAddress,
-    join: { from: 'partners.id', to: 'partner_addresses.partner_id' },
-  },
   category_links: {
     relation: Partner.HasManyRelation,
     modelClass: PartnerCategoryLink,

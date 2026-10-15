@@ -1,7 +1,7 @@
 import knex, { type Knex } from 'knex';
 import { afterEach, describe, expect, it } from 'vitest';
 import { defineAddon, installAddons, seed } from '../src/addon.js';
-import { defineModel, fields } from '../src/model-definition.js';
+import { defineModel, fields, type BaseModel } from '../src/model-definition.js';
 import { Registry } from '../src/registry.js';
 import { manifest as documentedManifest } from '../examples/sales/manifest.js';
 
@@ -12,6 +12,23 @@ const Parent = defineModel('test.parent', {
 const Child = defineModel('test.child', {
   table: 'test_children',
   fields: { name: fields.string({ required: true }), parent: fields.belongsTo(Parent) },
+});
+function relatedChildModel(): typeof BaseModel {
+  return RelatedChild;
+}
+const RelatedParent = defineModel('test.related_parent', {
+  table: 'test_related_parents',
+  fields: {
+    name: fields.string({ required: true }),
+    children: fields.hasMany(relatedChildModel, { foreignKey: 'parent_id' }),
+  },
+});
+const RelatedChild = defineModel('test.related_child', {
+  table: 'test_related_children',
+  fields: {
+    name: fields.string({ required: true }),
+    parent: fields.belongsTo(RelatedParent),
+  },
 });
 const addon = (version: string, models = [Parent], data = []) =>
   defineAddon({ name: 'test', version, models, data });
@@ -72,6 +89,24 @@ describe('programmatic addon installer', () => {
     expect(await connection('test_parents').first('name')).toMatchObject({ name: 'P' });
     expect(await connection('test_children').first('parent_id')).toMatchObject({ parent_id: 1 });
     expect(Registry.get('test.parent')).toBe(Parent);
+  });
+
+  it('orders has-many models by their owning belongs-to foreign key without a cycle', async () => {
+    const connection = database();
+    await installAddons(connection, [
+      defineAddon({
+        name: 'relations',
+        version: '1.0.0',
+        models: [RelatedChild, RelatedParent],
+      }),
+    ]);
+
+    const parent = await RelatedParent.query().insertAndFetch({ name: 'Parent' });
+    await RelatedChild.query().insert({ name: 'Child', parent_id: parent.id });
+
+    await expect(
+      RelatedParent.query().findById(parent.id).withGraphFetched('children')
+    ).resolves.toMatchObject({ children: [{ name: 'Child', parent_id: parent.id }] });
   });
 
   it('installs the documented addon example and its stable seed into a test database', async () => {
