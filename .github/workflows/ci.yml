@@ -6,7 +6,7 @@ on:
   pull_request_review:
     types: [submitted, dismissed]
   push:
-    branches: [dev, main]
+    branches: [main]
   workflow_dispatch:
 
 permissions:

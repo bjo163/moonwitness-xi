@@ -47,6 +47,7 @@ jobs:
       actions: read
       contents: read
       checks: read
+      pull-requests: read
       issues: read
     env:
       TASK_IDS: ${{ inputs.task_ids }}
@@ -139,6 +140,7 @@ jobs:
       actions: read
       contents: read
       checks: read
+      pull-requests: read
       issues: write
     env:
       TASK_IDS: ${{ inputs.task_ids }}

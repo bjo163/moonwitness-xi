@@ -7,9 +7,10 @@ import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   collectLifecycleSnapshot,
-  exactDevPushTechnicalGate,
+  exactDevPullRequestTechnicalGate,
   flattenGitHubPages,
-  selectExactDevPushCiRun,
+  isExactDevMainPullRequest,
+  selectExactDevPullRequestCiRun,
 } from './collect-lifecycle-snapshot.mjs';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -29,24 +30,44 @@ async function ghJson(args) {
   return JSON.parse(stdout);
 }
 
-async function currentDevPushTechnicalGate(repository, sourceSha) {
+async function ghJsonObject(args) {
+  const { stdout } = await execFileAsync('gh', ['api', ...args], {
+    cwd: repositoryRoot,
+    encoding: 'utf8',
+    env: process.env,
+    maxBuffer: 32 * 1024 * 1024,
+  });
+  return JSON.parse(stdout);
+}
+
+async function currentDevPullRequestTechnicalGate(repository, sourceSha) {
   const deadline = Date.now() + 25 * 60 * 1000;
   while (Date.now() < deadline) {
     const pages = await ghJson([
-      `repos/${repository}/actions/workflows/ci.yml/runs?branch=dev&per_page=100`,
+      `repos/${repository}/actions/workflows/ci.yml/runs?branch=dev&event=pull_request&per_page=100`,
     ]);
-    const run = selectExactDevPushCiRun(pages, sourceSha);
+    const run = selectExactDevPullRequestCiRun(pages, sourceSha);
+    if (run) {
+      const pullRequest = await ghJsonObject([
+        `repos/${repository}/pulls/${run.pull_request_number}`,
+      ]);
+      if (!isExactDevMainPullRequest(pullRequest, sourceSha, repository, run.pull_request_number)) {
+        throw new Error(
+          `The CI run for ${sourceSha} is not tied to a same-repository dev-to-main pull request.`
+        );
+      }
+    }
     if (run?.status === 'completed') {
       const jobPages = await ghJson([
         `repos/${repository}/actions/runs/${run.id}/jobs?per_page=100`,
       ]);
-      const gate = exactDevPushTechnicalGate(run, jobPages);
+      const gate = exactDevPullRequestTechnicalGate(run, jobPages);
       if (gate?.status === 'completed') return [gate];
     }
     await delay(15_000);
   }
   throw new Error(
-    `The exact dev push ci-technical-gate did not complete within 25 minutes for ${sourceSha}; no lifecycle snapshot was written.`
+    `The exact dev-to-main PR ci-technical-gate did not complete within 25 minutes for ${sourceSha}; no lifecycle snapshot was written.`
   );
 }
 
@@ -116,7 +137,7 @@ async function main() {
     main: git(['rev-parse', 'refs/remotes/origin/main']),
   };
   const [checkRuns, releasePages] = await Promise.all([
-    currentDevPushTechnicalGate(repository, branchHeads.dev),
+    currentDevPullRequestTechnicalGate(repository, branchHeads.dev),
     ghJson([`repos/${repository}/releases?per_page=100`]),
   ]);
   const releases = flattenGitHubPages(releasePages);

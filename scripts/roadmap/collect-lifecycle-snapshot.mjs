@@ -21,32 +21,68 @@ export function flattenGitHubPages(pages, property) {
 }
 
 /**
- * Select the newest push-triggered CI run for the exact dev source SHA.
- * PR and workflow-dispatch runs can share the same SHA but have different gates.
+ * Select the newest same-repository dev-to-main PR CI run for the exact dev source SHA.
+ * Push and workflow-dispatch runs can share the same SHA but are not the lifecycle source.
  * @param {unknown} pages
  * @param {string} sourceSha
- * @returns {{id:number,status:string,head_sha:string,event:string,head_branch:string}|undefined}
+ * @returns {{id:number,status:string,head_sha:string,event:string,head_branch:string,pull_request_number:number}|undefined}
  */
-export function selectExactDevPushCiRun(pages, sourceSha) {
+export function selectExactDevPullRequestCiRun(pages, sourceSha) {
   const runs = flattenGitHubPages(pages, 'workflow_runs');
   const candidates = runs.filter(
     (run) =>
       run &&
       run.head_sha === sourceSha &&
-      run.event === 'push' &&
+      run.event === 'pull_request' &&
       run.head_branch === 'dev' &&
+      Array.isArray(run.pull_requests) &&
+      run.pull_requests.some(
+        (pullRequest) =>
+          Number.isSafeInteger(pullRequest?.number) &&
+          pullRequest?.head?.ref === 'dev' &&
+          pullRequest.head.sha === sourceSha &&
+          pullRequest.base?.ref === 'main'
+      ) &&
       Number.isSafeInteger(run.id)
   );
-  return candidates.sort((left, right) => right.id - left.id)[0];
+  const run = candidates.sort((left, right) => right.id - left.id)[0];
+  const pullRequest = run?.pull_requests.find(
+    (candidate) =>
+      Number.isSafeInteger(candidate?.number) &&
+      candidate?.head?.ref === 'dev' &&
+      candidate.head.sha === sourceSha &&
+      candidate.base?.ref === 'main'
+  );
+  return run && pullRequest ? { ...run, pull_request_number: pullRequest.number } : undefined;
 }
 
 /**
- * Convert the exact dev push workflow's technical gate into lifecycle check metadata.
+ * Validate full PR repository identity from the pull request REST endpoint.
+ * Workflow-run payloads may omit repository objects, so their refs are not enough.
+ * @param {unknown} pullRequest
+ * @param {string} sourceSha
+ * @param {string} repository
+ * @param {number} expectedNumber
+ */
+export function isExactDevMainPullRequest(pullRequest, sourceSha, repository, expectedNumber) {
+  return Boolean(
+    pullRequest &&
+    pullRequest.number === expectedNumber &&
+    pullRequest.head?.ref === 'dev' &&
+    pullRequest.head.sha === sourceSha &&
+    pullRequest.head.repo?.full_name === repository &&
+    pullRequest.base?.ref === 'main' &&
+    pullRequest.base.repo?.full_name === repository
+  );
+}
+
+/**
+ * Convert the exact dev-to-main PR workflow's technical gate into lifecycle check metadata.
  * @param {{id:number,head_sha:string}} run
  * @param {unknown} pages
  * @returns {{id:number,name:string,head_sha:string,status:'queued'|'in_progress'|'completed',conclusion:string|null}|undefined}
  */
-export function exactDevPushTechnicalGate(run, pages) {
+export function exactDevPullRequestTechnicalGate(run, pages) {
   const jobs = flattenGitHubPages(pages, 'jobs');
   const gates = jobs.filter(
     (job) =>

@@ -2,11 +2,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   collectLifecycleSnapshot,
-  exactDevPushTechnicalGate,
+  exactDevPullRequestTechnicalGate,
   flattenGitHubPages,
+  isExactDevMainPullRequest,
   parseEvidenceSourceSha,
   parseRoadmapTaskStates,
-  selectExactDevPushCiRun,
+  selectExactDevPullRequestCiRun,
 } from './collect-lifecycle-snapshot.mjs';
 import { projectLifecycleSnapshot } from './lifecycle-snapshot.mjs';
 
@@ -37,18 +38,38 @@ test('flattens every GitHub CLI pagination page and rejects malformed page shape
   assert.throws(() => flattenGitHubPages([{ check_runs: null }], 'check_runs'), /page has/u);
 });
 
-test('selects the newest exact dev push and CI gate when workflow events arrive out of order', () => {
-  const run = selectExactDevPushCiRun(
+test('selects exact same-repository dev-to-main PR gate and ignores duplicate push checks', () => {
+  const run = selectExactDevPullRequestCiRun(
     [
       {
         workflow_runs: [
-          { id: 10, event: 'push', head_branch: 'dev', head_sha: devSha, status: 'in_progress' },
           {
             id: 9,
             event: 'pull_request',
             head_branch: 'dev',
             head_sha: devSha,
             status: 'completed',
+            pull_requests: [
+              {
+                number: 24,
+                head: { ref: 'dev', sha: devSha, repo: { full_name: 'bjo163/moonwitness-xi' } },
+                base: { ref: 'main', repo: { full_name: 'bjo163/moonwitness-xi' } },
+              },
+            ],
+          },
+          {
+            id: 11,
+            event: 'pull_request',
+            head_branch: 'dev',
+            head_sha: devSha,
+            status: 'in_progress',
+            pull_requests: [
+              {
+                number: 24,
+                head: { ref: 'dev', sha: devSha, repo: { full_name: 'bjo163/moonwitness-xi' } },
+                base: { ref: 'main', repo: { full_name: 'bjo163/moonwitness-xi' } },
+              },
+            ],
           },
           {
             id: 8,
@@ -57,16 +78,80 @@ test('selects the newest exact dev push and CI gate when workflow events arrive 
             head_sha: devSha,
             status: 'completed',
           },
-          { id: 7, event: 'push', head_branch: 'main', head_sha: devSha, status: 'completed' },
-          { id: 6, event: 'push', head_branch: 'dev', head_sha: sourceSha, status: 'completed' },
+          {
+            id: 7,
+            event: 'pull_request',
+            head_branch: 'dev',
+            head_sha: devSha,
+            status: 'completed',
+            pull_requests: [
+              {
+                number: 7,
+                head: { ref: 'feature', sha: devSha, repo: { full_name: 'fork/moonwitness-xi' } },
+                base: { ref: 'main', repo: { full_name: 'bjo163/moonwitness-xi' } },
+              },
+            ],
+          },
+          {
+            id: 6,
+            event: 'pull_request',
+            head_branch: 'dev',
+            head_sha: sourceSha,
+            status: 'completed',
+            pull_requests: [],
+          },
         ],
       },
     ],
     devSha
   );
-  assert.equal(run.id, 10);
+  assert.equal(run.id, 11);
+  assert.equal(run.pull_request_number, 24);
+  assert.equal(
+    isExactDevMainPullRequest(
+      {
+        number: 24,
+        head: {
+          ref: 'dev',
+          sha: devSha,
+          repo: { full_name: 'bjo163/moonwitness-xi' },
+        },
+        base: { ref: 'main', repo: { full_name: 'bjo163/moonwitness-xi' } },
+      },
+      devSha,
+      'bjo163/moonwitness-xi',
+      24
+    ),
+    true
+  );
+  assert.equal(
+    isExactDevMainPullRequest(
+      {
+        number: 24,
+        head: { ref: 'dev', sha: devSha, repo: { full_name: 'fork/moonwitness-xi' } },
+        base: { ref: 'main', repo: { full_name: 'bjo163/moonwitness-xi' } },
+      },
+      devSha,
+      'bjo163/moonwitness-xi',
+      24
+    ),
+    false
+  );
+  assert.equal(
+    isExactDevMainPullRequest(
+      {
+        number: 25,
+        head: { ref: 'dev', sha: devSha, repo: { full_name: 'bjo163/moonwitness-xi' } },
+        base: { ref: 'main', repo: { full_name: 'bjo163/moonwitness-xi' } },
+      },
+      devSha,
+      'bjo163/moonwitness-xi',
+      24
+    ),
+    false
+  );
   assert.deepEqual(
-    exactDevPushTechnicalGate(run, [
+    exactDevPullRequestTechnicalGate(run, [
       {
         jobs: [
           { id: 20, name: 'quality', status: 'completed', conclusion: 'success' },
@@ -84,8 +169,8 @@ test('selects the newest exact dev push and CI gate when workflow events arrive 
       conclusion: 'success',
     }
   );
-  assert.equal(exactDevPushTechnicalGate(run, [{ jobs: [] }]), undefined);
-  assert.equal(selectExactDevPushCiRun([{ workflow_runs: [] }], devSha), undefined);
+  assert.equal(exactDevPullRequestTechnicalGate(run, [{ jobs: [] }]), undefined);
+  assert.equal(selectExactDevPullRequestCiRun([{ workflow_runs: [] }], devSha), undefined);
 });
 
 test('parses the explicit source commit marker and derives canonical roadmap task states', () => {

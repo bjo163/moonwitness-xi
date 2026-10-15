@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const workflow = readFileSync('.github/workflows/ci.yml', 'utf8');
+const lifecycleWorkflow = readFileSync('.github/workflows/roadmap-issue-plan.yml', 'utf8');
 const codeqlWorkflow = readFileSync('.github/workflows/codeql.yml', 'utf8');
 const gitleaksWorkflow = readFileSync('.github/workflows/gitleaks.yml', 'utf8');
 
@@ -19,14 +20,24 @@ test('CI cancels stale runs only within the same target branch and event type', 
   assert.equal(group('dev', 'push'), group('dev', 'push'));
 });
 
-test('security scans avoid duplicate dev push runs while CI retains its issue-lifecycle gate', () => {
+test('technical CI runs once per dev SHA through its PR; main pushes remain fully validated', () => {
   assert.match(workflow, /^ {2}pull_request:\r?\n {4}branches: \[dev, main\]$/mu);
-  assert.match(workflow, /^ {2}push:\r?\n {4}branches: \[dev, main\]$/mu);
+  assert.match(workflow, /^ {2}push:\r?\n {4}branches: \[main\]$/mu);
 
   for (const source of [codeqlWorkflow, gitleaksWorkflow]) {
     assert.match(source, /^ {2}pull_request:\r?\n {4}branches: \[dev, main\]$/mu);
     assert.match(source, /^ {2}push:\r?\n {4}branches: \[main\]$/mu);
   }
+});
+
+test('roadmap lifecycle may read PR identity without gaining pull request write access', () => {
+  const planJob = lifecycleWorkflow.match(/ {2}plan:[\s\S]*?\n {2}apply:/u)?.[0];
+  const applyJob = lifecycleWorkflow.match(/ {2}apply:[\s\S]*$/u)?.[0];
+  assert.ok(planJob, 'issue sync should define its read-only planning job');
+  assert.ok(applyJob, 'issue sync should define its bounded apply job');
+  assert.match(planJob, /pull-requests: read/u);
+  assert.match(applyJob, /pull-requests: read/u);
+  assert.doesNotMatch(lifecycleWorkflow, /pull-requests: write/u);
 });
 
 test('technical gate validates every required lane and stays independent from promotion approval', () => {
