@@ -99,7 +99,10 @@ test('CSV import rejects invalid rows, reports partial failures, and exports onl
   await search.fill(`Extended, Imported ${suffix}`);
   const table = page.getByRole('table');
   await expect(table.getByText(`Extended, Imported ${suffix}`, { exact: true })).toBeVisible();
-  const selectedRow = table.getByRole('checkbox', { name: /Select record #/u });
+  const selectedRow = table
+    .getByRole('row')
+    .filter({ hasText: `Extended, Imported ${suffix}` })
+    .getByRole('checkbox');
   await selectedRow.check();
   const downloadReady = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export CSV' }).click();
