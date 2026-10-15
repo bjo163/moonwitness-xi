@@ -1976,6 +1976,8 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       group_id: activityGroup.id,
       model_name: 'base.tag_link',
       create: true,
+      write: true,
+      unlink: true,
     });
     await ModelAccess.query().insert({
       group_id: activityGroup.id,
@@ -2065,6 +2067,37 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       resource_model: Partner.modelName,
       resource_id: localPartner.id,
     });
+    const replacementTag = await Tag.query().insertAndFetch({
+      name: `PostgreSQL Replacement Resource Tag ${randomUUID()}`,
+    });
+    const allowedLocalTagLinkWrite = await app.inject({
+      method: 'PATCH',
+      url: `/api/base.tag_link/${allowedLocalTagLinkId}`,
+      headers,
+      payload: { tag_id: replacementTag.id },
+    });
+    expect(allowedLocalTagLinkWrite.statusCode, allowedLocalTagLinkWrite.payload).toBe(200);
+    expect(await TagLink.query().findById(allowedLocalTagLinkId)).toMatchObject({
+      tag_id: replacementTag.id,
+      resource_model: Partner.modelName,
+      resource_id: localPartner.id,
+    });
+    const allowedLocalTagLinkUnlink = await app.inject({
+      method: 'DELETE',
+      url: `/api/base.tag_link/${allowedLocalTagLinkId}`,
+      headers,
+    });
+    expect(allowedLocalTagLinkUnlink.statusCode, allowedLocalTagLinkUnlink.payload).toBe(200);
+    expect(await TagLink.query().findById(allowedLocalTagLinkId)).toMatchObject({ active: false });
+    await expect(
+      AuditLog.query()
+        .where({ model: 'base.tag_link', record_id: allowedLocalTagLinkId })
+        .orderBy('id', 'asc')
+    ).resolves.toMatchObject([
+      { operation: 'create', actor_id: localUser.id },
+      { operation: 'write', actor_id: localUser.id },
+      { operation: 'archive', actor_id: localUser.id },
+    ]);
     const deniedForeignTagLink = await app.inject({
       method: 'POST',
       url: '/api/base.tag_link',
@@ -2082,6 +2115,31 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
         resource_id: foreignPartner.id,
       })
     ).toBeUndefined();
+    const foreignTagLink = await TagLink.query().insertAndFetch({
+      tag_id: scopedTag.id,
+      resource_model: Partner.modelName,
+      resource_id: foreignPartner.id,
+    });
+    const foreignTagLinkAuditBeforeUnlink = await AuditLog.query()
+      .where({ model: 'base.tag_link', record_id: foreignTagLink.id })
+      .orderBy('id', 'asc');
+    const deniedForeignTagLinkUnlink = await app.inject({
+      method: 'DELETE',
+      url: `/api/base.tag_link/${foreignTagLink.id}`,
+      headers,
+    });
+    expect(deniedForeignTagLinkUnlink.statusCode).toBe(404);
+    expect(await TagLink.query().findById(foreignTagLink.id)).toMatchObject({
+      tag_id: scopedTag.id,
+      resource_model: Partner.modelName,
+      resource_id: foreignPartner.id,
+      active: true,
+    });
+    await expect(
+      AuditLog.query()
+        .where({ model: 'base.tag_link', record_id: foreignTagLink.id })
+        .orderBy('id', 'asc')
+    ).resolves.toEqual(foreignTagLinkAuditBeforeUnlink);
     const deniedForeignActivity = await app.inject({
       method: 'POST',
       url: '/api/base.activity',
