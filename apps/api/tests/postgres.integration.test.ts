@@ -962,6 +962,90 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
         fencing_token: 1,
       });
 
+      const retrySuffix = randomUUID().replaceAll('-', '').slice(0, 12);
+      const retryEventType = `postgres.ack_retry.${retrySuffix}`;
+      const retryDeliveries: number[] = [];
+      const appliedEffects = new Set<number>();
+      let effectCount = 0;
+      const unregisterRetryConsumer = registerOutboxConsumer(
+        retryEventType,
+        async (_payload, eventId) => {
+          retryDeliveries.push(eventId);
+          if (!appliedEffects.has(eventId)) {
+            appliedEffects.add(eventId);
+            effectCount += 1;
+          }
+        }
+      );
+      const retryEvent = await OutboxEvent.query().insertAndFetch({
+        event_type: retryEventType,
+        aggregate_model: 'base.partner',
+        aggregate_id: partnerId,
+        payload: JSON.stringify({ id: partnerId }),
+        status: 'pending',
+        attempts: 0,
+        max_attempts: 3,
+        available_at: new Date(0).toISOString(),
+        created_at: new Date(0).toISOString(),
+      });
+      const ackFunction = `reject_outbox_ack_${retrySuffix}`;
+      const ackTrigger = `reject_outbox_ack_${retrySuffix}`;
+      try {
+        await apiDb.raw(`
+          CREATE FUNCTION ${ackFunction}() RETURNS trigger
+          LANGUAGE plpgsql AS $$
+          BEGIN
+            RAISE EXCEPTION 'simulated PostgreSQL outbox acknowledgement failure';
+          END
+          $$;
+        `);
+        await apiDb.raw(`
+          CREATE TRIGGER ${ackTrigger}
+          BEFORE UPDATE ON outbox_events
+          FOR EACH ROW
+          WHEN (OLD.id = ${retryEvent.id} AND NEW.status = 'published')
+          EXECUTE FUNCTION ${ackFunction}();
+        `);
+
+        await expect(dispatchOneOutboxEvent(`postgres-ack-retry-${retrySuffix}`)).resolves.toBe(
+          true
+        );
+        await expect(OutboxEvent.query().findById(retryEvent.id)).resolves.toMatchObject({
+          status: 'pending',
+          attempts: 1,
+          fencing_token: 1,
+        });
+        await expect(
+          OutboxEvent.query().findById(retryEvent.id).select('last_error').first()
+        ).resolves.toMatchObject({
+          last_error: expect.stringContaining('acknowledgement failure'),
+        });
+
+        await apiDb.raw(`DROP TRIGGER ${ackTrigger} ON outbox_events`);
+        await apiDb.raw(`DROP FUNCTION ${ackFunction}()`);
+        await OutboxEvent.query()
+          .findById(retryEvent.id)
+          .patch({
+            available_at: new Date(0).toISOString(),
+          });
+
+        await expect(dispatchOneOutboxEvent(`postgres-ack-retry-${retrySuffix}`)).resolves.toBe(
+          true
+        );
+        expect(retryDeliveries).toEqual([retryEvent.id, retryEvent.id]);
+        expect(effectCount).toBe(1);
+        await expect(OutboxEvent.query().findById(retryEvent.id)).resolves.toMatchObject({
+          status: 'published',
+          attempts: 2,
+          fencing_token: 2,
+          published_at: expect.any(String),
+        });
+      } finally {
+        await apiDb.raw(`DROP TRIGGER IF EXISTS ${ackTrigger} ON outbox_events`);
+        await apiDb.raw(`DROP FUNCTION IF EXISTS ${ackFunction}()`);
+        unregisterRetryConsumer();
+      }
+
       const lifecycleRecord = await app.inject({
         method: 'POST',
         url: '/api/base.partner',
