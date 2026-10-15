@@ -5,6 +5,7 @@ import { URL } from 'node:url';
 import { getUnitRunnerCheckPlan } from './unit-runner-policy.mjs';
 
 const workflow = await readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
+const rootPackage = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 
 describe('unit runner CI ownership', () => {
   it('runs every shared contract locally', () => {
@@ -33,7 +34,12 @@ describe('unit runner CI ownership', () => {
     assert.ok(qualityJob?.includes('pnpm test:board-budget'));
     assert.ok(qualityJob?.includes('pnpm board:budget'));
     assert.ok(automationJob?.includes('pnpm test:versioned-docs'));
-    assert.ok(uiJob?.includes('pnpm test:assets'));
+    assert.ok(uiJob?.includes('pnpm test:assets:source'));
+    assert.match(
+      rootPackage.scripts['test:assets'],
+      /test:assets:source && pnpm assets:check:docs/u
+    );
+    assert.match(rootPackage.scripts['test:assets:source'], /export-doc-assets\.test\.mjs/u);
     assert.ok(uiJob?.includes('packages/ui/tests/*.test.mjs'));
     assert.ok(uiJob?.includes('packages/ui/scripts/verify-package.mjs'));
   });
