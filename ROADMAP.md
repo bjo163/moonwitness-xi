@@ -225,13 +225,13 @@ Jalur ini melengkapi M1/M7/M8, bukan membuat release pipeline kedua. Detail: [ka
 
 Track approved through ADR 0004 on 2026-10-15. The existing 148 M-series tasks and their statuses are preserved; K0–K9 is the separate 65-task knowledge rebuild track. Task index changes do not create GitHub Issues. Follow each task card, dependency, and review gate in [the K work plan](docs/roadmap/12-local-ai-rebuild.md).
 
-- [ ] K0-001 Centralization ADR and deployment boundary. Evidence: [K0-001](docs/roadmap/evidence/K0-001-002.md).
+- [x] K0-001 Centralization ADR and deployment boundary. Evidence: [K0-001](docs/roadmap/evidence/K0-001-002.md).
 - [ ] K0-002 Exact-SHA XI baseline and local capability survey. Evidence: [K0-002](docs/roadmap/evidence/K0-001-002.md).
-- [ ] K0-003 Canonical boundaries and domain ownership matrix. Evidence: [K0-003](docs/roadmap/evidence/K0-003.md).
+- [x] K0-003 Canonical boundaries and domain ownership matrix. Evidence: [K0-003](docs/roadmap/evidence/K0-003.md).
 - [ ] K0-004 Legal rights and source ingestion policy. Evidence: [K0-004](docs/roadmap/evidence/K0-004.md).
 - [ ] K0-005 Witness privacy consent and minor-safety policy. Evidence: [K0-005](docs/roadmap/evidence/K0-005.md).
 - [ ] K0-006 Legacy knowledge inventory and migration ledger.
-- [ ] K0-007 Task lifecycle and local-agent trust contract. Evidence: [K0-007](docs/roadmap/evidence/K0-007.md).
+- [x] K0-007 Task lifecycle and local-agent trust contract. Evidence: [K0-007](docs/roadmap/evidence/K0-007.md).
 - [ ] K1-001 Knowledge record types and JSON schemas.
 - [ ] K1-002 Canonical ID/alias grammar and resolver.
 - [ ] K1-003 Source artifact and rights schemas.
