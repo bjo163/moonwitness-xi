@@ -1731,6 +1731,27 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       company_id: localCompany.id,
     });
 
+    const partnerAuditBeforeCompanyMove = await AuditLog.query()
+      .where({ model: 'base.partner', record_id: localPartner.id })
+      .orderBy('id', 'asc');
+    const deniedCompanyMove = await app.inject({
+      method: 'PATCH',
+      url: `/api/base.partner/${localPartner.id}`,
+      headers,
+      payload: { company_id: foreignCompany.id },
+    });
+    expect(deniedCompanyMove.statusCode).toBe(403);
+    expect(await Partner.query().findById(localPartner.id)).toMatchObject({
+      name: 'PostgreSQL Tenant Contact Updated',
+      company_id: localCompany.id,
+      active: true,
+    });
+    await expect(
+      AuditLog.query()
+        .where({ model: 'base.partner', record_id: localPartner.id })
+        .orderBy('id', 'asc')
+    ).resolves.toEqual(partnerAuditBeforeCompanyMove);
+
     const partnerAuditBeforeDeniedUnlink = await AuditLog.query()
       .where({ model: 'base.partner', record_id: localPartner.id })
       .orderBy('id', 'asc');
