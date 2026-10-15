@@ -14,6 +14,10 @@ const uiCatalogManifest = JSON.parse(
 );
 const workflow = await readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
 const quality = workflow.split('  quality:\n')[1]?.split('\n  automation:\n')[0] ?? '';
+const releaseWorkflow = await readFile(
+  new URL('../.github/workflows/release.yml', import.meta.url),
+  'utf8'
+);
 
 test('CI reuses the validated workspace build only inside its quality job', () => {
   const qualitySteps = ['pnpm typecheck', 'pnpm architecture:check:built', 'pnpm docs:build:built'];
@@ -37,6 +41,13 @@ test('CI reuses the validated workspace build only inside its quality job', () =
 });
 
 test('built variants consume existing package output without invoking package builds', () => {
+  assert.match(rootManifest.scripts['test:unit'], /^pnpm build && pnpm test:unit:built$/u);
+  assert.doesNotMatch(rootManifest.scripts['test:unit:built'], /pnpm build/u);
+  assert.match(rootManifest.scripts.verify, /pnpm typecheck && pnpm test:unit:built/u);
+  assert.match(
+    rootManifest.scripts.verify,
+    /pnpm architecture:check:built && pnpm docs:build:built/u
+  );
   assert.equal(
     rootManifest.scripts['architecture:check:built'],
     'node scripts/architecture/generate-diagrams.mjs --check'
@@ -53,4 +64,9 @@ test('built variants consume existing package output without invoking package bu
     docsManifest.scripts['portal:build:built'],
     /scripts\/docs\/build-guide\.mjs/u
   );
+
+  const releaseVerification =
+    releaseWorkflow.split('  verify:\n')[1]?.split('\n  publish:\n')[0] ?? '';
+  assert.match(releaseVerification, /run: pnpm typecheck[\s\S]*run: pnpm docs:check:built/u);
+  assert.match(releaseVerification, /run: pnpm docs:check:built[\s\S]*run: pnpm test:unit:built/u);
 });

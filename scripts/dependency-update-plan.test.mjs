@@ -1,11 +1,25 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  COMPATIBILITY_REVIEW_GATES,
   buildDependencyPlan,
   classifyCompatibility,
   renderSummary,
   selectUpdateCandidate,
 } from './dependency-update-plan.mjs';
+
+test('full dependency candidate gates reuse the workspace build without dropping checks', () => {
+  assert.ok(COMPATIBILITY_REVIEW_GATES.includes('pnpm typecheck'));
+  assert.ok(COMPATIBILITY_REVIEW_GATES.includes('pnpm test:unit:built'));
+  assert.ok(COMPATIBILITY_REVIEW_GATES.includes('pnpm architecture:check:built'));
+  assert.ok(COMPATIBILITY_REVIEW_GATES.includes('pnpm docs:check:built'));
+  assert.ok(COMPATIBILITY_REVIEW_GATES.includes('pnpm test:integration'));
+  assert.ok(COMPATIBILITY_REVIEW_GATES.includes('pnpm test:e2e'));
+  assert.ok(COMPATIBILITY_REVIEW_GATES.includes('pnpm test:docs-portal'));
+  assert.ok(!COMPATIBILITY_REVIEW_GATES.includes('pnpm test:unit'));
+  assert.ok(!COMPATIBILITY_REVIEW_GATES.includes('pnpm architecture:check'));
+  assert.ok(!COMPATIBILITY_REVIEW_GATES.includes('pnpm docs:check'));
+});
 
 test('classifies patch, minor, major, same, and unknown versions without guessing', () => {
   assert.equal(classifyCompatibility('2.4.1', '2.4.2'), 'patch');

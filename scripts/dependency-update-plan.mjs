@@ -8,14 +8,14 @@ export const COMPATIBILITY_REVIEW_GATES = [
   'pnpm lint',
   'pnpm format:check',
   'pnpm typecheck',
-  'pnpm test:unit',
+  'pnpm test:unit:built',
   'pnpm test:integration',
   'pnpm test:e2e',
   'pnpm test:ui-catalog',
   'pnpm test:ui-budget',
   'pnpm test:architecture',
-  'pnpm architecture:check',
-  'pnpm docs:check',
+  'pnpm architecture:check:built',
+  'pnpm docs:check:built',
   'pnpm test:docs-portal',
 ];
 

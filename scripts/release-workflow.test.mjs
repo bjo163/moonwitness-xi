@@ -60,9 +60,9 @@ test('tag releases reuse exact-SHA main CI while dry runs keep full local verifi
     'pnpm lint',
     'pnpm format:check',
     'pnpm typecheck',
-    'pnpm docs:check',
+    'pnpm docs:check:built',
     'pnpm --filter @moonwitness/board lint',
-    'pnpm test:unit',
+    'pnpm test:unit:built',
     'pnpm test:integration',
   ];
   const reusableCiCondition =

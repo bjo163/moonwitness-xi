@@ -112,11 +112,11 @@ jobs:
       - if: github.ref_type != 'tag' || (github.event_name == 'workflow_dispatch' && !inputs.publish)
         run: pnpm typecheck
       - if: github.ref_type != 'tag' || (github.event_name == 'workflow_dispatch' && !inputs.publish)
-        run: pnpm docs:check
+        run: pnpm docs:check:built
       - if: github.ref_type != 'tag' || (github.event_name == 'workflow_dispatch' && !inputs.publish)
         run: pnpm --filter @moonwitness/board lint
       - if: github.ref_type != 'tag' || (github.event_name == 'workflow_dispatch' && !inputs.publish)
-        run: pnpm test:unit
+        run: pnpm test:unit:built
       - if: github.ref_type != 'tag' || (github.event_name == 'workflow_dispatch' && !inputs.publish)
         run: pnpm test:integration
       - name: Build the release images once with immutable source metadata
