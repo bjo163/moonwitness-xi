@@ -166,6 +166,7 @@ export function inspectTrustedCheckoutPolicies({
   promotionReportRefresh,
   issueIntake,
   issueIntakeRunner,
+  issueSync,
   browserMatrix,
   deepRegression,
 }) {
@@ -587,6 +588,29 @@ export function inspectTrustedCheckoutPolicies({
       );
   }
 
+  if (issueSync) {
+    const issueSyncJobs = workflowJobBlocks(issueSync);
+    const planJob = issueSyncJobs.find((job) => job.name === 'plan');
+    const applyJob = issueSyncJobs.find((job) => job.name === 'apply');
+    const resumeCalls = issueSync.match(
+      /node scripts\/roadmap\/resume-stale-issue-sync\.mjs/gu
+    )?.length;
+    if (
+      !planJob?.source.includes('      actions: read') ||
+      /actions:\s+write/u.test(planJob.source)
+    )
+      findings.push('Roadmap issue planning must keep Actions permission read-only.');
+    if (
+      !applyJob?.source.includes('      actions: write') ||
+      !applyJob.source.includes('STALE_SYNC_RETRY_COUNT:') ||
+      !issueSync.includes('stale_sync_retry_count:') ||
+      resumeCalls !== 3
+    )
+      findings.push(
+        'Stale roadmap issue applies must use a bounded dev workflow-dispatch resume from all three stale guards.'
+      );
+  }
+
   for (const [name, source, dependency, category] of [
     ['browser-matrix.yml', browserMatrix, 'browsers', 'browser-regression'],
     ['deep-regression.yml', deepRegression, 'postgres-recovery', 'deep-regression'],
@@ -642,6 +666,7 @@ async function main() {
     promotionReportRefresh,
     issueIntake,
     issueIntakeRunner,
+    issueSync,
     browserMatrix,
     deepRegression,
   ] = await Promise.all([
@@ -655,6 +680,7 @@ async function main() {
     readFile(path.join(repositoryRoot, '.github/workflows/refresh-promotion-report.yml'), 'utf8'),
     readFile(path.join(repositoryRoot, '.github/workflows/roadmap-issue-intake.yml'), 'utf8'),
     readFile(path.join(repositoryRoot, 'scripts/roadmap/run-issue-intake.mjs'), 'utf8'),
+    readFile(path.join(repositoryRoot, '.github/workflows/roadmap-issue-plan.yml'), 'utf8'),
     readFile(path.join(repositoryRoot, '.github/workflows/browser-matrix.yml'), 'utf8'),
     readFile(path.join(repositoryRoot, '.github/workflows/deep-regression.yml'), 'utf8'),
   ]);
@@ -669,6 +695,7 @@ async function main() {
     promotionReportRefresh,
     issueIntake,
     issueIntakeRunner,
+    issueSync,
     browserMatrix,
     deepRegression,
   });

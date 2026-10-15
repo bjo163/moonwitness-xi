@@ -284,6 +284,34 @@ test('issue intake policy rejects write scopes, unpinned checkout, and user text
   );
 });
 
+test('roadmap issue resume dispatch is bounded and Actions write stays apply-scoped', async () => {
+  const issueSync = await readFile(
+    new NodeURL('../.github/workflows/roadmap-issue-plan.yml', import.meta.url),
+    'utf8'
+  );
+  assert.deepEqual(policies({ issueSync }), []);
+
+  const unsafePlanPermission = issueSync.replace(
+    '      actions: read\n      contents: read',
+    '      actions: write\n      contents: read'
+  );
+  assert.ok(
+    policies({ issueSync: unsafePlanPermission }).some((finding) =>
+      finding.includes('planning must keep Actions permission read-only')
+    )
+  );
+
+  const missingResume = issueSync.replace(
+    'LATEST_DEV_SHA="$latest_dev_sha" node scripts/roadmap/resume-stale-issue-sync.mjs',
+    'echo stale'
+  );
+  assert.ok(
+    policies({ issueSync: missingResume }).some((finding) =>
+      finding.includes('bounded dev workflow-dispatch resume')
+    )
+  );
+});
+
 test('scheduled regression incidents are main-only, isolated, and narrowly scoped', async () => {
   const [browserMatrix, deepRegression] = await Promise.all([
     readFile(new NodeURL('../.github/workflows/browser-matrix.yml', import.meta.url), 'utf8'),

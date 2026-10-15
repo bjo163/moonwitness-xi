@@ -29,6 +29,11 @@ on:
         required: true
         default: false
         type: boolean
+      stale_sync_retry_count:
+        description: Internal bounded retry counter for a stale automatic issue sync
+        required: false
+        default: 0
+        type: number
 
 permissions:
   contents: read
@@ -132,7 +137,7 @@ jobs:
       group: roadmap-issue-sync
       cancel-in-progress: false
     permissions:
-      actions: read
+      actions: write
       contents: read
       checks: read
       pull-requests: read
@@ -162,8 +167,8 @@ jobs:
           fi
           git fetch origin dev main --tags --no-recurse-submodules
           if [[ "$(git rev-parse HEAD)" != "$SOURCE_SHA" || "$(git rev-parse refs/remotes/origin/dev)" != "$SOURCE_SHA" ]]; then
-            echo 'The dev source changed after plan selection; refresh the plan before applying.' >&2
-            exit 2
+            LATEST_DEV_SHA="$(git rev-parse refs/remotes/origin/dev)" node scripts/roadmap/resume-stale-issue-sync.mjs
+            exit 0
           fi
           if (( $(awk -F, '{print NF}' <<< "$TASK_IDS") > 5 )); then
             echo 'Issue sync apply is limited to five task IDs per run.' >&2
@@ -174,12 +179,18 @@ jobs:
           export SOURCE_SHA
           node scripts/roadmap/collect-lifecycle-snapshot-cli.mjs
           if [[ ! -s "$snapshot_file" ]]; then
-            echo 'The dev source advanced while waiting for its PR gate; skipping this stale issue-sync event.'
-            exit 0
+            git fetch origin dev --no-recurse-submodules
+            latest_dev_sha="$(git rev-parse refs/remotes/origin/dev)"
+            if [[ "$latest_dev_sha" != "$SOURCE_SHA" ]]; then
+              LATEST_DEV_SHA="$latest_dev_sha" node scripts/roadmap/resume-stale-issue-sync.mjs
+              exit 0
+            fi
+            echo 'Lifecycle collection produced no snapshot while dev remained unchanged.' >&2
+            exit 2
           fi
           git fetch origin dev --no-recurse-submodules
           if [[ "$(git rev-parse refs/remotes/origin/dev)" != "$SOURCE_SHA" ]]; then
-            echo 'The dev source advanced after lifecycle collection; skipping this stale issue-sync event.'
+            LATEST_DEV_SHA="$(git rev-parse refs/remotes/origin/dev)" node scripts/roadmap/resume-stale-issue-sync.mjs
             exit 0
           fi
           node scripts/roadmap/sync-issues.mjs --quiet --apply --task-ids "$TASK_IDS" --lifecycle-snapshot "$snapshot_file"
@@ -194,3 +205,4 @@ jobs:
           CHANGED_TASK_IDS: ${{ needs.plan.outputs.changed_task_ids }}
           BACKFILL_TASK_IDS: ${{ needs.plan.outputs.backfill_task_ids }}
           BACKFILL_NEXT_BATCH: ${{ inputs.backfill_next_batch }}
+          STALE_SYNC_RETRY_COUNT: ${{ inputs.stale_sync_retry_count || 0 }}
