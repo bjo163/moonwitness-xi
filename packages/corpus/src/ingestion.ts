@@ -7,6 +7,8 @@ import {
   parseCanonicalJson,
   validateKnowledgeRecord,
 } from '@moonwitness/knowledge';
+import { activateDatasetRelease, createDatasetRelease } from './dataset-release.js';
+import type { DatasetReleaseSnapshot } from './dataset-release.js';
 import type { IngestionRecipe, IngestionReport, IngestionRequest } from './types.js';
 
 type JsonObject = Record<string, unknown>;
@@ -197,7 +199,11 @@ export async function ingestDataset(request: IngestionRequest): Promise<Ingestio
   const staging = await mkdtemp(path.join(parent, '.moonwitness-ingest-'));
   try {
     const recordDirectory = path.join(staging, 'records');
-    await mkdir(recordDirectory);
+    await Promise.all([
+      mkdir(recordDirectory),
+      mkdir(path.join(staging, 'aliases')),
+      mkdir(path.join(staging, 'source-artifacts')),
+    ]);
     await Promise.all(
       records.map((record) => {
         if (typeof record.id !== 'string')
@@ -219,6 +225,17 @@ export async function ingestDataset(request: IngestionRequest): Promise<Ingestio
   } catch (error) {
     await rm(staging, { recursive: true, force: true });
     throw error;
+  }
+  if (request.release) {
+    const createdAt = request.release.createdAt ?? new Date().toISOString();
+    const release = await createDatasetRelease(root, {
+      ...request.release,
+      createdAt,
+      snapshotPath: report.outputPath,
+      snapshot: snapshot as DatasetReleaseSnapshot,
+    });
+    await activateDatasetRelease(root, release.datasetId, release.releaseId, createdAt);
+    report.releaseId = release.releaseId;
   }
   return report;
 }

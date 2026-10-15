@@ -13,6 +13,13 @@ export interface IngestionRequest {
   recipePath: string;
   outputPath: string;
   dryRun?: boolean;
+  release?: {
+    datasetId: string;
+    version: string;
+    ontologyVersion: string;
+    corpusVersion: string;
+    createdAt?: string;
+  };
 }
 
 export interface IngestionReport {
@@ -29,4 +36,5 @@ export interface IngestionReport {
   snapshotSha256: string;
   outputPath: string;
   dryRun: boolean;
+  releaseId?: string;
 }

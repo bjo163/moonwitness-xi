@@ -76,6 +76,39 @@ describe('ingestDataset', () => {
     await expect(ingestDataset(request)).rejects.toThrow('immutable');
   });
 
+  it('creates and activates a release from the ingested snapshot, then fails closed on corruption', async () => {
+    const root = await fixture(JSON.stringify([record('mw:entity:a')]));
+    const report = await ingestDataset({
+      rootDirectory: root,
+      recipePath: 'recipe.json',
+      outputPath: 'snapshots/one',
+      release: {
+        datasetId: 'synthetic-corpus',
+        version: '1.0.0',
+        ontologyVersion: '1.0.0',
+        corpusVersion: '1.0.0',
+        createdAt: '2026-10-16T10:00:00.000Z',
+      },
+    });
+    expect(report.releaseId).toMatch(/^[a-f0-9]{64}$/u);
+    const { readActiveDatasetRelease, activateDatasetRelease } = await import('../src/index.js');
+    const active = await readActiveDatasetRelease(root, 'synthetic-corpus');
+    expect(active?.releaseId).toBe(report.releaseId);
+    expect(active?.snapshotPath).toBe('snapshots/one');
+
+    const [recordFile] = await readdir(path.join(root, 'snapshots/one/records'));
+    await writeFile(path.join(root, 'snapshots/one/records', recordFile!), '{"tampered":true}\n');
+    await expect(
+      activateDatasetRelease(
+        root,
+        'synthetic-corpus',
+        report.releaseId!,
+        '2026-10-16T10:01:00.000Z'
+      )
+    ).rejects.toThrow(/snapshot|records/u);
+    expect(await readActiveDatasetRelease(root, 'synthetic-corpus')).toEqual(active);
+  });
+
   it('rejects checksum and parser failures before touching an existing snapshot', async () => {
     const root = await fixture(JSON.stringify([record('mw:entity:a')]));
     await writeFile(path.join(root, 'releases.json'), 'previous snapshot');

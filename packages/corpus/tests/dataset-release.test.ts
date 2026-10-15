@@ -1,7 +1,12 @@
-import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import {
+  canonicalizeJson,
+  createKnowledgeSnapshot,
+  hashCanonicalJson,
+} from '@moonwitness/knowledge';
 import {
   activateDatasetRelease,
   createDatasetRelease,
@@ -17,19 +22,31 @@ async function storeRoot(): Promise<string> {
   return root;
 }
 
-function release(version: string, digest: string): DatasetReleaseInput {
+async function release(
+  root: string,
+  version: string,
+  marker: string
+): Promise<DatasetReleaseInput> {
+  const records = [{ marker }];
+  const snapshot = createKnowledgeSnapshot({ records, aliases: [], sourceArtifacts: [] });
+  const snapshotPath = `snapshots/${version}-${marker}`;
+  const directory = path.join(root, snapshotPath);
+  await mkdir(path.join(directory, 'records'), { recursive: true });
+  await mkdir(path.join(directory, 'aliases'), { recursive: true });
+  await mkdir(path.join(directory, 'source-artifacts'), { recursive: true });
+  await writeFile(path.join(directory, 'snapshot.json'), `${canonicalizeJson(snapshot)}\n`);
+  await writeFile(
+    path.join(directory, 'records', `${hashCanonicalJson(records[0])}.json`),
+    `${canonicalizeJson(records[0])}\n`
+  );
   return {
     datasetId: 'synthetic-corpus',
     version,
     createdAt: '2026-10-16T10:00:00.000Z',
     ontologyVersion: '1.0.0',
     corpusVersion: '1.0.0',
-    snapshot: {
-      format: 'moonwitness-knowledge-snapshot/v1',
-      canonicalization: 'RFC8785',
-      hashAlgorithm: 'sha256',
-      sha256: digest.repeat(64),
-    },
+    snapshotPath,
+    snapshot,
   };
 }
 
@@ -40,7 +57,7 @@ afterEach(async () => {
 describe('immutable dataset releases and active pointers', () => {
   it('stores deterministic immutable release manifests without activating them', async () => {
     const root = await storeRoot();
-    const input = release('1.0.0', 'a');
+    const input = await release(root, '1.0.0', 'a');
     const first = await createDatasetRelease(root, input);
     const repeated = await createDatasetRelease(root, input);
 
@@ -54,20 +71,22 @@ describe('immutable dataset releases and active pointers', () => {
 
   it('does not let a semantic dataset version be rebound to different content', async () => {
     const root = await storeRoot();
-    await createDatasetRelease(root, release('1.0.0', 'a'));
-    await expect(createDatasetRelease(root, release('1.0.0', 'b'))).rejects.toThrow(/immutable/);
+    await createDatasetRelease(root, await release(root, '1.0.0', 'a'));
+    await expect(createDatasetRelease(root, await release(root, '1.0.0', 'b'))).rejects.toThrow(
+      /immutable/
+    );
   });
 
   it('activates only an existing intact release and can roll back to an earlier release', async () => {
     const root = await storeRoot();
-    const first = await createDatasetRelease(root, release('1.0.0', 'a'));
+    const first = await createDatasetRelease(root, await release(root, '1.0.0', 'a'));
     const activeFirst = await activateDatasetRelease(
       root,
       first.datasetId,
       first.releaseId,
       '2026-10-16T10:01:00.000Z'
     );
-    const second = await createDatasetRelease(root, release('1.1.0', 'b'));
+    const second = await createDatasetRelease(root, await release(root, '1.1.0', 'b'));
     expect(second.previousReleaseId).toBe(first.releaseId);
     await activateDatasetRelease(
       root,
@@ -96,7 +115,7 @@ describe('immutable dataset releases and active pointers', () => {
 
   it('leaves the active pointer unchanged when an activation target is missing', async () => {
     const root = await storeRoot();
-    const first = await createDatasetRelease(root, release('1.0.0', 'a'));
+    const first = await createDatasetRelease(root, await release(root, '1.0.0', 'a'));
     const active = await activateDatasetRelease(
       root,
       first.datasetId,
@@ -111,15 +130,16 @@ describe('immutable dataset releases and active pointers', () => {
 
   it('rejects invalid versions and malformed snapshot digests before writing files', async () => {
     const root = await storeRoot();
-    await expect(createDatasetRelease(root, { ...release('1.0', 'a') })).rejects.toThrow(
+    const invalidVersion = await release(root, '1.0.0', 'a');
+    await expect(createDatasetRelease(root, { ...invalidVersion, version: '1.0' })).rejects.toThrow(
       /semantic/
     );
     await expect(
       createDatasetRelease(root, {
-        ...release('1.0.0', 'a'),
-        snapshot: { ...release('1.0.0', 'a').snapshot, sha256: 'bad' },
+        ...invalidVersion,
+        snapshot: { ...invalidVersion.snapshot, sha256: 'bad' },
       })
     ).rejects.toThrow(/snapshot/);
-    expect(await readdir(root)).toEqual([]);
+    await expect(readdir(path.join(root, 'datasets'))).rejects.toMatchObject({ code: 'ENOENT' });
   });
 });

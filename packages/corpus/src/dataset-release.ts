@@ -1,12 +1,16 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { lstat, mkdir, readFile, readdir, rename, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { canonicalizeJson } from '@moonwitness/knowledge';
+import { canonicalizeJson, hashCanonicalJson, parseCanonicalJson } from '@moonwitness/knowledge';
 
 export interface DatasetReleaseSnapshot {
   format: 'moonwitness-knowledge-snapshot/v1';
   canonicalization: 'RFC8785';
   hashAlgorithm: 'sha256';
+  records: readonly string[];
+  aliases: readonly string[];
+  sourceArtifacts: readonly string[];
+  provenance: string | null;
   sha256: string;
 }
 
@@ -16,6 +20,7 @@ export interface DatasetReleaseInput {
   createdAt: string;
   ontologyVersion: string;
   corpusVersion: string;
+  snapshotPath: string;
   snapshot: DatasetReleaseSnapshot;
 }
 
@@ -29,6 +34,7 @@ export interface ActiveDatasetRelease {
   format: 'moonwitness-active-dataset-release/v1';
   datasetId: string;
   releaseId: string;
+  snapshotPath: string;
   activatedAt: string;
 }
 
@@ -56,6 +62,15 @@ function activePath(root: string, datasetId: string): string {
   return path.join(root, 'datasets', datasetId, 'active.json');
 }
 
+function safeRelativePath(value: string): string | null {
+  if (path.isAbsolute(value) || value.includes('\\') || value.includes('\0')) return null;
+  const segments = value.split('/');
+  if (segments.some((segment) => segment.length === 0 || segment === '.' || segment === '..')) {
+    return null;
+  }
+  return segments.join(path.sep);
+}
+
 function validateInput(input: DatasetReleaseInput): void {
   if (!datasetIdPattern.test(input.datasetId)) throw new TypeError('datasetId is invalid');
   if (!semverPattern.test(input.version))
@@ -69,9 +84,133 @@ function validateInput(input: DatasetReleaseInput): void {
     input.snapshot.format !== 'moonwitness-knowledge-snapshot/v1' ||
     input.snapshot.canonicalization !== 'RFC8785' ||
     input.snapshot.hashAlgorithm !== 'sha256' ||
+    !Array.isArray(input.snapshot.records) ||
+    !Array.isArray(input.snapshot.aliases) ||
+    !Array.isArray(input.snapshot.sourceArtifacts) ||
+    !(input.snapshot.provenance === null || digestPattern.test(input.snapshot.provenance)) ||
+    [...input.snapshot.records, ...input.snapshot.aliases, ...input.snapshot.sourceArtifacts].some(
+      (digest) => !digestPattern.test(digest)
+    ) ||
     !digestPattern.test(input.snapshot.sha256)
   ) {
     throw new TypeError('snapshot must be a valid canonical SHA-256 knowledge snapshot');
+  }
+  if (safeRelativePath(input.snapshotPath) === null) {
+    throw new TypeError('snapshotPath must be a safe relative path');
+  }
+}
+
+async function resolveSnapshotDirectory(root: string, snapshotPath: string): Promise<string> {
+  const relative = safeRelativePath(snapshotPath);
+  if (relative === null) throw new TypeError('snapshotPath must be a safe relative path');
+  const destination = path.resolve(root, relative);
+  const fromRoot = path.relative(root, destination);
+  if (fromRoot.startsWith(`..${path.sep}`) || fromRoot === '..' || path.isAbsolute(fromRoot)) {
+    throw new TypeError('snapshotPath escapes the release store');
+  }
+  let current = root;
+  const rootInfo = await lstat(root);
+  if (rootInfo.isSymbolicLink() || !rootInfo.isDirectory()) {
+    throw new TypeError('release store root must be a real directory');
+  }
+  for (const segment of fromRoot.split(path.sep)) {
+    current = path.join(current, segment);
+    const info = await lstat(current);
+    if (info.isSymbolicLink()) throw new TypeError('snapshotPath cannot traverse symbolic links');
+    if (current !== destination && !info.isDirectory()) {
+      throw new TypeError('snapshotPath parent must be a directory');
+    }
+  }
+  const destinationInfo = await lstat(destination);
+  if (!destinationInfo.isDirectory()) throw new TypeError('snapshotPath must be a directory');
+  return destination;
+}
+
+async function verifyDigestDirectory(
+  directory: string,
+  expectedDigests: readonly string[],
+  label: string
+): Promise<void> {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const actualDigests: string[] = [];
+  for (const entry of entries) {
+    if (!entry.isFile() || !/^[a-f0-9]{64}\.json$/u.test(entry.name)) {
+      throw new TypeError(`${label} contains an unexpected file or symbolic link`);
+    }
+    const filename = path.join(directory, entry.name);
+    const info = await lstat(filename);
+    if (info.isSymbolicLink() || !info.isFile()) {
+      throw new TypeError(`${label} entries must be regular files`);
+    }
+    const value = parseCanonicalJson(await readFile(filename, 'utf8'));
+    actualDigests.push(hashCanonicalJson(value));
+  }
+  actualDigests.sort();
+  if (canonicalizeJson(actualDigests) !== canonicalizeJson([...expectedDigests].sort())) {
+    throw new TypeError(`${label} contents do not match the release snapshot`);
+  }
+}
+
+async function verifySnapshotDirectory(
+  root: string,
+  snapshotPath: string,
+  expected: DatasetReleaseSnapshot
+): Promise<void> {
+  const directory = await resolveSnapshotDirectory(root, snapshotPath);
+  const snapshot = parseCanonicalJson(
+    await readFile(path.join(directory, 'snapshot.json'), 'utf8')
+  );
+  if (
+    canonicalizeJson(snapshot) !== canonicalizeJson(expected) ||
+    !snapshot ||
+    typeof snapshot !== 'object' ||
+    Array.isArray(snapshot)
+  ) {
+    throw new TypeError('snapshot manifest does not match the release declaration');
+  }
+  const snapshotRecord = snapshot as Record<string, unknown>;
+  const { sha256, ...content } = snapshotRecord;
+  if (typeof sha256 !== 'string' || hashCanonicalJson(content) !== sha256) {
+    throw new TypeError('snapshot manifest digest is invalid');
+  }
+  const entries = await readdir(directory, { withFileTypes: true });
+  const allowed = new Set([
+    'records',
+    'aliases',
+    'source-artifacts',
+    'snapshot.json',
+    'report.json',
+    'provenance.json',
+  ]);
+  if (entries.some((entry) => !allowed.has(entry.name))) {
+    throw new TypeError('snapshot directory contains an unexpected entry');
+  }
+  for (const [name, expectedDigests] of [
+    ['records', expected.records],
+    ['aliases', expected.aliases],
+    ['source-artifacts', expected.sourceArtifacts],
+  ] as const) {
+    const collectionDirectory = path.join(directory, name);
+    const info = await lstat(collectionDirectory);
+    if (info.isSymbolicLink() || !info.isDirectory()) {
+      throw new TypeError(`${name} must be a real directory`);
+    }
+    await verifyDigestDirectory(collectionDirectory, expectedDigests, name);
+  }
+  const provenancePath = path.join(directory, 'provenance.json');
+  try {
+    const provenance = parseCanonicalJson(await readFile(provenancePath, 'utf8'));
+    if (expected.provenance === null || hashCanonicalJson(provenance) !== expected.provenance) {
+      throw new TypeError('provenance contents do not match the release snapshot');
+    }
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+      if (expected.provenance !== null) {
+        throw new TypeError('snapshot provenance file is missing', { cause: error });
+      }
+    } else {
+      throw error;
+    }
   }
 }
 
@@ -180,6 +319,7 @@ export async function createDatasetRelease(
 ): Promise<DatasetReleaseManifest> {
   validateInput(input);
   const root = path.resolve(storeDirectory);
+  await verifySnapshotDirectory(root, input.snapshotPath, input.snapshot);
   const current = await readActiveDatasetRelease(root, input.datasetId);
   const payload = releasePayload(input, current?.releaseId ?? null);
   const releaseId = releaseDigest(payload);
@@ -263,11 +403,13 @@ export async function activateDatasetRelease(
   ) {
     throw new TypeError('release manifest failed integrity validation');
   }
+  await verifySnapshotDirectory(root, manifest.snapshotPath, manifest.snapshot);
   await ensureDirectoryTree(root, ['datasets', datasetId]);
   const pointer: ActiveDatasetRelease = {
     format: 'moonwitness-active-dataset-release/v1',
     datasetId,
     releaseId,
+    snapshotPath: manifest.snapshotPath,
     activatedAt,
   };
   await writeAtomically(activePath(root, datasetId), `${canonicalizeJson(pointer)}\n`);
