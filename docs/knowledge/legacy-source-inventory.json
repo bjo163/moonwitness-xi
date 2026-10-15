@@ -1,15 +1,270 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "inventoryVersion": 1,
-  "status": "partial_sources_unavailable",
+  "status": "partial_rights_and_file_scope_unresolved",
   "reviewedAt": "2026-10-15",
   "reviewScope": {
     "repository": "moonwitness-xi",
     "trackedFilesSearched": true,
     "legacyCheckoutsPresent": false,
+    "publicRemoteRefsAudited": true,
+    "privateRemoteContentsAccessed": false,
     "ontologyMappingsDirectoryPresent": false,
-    "sourceBytesCopied": false
+    "sourceBytesCopied": false,
+    "targetWorkspaceSourceFilesWritten": false
   },
+  "rightsPathSearch": {
+    "scope": "complete tracked Git tree at each recorded commit",
+    "caseInsensitivePathSubstrings": [
+      "LICENSE",
+      "LICENCE",
+      "COPYING",
+      "COPYRIGHT",
+      "NOTICE",
+      "RIGHTS",
+      "GRANT"
+    ],
+    "privateRepositoriesOpened": false,
+    "thirdPartyContentCopied": false
+  },
+  "remoteObservations": [
+    {
+      "repository": "bjo163/rocksoul-rgbl",
+      "visibility": "public",
+      "branch": "main",
+      "head": "df00706c98e21fb3fb0146b8389b0f2978f3d833",
+      "readme": {
+        "path": "README.md",
+        "sha256": "110df77d135b86bdbc6f537c03e1a18501b5e1f696779bc2cf5f2d9bc3b4b8a4",
+        "gitBlobSha": "f87752a650d40c7db8252407b07a302021faa43e",
+        "bytes": 9164
+      },
+      "rootLicensePath": "LICENSE",
+      "rootLicenseFound": false,
+      "treeScanComplete": true,
+      "matchingRightsFiles": [
+        {
+          "path": "LICENSES/README.md",
+          "gitBlobSha": "401aa644382d773ec35145491d9107bccb7603f4",
+          "sha256": "2b7a6872a94aecf9de6c33dbd46f1fd5fd894617664110a975dc22efe8133261",
+          "bytes": 557,
+          "classification": "repository_rights_policy",
+          "scope": "No repository-wide license; embedded text, translation, scan, audio, dataset, code, schema, and metadata can have different terms. Public visibility does not grant reuse rights."
+        },
+        {
+          "path": "datasets/dhammapada-sujato/LICENSES/SUTTACENTRAL-CC0.md",
+          "gitBlobSha": "af76fc4c7cfaf70719d07fdfa798111b5721805e",
+          "sha256": "5fef93a3f1220c71662986df8015bc087753cdb3f6398e8480a6b14b4e019faf",
+          "bytes": 1194,
+          "classification": "scoped_license_notice",
+          "scope": "CC0-1.0 covers only the pinned Bhikkhu Sujato English translation, not the Pali root or other translations."
+        },
+        {
+          "path": "datasets/dhammapada-sujato-1-20/LICENSES/SUTTACENTRAL-CC0.md",
+          "gitBlobSha": "2513cddfc4e41c6a5b4cfcf99a4ea78690d09a43",
+          "sha256": "e53e276250f92c86484dd8b726740fbb9d89ed2660ac08e58f0936fe5c09d571",
+          "bytes": 578,
+          "classification": "scoped_license_notice",
+          "scope": "CC0-1.0 covers the selected Sujato translation metadata only; other material requires separate review."
+        },
+        {
+          "path": "datasets/quran-tanzil-uthmani/LICENSES/TANZIL.md",
+          "gitBlobSha": "9a9a91583ca6bf7c7c0acb92a5435f6473b4f97f",
+          "sha256": "cbaaf32a7b1df803186a6ac44c2df20699ea452f376b5a3fc2b09516bbb197fa",
+          "bytes": 944,
+          "classification": "scoped_license_notice",
+          "scope": "Tanzil Quran Text v1.1 is CC-BY-3.0 with attribution and unchanged-text conditions; this does not cover translations, scans, fonts, audio, commentary, or unrelated metadata."
+        },
+        {
+          "path": "docs/P12-004-PALI-RIGHTS-AUDIT.md",
+          "gitBlobSha": "6334b7c1a1b50e4bd548761fc5e3239d0bc7a08a",
+          "sha256": "4b381a189638bb18021b2944b78f4967eca24bb912bc777918de8d796d0dd06c",
+          "bytes": 1861,
+          "classification": "source_specific_rights_audit",
+          "scope": "Pinned Bilara CC0 does not expressly clear the separate Pali root; the recorded disposition is metadata-only and alignment deferred pending root rights."
+        },
+        {
+          "path": "ingestion/recipes/dhammapada-sujato/pali-root-rights-audit.json",
+          "gitBlobSha": "c74ae8078bfada8b8e529149414725a635c3c5ca",
+          "sha256": "c3270210772ff825a5af8fec8e922d423207f3b57c00225b2181323cf9dcf8cb",
+          "bytes": 790,
+          "classification": "source_specific_rights_audit",
+          "scope": "Structured decision says metadata-only; the translation grant does not establish rights to the Pali root."
+        }
+      ],
+      "nonLicenseNameMatches": [],
+      "tags": [
+        {
+          "name": "browser-db-c654dcb2f346b44c0610532240bc3b8deee0bc25abadc5251ab820f9db97c869",
+          "tagObjectSha": "43aff5faa0f425a1dbdb1c5bba203512ffdbf42c",
+          "commitSha": "43aff5faa0f425a1dbdb1c5bba203512ffdbf42c"
+        },
+        {
+          "name": "browser-db-v3-c654dcb2f346b44c0610532240bc3b8deee0bc25abadc5251ab820f9db97c869",
+          "tagObjectSha": "03ca4666cb1761f498139114150d0acad79de47a",
+          "commitSha": "03ca4666cb1761f498139114150d0acad79de47a"
+        },
+        {
+          "name": "v0.1.0",
+          "tagObjectSha": "521964f533756a03d93f8761afb55872e8b0a8ce",
+          "commitSha": "cd23dcbfa9410383256ea95d0813da56569a3b5c"
+        }
+      ]
+    },
+    {
+      "repository": "bjo163/rocksoul-correlation",
+      "visibility": "public",
+      "branch": "main",
+      "head": "380ac810747a79b7efa22affb934b302ac224524",
+      "readme": {
+        "path": "README.md",
+        "sha256": "5399e2ba1c7b761f73b025138f8d52200552d84f9cc7e8644d4d1aba50dac916",
+        "gitBlobSha": "86f88d6938251d3f7e264aaf3acf4a32f48c7b3e",
+        "bytes": 9333
+      },
+      "rootLicensePath": "LICENSE",
+      "rootLicenseFound": false,
+      "treeScanComplete": true,
+      "matchingRightsFiles": [],
+      "nonLicenseNameMatches": [],
+      "tags": []
+    },
+    {
+      "repository": "bjo163/dev-mw-blueprint",
+      "visibility": "public",
+      "branch": "main",
+      "head": "cc53d63da1f34f69e20516a0b1c13514fa898725",
+      "readme": {
+        "path": "README.md",
+        "sha256": "7b5f1c79b36c3a86197b5588c3e882051834b528ffff4f89073edabd8ed7f06f",
+        "gitBlobSha": "906192648ed3980bc7fa84a6b412ad3f04df99b6",
+        "bytes": 8241
+      },
+      "rootLicensePath": "LICENSE",
+      "rootLicenseFound": false,
+      "treeScanComplete": true,
+      "matchingRightsFiles": [],
+      "nonLicenseNameMatches": [],
+      "tags": []
+    },
+    {
+      "repository": "bjo163/rocksoul-mftl",
+      "visibility": "public",
+      "branch": "main",
+      "head": "1519de291267eaa90960bcb04f7ac94e325d9d35",
+      "readme": {
+        "path": "README.md",
+        "sha256": "cd9aa8046e3f8aee695a59931ec420003f515d12e04da82942964808996b048a",
+        "gitBlobSha": "a70c4e39c835e1f9cd3941356e71d4232c164590",
+        "bytes": 16447
+      },
+      "rootLicensePath": "LICENSE",
+      "rootLicenseFound": false,
+      "treeScanComplete": true,
+      "matchingRightsFiles": [],
+      "nonLicenseNameMatches": [],
+      "tags": []
+    },
+    {
+      "repository": "bjo163/rocksoul-legend",
+      "visibility": "public",
+      "branch": "main",
+      "head": "1c1e851189530185cacf695a3c25adedce94fbb4",
+      "readme": {
+        "path": "README.md",
+        "sha256": "de8c551a8cc98a3d556b855e350579df495ab49bfb56edd66b9b4c4588a87cc3",
+        "gitBlobSha": "6e731b8106566ae44fd1cac7010a35fcfa59bf68",
+        "bytes": 10443
+      },
+      "rootLicensePath": "LICENSE",
+      "rootLicenseFound": false,
+      "treeScanComplete": true,
+      "matchingRightsFiles": [],
+      "nonLicenseNameMatches": [],
+      "tags": []
+    },
+    {
+      "repository": "bjo163/rocksoul-superhero",
+      "visibility": "public",
+      "branch": "main",
+      "head": "89963d5f5801aec3d44d2d55538e2a882e37f86b",
+      "readme": {
+        "path": "README.md",
+        "sha256": "5db58b83b9450b77379e7887946652208a80be28ffafc17507c9bedeee652be5",
+        "gitBlobSha": "e326b87fe31a8796d4f08bee57b4302fc4f1f999",
+        "bytes": 10414
+      },
+      "rootLicensePath": "LICENSE",
+      "rootLicenseFound": false,
+      "treeScanComplete": true,
+      "matchingRightsFiles": [],
+      "nonLicenseNameMatches": [],
+      "tags": []
+    },
+    {
+      "repository": "bjo163/rocksoul-aws",
+      "visibility": "public",
+      "branch": "main",
+      "head": "719413cc3d6c5c8349a87a1863e84c0e0f97e1c9",
+      "readme": {
+        "path": "README.md",
+        "sha256": "99e39f3184bdca28807375b5036856e5b74b77d7ff9f6a98bf0b5be3ad346925",
+        "gitBlobSha": "f4248d1f1dc2a823346039eb8fa819bf4cda1a52",
+        "bytes": 11826
+      },
+      "rootLicensePath": "LICENSE",
+      "rootLicenseFound": false,
+      "treeScanComplete": true,
+      "matchingRightsFiles": [],
+      "nonLicenseNameMatches": [
+        {
+          "path": "packages/orchestrator/src/aws/untc-legal-notices.ts",
+          "gitBlobSha": "1d02771087b9b939ac9734231cb0c1f132b4fcd3",
+          "classification": "treaty_notice_parser"
+        },
+        {
+          "path": "tests/fixtures/aws/untc-genocide-notices.html",
+          "gitBlobSha": "ba568ee95414381f862b96ae062b59edb9683611",
+          "classification": "treaty_notice_fixture"
+        },
+        {
+          "path": "src/engines/rights.ts",
+          "gitBlobSha": "d1691a93b021874df8f309a450cf8baa7e2f8955",
+          "classification": "application_rights_profile"
+        }
+      ],
+      "tags": [
+        {
+          "name": "v4.32.0",
+          "tagObjectSha": "537969bf3b7c740625d92326ce4357e3f1f889d0",
+          "commitSha": "bb9198ac24a4fa05195ae7eb0adf31bc28e50889"
+        },
+        {
+          "name": "v4.33.0",
+          "tagObjectSha": "ad01116b7c82a84ff165aef44693334ae2583a2f",
+          "commitSha": "ad01116b7c82a84ff165aef44693334ae2583a2f"
+        }
+      ]
+    },
+    {
+      "repository": "bjo163/rocksoul-jizz",
+      "visibility": "public",
+      "branch": "main",
+      "head": "c7ebf234432cc57534fda815c3eb7faacae62be9",
+      "readme": {
+        "path": "README.md",
+        "sha256": "5dd7a029a5edf6e190701973b1667813c1e2a7decc3d01a4c28158db0e0dedfc",
+        "gitBlobSha": "5471233c8f0810d812f51b141fb47f8acfd988c8",
+        "bytes": 6166
+      },
+      "rootLicensePath": "LICENSE",
+      "rootLicenseFound": false,
+      "treeScanComplete": true,
+      "matchingRightsFiles": [],
+      "nonLicenseNameMatches": [],
+      "tags": []
+    }
+  ],
   "decisionPolicy": "Every row is only a candidate until exact files, revisions, rights evidence, and source-specific review are available. No source bytes may be imported based on this inventory.",
   "candidates": [
     {
@@ -117,15 +372,16 @@
     }
   ],
   "completionGates": [
-    "Identify and provide each source checkout/archive and exact revision.",
-    "Inventory per-file paths and SHA-256 without modifying source bytes.",
+    "Review path-scoped rights evidence and select exact data files only where the grant covers that artifact and intended use.",
+    "Select intended source files after rights review, then inventory exact paths and SHA-256 without copying their contents.",
     "Record source owner and applicable license/grant evidence for intended use.",
     "Supply historical identifiers and mapping records; resolve aliases explicitly and keep conflicts visible.",
     "Record per-file data kind, target owner, transform, quality, manual review, tests, and port/reimplement/reference_only/reject/defer decision."
   ],
   "nonClaims": [
     "No source-specific rights clearance is established.",
-    "No legacy source bytes were present or copied.",
+    "Eight public repository references and root README files were observed read-only; no repository checkout or corpus source file was copied into XI.",
+    "Private design-family contents and old identifiers were not inspected or verified.",
     "No historical metrics or fixes are verified by this inventory.",
     "No old identifiers or alias conflicts can be reconciled without source maps."
   ]

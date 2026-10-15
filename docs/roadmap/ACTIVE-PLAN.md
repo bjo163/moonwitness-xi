@@ -50,6 +50,6 @@ Langkah 2–6 boleh dikerjakan paralel selama tidak mengubah file bersama. Dalam
 
 ## Backlog dan definisi selesai
 
-[EXECUTION-BACKLOG.md](EXECUTION-BACKLOG.md) menyimpan item tertunda, alasan, pemilik/dependency dan syarat pembukaan ulang. K0-004/K0-005 memiliki owner `bjo163` dan kebijakan umum yang disetujui. K0-006 tetap memerlukan checkout/revisi sumber serta pemetaan ID; hak per sumber dan consent per data masih wajib sebelum impor.
+[EXECUTION-BACKLOG.md](EXECUTION-BACKLOG.md) menyimpan item tertunda, alasan, pemilik/dependency dan syarat pembukaan ulang. K0-004/K0-005 memiliki owner `bjo163` dan kebijakan umum yang disetujui. K0-006 sudah mematok delapan ref publik dan memetakan notice hak yang tersedia; file sumber yang dipilih, hash data per file, ID historis, dan pemetaan ID masih perlu diverifikasi. Hak per sumber dan consent per data tetap wajib sebelum impor. Repo desain privat tidak dibuka.
 
 Goal lengkap hanya selesai bila seluruh acceptance master terbukti. Selesainya kode lokal berbeda dari acceptance hosted: M3.11, M8.09, release/Pages, security disposition dan promosi tetap terbuka selama bukti eksternalnya belum ada. Tidak membuat fixture atau simulasi kedua untuk menggantikan aksi hosted.
