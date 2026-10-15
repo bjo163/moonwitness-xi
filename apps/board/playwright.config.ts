@@ -36,7 +36,8 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: ci,
   retries: ci ? maxRetries : 0,
-  workers: ci ? 1 : undefined,
+  // Board E2E specs share seeded PostgreSQL state; CPU-count parallelism causes API contention.
+  workers: 1,
   reporter: [
     ['list'],
     ['junit', { outputFile: '../../test-results/junit/board-e2e.xml' }],

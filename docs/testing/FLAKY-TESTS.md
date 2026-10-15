@@ -12,6 +12,7 @@ Run tests by changed behavior and dependency boundary. A local focused pass is e
 
 - For a single unit or policy change, run its test file and the validator for the changed contract. Do not rerun unrelated package suites.
 - For PostgreSQL behavior, run the named integration test against an isolated database whose name includes `test` or `e2e`. Run the full integration suite only when shared setup, schema behavior, or multiple integration contracts changed.
+- Board E2E defaults to one worker because its specs share a seeded PostgreSQL database. Use a higher `--workers` value only with per-worker database isolation; otherwise API requests can time out under fixture contention.
 - For a Board flow, the canonical `pnpm test:e2e <spec-or-grep>` command runs policy/build/password-reset preflights before Playwright. If those preflights already passed on the same source tree and the change is isolated to the selected browser behavior, invoke Playwright directly to avoid rebuilding and resetting the test account again:
 
   ```sh
