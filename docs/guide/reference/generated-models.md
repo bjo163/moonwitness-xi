@@ -1,6 +1,6 @@
 # Generated model and addon reference
 
-Source fingerprint: `8a91c02af4d89fbc623563779bbb9ca5755134bfc6f0dcb8fee0b1cb6a6452a8`. Seed values and field defaults are intentionally omitted.
+Source fingerprint: `d03644081db2069f6489ecea481b63e7b6b6934111eb8e3b213ef0850978aa65`. Seed values and field defaults are intentionally omitted.
 
 ## Addon `auth`
 
@@ -481,7 +481,7 @@ Models: 1; declared views: 1; menu entries: 1; seed rows: 7.
 
 ## Addon `workflow`
 
-Version: `1.1.0`; dependencies: `base`, `jobs`, `notification`.
+Version: `1.2.0`; dependencies: `base`, `jobs`, `notification`.
 
 Models: 4; declared views: 4; menu entries: 4; seed rows: 6.
 

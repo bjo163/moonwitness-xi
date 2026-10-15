@@ -4035,7 +4035,7 @@
     },
     {
       "name": "workflow",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "depends": ["base", "jobs", "notification"],
       "models": [
         {
@@ -4694,5 +4694,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "8a91c02af4d89fbc623563779bbb9ca5755134bfc6f0dcb8fee0b1cb6a6452a8"
+  "generatedFromSha256": "d03644081db2069f6489ecea481b63e7b6b6934111eb8e3b213ef0850978aa65"
 }
