@@ -2044,6 +2044,7 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       model_name: 'organization.department',
       create: true,
       write: true,
+      unlink: true,
     });
     const localDepartment = await OrganizationDepartment.query().insertAndFetch({
       company_id: localCompany.id,
@@ -2099,17 +2100,49 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       name: 'PostgreSQL Local Support',
     });
 
-    const deniedDepartmentUnlink = await app.inject({
+    const allowedDepartmentUnlink = await app.inject({
       method: 'DELETE',
       url: `/api/organization.department/${createdDepartmentId}`,
       headers,
     });
-    expect(deniedDepartmentUnlink.statusCode).toBe(403);
+    expect(allowedDepartmentUnlink.statusCode, allowedDepartmentUnlink.payload).toBe(200);
     expect(await OrganizationDepartment.query().findById(createdDepartmentId)).toMatchObject({
       company_id: localCompany.id,
       code: 'postgres_local_support',
       name: 'PostgreSQL Local Support',
+      active: false,
     });
+    const localDepartmentUnlinkAudit = await AuditLog.query()
+      .where({ model: 'organization.department', record_id: createdDepartmentId })
+      .orderBy('id', 'asc');
+    expect(
+      localDepartmentUnlinkAudit.map(({ operation, actor_id }) => [operation, actor_id])
+    ).toEqual([
+      ['create', localUser.id],
+      ['archive', localUser.id],
+    ]);
+
+    const foreignDepartmentAuditBeforeUnlink = await AuditLog.query()
+      .where({ model: 'organization.department', record_id: foreignDepartment.id })
+      .orderBy('id', 'asc');
+    const deniedForeignDepartmentUnlink = await app.inject({
+      method: 'DELETE',
+      url: `/api/organization.department/${foreignDepartment.id}`,
+      headers,
+    });
+    expect(deniedForeignDepartmentUnlink.statusCode).toBe(404);
+    expect(deniedForeignDepartmentUnlink.payload).not.toContain('PostgreSQL Foreign Tenant');
+    expect(await OrganizationDepartment.query().findById(foreignDepartment.id)).toMatchObject({
+      company_id: foreignCompany.id,
+      code: 'postgres_foreign_operations',
+      name: 'PostgreSQL Foreign Operations',
+      active: true,
+    });
+    await expect(
+      AuditLog.query()
+        .where({ model: 'organization.department', record_id: foreignDepartment.id })
+        .orderBy('id', 'asc')
+    ).resolves.toEqual(foreignDepartmentAuditBeforeUnlink);
 
     const deniedDepartmentCreate = await app.inject({
       method: 'POST',
