@@ -122,18 +122,19 @@ test('the verified and scanned API and Board images are smoke-tested and handed 
     workflow.slice(workflow.indexOf('  attest-artifact:'), publishStart),
     publish,
   ]) {
-    assert.match(consumerJob, /repos\/\$GH_REPO\/actions\/artifacts\/\$EXPECTED_ARTIFACT_ID/u);
-    assert.match(consumerJob, /\.digest == \$digest/u);
-    assert.match(consumerJob, /\.workflow_run\.head_sha == \$sha/u);
-    assert.match(consumerJob, /\(\.id \| tostring\) == \$id/u);
-    assert.match(consumerJob, /\(\.workflow_run\.id \| tostring\) == \$run/u);
-    assert.match(consumerJob, /\.expired == false/u);
-    assert.match(consumerJob, /\.name == \$name/u);
+    const identityValidation = consumerJob.indexOf(
+      'run: node scripts/verify-release-artifact-identity.mjs'
+    );
+    const artifactDownload = consumerJob.indexOf('uses: actions/download-artifact@');
+    assert.ok(identityValidation >= 0 && identityValidation < artifactDownload);
     assert.match(
       consumerJob,
       /artifact-ids: \$\{\{ needs\.verify\.outputs\.release_artifact_id \}\}/u
     );
   }
+  const attestationJob = workflow.slice(workflow.indexOf('  attest-artifact:'), publishStart);
+  assert.match(attestationJob, /uses: actions\/checkout@/u);
+  assert.match(attestationJob, /persist-credentials: false/u);
   assert.match(verify, /steps\.upload_images\.outputs\.artifact-digest/u);
   assert.match(publish, /sha256sum --check release-artifacts\.sha256/u);
   assert.match(publish, /\.apiImageId' release-image-manifest\.json/u);

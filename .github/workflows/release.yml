@@ -240,6 +240,9 @@ jobs:
       attestations: write
       id-token: write
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Verify the exact release artifact identity
         env:
           GH_TOKEN: ${{ github.token }}
@@ -249,19 +252,7 @@ jobs:
           EXPECTED_ARTIFACT_NAME: release-images-${{ github.sha }}
           EXPECTED_SOURCE_SHA: ${{ github.sha }}
           EXPECTED_RUN_ID: ${{ github.run_id }}
-        run: |
-          set -euo pipefail
-          test -n "$EXPECTED_ARTIFACT_ID"
-          test -n "$EXPECTED_ARTIFACT_DIGEST"
-          artifact="$(gh api "repos/$GH_REPO/actions/artifacts/$EXPECTED_ARTIFACT_ID")"
-          jq -e \
-            --arg id "$EXPECTED_ARTIFACT_ID" \
-            --arg name "$EXPECTED_ARTIFACT_NAME" \
-            --arg digest "sha256:$EXPECTED_ARTIFACT_DIGEST" \
-            --arg sha "$EXPECTED_SOURCE_SHA" \
-            --arg run "$EXPECTED_RUN_ID" \
-            '(.id | tostring) == $id and .name == $name and .expired == false and .digest == $digest and .workflow_run.head_sha == $sha and (.workflow_run.id | tostring) == $run' \
-            <<< "$artifact" >/dev/null
+        run: node scripts/verify-release-artifact-identity.mjs
       - name: Download the verified release bundle
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
@@ -305,19 +296,7 @@ jobs:
           EXPECTED_ARTIFACT_NAME: release-images-${{ github.sha }}
           EXPECTED_SOURCE_SHA: ${{ github.sha }}
           EXPECTED_RUN_ID: ${{ github.run_id }}
-        run: |
-          set -euo pipefail
-          test -n "$EXPECTED_ARTIFACT_ID"
-          test -n "$EXPECTED_ARTIFACT_DIGEST"
-          artifact="$(gh api "repos/$GH_REPO/actions/artifacts/$EXPECTED_ARTIFACT_ID")"
-          jq -e \
-            --arg id "$EXPECTED_ARTIFACT_ID" \
-            --arg name "$EXPECTED_ARTIFACT_NAME" \
-            --arg digest "sha256:$EXPECTED_ARTIFACT_DIGEST" \
-            --arg sha "$EXPECTED_SOURCE_SHA" \
-            --arg run "$EXPECTED_RUN_ID" \
-            '(.id | tostring) == $id and .name == $name and .expired == false and .digest == $digest and .workflow_run.head_sha == $sha and (.workflow_run.id | tostring) == $run' \
-            <<< "$artifact" >/dev/null
+        run: node scripts/verify-release-artifact-identity.mjs
       - name: Download the images produced and verified by the release gate
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
