@@ -1440,6 +1440,26 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       company_id: localCompany.id,
     });
 
+    const partnerAuditBeforeDeniedUnlink = await AuditLog.query()
+      .where({ model: 'base.partner', record_id: localPartner.id })
+      .orderBy('id', 'asc');
+    const deniedPartnerUnlink = await app.inject({
+      method: 'DELETE',
+      url: `/api/base.partner/${localPartner.id}`,
+      headers,
+    });
+    expect(deniedPartnerUnlink.statusCode).toBe(403);
+    expect(await Partner.query().findById(localPartner.id)).toMatchObject({
+      name: 'PostgreSQL Tenant Contact Updated',
+      company_id: localCompany.id,
+      active: true,
+    });
+    await expect(
+      AuditLog.query()
+        .where({ model: 'base.partner', record_id: localPartner.id })
+        .orderBy('id', 'asc')
+    ).resolves.toEqual(partnerAuditBeforeDeniedUnlink);
+
     const revocableGroup = await AccessGroup.query().insert({
       code: 'postgres_revocable_partner_writers',
       name: 'PostgreSQL Revocable Partner Writers',
