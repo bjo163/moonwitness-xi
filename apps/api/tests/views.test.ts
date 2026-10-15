@@ -136,6 +136,7 @@ describe('data-driven view metadata', () => {
       'Identity',
       'Contact Details',
       'Address',
+      'Addresses',
       'Classification',
       'Internal Notes',
     ]);
