@@ -319,6 +319,7 @@
       "test:expected-ref": "node --test scripts/push-expected-ref.test.mjs",
       "test:flaky-policy": "node --test scripts/flaky-policy.test.mjs scripts/playwright-flake-reporter.test.mjs",
       "test:integration": "node scripts/run-postgres-tests.mjs",
+      "test:integration:built": "node scripts/run-postgres-tests.mjs --built",
       "test:maintenance-incidents": "node --test scripts/maintenance-incident.test.mjs",
       "test:package-manager": "node --test scripts/package-manager.test.mjs",
       "test:platform-audit": "node --test scripts/platform-audit.test.mjs",
@@ -4598,5 +4599,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "d486ef9cf5c680b7c207c7a09c258b7714cf58d81cbe31548ea281d7db38e37d"
+  "generatedFromSha256": "0aee65abd59694022566b5164ff8c46988627da84c7f0089b92020ace01b8372"
 }
