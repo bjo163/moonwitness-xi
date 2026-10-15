@@ -27,6 +27,108 @@
     "privateRepositoriesOpened": false,
     "thirdPartyContentCopied": false
   },
+  "historicalMetadataFindings": [
+    {
+      "repository": "bjo163/rocksoul-rgbl",
+      "repositoryHead": "df00706c98e21fb3fb0146b8389b0f2978f3d833",
+      "artifactPath": "spec/v0.1/schemas/core/entity.schema.json",
+      "artifactClass": "versioned_schema_history",
+      "observations": [
+        {
+          "commit": "cf9372baa839d48f278e1a92bb916c6107dcd9b8",
+          "gitBlobSha": "1a1f2e96fe9011647bde62fd41fdc08367398321"
+        },
+        {
+          "commit": "c4072ae8f18c15de36382d2abd3b4ec530779ec9",
+          "gitBlobSha": "82d435076cddea725b876175219f4f05abd7e6ae"
+        },
+        {
+          "commit": "4df536b531444a03504636bc436f934241522aff",
+          "gitBlobSha": "7d0b5f59ff9d2516bd75a69e418a089aa0db3219"
+        },
+        {
+          "commit": "df00706c98e21fb3fb0146b8389b0f2978f3d833",
+          "gitBlobSha": "d63d220d4ef496d24e456cc9ba7cd868088f817d"
+        }
+      ],
+      "limitations": "Schema history is technical metadata; source records were not validated against it and no old-to-canonical record-ID mapping was established."
+    },
+    {
+      "repository": "bjo163/rocksoul-rgbl",
+      "repositoryHead": "df00706c98e21fb3fb0146b8389b0f2978f3d833",
+      "artifactPath": "datasets/research-graph-baseline/snapshot-manifest.json",
+      "artifactClass": "snapshot_manifest_metadata",
+      "observations": [
+        {
+          "commit": "df00706c98e21fb3fb0146b8389b0f2978f3d833",
+          "gitBlobSha": "7045dfae0adbd29bc015a75d822795b55c335dc4"
+        }
+      ],
+      "limitations": "Manifest records counts/checksums and an edge-type alias; it is not a record-ID mapping or a rights grant."
+    },
+    {
+      "repository": "bjo163/rocksoul-rgbl",
+      "repositoryHead": "df00706c98e21fb3fb0146b8389b0f2978f3d833",
+      "artifactPath": "fixtures/deterministic-ids/v1.json",
+      "artifactClass": "deterministic_test_fixture",
+      "observations": [],
+      "limitations": "Fixture is not a complete historical ID map; tag v0.1.0 at commit cd23dcbfa9410383256ea95d0813da56569a3b5c is pinned separately and was not treated as proof that records migrate."
+    },
+    {
+      "repository": "bjo163/rocksoul-correlation",
+      "repositoryHead": "380ac810747a79b7efa22affb934b302ac224524",
+      "artifactPath": "schemas/correlation-edge.schema.json",
+      "artifactClass": "versioned_schema_history",
+      "observations": [
+        {
+          "commit": null,
+          "gitBlobSha": "63da81ee85bf7ed0a5f557badce6fae5053f58e9"
+        },
+        {
+          "commit": null,
+          "gitBlobSha": "51fa686cdab239774bbe7cdd02af08bdf896c3bf"
+        }
+      ],
+      "limitations": "Schema and provenance snapshot history exist, but no corpus-record validation or old-ID mapping was confirmed."
+    },
+    {
+      "repository": "bjo163/dev-mw-blueprint",
+      "repositoryHead": "cc53d63da1f34f69e20516a0b1c13514fa898725",
+      "artifactPath": "versioned mizan-engine fixtures and sequential SQL migrations 0001–0003",
+      "artifactClass": "database_and_test_fixture_history",
+      "observations": [
+        {
+          "commit": null,
+          "gitBlobSha": "514875a00533847eaa673679556dedb02a57b8d4"
+        },
+        {
+          "commit": null,
+          "gitBlobSha": "df18039a195f05af873fbeebfb51723952f582cd"
+        },
+        {
+          "commit": null,
+          "gitBlobSha": "0595c25333420ef56b99b8d281973dc617668622"
+        }
+      ],
+      "limitations": "These identify database/test history, not ontology/corpus releases or a record-ID crosswalk."
+    },
+    {
+      "repository": "bjo163/rocksoul-aws",
+      "repositoryHead": "719413cc3d6c5c8349a87a1863e84c0e0f97e1c9",
+      "artifactPath": "repository/package/runtime identity migrations and aliases",
+      "artifactClass": "application_identity_migration_history",
+      "observations": [],
+      "limitations": "Observed migrations concern repository/package/runtime identity (including retired moonwitness-os and deprecated app.cosmic names), not corpus record identity."
+    },
+    {
+      "repository": "bjo163/rocksoul-superhero",
+      "repositoryHead": "89963d5f5801aec3d44d2d55538e2a882e37f86b",
+      "artifactPath": "public/data/superhero.snapshot.json",
+      "artifactClass": "snapshot_history",
+      "observations": [],
+      "limitations": "Historical snapshot blobs exist; no schema compatibility validation or old-to-canonical record-ID mapping was established."
+    }
+  ],
   "remoteObservations": [
     {
       "repository": "bjo163/rocksoul-rgbl",

@@ -11,6 +11,7 @@
     "reviewedAt",
     "reviewScope",
     "rightsPathSearch",
+    "historicalMetadataFindings",
     "decisionPolicy",
     "candidates",
     "completionGates",
@@ -99,6 +100,51 @@
         },
         "thirdPartyContentCopied": {
           "type": "boolean"
+        }
+      }
+    },
+    "historicalMetadataFindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "repository",
+          "repositoryHead",
+          "artifactPath",
+          "artifactClass",
+          "observations",
+          "limitations"
+        ],
+        "properties": {
+          "repository": { "type": "string", "minLength": 1 },
+          "repositoryHead": { "$ref": "#/$defs/gitSha" },
+          "artifactPath": { "type": "string", "minLength": 1 },
+          "artifactClass": {
+            "enum": [
+              "versioned_schema_history",
+              "snapshot_manifest_metadata",
+              "deterministic_test_fixture",
+              "database_and_test_fixture_history",
+              "application_identity_migration_history",
+              "snapshot_history"
+            ]
+          },
+          "observations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["commit", "gitBlobSha"],
+              "properties": {
+                "commit": {
+                  "oneOf": [{ "$ref": "#/$defs/gitSha" }, { "type": "null" }]
+                },
+                "gitBlobSha": { "$ref": "#/$defs/gitSha" }
+              }
+            }
+          },
+          "limitations": { "type": "string", "minLength": 1 }
         }
       }
     },
