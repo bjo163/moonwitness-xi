@@ -20,23 +20,45 @@ function git(args) {
   return execFileSync('git', args, { cwd: repositoryRoot, encoding: 'utf8' }).trim();
 }
 
+export async function withGitHubReadRetry(
+  read,
+  { sleep = delay, maxAttempts = 3, initialDelayMs = 1_000 } = {}
+) {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await read();
+    } catch (error) {
+      const message = `${error.stderr ?? ''} ${error.message ?? ''}`;
+      const transient = /HTTP 5(?:02|03|04)|couldn't respond to your request in time/iu.test(
+        message
+      );
+      if (!transient || attempt >= maxAttempts) throw error;
+      await sleep(initialDelayMs * 2 ** (attempt - 1));
+    }
+  }
+}
+
 async function ghJson(args) {
-  const { stdout } = await execFileAsync('gh', ['api', '--paginate', '--slurp', ...args], {
-    cwd: repositoryRoot,
-    encoding: 'utf8',
-    env: process.env,
-    maxBuffer: 32 * 1024 * 1024,
-  });
+  const { stdout } = await withGitHubReadRetry(() =>
+    execFileAsync('gh', ['api', '--paginate', '--slurp', ...args], {
+      cwd: repositoryRoot,
+      encoding: 'utf8',
+      env: process.env,
+      maxBuffer: 32 * 1024 * 1024,
+    })
+  );
   return JSON.parse(stdout);
 }
 
 async function ghJsonObject(args) {
-  const { stdout } = await execFileAsync('gh', ['api', ...args], {
-    cwd: repositoryRoot,
-    encoding: 'utf8',
-    env: process.env,
-    maxBuffer: 32 * 1024 * 1024,
-  });
+  const { stdout } = await withGitHubReadRetry(() =>
+    execFileAsync('gh', ['api', ...args], {
+      cwd: repositoryRoot,
+      encoding: 'utf8',
+      env: process.env,
+      maxBuffer: 32 * 1024 * 1024,
+    })
+  );
   return JSON.parse(stdout);
 }
 

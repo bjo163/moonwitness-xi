@@ -13,6 +13,7 @@ import {
 import { projectLifecycleSnapshot } from './lifecycle-snapshot.mjs';
 import {
   waitForCurrentDevPullRequestTechnicalGate,
+  withGitHubReadRetry,
   writeSnapshotIfDevHeadIsCurrent,
 } from './collect-lifecycle-snapshot-cli.mjs';
 
@@ -24,6 +25,38 @@ const releaseSha = 'e'.repeat(40);
 const task = { id: 'M1.01', dependsOn: [], status: 'complete', evidence: 'evidence.md' };
 const indexTasks = [task, { id: 'M1.02', dependsOn: [], evidence: 'partial.md' }];
 const roadmap = '- [x] M1.01 Finished with evidence.\n- [ ] M1.02 In progress.\n';
+
+test('retries bounded transient GitHub API read failures and preserves permission errors', async () => {
+  const delays = [];
+  let attempts = 0;
+  const value = await withGitHubReadRetry(
+    async () => {
+      attempts += 1;
+      if (attempts < 3) {
+        const error = new Error('Command failed: gh api');
+        error.stderr = "gh: We couldn't respond to your request in time. (HTTP 504)";
+        throw error;
+      }
+      return { ok: true };
+    },
+    { sleep: async (milliseconds) => delays.push(milliseconds) }
+  );
+  assert.deepEqual(value, { ok: true });
+  assert.equal(attempts, 3);
+  assert.deepEqual(delays, [1_000, 2_000]);
+
+  let permissionAttempts = 0;
+  await assert.rejects(
+    withGitHubReadRetry(async () => {
+      permissionAttempts += 1;
+      const error = new Error('HTTP 403: Resource not accessible by integration');
+      error.stderr = error.message;
+      throw error;
+    }),
+    /HTTP 403/u
+  );
+  assert.equal(permissionAttempts, 1);
+});
 
 test('flattens every GitHub CLI pagination page and rejects malformed page shapes', () => {
   const checkPages = [
