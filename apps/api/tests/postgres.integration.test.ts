@@ -1983,6 +1983,8 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       group_id: activityGroup.id,
       model_name: 'base.partner_category_link',
       create: true,
+      write: true,
+      unlink: true,
     });
     await ModelAccess.query().insert({
       group_id: activityGroup.id,
@@ -2116,6 +2118,39 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       partner_id: localPartner.id,
       category_id: scopedCategory.id,
     });
+    const replacementCategory = await PartnerCategory.query().insertAndFetch({
+      code: `postgres-replacement-category-${randomUUID()}`,
+      name: 'PostgreSQL Replacement Category',
+    });
+    const allowedCategoryWrite = await app.inject({
+      method: 'PATCH',
+      url: `/api/base.partner_category_link/${allowedCategoryLinkId}`,
+      headers,
+      payload: { category_id: replacementCategory.id },
+    });
+    expect(allowedCategoryWrite.statusCode, allowedCategoryWrite.payload).toBe(200);
+    expect(await PartnerCategoryLink.query().findById(allowedCategoryLinkId)).toMatchObject({
+      partner_id: localPartner.id,
+      category_id: replacementCategory.id,
+    });
+    const allowedCategoryUnlink = await app.inject({
+      method: 'DELETE',
+      url: `/api/base.partner_category_link/${allowedCategoryLinkId}`,
+      headers,
+    });
+    expect(allowedCategoryUnlink.statusCode, allowedCategoryUnlink.payload).toBe(200);
+    expect(await PartnerCategoryLink.query().findById(allowedCategoryLinkId)).toMatchObject({
+      active: false,
+    });
+    await expect(
+      AuditLog.query()
+        .where({ model: 'base.partner_category_link', record_id: allowedCategoryLinkId })
+        .orderBy('id', 'asc')
+    ).resolves.toMatchObject([
+      { operation: 'create', actor_id: localUser.id },
+      { operation: 'write', actor_id: localUser.id },
+      { operation: 'archive', actor_id: localUser.id },
+    ]);
     const deniedForeignCategoryLink = await app.inject({
       method: 'POST',
       url: '/api/base.partner_category_link',
@@ -2129,6 +2164,36 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
         category_id: scopedCategory.id,
       })
     ).toBeUndefined();
+    const foreignCategoryLink = await PartnerCategoryLink.query().insertAndFetch({
+      partner_id: foreignPartner.id,
+      category_id: scopedCategory.id,
+    });
+    const foreignCategoryLinkAudit = await AuditLog.query()
+      .where({ model: 'base.partner_category_link', record_id: foreignCategoryLink.id })
+      .orderBy('id', 'asc');
+    const deniedForeignCategoryWrite = await app.inject({
+      method: 'PATCH',
+      url: `/api/base.partner_category_link/${foreignCategoryLink.id}`,
+      headers,
+      payload: { category_id: replacementCategory.id },
+    });
+    expect(deniedForeignCategoryWrite.statusCode).toBe(404);
+    const deniedForeignCategoryUnlink = await app.inject({
+      method: 'DELETE',
+      url: `/api/base.partner_category_link/${foreignCategoryLink.id}`,
+      headers,
+    });
+    expect(deniedForeignCategoryUnlink.statusCode).toBe(404);
+    expect(await PartnerCategoryLink.query().findById(foreignCategoryLink.id)).toMatchObject({
+      partner_id: foreignPartner.id,
+      category_id: scopedCategory.id,
+      active: true,
+    });
+    await expect(
+      AuditLog.query()
+        .where({ model: 'base.partner_category_link', record_id: foreignCategoryLink.id })
+        .orderBy('id', 'asc')
+    ).resolves.toEqual(foreignCategoryLinkAudit);
     const scopedTag = await Tag.query().insertAndFetch({ name: 'PostgreSQL Scoped Resource Tag' });
     const allowedLocalTagLink = await app.inject({
       method: 'POST',
