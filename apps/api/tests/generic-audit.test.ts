@@ -20,21 +20,22 @@ const CredentialProbe = defineModel('test.audit_credential_probe', {
 describe('generic audit snapshots', () => {
   it('omits explicitly sensitive business fields but keeps safe fields', () => {
     const accountNumber = 'private-account-number-sentinel';
+    const accountHolder = 'private-account-holder-sentinel';
     const snapshot = auditSnapshot(PartnerBank, {
       id: 9,
       acc_number: accountNumber,
       sanitized_acc_number: '••••7890',
-      acc_holder_name: 'Example Holder',
+      acc_holder_name: accountHolder,
       is_primary: true,
     });
 
     expect(snapshot).toEqual({
       id: 9,
       sanitized_acc_number: '••••7890',
-      acc_holder_name: 'Example Holder',
       is_primary: true,
     });
     expect(JSON.stringify(snapshot)).not.toContain(accountNumber);
+    expect(JSON.stringify(snapshot)).not.toContain(accountHolder);
   });
 
   it('excludes credential-like declared fields from audit and outbox snapshots', () => {
