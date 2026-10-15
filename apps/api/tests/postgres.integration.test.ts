@@ -162,6 +162,56 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     expect(result.rows[0]?.statement_timeout).toBe('30s');
   });
 
+  it('recovers a persisted PostgreSQL outbox lease after a worker restart', async () => {
+    await installAddons(db, [manifest, jobsManifest]);
+    const suffix = randomUUID().replaceAll('-', '').slice(0, 12);
+    const eventType = `test.outbox.restart.${suffix}`;
+    const deliveries: number[] = [];
+    const appliedEffects = new Set<number>();
+    let effectCount = 0;
+    const unregister = registerOutboxConsumer(eventType, async (_payload, id) => {
+      deliveries.push(id);
+      if (!appliedEffects.has(id)) {
+        appliedEffects.add(id);
+        effectCount += 1;
+      }
+    });
+
+    try {
+      const event = await OutboxEvent.query().insertAndFetch({
+        event_type: eventType,
+        aggregate_model: 'base.partner',
+        aggregate_id: 123,
+        payload: '{"record":{"id":123}}',
+        status: 'processing',
+        attempts: 1,
+        max_attempts: 3,
+        fencing_token: 1,
+        lease_owner: `crashed-${suffix}`,
+        lease_until: new Date(0).toISOString(),
+        available_at: new Date(0).toISOString(),
+      });
+      deliveries.push(event.id);
+      appliedEffects.add(event.id);
+      effectCount += 1;
+
+      expect(await dispatchOneOutboxEvent(`restarted-${suffix}`)).toBe(true);
+      expect(deliveries).toEqual([event.id, event.id]);
+      expect(effectCount).toBe(1);
+      await expect(OutboxEvent.query().findById(event.id)).resolves.toMatchObject({
+        status: 'published',
+        attempts: 2,
+        fencing_token: 2,
+        lease_owner: null,
+        lease_until: null,
+      });
+      expect(await dispatchOneOutboxEvent(`restarted-${suffix}`)).toBe(false);
+      expect(deliveries).toEqual([event.id, event.id]);
+    } finally {
+      unregister();
+    }
+  }, 30000);
+
   it('rolls back PostgreSQL upgrade DDL, data, and addon version when a programmatic hook fails', async () => {
     const upgradeSchema = `mw_upgrade_test_${randomUUID().replaceAll('-', '')}`;
     await adminDb.raw('create schema ??', [upgradeSchema]);

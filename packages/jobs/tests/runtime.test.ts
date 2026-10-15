@@ -657,6 +657,53 @@ describe('durable job runtime', () => {
     }
   });
 
+  it('recovers a persisted outbox lease after a worker restart', async () => {
+    const deliveries: number[] = [];
+    const appliedEffects = new Set<number>();
+    let effectCount = 0;
+    const unregister = registerOutboxConsumer('outbox.restart-recovery', async (_payload, id) => {
+      deliveries.push(id);
+      if (!appliedEffects.has(id)) {
+        appliedEffects.add(id);
+        effectCount += 1;
+      }
+    });
+
+    try {
+      const event = await OutboxEvent.query().insertAndFetch({
+        event_type: 'outbox.restart-recovery',
+        aggregate_model: 'base.partner',
+        aggregate_id: 123,
+        payload: '{"record":{"id":123}}',
+        status: 'processing',
+        attempts: 1,
+        max_attempts: 3,
+        fencing_token: 1,
+        lease_owner: 'crashed-outbox-worker',
+        lease_until: new Date(0).toISOString(),
+        available_at: new Date(0).toISOString(),
+      });
+      deliveries.push(event.id);
+      appliedEffects.add(event.id);
+      effectCount += 1;
+
+      expect(await dispatchOneOutboxEvent('restarted-outbox-worker')).toBe(true);
+      expect(deliveries).toEqual([event.id, event.id]);
+      expect(effectCount).toBe(1);
+      await expect(OutboxEvent.query().findById(event.id)).resolves.toMatchObject({
+        status: 'published',
+        attempts: 2,
+        fencing_token: 2,
+        lease_owner: null,
+        lease_until: null,
+      });
+      expect(await dispatchOneOutboxEvent('restarted-outbox-worker')).toBe(false);
+      expect(deliveries).toEqual([event.id, event.id]);
+    } finally {
+      unregister();
+    }
+  });
+
   it('dispatches a matching event after deferring an older event without a consumer', async () => {
     const delivered: number[] = [];
     const unregister = registerOutboxConsumer('record.created', async (_payload, eventId) => {
