@@ -1771,6 +1771,8 @@
       "id": "K4-004",
       "title": "Semantic RUH/HIZAB concept scope and mappings",
       "milestone": "K4",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/K4-004.md",
       "dependsOn": ["K4-002", "K2-004"],
       "output": "Typed theology/semantic concept profiles with uncertainty and scope",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
