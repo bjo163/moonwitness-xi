@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { lstat, mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, readdir, rename, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { canonicalizeJson } from '@moonwitness/knowledge';
 
@@ -185,6 +185,18 @@ export async function createDatasetRelease(
   const releaseId = releaseDigest(payload);
   const manifest: DatasetReleaseManifest = { ...payload, releaseId };
   await ensureDirectoryTree(root, ['datasets', input.datasetId, 'releases']);
+  const releaseDirectory = path.dirname(releasePath(root, input.datasetId, releaseId));
+  for (const entry of await readdir(releaseDirectory, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith('.json')) {
+      throw new TypeError('release directory contains an unexpected entry');
+    }
+    const existing = JSON.parse(
+      await readFile(path.join(releaseDirectory, entry.name), 'utf8')
+    ) as DatasetReleaseManifest;
+    if (existing.version === input.version && existing.releaseId !== releaseId) {
+      throw new TypeError('dataset semantic versions are immutable and already assigned');
+    }
+  }
   try {
     await writeFile(
       releasePath(root, input.datasetId, releaseId),

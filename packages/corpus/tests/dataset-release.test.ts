@@ -52,6 +52,12 @@ describe('immutable dataset releases and active pointers', () => {
     ]);
   });
 
+  it('does not let a semantic dataset version be rebound to different content', async () => {
+    const root = await storeRoot();
+    await createDatasetRelease(root, release('1.0.0', 'a'));
+    await expect(createDatasetRelease(root, release('1.0.0', 'b'))).rejects.toThrow(/immutable/);
+  });
+
   it('activates only an existing intact release and can roll back to an earlier release', async () => {
     const root = await storeRoot();
     const first = await createDatasetRelease(root, release('1.0.0', 'a'));
