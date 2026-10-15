@@ -10,6 +10,36 @@ import { fileURLToPath, URL } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const PROJECT_NAME_PATTERN = /^moonwitness-smoke-[a-z0-9-]+$/u;
 const SHUTDOWN_PATTERN = /Graceful shutdown complete|API server shutdown complete/u;
+const SAFE_SERVICE_NAMES = new Set(['api', 'board', 'postgres']);
+const SAFE_STATES = new Set(['created', 'dead', 'exited', 'paused', 'restarting', 'running']);
+const SAFE_HEALTH_STATES = new Set(['healthy', 'starting', 'unhealthy']);
+
+export function formatSafeServiceStatus(raw) {
+  const records = [];
+  try {
+    const parsed = JSON.parse(raw);
+    records.push(...(Array.isArray(parsed) ? parsed : [parsed]));
+  } catch {
+    for (const line of raw.split(/\r?\n/u).filter(Boolean)) {
+      try {
+        records.push(JSON.parse(line));
+      } catch {
+        // Ignore unstructured output; diagnostics only expose selected fields.
+      }
+    }
+  }
+
+  const summaries = records.flatMap((record) => {
+    if (!record || typeof record !== 'object') return [];
+    const service = record.Service;
+    if (!SAFE_SERVICE_NAMES.has(service)) return [];
+    const state = SAFE_STATES.has(record.State) ? record.State : 'unknown';
+    const health = SAFE_HEALTH_STATES.has(record.Health) ? record.Health : 'none';
+    const exitCode = Number.isInteger(record.ExitCode) ? record.ExitCode : 'unknown';
+    return [`${service}/${state}/${health}/${exitCode}`];
+  });
+  return summaries.length > 0 ? summaries.join(', ') : 'unavailable';
+}
 
 function command(args, { root, environment, capture = false }) {
   const result = spawnSync('docker', ['compose', ...args], {
@@ -67,14 +97,14 @@ async function responseText(url, { method = 'GET', headers, body } = {}) {
 }
 
 async function expectEndpoint({ url, phase, includes, request, pause }) {
-  for (let attempt = 0; attempt < 20; attempt += 1) {
+  for (let attempt = 0; attempt < 90; attempt += 1) {
     try {
       const response = await request(url);
       if (response.ok && response.body.includes(includes)) return;
     } catch {
       // The container may still be starting; retry without printing response or network details.
     }
-    if (attempt < 19) await pause(2000);
+    if (attempt < 89) await pause(2000);
   }
   throw new Error(`Container endpoint did not pass the ${phase} check.`);
 }
@@ -86,9 +116,9 @@ export async function runContainerSmoke({
   request = responseText,
   pause = (duration) => delay(duration),
   getPort = availablePort,
-  reportFailure = (failedPhase) => {
+  reportFailure = (failedPhase, serviceStatus) => {
     process.stderr.write(
-      `::error title=Container smoke failed::Phase ${failedPhase} failed; inspect the authorized runner log for details.\n`
+      `::error title=Container smoke failed::Phase ${failedPhase} failed; service status: ${serviceStatus}.\n`
     );
   },
   processId = process.pid,
@@ -122,37 +152,33 @@ export async function runContainerSmoke({
     PRINT_ROUTES: 'false',
   };
 
+  const buildArgs = environment.SMOKE_USE_PREBUILT_IMAGES === 'true' ? ['--no-build'] : ['--build'];
   let failure;
   let phase = 'compose_up';
   try {
-    execute(
-      [
-        ...composeArgs,
-        'up',
-        '--detach',
-        '--build',
-        '--wait',
-        '--wait-timeout',
-        '180',
-        'api',
-        'board',
-      ],
-      { root, environment: composeEnvironment }
-    );
+    execute([...composeArgs, 'up', '--detach', '--wait', '--wait-timeout', '180', 'postgres'], {
+      root,
+      environment: composeEnvironment,
+    });
 
-    phase = 'api_root';
-    await expectEndpoint({
-      url: `http://127.0.0.1:${apiPort}/`,
-      phase,
-      includes: 'MoonWitness Enterprise ORM API',
-      request,
-      pause,
+    phase = 'api_start';
+    execute([...composeArgs, 'up', '--detach', ...buildArgs, '--no-deps', 'api'], {
+      root,
+      environment: composeEnvironment,
     });
     phase = 'api_readiness';
     await expectEndpoint({
       url: `http://127.0.0.1:${apiPort}/readyz`,
       phase,
       includes: '"status":"healthy"',
+      request,
+      pause,
+    });
+    phase = 'api_root';
+    await expectEndpoint({
+      url: `http://127.0.0.1:${apiPort}/`,
+      phase,
+      includes: 'MoonWitness Enterprise ORM API',
       request,
       pause,
     });
@@ -209,6 +235,11 @@ export async function runContainerSmoke({
       request: (url) => request(url, { headers: authorization }),
       pause,
     });
+    phase = 'board_start';
+    execute([...composeArgs, 'up', '--detach', ...buildArgs, '--no-deps', 'board'], {
+      root,
+      environment: composeEnvironment,
+    });
     phase = 'board_root';
     await expectEndpoint({
       url: `http://127.0.0.1:${boardPort}/`,
@@ -233,6 +264,21 @@ export async function runContainerSmoke({
     failure = { phase, error };
   }
 
+  let serviceStatus = 'unavailable';
+  if (failure) {
+    try {
+      serviceStatus = formatSafeServiceStatus(
+        execute([...composeArgs, 'ps', '--all', '--format', 'json'], {
+          root,
+          environment: composeEnvironment,
+          capture: true,
+        })
+      );
+    } catch {
+      // Preserve the original failure if the safe status query is unavailable.
+    }
+  }
+
   let cleanupError;
   try {
     execute([...composeArgs, 'down', '--volumes', '--remove-orphans'], {
@@ -244,7 +290,7 @@ export async function runContainerSmoke({
   }
 
   if (failure) {
-    reportFailure(failure.phase);
+    reportFailure(failure.phase, serviceStatus);
     const detail = cleanupError ? ' Cleanup also failed.' : '';
     throw new Error(`Container smoke failed during ${failure.phase}.${detail}`, {
       cause: failure.error,

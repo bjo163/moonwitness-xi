@@ -1192,7 +1192,7 @@
     },
     {
       "id": "M10.05",
-      "status": "complete",
+      "status": "in_progress",
       "evidence": "docs/roadmap/evidence/M10.05.md",
       "title": "Image API/Board berjalan pada runner; health/readiness/shutdown dan konfigurasi container terverifikasi.",
       "milestone": "M10",

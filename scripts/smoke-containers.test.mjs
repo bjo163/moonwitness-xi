@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { runContainerSmoke } from './smoke-containers.mjs';
+import { formatSafeServiceStatus, runContainerSmoke } from './smoke-containers.mjs';
 
-function harness({ request } = {}) {
+function harness({ request, status, reportFailure, environment } = {}) {
   const calls = [];
   const outputs = [];
   const options = [];
@@ -10,6 +10,7 @@ function harness({ request } = {}) {
   const execute = (args, settings) => {
     calls.push(args);
     options.push(settings);
+    if (args.includes('ps')) return status ?? '';
     return args.includes('logs') ? 'Graceful shutdown complete' : '';
   };
   let port = 41000;
@@ -21,7 +22,7 @@ function harness({ request } = {}) {
     run: (overrides = {}) =>
       runContainerSmoke({
         root: 'X:/fixture',
-        environment: { EXISTING_ENV: 'preserved' },
+        environment: { EXISTING_ENV: 'preserved', ...environment },
         execute,
         request:
           request ??
@@ -48,7 +49,7 @@ function harness({ request } = {}) {
             return { ok: true, body: 'MoonWitness Enterprise ORM API "status":"healthy"' };
           }),
         pause: async () => {},
-        reportFailure: (phase) => outputs.push(phase),
+        reportFailure: reportFailure ?? ((phase) => outputs.push(phase)),
         getPort: async () => (port += 1),
         processId: 55,
         now: () => 1234,
@@ -62,8 +63,10 @@ test('runs isolated Compose smoke phases and always removes only its project vol
   await fixture.run();
 
   const commandTexts = fixture.calls.map((args) => args.join(' '));
+  assert.match(commandTexts[0], /--wait-timeout 180 postgres$/u);
+  assert.match(commandTexts[1], /up --detach --build --no-deps api$/u);
+  assert.match(commandTexts[2], /up --detach --build --no-deps board$/u);
   assert.match(commandTexts[0], /--project-name moonwitness-smoke-55-1234/u);
-  assert.match(commandTexts[0], /--wait-timeout 180 api board$/u);
   assert.ok(commandTexts.some((entry) => entry.includes('stop --timeout 45 api')));
   assert.ok(commandTexts.some((entry) => entry.endsWith('logs api')));
   assert.equal(
@@ -88,11 +91,68 @@ test('runs isolated Compose smoke phases and always removes only its project vol
   assert.ok(corpusRequests.some(({ url }) => url.includes('mw%3Aedition%3Awebp-protestant')));
 });
 
+test('uses already-verified images without rebuilding them for release smoke', async () => {
+  const fixture = harness({ environment: { SMOKE_USE_PREBUILT_IMAGES: 'true' } });
+  await fixture.run();
+
+  const starts = fixture.calls
+    .filter((args) => args.includes('up'))
+    .map((args) => args.slice(args.indexOf('up')).join(' '));
+  assert.deepEqual(starts, [
+    'up --detach --wait --wait-timeout 180 postgres',
+    'up --detach --no-build --no-deps api',
+    'up --detach --no-build --no-deps board',
+  ]);
+});
+
 test('reports the failing phase and still cleans up after an unhealthy endpoint', async () => {
   const fixture = harness({ request: async () => ({ ok: false, body: 'unavailable' }) });
-  await assert.rejects(fixture.run(), /Container smoke failed during api_root/u);
-  assert.deepEqual(fixture.outputs, ['api_root']);
+  await assert.rejects(fixture.run(), /Container smoke failed during api_readiness/u);
+  assert.deepEqual(fixture.outputs, ['api_readiness']);
+  assert.ok(fixture.calls.some((args) => args.includes('ps')));
+  assert.ok(!fixture.calls.some((args) => args.at(-1) === 'board'));
   assert.match(fixture.calls.at(-1).join(' '), /down --volumes --remove-orphans$/u);
+});
+
+test('reports only allowlisted service status fields when API readiness fails', async () => {
+  const failures = [];
+  const fixture = harness({
+    request: async (url) =>
+      url.endsWith('/readyz')
+        ? { ok: false, body: 'unavailable' }
+        : { ok: true, body: 'MoonWitness Enterprise ORM API' },
+    status: JSON.stringify([
+      {
+        Service: 'api',
+        State: 'restarting',
+        Health: 'unhealthy',
+        ExitCode: 1,
+        JWT_SECRET: 'must-not-be-printed',
+      },
+      { Service: 'postgres', State: 'running', Health: 'healthy', ExitCode: 0 },
+      { Service: 'unknown-service', State: 'running', Health: 'healthy', ExitCode: 0 },
+    ]),
+    reportFailure: (phase, serviceStatus) => failures.push({ phase, serviceStatus }),
+  });
+
+  await assert.rejects(fixture.run(), /Container smoke failed during api_readiness/u);
+  assert.deepEqual(failures, [
+    {
+      phase: 'api_readiness',
+      serviceStatus: 'api/restarting/unhealthy/1, postgres/running/healthy/0',
+    },
+  ]);
+  assert.doesNotMatch(JSON.stringify(failures), /must-not-be-printed/u);
+});
+
+test('safe service status ignores raw fields and malformed output', () => {
+  assert.equal(
+    formatSafeServiceStatus(
+      '{"Service":"api","State":"running","Health":"healthy","ExitCode":0,"Password":"hidden"}'
+    ),
+    'api/running/healthy/0'
+  );
+  assert.equal(formatSafeServiceStatus('not-json with database credentials'), 'unavailable');
 });
 
 test('preserves a smoke failure when cleanup also fails and reports the cleanup failure', async () => {
@@ -114,7 +174,7 @@ test('preserves a smoke failure when cleanup also fails and reports the cleanup 
         return '';
       },
     }),
-    /Container smoke failed during api_root\. Cleanup also failed\./u
+    /Container smoke failed during api_readiness\. Cleanup also failed\./u
   );
   assert.ok(calls.at(-1).includes('down'));
 });
