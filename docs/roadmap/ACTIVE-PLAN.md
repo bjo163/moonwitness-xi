@@ -1,6 +1,6 @@
 # Jalur rilis aktif
 
-**Diperbarui: 2026-10-15.** Tujuan dekatnya adalah satu rilis pertama yang dapat dipakai, bukan menyelesaikan 148 kartu satu per satu. Seluruh kartu tetap ada di `tasks.json`; catatan batch lama dipindahkan ke [arsip eksekusi](EXECUTION-HISTORY-2026-10-15.md). Estimasi lama 8–13 hari tidak dipakai lagi karena mencampur pekerjaan wajib dengan backlog dan pengulangan verifikasi.
+**Diperbarui: 2026-10-15.** Tujuan dekatnya adalah satu rilis pertama yang dapat dipakai, bukan menyelesaikan 148 kartu satu per satu. Seluruh kartu tetap ada di `tasks.json`; catatan batch lama dipindahkan ke [arsip eksekusi](EXECUTION-HISTORY-2026-10-15.md). Estimasi lama 8–13 hari tidak dipakai lagi karena mencampur pekerjaan wajib dengan backlog dan pengulangan verifikasi. Perubahan ini mempercepat urutan eksekusi, bukan menghapus acceptance atau menutup kartu tanpa bukti.
 
 ## Batas waktu dan aturan berhenti mengulang
 
@@ -55,3 +55,45 @@ Lihat daftar dan kondisi pembukaan kembali di [backlog yang ditunda](EXECUTION-B
 ## Batch lokal berikutnya
 
 PostgreSQL canonical suite lulus 15/15 pada exact source `203d29a05fedcf8c3b34b2303fa71b9df5bb0681`; focused Chromium request journey lulus di source aplikasi `5cff67d`, yang tidak berubah sampai `203d29a`. Jangan ulang suite ini kecuali source aplikasi terkait berubah atau kandidat final memerlukan hosted exact-SHA acceptance. Jangan membuat fixture/model atau refresh plan baru hanya untuk menambah jumlah bukti. Berikutnya kerjakan blocker lokal yang source-nya benar-benar belum terpenuhi; jika sisanya menunggu owner/akses GitHub, tandai dependensinya dan lanjutkan task lokal lain. Setelah perubahan, jalankan cek terarah, review diff, commit dan push ke `dev`, catat SHA dan hasil; hosted CI tetap verifikasi asinkron.
+
+## Goal eksekusi yang diperbarui — jalur tercepat tanpa mengurangi cakupan
+
+Goal rilis tetap aktif. Untuk menghindari empat hari kerja berputar, gunakan status `in_progress` sebagai daftar penerimaan yang belum lengkap, bukan instruksi untuk mengulang implementasi atau suite yang sudah lulus. Audit status/evidence sekali di awal batch; setelah itu kerja berdasarkan dependency dan gap acceptance berikut.
+
+### Release blockers (menahan promosi, bukan pekerjaan lokal)
+
+1. **M10.03 — exact-SHA gates dan promosi:** setelah memilih kandidat `dev`, tunggu semua check wajib untuk SHA/PR kandidat, PostgreSQL, browser dan container, lalu review CODEOWNER; jangan merilis atau mempromosikan sebelum seluruh policy lulus. Pemilik: maintainer + CODEOWNER. Bukti tutup: hasil check pada SHA yang dipromosikan dan verifikasi ref `main`.
+2. **M8.03/M8.11 — security disposition:** minta security owner/admin memeriksa alert/SARIF privat, temuan secret historis, status rotasi/revokasi, private reporting dan pemilik respons. Pemilik: security owner/repo admin. Bukti tutup: disposition tertulis untuk tiap finding dan kanal/role operasional terverifikasi. Scan lokal yang bersih tidak menggantikan ini.
+3. **M6.08 — stable docs:** tunggu rilis stabil pertama dan Pages production run; manifest/retensi lokal dan test-nya sudah ada. Pemilik: release maintainer. Bukti tutup: arsip versi di Release, alias latest dan Pages cocok dengan versi/SHA rilis.
+
+### Bisa dikerjakan lokal sekarang (urut dependensi, tanpa menunggu CI)
+
+1. **M3.11:** workflow browser matrix sudah tersedia di `main` dan menerima `workflow_dispatch`. Lokal, seluruh engine/PG coverage sudah tercatat; gap tunggalnya adalah satu eksekusi dari `main` dan review artifact. Jangan jalankan ulang browser suite lokal. Periksa run terjadwal/dispatch yang ada sekali; bila belum ada dan konektor mengizinkan, dispatch satu kali; jika tool/izin tidak tersedia, pindahkan ke blocker GitHub Actions dengan URL workflow. Tutup hanya setelah semua engine pass dan artifact aman ditinjau.
+2. **M8.09:** periksa kontrak planner/reconciler dan uji dry-run lokal yang belum punya evidence pada source saat ini. Jika workflow/code sudah lengkap, jangan membuat ulang: rekam evidence lokal singkat dan tunggu aktivasi default-branch/`issues:write`. Tutup setelah scheduled reconcile menghasilkan upsert/resolve yang terverifikasi tanpa duplikasi/spam.
+3. **M9.03 + M9.06:** perlakukan sebagai satu jalur acceptance addon karena M9.06 bergantung pada engine M9.03. Implementation, seed, API, expiry, dan perjalanan PostgreSQL/Board sudah ada; audit hanya gap yang belum terbukti untuk source saat ini, tanpa membuat model/fixture baru. Jika tidak ada gap lokal material, jangan refresh suite: tandai sisa exact-SHA/review sebagai blocker dan lanjut.
+4. **M9.08:** jangan mengejar angka before/after lama yang tidak punya baseline setara. Pertahankan bukti graph, consumer dan route budget yang ada; minta owner menetapkan apakah hasil tersebut cukup atau tunggu baseline sebelum ekstraksi berikutnya. Perlakukan sebagai keputusan owner/backlog, bukan pekerjaan implementasi rilis.
+
+### Approval/akses GitHub yang harus diberi pemilik
+
+| Kebutuhan                                                               | Pemilik yang diminta      | Dampak                                                        | Jalur lokal sementara                                             |
+| ----------------------------------------------------------------------- | ------------------------- | ------------------------------------------------------------- | ----------------------------------------------------------------- |
+| CODEOWNER review dan merge PR promosi                                   | CODEOWNER/repo admin      | Menahan perubahan `main` dan M10.03                           | Lanjut audit lokal dan siapkan bukti kandidat; jangan bypass      |
+| Private alerts/SARIF, security reporting dan disposition historis       | Security owner/repo admin | Menahan penutupan M8.03/M8.11                                 | Pertahankan fail-closed policy dan catat bukti scan yang tersedia |
+| `workflow_dispatch`, Actions artifact/log dan Pages production settings | GitHub Actions admin      | Menahan acceptance terjadwal M3.11/M8.09 dan rilis docs M6.08 | Validasi workflow/test lokal sekali; jangan mengulang suite       |
+| `issues:write` untuk reconciler issue                                   | GitHub Actions admin      | Menahan remote upsert/resolve M8.09                           | Jalankan planner/dry-run dan cek deduplikasi lokal                |
+
+### Item post-release/backlog
+
+M9.08 controlled size comparison tetap ditunda sampai ada baseline same-runner/toolchain sebelum ekstraksi berikutnya atau owner produk menerima graph/size budgets sebagai keputusan final. Ekspansi addon di luar request/approval, audit visual/browser yang telah lulus, rehearsal lifecycle penuh M11.14, serta eksperimen fault/recovery yang memerlukan akses privat tidak menahan rilis pertama; syarat pembuka masing-masing tetap tercatat di `EXECUTION-BACKLOG.md`. Tidak ada item roadmap yang dihapus.
+
+### Batas batch agar tidak mengulang pekerjaan
+
+- Satu batch harus menyebut kartu, gap acceptance, file/jalur, satu focused command, serta bukti hasil. Bila audit memperlihatkan implementasi sudah benar dan yang tertinggal remote, batch lokal berhenti pada pencatatan gap; pindah ke item lokal independen.
+- Jangan menjalankan suite aplikasi, browser matrix, `pnpm verify`, `release:prepare`, atau audit penuh hanya untuk memperbarui timestamp/fingerprint evidence. Gunakan ulang bukti bila source dan input relevan tidak berubah. Jalankan hanya failed lane setelah kegagalan.
+- Untuk docs/roadmap saja: jalankan validasi roadmap dan formatting yang relevan. Untuk workflow saja: workflow policy tests/linter terarah. Jalankan full required gates satu kali pada kandidat final; tetap wajib, tidak boleh dilewati.
+- Satu status snapshot GitHub per checkpoint; jangan polling berulang tanpa perubahan status. CI asinkron berjalan sesudah push dan tidak menghentikan batch lokal independen.
+- Tiap batch selesai dengan review diff, commit dan push ke `dev`, lalu catat SHA serta pemeriksaan lokal. Jangan membuat branch ketiga atau mempromosikan ke `main` di luar PR/gate yang berlaku.
+
+### Definisi selesai goal
+
+Goal belum selesai hanya karena implementasi lokal atau CI `dev` lulus. Selesai setelah blocker rilis di atas punya evidence exact-SHA, approval/security owner lengkap, promosi protected ke `main`, stable docs/Pages dan release trace cocok, serta acceptance roadmap yang memang termasuk rilis ditutup. Semua sisanya tetap bisa dilanjutkan sebagai backlog eksplisit tanpa memperpanjang jalur rilis pertama.
