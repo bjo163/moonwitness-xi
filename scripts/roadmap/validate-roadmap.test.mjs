@@ -3,7 +3,7 @@ import test from 'node:test';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validateRoadmapIndex } from './validate-roadmap.mjs';
+import { findDuplicateJsonObjectKeys, validateRoadmapIndex } from './validate-roadmap.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const schema = JSON.parse(await readFile(path.join(root, 'docs/roadmap/task.schema.json'), 'utf8'));
@@ -61,6 +61,20 @@ test('schema declares versioned tasks and optional prioritization/assignment fie
   assert.ok(schema.$defs.task.properties.assignee);
   assert.ok(schema.$defs.task.properties.labels);
   assert.match(schema.$defs.task.properties.id.pattern, /K\(\?:0/u);
+});
+
+test('detects duplicate keys within one object without confusing separate objects', () => {
+  assert.deepEqual(
+    findDuplicateJsonObjectKeys('{"task":{"evidence":"first","evidence":"second"}}'),
+    ['evidence']
+  );
+  assert.deepEqual(
+    findDuplicateJsonObjectKeys(
+      String.raw`{"task":{"evidence":"first"},"other":{"evidence":"second"}}`
+    ),
+    []
+  );
+  assert.deepEqual(findDuplicateJsonObjectKeys(String.raw`{"a":1,"\u0061":2}`), ['a']);
 });
 
 test('accepts stable unique IDs, safe cards, DAG dependencies, evidence and checkbox agreement', () => {

@@ -41,6 +41,41 @@ function isRecord(value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/** Return duplicate property names, scoped to each JSON object rather than globally. */
+export function findDuplicateJsonObjectKeys(source) {
+  const containers = [];
+  const duplicates = [];
+  for (let index = 0; index < source.length; index += 1) {
+    const character = source[index];
+    if (character === '"') {
+      const start = index;
+      let escaped = false;
+      for (index += 1; index < source.length; index += 1) {
+        const current = source[index];
+        if (escaped) escaped = false;
+        else if (current === '\\') escaped = true;
+        else if (current === '"') break;
+      }
+      const container = containers.at(-1);
+      if (container?.kind === 'object' && container.expectingKey) {
+        const key = JSON.parse(source.slice(start, index + 1));
+        if (container.keys.has(key)) duplicates.push(key);
+        container.keys.add(key);
+        container.expectingKey = false;
+      }
+    } else if (character === '{') {
+      containers.push({ kind: 'object', expectingKey: true, keys: new Set() });
+    } else if (character === '[') {
+      containers.push({ kind: 'array' });
+    } else if (character === '}' || character === ']') {
+      containers.pop();
+    } else if (character === ',' && containers.at(-1)?.kind === 'object') {
+      containers.at(-1).expectingKey = true;
+    }
+  }
+  return duplicates;
+}
+
 function isSafeRoadmapPath(value, prefix) {
   if (typeof value !== 'string' || value.includes('\\') || path.posix.isAbsolute(value))
     return false;
@@ -275,7 +310,14 @@ export function validateRoadmapIndex(input, roadmap, documents) {
 async function loadRepository() {
   const indexPath = path.join(repositoryRoot, 'docs/roadmap/tasks.json');
   const roadmapPath = path.join(repositoryRoot, 'ROADMAP.md');
-  const index = JSON.parse(await readFile(indexPath, 'utf8'));
+  const indexSource = await readFile(indexPath, 'utf8');
+  const duplicateKeys = findDuplicateJsonObjectKeys(indexSource);
+  if (duplicateKeys.length > 0) {
+    throw new Error(
+      `tasks.json contains duplicate object keys: ${[...new Set(duplicateKeys)].join(', ')}`
+    );
+  }
+  const index = JSON.parse(indexSource);
   const roadmap = await readFile(roadmapPath, 'utf8');
   /** @type {Map<string, string>} */
   const documents = new Map();
