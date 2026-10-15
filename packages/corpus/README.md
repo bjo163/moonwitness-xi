@@ -79,12 +79,13 @@ remains valid and no text bytes need to be checked in.
 kind, export time, byte length, SHA-256, and source-scoped consent fields. It
 hashes the selected file locally, writes only the metadata manifest, and refuses
 denied or withdrawn consent, a source mismatch, unsafe paths, symbolic links,
-and manifest overwrites. It does not parse, copy, upload, or publish archive
-contents. The caller must keep manifests and source files in a private local
-workspace; never commit real account, witness, or consent data. Validation only
-checks declared structure and source binding; it does not prove that consent is
-authentic or legally sufficient. Retention, revocation, and any real-data import
-remain gated by K5-002 and the accepted privacy policy.
+workspace-local intake roots, and manifest overwrites. The caller must provide
+the repository `workspaceRoot` and keep the source plus manifest in a private
+local `rootDirectory` outside it. The function does not parse, copy, upload, or
+publish archive contents; never commit real account, witness, or consent data.
+Validation only checks declared structure and source binding; it does not prove
+that consent is authentic or legally sufficient. Retention, revocation, and any
+real-data import remain gated by K5-002 and the accepted privacy policy.
 
 ## Dataset release pointers
 

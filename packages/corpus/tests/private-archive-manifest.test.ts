@@ -47,6 +47,7 @@ function consent(
 function request(rootDirectory: string, overrides: Partial<PrivateArchiveImportRequest> = {}) {
   return {
     rootDirectory,
+    workspaceRoot: process.cwd(),
     sourcePath: 'archive.json',
     manifestPath: 'manifests/intake.json',
     manifestId: 'synthetic-intake-v1',
@@ -65,6 +66,15 @@ afterEach(async () => {
 });
 
 describe('private archive import manifest', () => {
+  it('refuses to place archive intake metadata inside the workspace', async () => {
+    const root = await rootFixture();
+
+    await expect(
+      createPrivateArchiveImportManifest(request(root, { workspaceRoot: root }))
+    ).rejects.toThrow('rootDirectory must be outside the workspace');
+    await expect(readdir(root)).resolves.toEqual(['archive.json']);
+  });
+
   it('records only source metadata and scoped consent for a local synthetic archive', async () => {
     const root = await rootFixture();
     const manifest = await createPrivateArchiveImportManifest(request(root));

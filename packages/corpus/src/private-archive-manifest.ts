@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { lstat, mkdir, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { canonicalizeJson } from '@moonwitness/knowledge';
 import privateArchiveImportManifestSchema from '../schemas/private-archive-import-manifest.schema.json' with { type: 'json' };
@@ -46,6 +46,7 @@ export interface PrivateArchiveImportManifest {
 
 export interface PrivateArchiveImportRequest {
   rootDirectory: string;
+  workspaceRoot: string;
   sourcePath: string;
   manifestPath: string;
   manifestId: string;
@@ -178,10 +179,23 @@ export async function createPrivateArchiveImportManifest(
   if (!request.consent || request.consent.state !== 'granted') {
     throw new TypeError('A granted, source-scoped consent decision is required');
   }
-  const root = path.resolve(request.rootDirectory);
-  const rootDetails = await lstat(root);
+  const rootCandidate = path.resolve(request.rootDirectory);
+  const rootDetails = await lstat(rootCandidate);
   if (rootDetails.isSymbolicLink() || !rootDetails.isDirectory()) {
     throw new TypeError('rootDirectory must be a real local directory');
+  }
+  const [root, workspace] = await Promise.all([
+    realpath(rootCandidate),
+    realpath(request.workspaceRoot),
+  ]);
+  const relativeRoot = path.relative(workspace, root);
+  if (
+    relativeRoot === '' ||
+    (relativeRoot !== '..' &&
+      !relativeRoot.startsWith(`..${path.sep}`) &&
+      !path.isAbsolute(relativeRoot))
+  ) {
+    throw new TypeError('rootDirectory must be outside the workspace');
   }
 
   const sourceRelativePath = safeRelativePath(request.sourcePath, 'sourcePath');
