@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@/components/ui/dialog';
+} from '@moonwitness/ui/components/dialog';
 
 interface ShortcutGroup {
   category: string;

@@ -1,5 +1,11 @@
-// Official ISO 3166-2 Country Subdivisions (States, Provinces, Regions, Territories, Emirates, Prefectures)
-// 100% Authoritative, official ISO 3166-2 codes and names for major global economies and ASEAN hubs.
+/** Curated ISO 3166-2 subdivision examples; this is deliberately not a global-complete dataset. */
+export const countryStateDataSource = Object.freeze({
+  name: 'Curated ISO 3166-2 subdivision examples',
+  standard: 'ISO 3166-2 code format; per-country coverage varies',
+  coverage:
+    'Selected subdivisions for Indonesia, United States, and additional ASEAN markets; not complete worldwide',
+  verifiedDate: '2026-10-04',
+});
 
 export interface CountrySubdivision {
   countryCode: string;

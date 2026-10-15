@@ -1,13 +1,18 @@
 import { spawnSync } from 'node:child_process';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { join, relative, resolve } from 'node:path';
 import { argv, cwd, env, stderr, stdout } from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-const requiredProjects = ['quality', 'integration', 'browser', 'containers', 'automation'];
+const requiredProjects = ['quality', 'integration', 'browser', 'containers', 'automation', 'ui'];
 const fullScopeFiles = new Set([
   '.github',
   'scripts',
+  'ROADMAP.md',
+  '.dockerignore',
+  '.env.example',
+  '.env.production.example',
+  '.gitleaks.toml',
   'package.json',
   '.gitignore',
   '.node-version',
@@ -17,12 +22,19 @@ const fullScopeFiles = new Set([
   'tsconfig.base.json',
   'eslint.config.js',
   'prettier.config.js',
+  '.prettierignore',
   '.prettierrc',
   '.prettierrc.json',
   'vitest.config.ts',
   'Dockerfile',
   'docker-compose.production.yml',
 ]);
+
+export function hasFullScopeChange(changedFiles) {
+  return changedFiles.some((path) =>
+    [...fullScopeFiles].some((root) => path === root || path.startsWith(`${root}/`))
+  );
+}
 
 function git(args) {
   const result = spawnSync('git', args, { encoding: 'utf8' });
@@ -52,9 +64,11 @@ export function expandWorkspaceDependencies(changedNames, projects) {
   return affected;
 }
 
-export function ciProjectsForAffectedPackages(affectedPackages) {
+export function ciProjectsForAffectedPackages(affectedPackages, changedFiles = []) {
   const affected = new Set(affectedPackages);
-  const projects = new Set(['automation']);
+  const projects = new Set();
+  const uiPackages = new Set(['@moonwitness/assets', '@moonwitness/ui', '@moonwitness/ui-catalog']);
+  const specializedPackages = new Set([...uiPackages, '@moonwitness/api', '@moonwitness/board']);
   if (affected.has('@moonwitness/board')) {
     projects.add('quality');
     projects.add('browser');
@@ -64,10 +78,17 @@ export function ciProjectsForAffectedPackages(affectedPackages) {
     projects.add('integration');
     projects.add('containers');
   }
-  if ([...affected].some((name) => name !== '@moonwitness/board' && name !== '@moonwitness/api')) {
+  if ([...affected].some((name) => uiPackages.has(name))) {
+    projects.add('quality');
+    projects.add('ui');
+  }
+  if ([...affected].some((name) => !specializedPackages.has(name))) {
     for (const project of ['quality', 'integration', 'browser', 'containers']) {
       projects.add(project);
     }
+  }
+  if (changedFiles.some((path) => path.startsWith('docs/roadmap/'))) {
+    projects.add('automation');
   }
   return [...projects];
 }
@@ -84,29 +105,62 @@ async function writePlan(result, jsonOutput) {
   stdout.write(jsonOutput ? JSON.stringify(result) : projects.join('\n'));
 }
 
-async function projectDependencies(project) {
-  let manifest;
-  try {
-    manifest = JSON.parse(await readFile(join(project.path, 'package.json'), 'utf8'));
-  } catch {
-    return [];
+export async function readWorkspaceProjects(root = cwd()) {
+  const workspaceYaml = await readFile(join(root, 'pnpm-workspace.yaml'), 'utf8');
+  const patterns = [];
+  let readingPackages = false;
+  for (const line of workspaceYaml.split(/\r?\n/u)) {
+    if (/^packages:\s*$/u.test(line)) {
+      readingPackages = true;
+      continue;
+    }
+    if (readingPackages && /^\S/u.test(line)) break;
+    if (!readingPackages) continue;
+    const pattern = /^\s+-\s+['"]?([^'"#]+)['"]?\s*$/u.exec(line)?.[1]?.trim();
+    if (pattern) patterns.push(pattern);
   }
-  return Object.entries({ ...manifest.dependencies, ...manifest.devDependencies })
-    .filter(([name, version]) => name.startsWith('@moonwitness/') && version === 'workspace:*')
-    .map(([name]) => name);
-}
+  if (patterns.length === 0) throw new Error('pnpm workspace packages are missing');
 
-function readWorkspaceProjects() {
-  const result = spawnSync('pnpm', ['list', '--recursive', '--depth', '-1', '--json'], {
-    encoding: 'utf8',
-  });
-  if (result.status === 0) return JSON.parse(result.stdout);
-  const fallback = spawnSync('pnpm.cmd', ['list', '--recursive', '--depth', '-1', '--json'], {
-    encoding: 'utf8',
-    shell: true,
-  });
-  if (fallback.status !== 0) throw new Error('pnpm workspace graph unavailable');
-  return JSON.parse(fallback.stdout);
+  const projects = [];
+  const names = new Set();
+  for (const pattern of patterns) {
+    const match = /^([^*]+)\/\*$/u.exec(pattern);
+    if (!match) throw new Error(`Unsupported pnpm workspace package pattern: ${pattern}`);
+    const packageDirectory = join(root, match[1]);
+    const entries = await readdir(packageDirectory, { withFileTypes: true });
+    entries.sort((left, right) => left.name.localeCompare(right.name));
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const packagePath = join(packageDirectory, entry.name);
+      let manifest;
+      try {
+        manifest = JSON.parse(await readFile(join(packagePath, 'package.json'), 'utf8'));
+      } catch (error) {
+        if (error?.code === 'ENOENT') continue;
+        throw error;
+      }
+      if (typeof manifest.name !== 'string' || manifest.name.length === 0) {
+        throw new Error(`Workspace package name is missing: ${packagePath}`);
+      }
+      if (names.has(manifest.name)) {
+        throw new Error(`Duplicate workspace package name: ${manifest.name}`);
+      }
+      names.add(manifest.name);
+      const dependencies = Object.entries({
+        ...manifest.dependencies,
+        ...manifest.devDependencies,
+      })
+        .filter(([name, version]) => name.startsWith('@moonwitness/') && version === 'workspace:*')
+        .map(([name]) => name)
+        .sort();
+      projects.push({
+        name: manifest.name,
+        path: relative(root, packagePath).replaceAll('\\', '/'),
+        dependencies,
+      });
+    }
+  }
+  return projects.sort((left, right) => left.name.localeCompare(right.name));
 }
 
 async function main() {
@@ -115,14 +169,7 @@ async function main() {
   const jsonOutput = argv.includes('--json');
   let workspaceProjects;
   try {
-    workspaceProjects = readWorkspaceProjects()
-      .filter((project) => project.name !== 'moonwitness-monorepo')
-      .map(async (project) => ({
-        ...project,
-        path: relative(cwd(), project.path).replaceAll('\\', '/'),
-        dependencies: await projectDependencies(project),
-      }));
-    workspaceProjects = await Promise.all(workspaceProjects);
+    workspaceProjects = await readWorkspaceProjects();
   } catch {
     stderr.write('Invalid pnpm workspace graph; using full CI scope.\n');
     await writePlan(
@@ -140,11 +187,7 @@ async function main() {
   }
 
   const changedFiles = changedPaths.split(/\r?\n/u).filter(Boolean);
-  if (
-    changedFiles.some((path) =>
-      [...fullScopeFiles].some((root) => path === root || path.startsWith(`${root}/`))
-    )
-  ) {
+  if (hasFullScopeChange(changedFiles)) {
     await writePlan(
       { mode: 'full', reason: 'shared-configuration', projects: requiredProjects },
       jsonOutput
@@ -159,7 +202,7 @@ async function main() {
     .map((project) => project.name);
   const affected = expandWorkspaceDependencies(changedNames, workspaceProjects);
 
-  const ciProjects = ciProjectsForAffectedPackages(affected);
+  const ciProjects = ciProjectsForAffectedPackages(affected, changedFiles);
   const unclassifiedChanges = changedFiles.some(
     (path) =>
       !workspaceProjects.some((project) => path.startsWith(`${project.path}/`)) &&

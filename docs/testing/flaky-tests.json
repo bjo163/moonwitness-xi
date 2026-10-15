@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "maxRetries": 1,
+  "quarantine": [],
+  "protectedTestPatterns": [
+    "security",
+    "auth",
+    "authorization",
+    "password",
+    "token",
+    "permission",
+    "rate.?limit",
+    "tenant",
+    "company membership",
+    "cross.?company"
+  ]
+}

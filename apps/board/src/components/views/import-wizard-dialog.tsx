@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useCallback } from 'react';
 import {
   Upload,
   FileSpreadsheet,
@@ -12,14 +12,14 @@ import {
 } from 'lucide-react';
 import type { ResolvedViews } from '@moonwitness/client';
 import { client } from '@/lib/client';
-import { Button } from '@/components/ui/button';
+import { Button } from '@moonwitness/ui/components/button';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@/components/ui/dialog';
+} from '@moonwitness/ui/components/dialog';
 import { Doodle } from '@/components/manga/effects';
 import { cn } from '@/lib/utils';
 
@@ -176,29 +176,32 @@ export function ImportWizardDialog({
   };
 
   // Convert row into record object based on mapping
-  const transformRow = (row: string[]): Record<string, unknown> => {
-    const record: Record<string, unknown> = {};
-    parsed.headers.forEach((header, idx) => {
-      const targetField = columnMapping[header];
-      if (targetField && row[idx] !== undefined && row[idx] !== '') {
-        const fieldMeta = views.fields.find((f) => f.name === targetField);
-        let val: unknown = row[idx];
-        if (fieldMeta?.type === 'integer') {
-          const parsedInt = parseInt(row[idx], 10);
-          val = isNaN(parsedInt) ? null : parsedInt;
-        } else if (fieldMeta?.type === 'boolean') {
-          val = ['true', '1', 'yes', 'y', 't'].includes(row[idx].toLowerCase());
+  const transformRow = useCallback(
+    (row: string[]): Record<string, unknown> => {
+      const record: Record<string, unknown> = {};
+      parsed.headers.forEach((header, idx) => {
+        const targetField = columnMapping[header];
+        if (targetField && row[idx] !== undefined && row[idx] !== '') {
+          const fieldMeta = views.fields.find((f) => f.name === targetField);
+          let val: unknown = row[idx];
+          if (fieldMeta?.type === 'integer') {
+            const parsedInt = parseInt(row[idx], 10);
+            val = isNaN(parsedInt) ? null : parsedInt;
+          } else if (fieldMeta?.type === 'boolean') {
+            val = ['true', '1', 'yes', 'y', 't'].includes(row[idx].toLowerCase());
+          }
+          record[targetField] = val;
         }
-        record[targetField] = val;
-      }
-    });
-    return record;
-  };
+      });
+      return record;
+    },
+    [parsed.headers, columnMapping, views.fields]
+  );
 
   // Preview transformed data (up to 5 rows)
   const previewRows = useMemo(() => {
-    return parsed.rows.slice(0, 5).map((row) => transformRow(row));
-  }, [parsed, columnMapping]);
+    return parsed.rows.slice(0, 5).map(transformRow);
+  }, [parsed.rows, transformRow]);
 
   // Validation check for unmapped required fields
   const missingRequired = useMemo(() => {

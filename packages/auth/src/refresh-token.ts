@@ -2,9 +2,9 @@ import { defineModel, fields } from '@moonwitness/orm';
 import { User } from '@moonwitness/orm-base';
 
 /**
- * Server-side record of an issued refresh token. Only the SHA-256 hash of the token is
- * stored, so a database leak does not yield usable credentials. Tokens that were rotated
- * share a `family`, which lets reuse of an old token revoke the whole chain.
+ * Server-side record of an issued refresh token. Only a keyed HMAC fingerprint is stored,
+ * so a database leak without the server secret cannot verify or recover token values.
+ * Rotated tokens share a `family`, which lets reuse revoke the whole chain.
  */
 export const RefreshToken = defineModel('auth.refresh_token', {
   table: 'auth_refresh_tokens',

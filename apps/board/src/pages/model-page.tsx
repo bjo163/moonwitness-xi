@@ -1,6 +1,6 @@
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { useViews } from '@/hooks/use-model';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@moonwitness/ui/components/skeleton';
 import { Doodle } from '@/components/manga/effects';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 import { ListView } from '@/components/views/list-view';
@@ -15,6 +15,28 @@ export function ModelPage() {
   const isCreate = id === 'new' || searchParams.get('create') === '1';
   const isEdit = !isCreate && Boolean(id);
   const recordId = isEdit && id ? parseInt(id, 10) : undefined;
+  const relationParentModel = searchParams.get('relation_parent_model');
+  const relationParentIdValue = searchParams.get('relation_parent_id');
+  const relationParentField = searchParams.get('relation_field');
+  const parsedRelationParentId =
+    relationParentIdValue && /^\d+$/u.test(relationParentIdValue)
+      ? Number(relationParentIdValue)
+      : Number.NaN;
+  const relationField = views?.fields.find(
+    (field) =>
+      field.name === relationParentField &&
+      field.type === 'many2one' &&
+      field.relation === relationParentModel &&
+      !field.readonly &&
+      !field.writeOnly
+  );
+  const relationParent =
+    isCreate &&
+    relationField &&
+    Number.isSafeInteger(parsedRelationParentId) &&
+    parsedRelationParentId > 0
+      ? { model: relationField.relation!, id: parsedRelationParentId, field: relationField.name }
+      : undefined;
 
   const breadcrumbs = views
     ? [
@@ -57,8 +79,20 @@ export function ModelPage() {
         <FormView
           model={model}
           views={views}
-          onBack={() => navigate(`/m/${model}`)}
-          onSaved={(newId) => navigate(`/m/${model}/${newId}`, { replace: true })}
+          initialValues={relationParent ? { [relationParent.field]: relationParent.id } : undefined}
+          onBack={() =>
+            navigate(
+              relationParent ? `/m/${relationParent.model}/${relationParent.id}` : `/m/${model}`
+            )
+          }
+          onSaved={(newId) =>
+            navigate(
+              relationParent
+                ? `/m/${relationParent.model}/${relationParent.id}`
+                : `/m/${model}/${newId}`,
+              { replace: true }
+            )
+          }
         />
       ) : isEdit && recordId !== undefined && !Number.isNaN(recordId) ? (
         <FormView

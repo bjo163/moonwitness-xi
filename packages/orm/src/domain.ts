@@ -7,6 +7,125 @@ export type ASTNode =
   | { type: 'OR'; left: ASTNode; right: ASTNode }
   | { type: 'NOT'; child: ASTNode };
 
+const DOMAIN_OPERATORS = new Set<DomainOperator>([
+  '=',
+  '!=',
+  '<>',
+  '>',
+  '>=',
+  '<',
+  '<=',
+  'like',
+  'ilike',
+  'not like',
+  'not ilike',
+  '=like',
+  'in',
+  'not in',
+  'is null',
+  'is not null',
+]);
+const MAX_DOMAIN_TERMS = 100;
+const MAX_DOMAIN_FIELD_LENGTH = 255;
+const MAX_DOMAIN_STRING_LENGTH = 4096;
+const MAX_DOMAIN_LIST_LENGTH = 500;
+const MAX_DOMAIN_NESTING = 32;
+
+function isDomainScalar(value: unknown): value is string | number | boolean | null {
+  return (
+    value === null ||
+    typeof value === 'string' ||
+    typeof value === 'boolean' ||
+    (typeof value === 'number' && Number.isFinite(value))
+  );
+}
+
+/** Validates untrusted REST/RPC input before it reaches query construction. */
+export function validateDomain(input: unknown, allowedFields?: ReadonlySet<string>): Domain {
+  if (!Array.isArray(input) || input.length > MAX_DOMAIN_TERMS) {
+    throw new Error(`Invalid domain: expected an array with at most ${MAX_DOMAIN_TERMS} terms`);
+  }
+
+  const terms: unknown[] = input;
+  for (const [index, item] of terms.entries()) {
+    if (item === '&' || item === '|' || item === '!') continue;
+    if (!Array.isArray(item) || (item.length !== 2 && item.length !== 3)) {
+      throw new Error(`Invalid domain: term ${index} must be a two- or three-item leaf`);
+    }
+    const leaf: unknown[] = item;
+    const [field, rawOperator, value] = leaf;
+    if (
+      typeof field !== 'string' ||
+      field.length === 0 ||
+      field.length > MAX_DOMAIN_FIELD_LENGTH ||
+      !/^[A-Za-z_][A-Za-z0-9_.]*$/u.test(field)
+    ) {
+      throw new Error(`Invalid domain: term ${index} has an invalid field`);
+    }
+    if (allowedFields && !allowedFields.has(field)) {
+      throw new Error(`Invalid domain: field '${field}' is not queryable`);
+    }
+
+    let operator: DomainOperator = '=';
+    let operand = rawOperator;
+    if (leaf.length === 3) {
+      if (typeof rawOperator !== 'string') {
+        throw new Error(`Invalid domain: term ${index} has an invalid operator`);
+      }
+      operator = rawOperator.toLowerCase() as DomainOperator;
+      if (!DOMAIN_OPERATORS.has(operator)) {
+        throw new Error(`Invalid domain: operator '${rawOperator}' is not supported`);
+      }
+      operand = value;
+    }
+
+    if (typeof operand === 'string' && operand.length > MAX_DOMAIN_STRING_LENGTH) {
+      throw new Error(`Invalid domain: term ${index} value is too long`);
+    }
+    if (!isDomainScalar(operand)) {
+      if (
+        !Array.isArray(operand) ||
+        operand.length > MAX_DOMAIN_LIST_LENGTH ||
+        !operand.every(isDomainScalar)
+      ) {
+        throw new Error(`Invalid domain: term ${index} must use a scalar or a bounded scalar list`);
+      }
+    }
+    if (
+      ['like', 'ilike', 'not like', 'not ilike', '=like'].includes(operator) &&
+      typeof operand !== 'string'
+    ) {
+      throw new Error(`Invalid domain: operator '${operator}' requires a string value`);
+    }
+    if (Array.isArray(operand) && operator !== 'in' && operator !== 'not in') {
+      throw new Error(`Invalid domain: operator '${operator}' does not accept a list`);
+    }
+  }
+
+  const depths: number[] = [];
+  for (const item of [...terms].reverse()) {
+    if (item === '&' || item === '|') {
+      const left = depths.pop();
+      const right = depths.pop();
+      if (left === undefined || right === undefined) {
+        throw new Error(`Invalid domain: '${item}' operator expects 2 arguments`);
+      }
+      depths.push(Math.max(left, right) + 1);
+    } else if (item === '!') {
+      const child = depths.pop();
+      if (child === undefined) throw new Error("Invalid domain: '!' operator expects 1 argument");
+      depths.push(child + 1);
+    } else {
+      depths.push(1);
+    }
+    if ((depths.at(-1) ?? 0) > MAX_DOMAIN_NESTING) {
+      throw new Error(`Invalid domain: expression nesting exceeds ${MAX_DOMAIN_NESTING}`);
+    }
+  }
+
+  return input as Domain;
+}
+
 interface DomainQuery {
   where(callback: (query: DomainQuery) => void): DomainQuery;
   where(field: string, operator: string, value: string | number | boolean): DomainQuery;
@@ -42,6 +161,7 @@ export function normalizeLeaf(leaf: DomainLeaf): {
  * Implicit consecutive leaves are joined with 'AND'.
  */
 export function parseDomainToAST(domain: Domain): ASTNode | null {
+  domain = validateDomain(domain);
   if (!Array.isArray(domain) || domain.length === 0) {
     return null;
   }
@@ -56,6 +176,9 @@ export function parseDomainToAST(domain: Domain): ASTNode | null {
       if (!left || !right) {
         throw new Error(`Invalid domain: '&' operator expects 2 arguments.`);
       }
+      if (Math.max(astDepth(left), astDepth(right)) >= MAX_DOMAIN_NESTING) {
+        throw new Error(`Invalid domain: expression nesting exceeds ${MAX_DOMAIN_NESTING}`);
+      }
       stack.push({ type: 'AND', left, right });
     } else if (item === '|') {
       const left = stack.pop();
@@ -63,11 +186,17 @@ export function parseDomainToAST(domain: Domain): ASTNode | null {
       if (!left || !right) {
         throw new Error(`Invalid domain: '|' operator expects 2 arguments.`);
       }
+      if (Math.max(astDepth(left), astDepth(right)) >= MAX_DOMAIN_NESTING) {
+        throw new Error(`Invalid domain: expression nesting exceeds ${MAX_DOMAIN_NESTING}`);
+      }
       stack.push({ type: 'OR', left, right });
     } else if (item === '!') {
       const child = stack.pop();
       if (!child) {
         throw new Error(`Invalid domain: '!' operator expects 1 argument.`);
+      }
+      if (astDepth(child) >= MAX_DOMAIN_NESTING) {
+        throw new Error(`Invalid domain: expression nesting exceeds ${MAX_DOMAIN_NESTING}`);
       }
       stack.push({ type: 'NOT', child });
     } else if (Array.isArray(item)) {
@@ -90,6 +219,18 @@ export function parseDomainToAST(domain: Domain): ASTNode | null {
   }
 
   return root;
+}
+
+function astDepth(node: ASTNode): number {
+  switch (node.type) {
+    case 'LEAF':
+      return 1;
+    case 'NOT':
+      return astDepth(node.child) + 1;
+    case 'AND':
+    case 'OR':
+      return Math.max(astDepth(node.left), astDepth(node.right)) + 1;
+  }
 }
 
 /**

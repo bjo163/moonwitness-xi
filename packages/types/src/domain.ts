@@ -38,6 +38,28 @@ export interface SearchOptions {
   transaction?: object;
 }
 
+export interface GroupCountOptions extends Pick<
+  SearchOptions,
+  'activeTest' | 'context' | 'transaction'
+> {
+  /** Maximum number of distinct groups returned (1–500). */
+  limit?: number;
+  /** Number of groups to skip, bounded by the API. */
+  offset?: number;
+}
+
+export interface GroupCountRow {
+  values: Record<string, JsonValue>;
+  count: number;
+}
+
+export interface GroupCountPage {
+  groups: GroupCountRow[];
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+}
+
 export interface SearchReadOptions extends SearchOptions {
   fields?: string[];
 }

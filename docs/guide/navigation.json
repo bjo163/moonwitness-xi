@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "title": "MoonWitness Guide",
+  "sections": [
+    {
+      "title": "Mulai",
+      "items": [
+        {
+          "title": "Quickstart lokal",
+          "kind": "tutorial",
+          "path": "docs/guide/tutorials/quickstart.md"
+        },
+        {
+          "title": "Arsitektur",
+          "kind": "explanation",
+          "path": "docs/guide/explanations/architecture.md"
+        }
+      ]
+    },
+    {
+      "title": "Kembangkan dan operasikan",
+      "items": [
+        {
+          "title": "Membuat addon",
+          "kind": "how-to",
+          "path": "docs/guide/how-to/addon-development.md"
+        },
+        {
+          "title": "Addon organisasi",
+          "kind": "how-to",
+          "path": "docs/guide/how-to/organization-addon.md"
+        },
+        {
+          "title": "Contoh addon request/approval",
+          "kind": "how-to",
+          "path": "docs/guide/how-to/request-approval-addon.md"
+        },
+        {
+          "title": "Addon workflow dan approval",
+          "kind": "how-to",
+          "path": "docs/guide/explanations/workflow-engine.md"
+        },
+        { "title": "Menjalankan Board", "kind": "how-to", "path": "docs/guide/how-to/board.md" },
+        {
+          "title": "Jobs dan outbox",
+          "kind": "how-to",
+          "path": "docs/guide/how-to/jobs-outbox.md"
+        },
+        { "title": "Keamanan", "kind": "how-to", "path": "docs/guide/how-to/security.md" },
+        {
+          "title": "Troubleshooting",
+          "kind": "how-to",
+          "path": "docs/guide/how-to/troubleshooting.md"
+        },
+        { "title": "Recovery", "kind": "how-to", "path": "docs/guide/how-to/recovery.md" },
+        {
+          "title": "Release dan upgrade",
+          "kind": "how-to",
+          "path": "docs/guide/how-to/release-upgrade.md"
+        },
+        {
+          "title": "Portal dokumentasi",
+          "kind": "how-to",
+          "path": "docs/guide/how-to/developer-portal.md"
+        }
+      ]
+    },
+    {
+      "title": "Referensi",
+      "items": [
+        { "title": "API", "kind": "reference", "path": "docs/guide/reference/api.md" },
+        { "title": "Model runtime", "kind": "reference", "path": "docs/guide/reference/models.md" },
+        {
+          "title": "API routes yang diekstrak",
+          "kind": "reference",
+          "path": "docs/guide/reference/generated-api.md"
+        },
+        {
+          "title": "Model, addon, menu, dan akses",
+          "kind": "reference",
+          "path": "docs/guide/reference/generated-models.md"
+        },
+        {
+          "title": "Paket, perintah, dan konfigurasi",
+          "kind": "reference",
+          "path": "docs/guide/reference/generated-platform.md"
+        },
+        {
+          "title": "Integrasi webhook",
+          "kind": "reference",
+          "path": "docs/guide/reference/integrations.md"
+        }
+      ]
+    }
+  ]
+}

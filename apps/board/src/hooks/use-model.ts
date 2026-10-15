@@ -1,20 +1,22 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { SearchReadOptions } from '@moonwitness/client';
 import { client } from '@/lib/client';
+import { isCurrentScopeQueryKey, scopedQueryKey } from '@/lib/query-scope';
 
 export type RecordData = Record<string, unknown> & { id: number };
 
 const keys = {
-  models: ['models'] as const,
-  views: (model: string) => ['views', model] as const,
-  list: (model: string, options: SearchReadOptions) => ['records', model, 'list', options] as const,
-  record: (model: string, id: number) => ['records', model, 'one', id] as const,
+  models: () => scopedQueryKey(['models']),
+  views: (model: string) => scopedQueryKey(['views', model]),
+  list: (model: string, options: SearchReadOptions) =>
+    scopedQueryKey(['records', model, 'list', options]),
+  record: (model: string, id: number) => scopedQueryKey(['records', model, 'one', id]),
   all: (model: string) => ['records', model] as const,
 };
 
 export function useModels() {
   return useQuery({
-    queryKey: keys.models,
+    queryKey: keys.models(),
     queryFn: () => client.getModels(),
     staleTime: 5 * 60_000,
   });
@@ -33,7 +35,13 @@ export function useRecords(model: string, options: SearchReadOptions, enabled = 
   return useQuery({
     queryKey: keys.list(model, options),
     queryFn: () => client.model<RecordData>(model).searchRead({ ...options, count: true }),
-    placeholderData: keepPreviousData,
+    placeholderData: (previousData, previousQuery) =>
+      previousQuery &&
+      previousQuery.queryKey[0] === 'records' &&
+      previousQuery.queryKey[1] === model &&
+      isCurrentScopeQueryKey(previousQuery.queryKey)
+        ? previousData
+        : undefined,
     enabled,
   });
 }

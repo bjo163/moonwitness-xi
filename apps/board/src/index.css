@@ -1,59 +1,54 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@import '@moonwitness/ui/styles/tokens.css';
+@import '@moonwitness/ui/components.css';
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* ───────────────────────────── Manga ink design tokens ─────────────────────────────
- * Two accents only: lime highlighter and hot pink. Everything else is paper and ink.
- * Dark mode swaps paper and ink; accents stay identical so the identity survives.
+/*
+ * Tailwind and existing Board classes adapt shared values. Redeclare aliases on .dark too:
+ * the Board scopes dark mode to its side navigation as well as the document root, and CSS
+ * custom properties declared only on :root are computed there before inheriting.
  */
-:root {
-  --paper: #f3efe4;
-  --paper-raised: #fffdf6;
-  --ink: #0d0d0d;
-  --ink-soft: #3a3a36;
-  --ink-faint: #8a877d;
-  --lime: #e6ff00;
-  --pink: #ff2e88;
-  --on-accent: #0d0d0d;
-  --halftone-dot: rgb(13 13 13 / 0.13);
-
-  /* shadcn semantic tokens */
-  --background: var(--paper);
-  --foreground: var(--ink);
-  --card: var(--paper-raised);
-  --card-foreground: var(--ink);
-  --popover: var(--paper-raised);
-  --popover-foreground: var(--ink);
-  --primary: var(--lime);
-  --primary-foreground: var(--on-accent);
-  --secondary: var(--paper);
-  --secondary-foreground: var(--ink);
-  --muted: #e7e2d4;
-  --muted-foreground: var(--ink-soft);
-  --accent: var(--lime);
-  --accent-foreground: var(--on-accent);
-  --destructive: var(--pink);
-  --border: var(--ink);
-  --input: var(--ink);
-  --ring: var(--ink);
-  --radius: 0.25rem;
-}
-
+:root,
 .dark {
-  --paper: #0e0e10;
-  --paper-raised: #17171a;
-  --ink: #f3efe4;
-  --ink-soft: #c9c5b8;
-  --ink-faint: #7d7a72;
-  --halftone-dot: rgb(243 239 228 / 0.09);
-  --muted: #232327;
+  --paper: var(--mw-paper);
+  --paper-raised: var(--mw-paper-raised);
+  --ink: var(--mw-ink);
+  --ink-soft: var(--mw-ink-soft);
+  --ink-faint: var(--mw-ink-faint);
+  --lime: var(--mw-lime);
+  --pink: var(--mw-pink);
+  --on-pink: var(--mw-on-pink);
+  --on-accent: var(--mw-on-accent);
+  --halftone-dot: var(--mw-halftone-dot);
+
+  /* Existing component tokens are aliases; values remain owned by packages/ui. */
+  --background: var(--mw-background);
+  --foreground: var(--mw-foreground);
+  --card: var(--mw-surface);
+  --card-foreground: var(--mw-surface-foreground);
+  --popover: var(--mw-popover);
+  --popover-foreground: var(--mw-popover-foreground);
+  --primary: var(--mw-primary);
+  --primary-foreground: var(--mw-primary-foreground);
+  --secondary: var(--mw-secondary);
+  --secondary-foreground: var(--mw-secondary-foreground);
+  --muted: var(--mw-muted);
+  --muted-foreground: var(--mw-muted-foreground);
+  --accent: var(--mw-accent);
+  --accent-foreground: var(--mw-accent-foreground);
+  --destructive: var(--mw-destructive);
+  --border: var(--mw-border);
+  --input: var(--mw-input);
+  --ring: var(--mw-focus);
+  --radius: var(--mw-radius-md);
 }
 
 @theme inline {
-  --font-display: 'Anton', 'Impact', sans-serif;
-  --font-sans: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-display: var(--mw-font-display);
+  --font-sans: var(--mw-font-sans);
+  --font-mono: var(--mw-font-mono);
 
   --color-paper: var(--paper);
   --color-paper-raised: var(--paper-raised);
@@ -62,6 +57,7 @@
   --color-ink-faint: var(--ink-faint);
   --color-lime: var(--lime);
   --color-pink: var(--pink);
+  --color-on-pink: var(--on-pink);
   --color-on-accent: var(--on-accent);
 
   --color-background: var(--background);
@@ -82,14 +78,25 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-success: var(--mw-success);
+  --color-on-success: var(--mw-on-success);
+  --color-warning: var(--mw-warning);
+  --color-on-warning: var(--mw-on-warning);
+  --color-info: var(--mw-info);
+  --color-on-info: var(--mw-on-info);
+  --color-chart-1: var(--mw-chart-1);
+  --color-chart-2: var(--mw-chart-2);
+  --color-chart-3: var(--mw-chart-3);
+  --color-chart-4: var(--mw-chart-4);
+  --color-chart-5: var(--mw-chart-5);
 
-  --radius-sm: calc(var(--radius) - 2px);
-  --radius-md: var(--radius);
-  --radius-lg: calc(var(--radius) + 2px);
+  --radius-sm: var(--mw-radius-sm);
+  --radius-md: var(--mw-radius-md);
+  --radius-lg: var(--mw-radius-lg);
 
   /* Neo-brutalist hard shadows */
-  --shadow-ink: 3px 3px 0 0 var(--ink);
-  --shadow-ink-lg: 6px 6px 0 0 var(--ink);
+  --shadow-ink: var(--mw-shadow-ink);
+  --shadow-ink-lg: var(--mw-shadow-ink-lg);
 }
 
 @layer base {

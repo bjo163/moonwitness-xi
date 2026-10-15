@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "metric": "branches",
+  "files": {
+    "apps/api/src/auth/policy.ts": 95,
+    "apps/api/src/auth/rules.ts": 91,
+    "packages/auth/src/service.ts": 58,
+    "packages/jobs/src/runtime.ts": 61,
+    "packages/orm/src/addon.ts": 67,
+    "packages/orm-base/src/data.ts": 75,
+    "packages/orm-workflow/src/runtime.ts": 79,
+    "packages/orm-integration/src/webhook-security.ts": 70,
+    "packages/orm-integration/src/runtime.ts": 70,
+    "packages/orm-organization/src/validation.ts": 60
+  }
+}

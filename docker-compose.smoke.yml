@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: moonwitness_smoke
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U postgres -d moonwitness_smoke]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  api:
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  board:
+    ports:
+      - '127.0.0.1:4174:8080'

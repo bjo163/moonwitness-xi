@@ -1,3 +1,5 @@
+import { isRecord } from '@moonwitness/types';
+
 /** Driver errors may contain SQL bindings; expose only a safe code. */
 export function databaseErrorCode(error: unknown): string | undefined {
   if (typeof error !== 'object' || error === null) return undefined;
@@ -27,8 +29,8 @@ const ERROR_CATEGORIES: Readonly<Record<string, string>> = {
 };
 
 function errorObject(error: unknown): Record<string, unknown> | undefined {
-  if (typeof error !== 'object' || error === null) return undefined;
-  const record = error as Record<string, unknown>;
+  if (!isRecord(error)) return undefined;
+  const record = error;
   const native = record.nativeError;
   if (typeof native === 'object' && native !== null) return errorObject(native) ?? record;
   return record;

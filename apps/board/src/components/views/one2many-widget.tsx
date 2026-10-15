@@ -3,17 +3,18 @@ import { ExternalLink, Loader2, Plus, Trash2 } from 'lucide-react';
 import { Link } from 'react-router';
 import type { Domain, FieldMeta } from '@moonwitness/client';
 import { useRecordMutations, useRecords, useViews } from '@/hooks/use-model';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@moonwitness/ui/components/button';
+import { Skeleton } from '@moonwitness/ui/components/skeleton';
 import { FieldCell } from './fields';
 
 interface One2ManyWidgetProps {
   field: FieldMeta;
+  parentModel: string;
   parentId?: number;
   isCreate: boolean;
 }
 
-export function One2ManyWidget({ field, parentId, isCreate }: One2ManyWidgetProps) {
+export function One2ManyWidget({ field, parentModel, parentId, isCreate }: One2ManyWidgetProps) {
   const targetModel = field.relation;
   const foreignKey = field.foreignKey ?? 'partner_id';
 
@@ -35,6 +36,12 @@ export function One2ManyWidget({ field, parentId, isCreate }: One2ManyWidgetProp
   );
 
   const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const createParams = new URLSearchParams({
+    relation_parent_model: parentModel,
+    relation_parent_id: String(parentId),
+    relation_field: foreignKey,
+  });
 
   const columns = useMemo(() => {
     if (!targetViews?.list?.columns || !targetViews?.fields) return [];
@@ -84,7 +91,7 @@ export function One2ManyWidget({ field, parentId, isCreate }: One2ManyWidgetProp
           size="xs"
           className="gap-1 font-mono text-xs hover:bg-lime hover:text-on-accent"
         >
-          <Link to={`/m/${targetModel}/new`}>
+          <Link to={`/m/${targetModel}/new?${createParams.toString()}`}>
             <Plus className="size-3.5" /> Add New
           </Link>
         </Button>
@@ -135,7 +142,7 @@ export function One2ManyWidget({ field, parentId, isCreate }: One2ManyWidgetProp
                         <Button
                           variant="ghost"
                           size="xs"
-                          className="h-6 px-1.5 text-pink hover:bg-pink hover:text-white"
+                          className="h-6 px-1.5 text-pink hover:bg-pink hover:text-on-pink"
                           onClick={() => handleDelete(row.id as number)}
                           disabled={deletingId === row.id}
                           title="Archive item"

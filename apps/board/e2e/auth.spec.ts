@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { E2E_SUPERADMIN_PASSWORD } from './constants.js';
 
 test('login form renders and rejects invalid credentials', async ({ page }) => {
   await page.goto('/login');
@@ -17,11 +18,38 @@ test('login form renders and rejects invalid credentials', async ({ page }) => {
 test('superadmin can log in, open dashboard, and log out', async ({ page }) => {
   await page.goto('/login');
   await page.getByLabel('Login').fill('superadmin');
-  await page.getByLabel('Password').fill('e2e-only-password');
+  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the board' }).click();
 
   await expect(page).toHaveURL(/\/$/u);
   await expect(page.getByText('Welcome, superadmin!', { exact: false })).toBeVisible();
+  await expect(page.getByRole('img', { name: 'Background job status distribution' })).toBeVisible();
+  await expect(
+    page.getByRole('table', { name: 'Background job status distribution' })
+  ).toBeAttached();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole('img', { name: 'Background job status distribution' })).toBeVisible();
+  const mobileOverflow = await page.evaluate(() => {
+    const clientWidth = document.documentElement.clientWidth;
+    const scrollWidth = document.documentElement.scrollWidth;
+    const elements = Array.from(document.querySelectorAll<HTMLElement>('*'))
+      .map((element) => ({
+        tag: element.tagName.toLowerCase(),
+        className: typeof element.className === 'string' ? element.className : '',
+        right: Math.round(element.getBoundingClientRect().right),
+        width: Math.round(element.getBoundingClientRect().width),
+        scrollWidth: element.scrollWidth,
+        clientWidth: element.clientWidth,
+      }))
+      .filter(
+        ({ right, scrollWidth: elementScrollWidth, clientWidth: elementClientWidth }) =>
+          right > clientWidth || elementScrollWidth > elementClientWidth
+      )
+      .slice(0, 12);
+    return { hasHorizontalOverflow: scrollWidth > clientWidth, clientWidth, scrollWidth, elements };
+  });
+  expect(mobileOverflow.hasHorizontalOverflow, JSON.stringify(mobileOverflow)).toBe(false);
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByRole('button', { name: 'superadmin' }).click();
   await expect(page.getByRole('menuitem', { name: 'Sign out' })).toBeVisible();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();
@@ -38,4 +66,26 @@ test('login layout fits a narrow mobile viewport', async ({ page }) => {
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth
   );
   expect(hasHorizontalOverflow).toBe(false);
+});
+
+test('shared select works with keyboard and profile feedback is announced', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByLabel('Login').fill('superadmin');
+  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await expect(page).toHaveURL(/\/$/u);
+  await expect(page.getByText('Welcome, superadmin!', { exact: false })).toBeVisible();
+
+  await page.goto('/settings');
+  const language = page.getByRole('combobox').first();
+  await language.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('listbox')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('listbox')).toBeHidden();
+  await expect(language).toBeFocused();
+
+  await page.goto('/profile');
+  await page.getByRole('button', { name: 'Save profile' }).click();
+  await expect(page.getByText('Profile updated')).toBeVisible();
 });

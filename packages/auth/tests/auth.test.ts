@@ -8,7 +8,10 @@ const PASSWORD = 'correct-horse-battery';
 
 describe('auth service', () => {
   let db: Knex;
-  const auth = createAuthService({ refreshTtlSeconds: 60 });
+  const auth = createAuthService({
+    refreshTtlSeconds: 60,
+    refreshTokenSecret: 'test-refresh-token-secret-which-is-long-enough',
+  });
 
   beforeEach(async () => {
     db = knex({
@@ -23,7 +26,7 @@ describe('auth service', () => {
     await db.destroy();
   });
 
-  it('logs in with valid credentials and stores only a hash of the refresh token', async () => {
+  it('stores keyed refresh-token fingerprints and rejects a different server key', async () => {
     const session = await auth.login('superadmin', PASSWORD, { userAgent: 'vitest' });
     expect(session).toMatchObject({ login: 'superadmin', role: 'superadmin' });
     const rows = await RefreshToken.query();
@@ -31,6 +34,34 @@ describe('auth service', () => {
     expect(rows[0].token_hash).not.toBe(session.refreshToken);
     expect(rows[0].token_hash).toMatch(/^[a-f0-9]{64}$/);
     expect(rows[0].user_agent).toBe('vitest');
+    await expect(
+      createAuthService({
+        refreshTokenSecret: 'different-refresh-token-secret-long-enough',
+      }).refresh(session.refreshToken)
+    ).rejects.toBeInstanceOf(AuthError);
+  }, 20000);
+
+  it('models JWT key rotation by rejecting old refresh sessions and allowing a new login', async () => {
+    const previousSession = await auth.login('superadmin', PASSWORD, {
+      userAgent: 'pre-rotation',
+    });
+    const rotatedAuth = createAuthService({
+      refreshTtlSeconds: 60,
+      refreshTokenSecret: 'rotated-refresh-token-secret-which-is-long-enough',
+    });
+
+    await expect(rotatedAuth.refresh(previousSession.refreshToken)).rejects.toBeInstanceOf(
+      AuthError
+    );
+
+    const recoveredSession = await rotatedAuth.login('superadmin', PASSWORD, {
+      userAgent: 'post-rotation',
+    });
+    expect(recoveredSession.userId).toBe(previousSession.userId);
+    expect(recoveredSession.refreshToken).not.toBe(previousSession.refreshToken);
+    await expect(rotatedAuth.refresh(recoveredSession.refreshToken)).resolves.toMatchObject({
+      userId: previousSession.userId,
+    });
   }, 20000);
 
   it('registers a new user with partner and prevents duplicate logins', async () => {
@@ -116,5 +147,20 @@ describe('auth service', () => {
     await auth.revokeAllForUser(a.userId);
     await expect(auth.refresh(a.refreshToken)).rejects.toBeInstanceOf(AuthError);
     await expect(auth.refresh(b.refreshToken)).rejects.toBeInstanceOf(AuthError);
+  }, 20000);
+
+  it('revokes outstanding refresh sessions across all users', async () => {
+    const admin = await auth.login('superadmin', PASSWORD);
+    const user = await auth.register({
+      login: 'session-revocation-user',
+      password: 'session-revocation-password',
+      name: 'Session Revocation User',
+      email: 'session-revocation@example.com',
+    });
+    const revokedCount = await auth.revokeAllSessions();
+
+    expect(revokedCount).toBe(2);
+    await expect(auth.refresh(admin.refreshToken)).rejects.toBeInstanceOf(AuthError);
+    await expect(auth.refresh(user.refreshToken)).rejects.toBeInstanceOf(AuthError);
   }, 20000);
 }, 20000);

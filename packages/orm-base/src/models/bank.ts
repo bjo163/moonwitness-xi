@@ -22,9 +22,9 @@ export const PartnerBank = defineModel('base.partner_bank', {
   table: 'partner_banks',
   order: 'is_primary desc, id desc',
   fields: {
-    acc_number: fields.string({ required: true, label: 'Account Number' }),
+    acc_number: fields.string({ required: true, sensitive: true, label: 'Account Number' }),
     sanitized_acc_number: fields.string({ label: 'Sanitized Account Number' }),
-    acc_holder_name: fields.string({ label: 'Account Holder Name' }),
+    acc_holder_name: fields.string({ sensitive: true, label: 'Account Holder Name' }),
     partner: fields.belongsTo(Partner, { required: true, label: 'Account Owner / Partner' }),
     bank: fields.belongsTo(Bank, { label: 'Bank' }),
     currency: fields.belongsTo(Currency, { label: 'Account Currency' }),

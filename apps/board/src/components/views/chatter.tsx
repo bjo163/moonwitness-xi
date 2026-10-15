@@ -1,9 +1,11 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from '@moonwitness/ui/components/toast';
 import {
   Calendar,
   CheckCircle2,
   Clock,
+  Download,
   File,
   FileArchive,
   FileCode,
@@ -21,11 +23,13 @@ import {
   Zap,
 } from 'lucide-react';
 import { client } from '@/lib/client';
-import { useAuth } from '@/hooks/use-auth';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+import { formatDateTime } from '@/lib/date-format';
+import { scopedQueryKey } from '@/lib/query-scope';
+import { useAuth } from '@/hooks/use-auth-context';
+import { Button } from '@moonwitness/ui/components/button';
+import { Input } from '@moonwitness/ui/components/input';
+import { Textarea } from '@moonwitness/ui/components/textarea';
+import { Label } from '@moonwitness/ui/components/label';
 import { Doodle } from '@/components/manga/effects';
 import { cn } from '@/lib/utils';
 
@@ -52,7 +56,6 @@ interface AttachmentRecord {
   resource_id: number;
   mimetype: string;
   size_bytes: number;
-  storage_key: string;
   checksum?: string;
   create_date?: string;
 }
@@ -78,7 +81,7 @@ const TYPE_COLORS = {
   todo: 'border-2 border-ink bg-lime text-on-accent',
   call: 'border-2 border-ink bg-paper-raised text-ink',
   meeting: 'border-2 border-ink bg-ink text-paper',
-  email: 'border-2 border-ink bg-pink text-white',
+  email: 'border-2 border-ink bg-pink text-on-pink',
 };
 
 function formatBytes(bytes: number) {
@@ -107,20 +110,26 @@ export function Chatter({ model, recordId }: ChatterProps) {
   const [submitting, setSubmitting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // New activity form state
   const [newSummary, setNewSummary] = useState('');
   const [newType, setNewType] = useState<'todo' | 'call' | 'meeting' | 'email'>('todo');
-  const [newDeadline, setNewDeadline] = useState(
-    new Date(Date.now() + 86400000).toISOString().slice(0, 10)
+  const [newDeadline, setNewDeadline] = useState(() =>
+    new Date(now + 86400000).toISOString().slice(0, 10)
   );
   const [newNote, setNewNote] = useState('');
 
   // 1. Query activities for this specific record
   const { data: activitiesData, isLoading: activitiesLoading } = useQuery({
-    queryKey: ['records', 'base.activity', 'for_record', model, recordId],
+    queryKey: scopedQueryKey(['records', 'base.activity', 'for_record', model, recordId]),
     queryFn: () =>
       client.model<ActivityRecord>('base.activity').searchRead({
         domain: [
@@ -134,7 +143,7 @@ export function Chatter({ model, recordId }: ChatterProps) {
 
   // 2. Query attachments for this record
   const { data: attachmentsData, isLoading: attachmentsLoading } = useQuery({
-    queryKey: ['records', 'base.attachment', 'for_record', model, recordId],
+    queryKey: scopedQueryKey(['records', 'base.attachment', 'for_record', model, recordId]),
     queryFn: () =>
       client.model<AttachmentRecord>('base.attachment').searchRead({
         domain: [
@@ -148,7 +157,7 @@ export function Chatter({ model, recordId }: ChatterProps) {
 
   // 3. Query audit logs for this specific record (admins only)
   const { data: auditData, isLoading: auditLoading } = useQuery({
-    queryKey: ['records', 'base.audit_log', 'for_record', model, recordId],
+    queryKey: scopedQueryKey(['records', 'base.audit_log', 'for_record', model, recordId]),
     queryFn: () =>
       client.model<AuditLogRecord>('base.audit_log').searchRead({
         domain: [
@@ -219,21 +228,18 @@ export function Chatter({ model, recordId }: ChatterProps) {
     try {
       const fileList = Array.from(files);
       for (const file of fileList) {
-        const key = `vault_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-        await client.model('base.attachment').create({
-          name: file.name,
-          resource_model: model,
-          resource_id: recordId,
-          mimetype: file.type || 'application/octet-stream',
-          size_bytes: file.size,
-          storage_key: key,
-        });
+        if (file.size > 10 * 1024 * 1024) throw new Error(`${file.name} exceeds the 10 MiB limit`);
+        await client
+          .model<AttachmentRecord>('base.attachment')
+          .uploadAttachment(model, recordId, file);
       }
       queryClient.invalidateQueries({
         queryKey: ['records', 'base.attachment'],
       });
+      toast.success(`${fileList.length} file${fileList.length === 1 ? '' : 's'} uploaded`);
     } catch (err) {
       console.error('Failed to upload attachments:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to upload attachment');
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -248,6 +254,23 @@ export function Chatter({ model, recordId }: ChatterProps) {
       });
     } catch (err) {
       console.error('Failed to delete attachment:', err);
+    }
+  };
+
+  const handleDownloadAttachment = async (attachment: AttachmentRecord) => {
+    try {
+      const blob = await client
+        .model<AttachmentRecord>('base.attachment')
+        .downloadAttachment(attachment.id);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = attachment.name;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download attachment:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to download attachment');
     }
   };
 
@@ -294,7 +317,7 @@ export function Chatter({ model, recordId }: ChatterProps) {
             <Clock className="size-3.5" />
             Activities
             {plannedCount > 0 && (
-              <span className="grid size-4 place-items-center border border-ink bg-pink text-[10px] font-bold text-white shadow-[1px_1px_0_0_var(--ink)]">
+              <span className="grid size-4 place-items-center border border-ink bg-pink text-[10px] font-bold text-on-pink shadow-[1px_1px_0_0_var(--ink)]">
                 {plannedCount}
               </span>
             )}
@@ -467,9 +490,7 @@ export function Chatter({ model, recordId }: ChatterProps) {
                 const Icon = TYPE_ICONS[act.activity_type] || CheckCircle2;
                 const isDone = act.state === 'done';
                 const isOverdue =
-                  !isDone &&
-                  act.deadline &&
-                  new Date(act.deadline) < new Date(Date.now() - 86400000);
+                  !isDone && act.deadline && new Date(act.deadline).getTime() < now - 86400000;
 
                 return (
                   <div
@@ -522,7 +543,7 @@ export function Chatter({ model, recordId }: ChatterProps) {
                               className={cn(
                                 'font-mono text-xs px-1.5 py-0.5 border',
                                 isOverdue
-                                  ? 'border-pink bg-pink text-white font-bold'
+                                  ? 'border-pink bg-pink text-on-pink font-bold'
                                   : 'border-ink/20 text-ink-faint'
                               )}
                             >
@@ -602,7 +623,8 @@ export function Chatter({ model, recordId }: ChatterProps) {
             <UploadCloud className="mx-auto size-8 text-ink-faint mb-2" />
             <p className="font-bold text-sm text-ink">Drop files here or click to browse</p>
             <p className="font-mono text-xs text-ink-faint mt-1">
-              Supports documents, images, spreadsheets, and archives linked to {model} #{recordId}
+              Files up to 10 MiB · documents, images, spreadsheets, and archives linked to {model} #
+              {recordId}
             </p>
           </div>
 
@@ -641,6 +663,15 @@ export function Chatter({ model, recordId }: ChatterProps) {
                     </div>
 
                     <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDownloadAttachment(file)}
+                        className="size-7 text-ink-faint hover:text-lime hover:bg-lime/10"
+                        title="Download attachment"
+                      >
+                        <Download className="size-3.5" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -721,7 +752,7 @@ export function Chatter({ model, recordId }: ChatterProps) {
                               ? 'border-lime bg-lime text-on-accent'
                               : entry.operation === 'write'
                                 ? 'border-ink bg-ink text-paper'
-                                : 'border-pink bg-pink text-white'
+                                : 'border-pink bg-pink text-on-pink'
                           )}
                         >
                           {entry.operation}
@@ -732,7 +763,7 @@ export function Chatter({ model, recordId }: ChatterProps) {
                       </div>
                       <span className="text-[10px] text-ink-faint">
                         {entry.create_date
-                          ? new Date(String(entry.create_date)).toLocaleString()
+                          ? formatDateTime(String(entry.create_date))
                           : `#${entry.id}`}
                       </span>
                     </div>

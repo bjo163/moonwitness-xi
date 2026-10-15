@@ -2,7 +2,7 @@
 
 ## Tujuan dan batas aktivasi
 
-Setiap task roadmap mempunyai satu issue GitHub yang dapat ditelusuri ke source, bukti, commit, CI, PR, dan release. Dokumen ini merencanakan automation tersebut. Menulis rencana ini belum membuat issues atau mengaktifkan auto-merge; bootstrap dilakukan dalam M11.14 setelah dry-run dan pilot.
+Setiap task roadmap mempunyai satu issue GitHub yang dapat ditelusuri ke source, bukti, commit, CI, PR, dan release. Push `dev` otomatis merekonsiliasi hanya task yang isi checklist, index, kartu, atau evidence berubah. Apply dibatasi lima task per run, menghitung ulang state remote sebelum menulis, dan tetap terpisah dari auto-merge/release. Backfill issue lama memerlukan pilihan ID eksplisit; perubahan besar yang melewati batas harus dipecah menjadi batch terkontrol.
 
 Source code tetap menggunakan hanya `main` dan `dev`. Tidak membuat issue branches, dependency branches, release branches, maupun `gh-pages`.
 
@@ -27,7 +27,7 @@ Identitas stabil menggunakan repository ID plus task ID. Title dapat berubah, no
 Contoh body target:
 
 ```markdown
-<!-- moonwitness-task: M11.03 -->
+<!-- moonwitness-task: <numeric-repository-id>:M11.03 -->
 <!-- BEGIN MOONWITNESS MANAGED -->
 
 Task: M11.03
@@ -81,6 +81,8 @@ Implementation status dan delivery stage adalah dua dimensi. Task audit read-onl
 
 Manual close tanpa evidence menimbulkan `needs-triage` dan report. Jangan membuat perang reopen/close otomatis; perubahan source/status hanya diterima setelah maintainer dan evidence direkonsiliasi. Event tidak tepercaya tidak boleh memicu commit, shell command, release, atau arbitrary URL fetch.
 
+Evaluator lokal di `scripts/roadmap/lifecycle.mjs` hanya memproyeksikan fakta terstruktur yang diberikan pemanggil: source ancestry, required check runs pada SHA dev saat ini, ancestry main, dan manifest release. Collector `scripts/roadmap/collect-lifecycle-snapshot-cli.mjs` membaca `ci-technical-gate` dari run `ci.yml` untuk PR same-repository `dev` → `main` dengan exact dev SHA dan GitHub Releases via `gh`, lalu memakai full checkout untuk membuktikan ancestry source/dev/main/tag; status kerja dan acceptance berasal dari checkbox tervalidasi serta evidence file. Technical gate hanya sukses bila plan dan seluruh lane terpilih sukses; `ci-gate` tetap menjadi status check promosi sesuai kebijakan M1.02–M1.06 dan dapat menunggu CODEOWNER. Source SHA yang tidak ditemukan di evidence tidak dipinjam dari evidence commit; task tetap complete secara kerja tetapi delivery tidak diverifikasi dan issue tidak menjadi kandidat close. Importer `scripts/roadmap/lifecycle-snapshot.mjs` menolak repo/SHA yang berbeda, snapshot lebih tua dari lima menit, task hilang/duplikat/tidak dikenal. Hard dependency yang belum complete dipertahankan sebagai blocker dan mencegah issue close, termasuk jika acceptance checkbox task sudah dicentang. Planner default tetap read-only dengan `--lifecycle-snapshot <path>`. Apply hanya pada manual dispatch dev, task IDs eksplisit (maksimal lima), fresh snapshot exact SHA, fresh remote re-plan, permission `issues: write`, dan writer coordinator. Reconciler hanya menutup issue yang sudah ada dan masih open bila snapshot membuktikan acceptance, dependency dan `verified-dev`/delivery criteria; closed manual tetap closed dan race perubahan state menggagalkan PATCH. Snapshot ephemeral dihapus setelah dipakai. Hosted lifecycle write pilot masih harus dibuktikan sebelum M11.07 ditutup.
+
 ## Commit/push yang wajib pada setiap unit selesai
 
 1. Selesaikan satu perubahan logis beserta acceptance relevan.
@@ -122,16 +124,16 @@ Auto-merge GitHub menunggu required checks dan reviews; setting repository dan e
 ## Workflow target dan bootstrap
 
 1. Validator lokal memeriksa index/cards/dependencies dan menghasilkan desired issues.
-2. Dry-run membaca seluruh remote managed issues dan menulis plan create/update/no-op/conflict.
-3. Uji satu task pilot, termasuk title rename, notes maintainer dan repeated run.
-4. Bulk import dijalankan bertahap dengan pembatasan mutation rate dan checkpoint.
-5. Aktifkan push-trigger trusted dev roadmap/evidence, periodic reconciliation, serta manual dispatch.
+2. Dry-run membaca seluruh remote managed issues dan menulis plan create/update/no-op/conflict. Pada repository publik, planning read-only tidak memerlukan token; private repositories tetap memerlukan credential read yang sesuai.
+3. Push `dev` membandingkan checklist, objek task index, seksi kartu, dan evidence antara `before` dan `head`; hanya Task ID yang berubah dikirim ke bounded apply.
+4. Apply membaca ulang semua issue open/closed, menolak fingerprint basi/konflik, memastikan metadata milestone/label, kemudian menulis serial dengan recovery marker dan maksimal lima task.
+5. Backfill otomatis memilih maksimal lima operasi create/update berikutnya per hari dari plan pada SHA `dev` terbaru. Job terjadwal berjalan dari workflow `main` tetapi checkout dan guard apply wajib membuktikan SHA `dev` masih sama dengan plan; manual dispatch tetap menyediakan Task ID eksplisit atau pilihan next batch.
 6. Tambahkan lifecycle updates dari CI/promosi/release dengan source SHA validation.
 7. Aktifkan dashboard/Projects projection hanya setelah core sync stabil.
 
 Current default branch masih main. Scheduled/manual workflow discovery dan GitHub App setup harus diuji saat bootstrap; workflow yang hanya ada di dev mungkin belum menjadi entry point schedule/manual sebagaimana diharapkan. Promosikan workflow lewat jalur terverifikasi sebelum mengklaim schedule aktif.
 
-GitHub API mutations dilakukan serial dan menghormati Retry-After/rate reset. Hindari membuat ratusan issue secara paralel; jalur kerja agen boleh paralel, API writes tetap terkoordinasi. [Best practices GitHub REST API](https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api).
+GitHub API mutations dilakukan serial dan menghormati Retry-After/rate reset. Automatic push sync hanya menerapkan task yang berubah pada exact push; job backlog terjadwal membuat/memperbarui paling banyak lima task per hari sampai seluruh projection sinkron. Keduanya menggunakan exact SHA dan shared writer coordinator. Jalur kerja agen boleh paralel, API writes tetap terkoordinasi. [Best practices GitHub REST API](https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api).
 
 ## Test wajib untuk reconciler
 

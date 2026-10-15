@@ -22,6 +22,13 @@ export interface SearchQueryParams {
   count?: string;
 }
 
+export interface GroupCountQueryParams {
+  domain?: string;
+  group_by?: string;
+  limit?: string;
+  offset?: string;
+}
+
 export interface DeleteQueryParams {
   hard?: string;
 }

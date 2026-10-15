@@ -8,19 +8,21 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: sync-main-into-dev
+  group: repository-write-coordinator
   cancel-in-progress: false
 
 jobs:
   sync:
     name: merge-main-into-dev
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Synchronize without overwriting concurrent dev work
@@ -63,4 +65,4 @@ jobs:
             exit 1
           fi
 
-          git push origin HEAD:refs/heads/dev
+          node scripts/push-expected-ref.mjs origin HEAD refs/heads/dev "$expected_dev"

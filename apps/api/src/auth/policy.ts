@@ -2,7 +2,7 @@
 export type Operation = 'read' | 'create' | 'write' | 'unlink' | 'action';
 
 /** Never reachable through the generic API, whatever the role (tokens, sessions, ...). */
-const INTERNAL_PREFIXES = ['auth.', 'base.job', 'base.cron', 'base.outbox_event'];
+const INTERNAL_PREFIXES = ['auth.', 'base.job', 'base.cron', 'base.outbox_event', 'workflow.'];
 
 /** Only administrative roles may touch these; ordinary users use dedicated endpoints. */
 const ADMIN_ONLY_MODELS = new Set([

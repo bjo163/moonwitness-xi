@@ -143,6 +143,31 @@ export interface SearchReadResult<T = Record<string, unknown>> {
   total?: number;
 }
 
+export type GroupCountValue = string | number | boolean | null;
+
+export interface GroupCountOptions {
+  domain?: Domain;
+  groupBy: readonly string[];
+  /** Server default 100, maximum 500 groups. */
+  limit?: number;
+  /** Server default 0, maximum 10,000. Use `hasMore` from the result to continue. */
+  offset?: number;
+}
+
+export interface GroupCountRow {
+  values: Record<string, GroupCountValue>;
+  count: number;
+}
+
+export interface GroupCountResult {
+  model: string;
+  groupBy: string[];
+  groups: GroupCountRow[];
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+}
+
 export interface TokenStorage {
   getItem(key: string): string | null | Promise<string | null>;
   setItem(key: string, value: string): void | Promise<void>;

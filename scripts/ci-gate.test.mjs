@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { isCiGatePassing } from './ci-gate.mjs';
+import { isCiGatePassing, renderCiJobSummary } from './ci-gate.mjs';
 
 const successfulResults = {
   quality: 'success',
@@ -8,6 +8,7 @@ const successfulResults = {
   browser: 'success',
   containers: 'success',
   automation: 'success',
+  ui: 'success',
 };
 
 test('accepts a success from every required job', () => {
@@ -34,8 +35,14 @@ test('rejects a missing required job', () => {
 test('accepts intentionally skipped jobs absent from a valid affected plan', () => {
   assert.equal(
     isCiGatePassing(
-      { ...successfulResults, integration: 'skipped', browser: 'skipped', containers: 'skipped' },
-      ['quality', 'automation'],
+      {
+        ...successfulResults,
+        integration: 'skipped',
+        browser: 'skipped',
+        containers: 'skipped',
+        automation: 'skipped',
+      },
+      ['quality'],
       'success'
     ),
     true
@@ -57,8 +64,11 @@ test('rejects any run whose affected plan failed', () => {
   assert.equal(isCiGatePassing(successfulResults, ['quality', 'automation'], 'failure'), false);
 });
 
-test('rejects a plan that omits the always-required automation job', () => {
-  assert.equal(isCiGatePassing(successfulResults, ['quality'], 'success'), false);
+test('accepts a package-specific plan without automation when its lane is skipped', () => {
+  assert.equal(
+    isCiGatePassing({ ...successfulResults, automation: 'skipped' }, ['quality'], 'success'),
+    true
+  );
 });
 
 test('rejects unknown jobs in the plan', () => {
@@ -66,4 +76,16 @@ test('rejects unknown jobs in the plan', () => {
     isCiGatePassing(successfulResults, ['quality', 'automation', 'unknown'], 'success'),
     false
   );
+});
+
+test('summarizes success, failure, and intentionally skipped jobs without environment data', () => {
+  const summary = renderCiJobSummary(
+    { ...successfulResults, integration: 'failure', browser: 'skipped' },
+    ['quality', 'integration', 'automation'],
+    'success'
+  );
+  assert.match(summary, /Overall: \*\*failed\*\*/);
+  assert.match(summary, /\| integration \| failure \|/);
+  assert.match(summary, /\| browser \| not selected \|/);
+  assert.doesNotMatch(summary, /password|token|cookie|DATABASE_URL/i);
 });

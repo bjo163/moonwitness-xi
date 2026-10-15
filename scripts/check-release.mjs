@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { readdir } from 'node:fs/promises';
 import process from 'node:process';
 import { fileURLToPath, URL as NodeURL } from 'node:url';
+import { findWorkspaceVersionMismatches } from './workspace-version-policy.mjs';
 
 const log = (message) => process.stdout.write(`${message}\n`);
 const fail = (message) => process.stderr.write(`${message}\n`);
@@ -44,12 +45,13 @@ for (const path of manifests) {
 }
 
 const mismatches = [];
+const workspaceManifests = [];
 for (const path of existingManifests) {
   const manifest = JSON.parse(await readFile(`${workspacePath}/${path}`, 'utf8'));
-  if (manifest.private !== true && manifest.version !== root.version) {
-    mismatches.push(`${manifest.name}: ${manifest.version} (expected ${root.version})`);
-  }
+  workspaceManifests.push({ path, manifest });
 }
+const workspaceMismatches = findWorkspaceVersionMismatches(root.version, workspaceManifests);
+mismatches.push(...workspaceMismatches);
 const apiManifest = JSON.parse(await readFile(`${workspacePath}/apps/api/package.json`, 'utf8'));
 if (apiManifest.version !== root.version) {
   mismatches.push(`@moonwitness/api: ${apiManifest.version} (expected ${root.version})`);

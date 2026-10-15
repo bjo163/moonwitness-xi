@@ -133,11 +133,12 @@ const authPlugin: FastifyPluginAsync<AuthPluginOptions> = async (fastify, option
     if (companyMemberships.length === 0) {
       return reply.code(403).send({ success: false, error: 'No active company membership' });
     }
-    const selectedMembership = parsedCompanyHeader
-      ? companyMemberships.find(({ company_id }) => company_id === parsedCompanyHeader)
-      : (companyMemberships.find(({ is_default }) => is_default) ??
-        companyMemberships.find(({ company_id }) => company_id === partner.company_id) ??
-        companyMemberships[0]);
+    const selectedMembership =
+      parsedCompanyHeader !== undefined
+        ? companyMemberships.find(({ company_id }) => company_id === parsedCompanyHeader)
+        : (companyMemberships.find(({ is_default }) => is_default) ??
+          companyMemberships.find(({ company_id }) => company_id === partner.company_id) ??
+          companyMemberships[0]);
     if (parsedCompanyHeader !== undefined && !selectedMembership) {
       return reply.code(403).send({ success: false, error: 'Company access denied' });
     }

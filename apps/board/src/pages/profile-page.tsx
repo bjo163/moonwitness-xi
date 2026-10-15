@@ -1,13 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Building2, Contact, Mail, ShieldCheck, UserRound } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@moonwitness/ui/components/toast';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useAuth } from '@/hooks/use-auth';
+import { Button } from '@moonwitness/ui/components/button';
+import { Input } from '@moonwitness/ui/components/input';
+import { Label } from '@moonwitness/ui/components/label';
+import { Skeleton } from '@moonwitness/ui/components/skeleton';
+import { useAuth } from '@/hooks/use-auth-context';
 import { client } from '@/lib/client';
 
 interface PartnerProfile {
@@ -32,16 +32,18 @@ export function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const queryClient = useQueryClient();
   const { data, isLoading, error } = useQuery({
-    queryKey: ['profile', user?.partner_id],
+    queryKey: ['profile', user?.id],
     queryFn: async () => {
-      if (!user?.partner_id) return undefined;
+      if (!user) return null;
+      const currentUser = await client.getMe();
+      if (!currentUser.partner_id) return null;
       const result = await client.model<PartnerProfile>('base.partner').searchRead({
-        domain: [['id', '=', user.partner_id]],
+        domain: [['id', '=', currentUser.partner_id]],
         limit: 1,
       });
-      return result.records[0];
+      return result.records[0] ?? null;
     },
-    enabled: Boolean(user?.partner_id),
+    enabled: Boolean(user),
   });
 
   const saveProfile = async (event: FormEvent<HTMLFormElement>) => {
@@ -61,7 +63,7 @@ export function ProfilePage() {
           website: value('website') || null,
         },
       });
-      await queryClient.invalidateQueries({ queryKey: ['profile', user?.partner_id] });
+      await queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
       toast.success('Profile updated');
     } catch (saveError) {
       toast.error(saveError instanceof Error ? saveError.message : 'Could not update profile');
@@ -80,17 +82,17 @@ export function ProfilePage() {
       </header>
 
       <section className="ink-panel overflow-hidden bg-card">
-        <div className="flex flex-wrap items-center gap-4 border-b-2 border-ink bg-lime/20 p-6 sm:p-8">
+        <div className="grid grid-cols-[4rem_minmax(0,1fr)] items-center gap-4 border-b-2 border-ink bg-lime/20 p-6 sm:flex sm:flex-wrap sm:p-8">
           <div className="grid size-16 place-items-center border-2 border-ink bg-lime shadow-ink-sm">
             <UserRound className="size-8" />
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="truncate font-display text-3xl uppercase">
+            <h2 className="break-words font-display text-2xl uppercase sm:text-3xl">
               {data?.name ?? user?.login}
             </h2>
             <p className="font-mono text-sm text-ink-soft">@{user?.login}</p>
           </div>
-          <span className="inline-flex items-center gap-1.5 border-2 border-ink bg-paper-raised px-3 py-1.5 font-mono text-xs font-bold uppercase">
+          <span className="col-start-2 inline-flex w-fit items-center gap-1.5 border-2 border-ink bg-paper-raised px-3 py-1.5 font-mono text-xs font-bold uppercase sm:ml-auto">
             <ShieldCheck className="size-4" /> {user?.role}
           </span>
         </div>
@@ -187,12 +189,14 @@ function ProfileDetail({
   value?: string;
 }) {
   return (
-    <div className="flex min-h-20 items-start gap-3 bg-card p-5">
-      <Icon className="mt-0.5 size-4 shrink-0 text-ink-faint" />
-      <div className="min-w-0">
-        <dt className="font-mono text-[11px] uppercase tracking-wider text-ink-faint">{label}</dt>
-        <dd className="mt-1 break-words text-sm font-medium">{value || 'Not provided'}</dd>
-      </div>
+    <div className="grid min-h-20 grid-cols-[1rem_minmax(0,1fr)] items-start gap-x-3 bg-card p-5">
+      <dt className="col-span-2 flex items-center gap-3 font-mono text-[11px] uppercase tracking-wider text-ink-faint">
+        <Icon className="size-4 shrink-0" aria-hidden="true" />
+        {label}
+      </dt>
+      <dd className="col-start-2 mt-1 break-words text-sm font-medium">
+        {value || 'Not provided'}
+      </dd>
     </div>
   );
 }

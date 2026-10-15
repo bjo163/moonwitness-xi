@@ -158,6 +158,8 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 2. Tetapkan concurrency editing policy sebelum menambah version field.
 3. Test transaction failure, timezone boundary, duplicate write dan error mapping.
 
+**Conflict contract:** Generic record updates use atomic transactions with audit/outbox writes. Concurrent writes follow last-commit-wins; there is no optimistic version token or stale-write conflict response yet. Clients that need conflict detection must serialize edits until a version contract is implemented.
+
 ### Verifikasi dan syarat selesai
 
 Constraint error memiliki response aman; rollback tidak meninggalkan setengah data; chosen conflict behavior terdokumentasi.
@@ -202,73 +204,88 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ## M4.12 — Attachment: izin upload/download, size/MIME, filename/path traversal, storage ownership, dan retensi.
 
-- **Prasyarat:** M0.01
+- **Prasyarat:** M4.06
+- **Status:** Selesai untuk provider filesystem lokal; object-storage adapter, malware scanning, dan orphan sweeper tetap dicatat sebagai M9.02.
+- **Bukti:** [M4.12](evidence/M4.12.md); kontrak runtime lengkap di [attachments.md](../engineering/attachments.md).
+
 - **Baca/periksa:** Attachment model/routes/storage implementation dari inventory.
 - **Deliverable:** Attachment hardening tests.
 
 ### Langkah pelaksanaan
 
-1. Audit ownership dari upload sampai download/delete.
-2. Batasi size/type dan normalisasi metadata; object key tidak berasal langsung dari path pengguna.
-3. Uji traversal, cross-company object access dan missing/deleted blob.
+1. Audit ownership dari upload sampai download/delete; upload dan download wajib menyelesaikan parent record melalui row/company scope request.
+2. Terima byte stream terbatas 10 MiB, MIME allowlist, nama UTF-8 aman maksimal 255 karakter, key UUID server-generated, checksum SHA-256, serta tulis temp-file mode 0600 lalu rename atomik.
+3. Sembunyikan object key dari REST/RPC, view, audit, dan client; larang create/write metadata lewat generic API.
+4. Gunakan forced download + `nosniff`/private cache headers; batasi upload 20 request per menit per IP.
+5. Semantik retensi: archive mempertahankan binary untuk restore; hard delete metadata diikuti penghapusan binary. Dokumentasikan konsekuensi storage lokal dan proses orphan/expiry yang masih belum tersedia.
+6. Uji metadata palsu, MIME di luar allowlist, traversal, size, content round-trip, akses lintas user, transaksi gagal, dan penghapusan file.
 
 ### Verifikasi dan syarat selesai
 
-Unauthorized download tidak berhasil; invalid upload tak meninggalkan orphan tanpa cleanup.
+Unauthorized download tidak berhasil; invalid upload tidak menulis file; kegagalan metadata membersihkan file; hard delete menghapus bytes dan archive mempertahankan bytes.
 
-Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M4.12.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
+Batas dukungan provider dan pekerjaan storage terdistribusi dicatat eksplisit pada bukti M4.12 dan M9.02; ini tidak menghalangi kontrak lokal yang telah diuji.
 
 ## M4.13 — Operasional: graceful shutdown, DB pools/timeouts, request ID, redaksi log, readiness/liveness API dan worker.
 
 - **Prasyarat:** M0.01
 - **Baca/periksa:** server.ts; health.routes.ts; observability; worker commands.
-- **Deliverable:** Runtime lifecycle tests.
+- **Deliverable:** Runtime lifecycle tests dan [runtime operations contract](../engineering/runtime-operations.md).
 
 ### Langkah pelaksanaan
 
-1. Pisahkan liveness dari readiness dependency.
-2. Implementasikan stop accepting lalu drain in-flight sesuai timeout dan tutup pools.
-3. Redact config/logs dan expose metrics low-cardinality tanpa data pribadi.
+1. Pisahkan liveness API/worker dari readiness dependency; readiness menjalankan koneksi DB dan no-store.
+2. Batasi pool, waktu tunggu koneksi, dan statement timeout PostgreSQL per proses; validasi nilai startup dan hitung kapasitas agregat semua replicas/workers.
+3. Validasi `X-Request-ID`, buat UUID fallback, dan kembalikan ID yang sama tanpa menggunakannya sebagai label metric.
+4. Pada SIGINT/SIGTERM, API berhenti menerima request, menguras request yang berjalan, menutup socket setelah deadline, lalu menutup pool. Workers menghentikan polling, menandai probe not-ready, menyelesaikan pekerjaan aktif, dan menutup pool.
+5. Sediakan probe internal worker opsional yang mati secara default; loopback/private bind harus eksplisit.
+6. Audit error/log context agar tidak membocorkan secret atau bindings SQL; metrics tetap pakai route template dengan cardinality rendah.
 
 ### Verifikasi dan syarat selesai
 
-SIGTERM runner selesai dalam batas; readiness false saat dependency wajib down; no secret log.
+Tes membuktikan deadline shutdown/socket close, drain job aktif, probe liveness/readiness API dan worker, invalid request ID fallback, batas pool/query, database-unavailable 503, dan tidak adanya secret pada log.
 
-Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M4.13.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
+Implementasi dan hasil CI dicatat dalam [evidence M4.13](evidence/M4.13.md). Probe worker opsional dan default-nya nonaktif; operator perlu mengaktifkannya pada jaringan privat bila orkestrator membutuhkannya. Promosi ke `main` tetap mengikuti CODEOWNER gate.
 
-## M4.14 — Restore drill dengan data aplikasi, relasi, akun test dan integrity checks; tetapkan target pemulihan berbasis hasil pengukuran.
+## M4.14 — Restore drill dengan data aplikasi, relasi, akun test dan integrity checks; tetapkan target pemulihan berbasis hasil pengukuran. **Selesai**
 
 - **Prasyarat:** M4.02, M4.03
 - **Baca/periksa:** backup-postgres.sh; restore-postgres.sh; PostgreSQL fixture.
-- **Deliverable:** Application restore drill report.
+- **Deliverable:** Isolated application restore drill in CI and a report of measured backup/restore duration, validated integrity, and explicit RPO/RTO scope.
 
 ### Langkah pelaksanaan
 
-1. Seed company/users/partners/relations dengan credential sintetis; backup ke temp dir.
-2. Restore ke database baru terisolasi dengan confirmation safeguards.
-3. Verifikasi counts/external IDs/relations dan login fixture; ukur durasi backup/restore.
+1. Buat dua database dengan nama acak pada PostgreSQL CI service; fixture hanya menerima URL database source/target yang diturunkan dari maintenance URL.
+2. Instal Base/Auth/Jobs secara programatik pada source, set password admin sintetis, lalu buat akun fixture ber-password acak melalui alur auth normal, partner parent/child, alamat primary, company membership, dan group membership.
+3. Catat jumlah row pada tabel aplikasi, external ID default company/user, dan ID fixture; buat custom-format dump di direktori sementara dengan permission terbatas.
+4. Jalankan restore ke target kosong melalui skrip operasional yang sama. Kirim konfirmasi nama target yang salah lebih dahulu dan wajibkan skrip menolaknya sebelum mengirim nama target yang tepat.
+5. Pada target, bandingkan count dan seluruh ID, periksa foreign-key references company/partner/address/membership, lalu login akun sintetis untuk membuktikan password hash dan data auth benar-benar pulih.
+6. Ukur waktu dump dan restore pada dataset fixture, laporkan sebagai pengukuran run tersebut saja; bersihkan database, dump, dan file ekspektasi pada jalur sukses maupun gagal.
+7. Jangan mengklaim RPO atau RTO produksi dari CI. RPO bergantung pada frekuensi serta keberhasilan backup off-host; RTO operasional juga mencakup provision, recovery decision, traffic cutover, dan validasi layanan.
 
 ### Verifikasi dan syarat selesai
 
-Restore mismatch confirmation ditolak; restored app integrity pass; tidak menyentuh DB sumber.
+Semua acceptance diverifikasi dalam [evidence M4.14](evidence/M4.14.md). Hasil durasi berlaku untuk fixture CI itu; RPO/RTO produksi belum ditetapkan karena frekuensi backup off-host dan waktu cutover belum terukur.
 
-Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M4.14.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
+Detail command, hasil, SHA, hosted CI, batasan RPO/RTO, serta cleanup dicatat pada [evidence M4.14](evidence/M4.14.md).
 
 ## M4.15 — Tambahkan baseline load/query tests dan budget regresi realistis; ukur N+1 serta operasi yang memperbesar penggunaan memori.
 
 - **Prasyarat:** M0.03, M0.06
 - **Baca/periksa:** base.model.ts; generic routes; baseline datasets.
-- **Deliverable:** Performance fixtures dan report.
+- **Deliverable:** Isolated PostgreSQL workload fixture, deterministic query-count budgets, EXPLAIN plans, and a sanitized CI performance report artifact.
 
 ### Langkah pelaksanaan
 
-1. Buat dataset kecil/menengah deterministik untuk list/count/eager/job claim.
-2. Ukur query count/latency/memory pada runner fixed semampunya.
-3. Tetapkan relative budgets dan analisis EXPLAIN untuk hot paths, bukan optimasi spekulatif.
+1. Buat schema PostgreSQL sementara; seed 120 partner dan 240 alamat terprogram, plus delapan job yang dikerjakan melalui worker runtime.
+2. Ukur `search_read` list, `search_count`, eager addresses pada 12 vs 120 partner, serta 8 claim jobs. Tangkap query event dari koneksi uji, latency sesudah satu warm-up, dan delta heap.
+3. Tetapkan structural budgets: list 1 query, count 1, eager-loading 2 queries tetap untuk ukuran kecil/menengah, dan claim <=12 queries/job. Assert hasil/relasi lengkap agar query reduction tidak membuang data.
+4. Simpan median/p95/rata-rata/deviasi, heap delta, fixture scale, Node/PostgreSQL versi, dan `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` untuk partner list dan eager related-address query sebagai JSON artifact yang ikut secret scanner.
+5. Jangan gate absolute latency atau heap pada shared runner; gunakan sebagai baseline tren dan optimalkan hanya bila rencana/hasil menunjukkan hot path nyata.
 
 ### Verifikasi dan syarat selesai
 
-N+1 terdeteksi oleh query-count assertion; benchmark laporan menyebut environment dan variance.
+Eager loading tidak menambah query saat hasil meningkat 10x; structural job/list/count budgets lulus; report menyebut environment, jumlah sample, variance, EXPLAIN, dan batas interpretasi timing/memory.
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M4.15.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
@@ -276,16 +293,17 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 - **Prasyarat:** M0.07
 - **Baca/periksa:** Public exports; client/types; addon contracts.
-- **Deliverable:** Compatibility policy dan contract tests.
+- **Deliverable:** `docs/engineering/compatibility.md`, compatibility policy, and executable client→API and addon→ORM contract tests.
 
 ### Langkah pelaksanaan
 
-1. Daftar public APIs dan supported semantics.
-2. Tetapkan deprecation window serta upgrade instructions untuk change incompatible.
-3. Tambah contract tests untuk client→API dan addon example→ORM.
+1. Daftar root exports, auth/model HTTP routes, response/error semantics, search options, addon manifest and installer behavior; label internal imports unsupported.
+2. Tetapkan SemVer behavior untuk pre-stable dan stable release, deprecation notice/window, security exception, and mandatory breaking-change guide.
+3. Dokumentasikan upgrade langkah demi langkah termasuk backup/restore rehearsal, addon version/hooks, data/seed identity, token/session impact, paired client/server deployment, and post-upgrade integrity checks. Jangan menjanjikan down migration otomatis.
+4. Jalankan contract test melalui public client package terhadap Fastify routes, termasuk comma-separated relation loading, serta install seeded base manifest melalui public ORM/addon exports. Pertahankan test upgrade hook, transaction rollback, seed identity, and downgrade rejection.
 
 ### Verifikasi dan syarat selesai
 
-Breaking contract terdeteksi sebelum release; upgrade guide menjelaskan data/session impact.
+Public contract tercatat, client→API dan addon→ORM contract tests lulus, dan upgrade guide menjelaskan data/session impact serta batas rollback. Release-gate enforcement untuk breaking notes dilacak di M7.06.
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M4.16.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.

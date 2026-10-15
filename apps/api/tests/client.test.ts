@@ -100,6 +100,29 @@ describe('@moonwitness/client against the real API', () => {
     expect((await partners.read(created.id)).active).toBe(false);
   });
 
+  it('keeps comma-separated relation loading compatible between SDK and generic API', async () => {
+    const client = newClient();
+    await client.login({ login: 'superadmin', password: ADMIN_PASSWORD });
+    const users = client.model<{
+      login: string;
+      partner: { name: string };
+      language: { code: string } | null;
+    }>('base.user');
+
+    const result = await users.searchRead({
+      domain: [['login', '=', 'superadmin']],
+      with: 'partner,language',
+      count: true,
+    });
+
+    expect(result.total).toBe(1);
+    expect(result.records[0]).toMatchObject({
+      login: 'superadmin',
+      partner: { name: 'Super Administrator' },
+    });
+    expect(result.records[0]).toHaveProperty('language');
+  });
+
   it('registers, persists the session in storage, and maps conflicts', async () => {
     const storage = new MemoryStorage();
     const client = newClient(storage);

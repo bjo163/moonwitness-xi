@@ -1,0 +1,297 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { reconcileReleaseAssets } from './reconcile-release-assets.mjs';
+
+const digestA = `sha256:${'a'.repeat(64)}`;
+const digestB = `sha256:${'b'.repeat(64)}`;
+const files = [
+  { path: 'release-api.spdx.json', name: 'release-api.spdx.json', digest: digestA, size: 100 },
+  { path: 'release-board.spdx.json', name: 'release-board.spdx.json', digest: digestB, size: 200 },
+];
+
+function fakeAdapter(initial = []) {
+  const assets = new Map(initial.map((asset) => [asset.name, { ...asset }]));
+  const uploads = [];
+  let failAfterAccept = new Set();
+  let failBeforeAccept = new Set();
+  return {
+    assets,
+    uploads,
+    failAfterAccept,
+    failBeforeAccept,
+    async listAssets() {
+      return [...assets.values()];
+    },
+    async uploadAsset(_tag, path) {
+      const expected = files.find((file) => file.path === path);
+      assert.ok(expected, `unexpected upload path ${path}`);
+      uploads.push(expected.name);
+      if (failBeforeAccept.has(expected.name)) throw new Error('simulated pre-accept timeout');
+      assets.set(expected.name, {
+        name: expected.name,
+        digest: expected.digest,
+        size: expected.size,
+      });
+      if (failAfterAccept.has(expected.name)) throw new Error('simulated lost upload response');
+    },
+  };
+}
+
+const reconcile = (adapter, overrides = {}) =>
+  reconcileReleaseAssets({
+    tag: 'v1.2.3',
+    releaseId: 42,
+    isDraft: true,
+    files,
+    adapter,
+    ...overrides,
+  });
+
+test('uploads missing assets and verifies each remote digest and size', async () => {
+  const adapter = fakeAdapter();
+  const result = await reconcile(adapter);
+  assert.deepEqual(
+    result.map(({ action }) => action),
+    ['uploaded', 'uploaded']
+  );
+  assert.deepEqual(
+    adapter.uploads,
+    files.map(({ name }) => name)
+  );
+});
+
+test('reuses an exact existing asset without uploading it again', async () => {
+  const adapter = fakeAdapter([files[0]]);
+  const result = await reconcile(adapter);
+  assert.deepEqual(
+    result.map(({ action }) => action),
+    ['reused', 'uploaded']
+  );
+  assert.deepEqual(adapter.uploads, [files[1].name]);
+});
+
+test('preflights every immutable name conflict before uploading any missing asset', async () => {
+  const adapter = fakeAdapter([{ ...files[1], digest: digestA }]);
+  await assert.rejects(reconcile(adapter), /conflicts with the verified file/u);
+  assert.deepEqual(adapter.uploads, []);
+});
+
+test('refuses to add an asset after a release is already published', async () => {
+  const adapter = fakeAdapter([files[0]]);
+  await assert.rejects(reconcile(adapter, { isDraft: false }), /published release/u);
+  assert.deepEqual(adapter.uploads, []);
+});
+
+test('reuses a complete verified asset set on a published release without writes', async () => {
+  const adapter = fakeAdapter(files);
+  const result = await reconcile(adapter, { isDraft: false });
+
+  assert.deepEqual(
+    result.map(({ action }) => action),
+    ['reused', 'reused']
+  );
+  assert.deepEqual(adapter.uploads, []);
+});
+
+test('keeps a published asset unchanged when another required asset is missing', async () => {
+  const publishedAsset = { ...files[0] };
+  const adapter = fakeAdapter([publishedAsset]);
+
+  await assert.rejects(reconcile(adapter, { isDraft: false }), /published release/u);
+
+  assert.deepEqual(adapter.uploads, []);
+  assert.deepEqual(adapter.assets.get(publishedAsset.name), publishedAsset);
+  assert.equal(adapter.assets.has(files[1].name), false);
+});
+
+test('does not upload when the initial remote inventory cannot be read', async () => {
+  const adapter = fakeAdapter();
+  adapter.listAssets = async () => {
+    throw new Error('simulated GitHub API outage');
+  };
+
+  await assert.rejects(reconcile(adapter), /simulated GitHub API outage/u);
+  assert.deepEqual(adapter.uploads, []);
+  assert.deepEqual([...adapter.assets.keys()], []);
+});
+
+test('recovers an upload accepted remotely when the CLI response is lost', async () => {
+  const adapter = fakeAdapter();
+  adapter.failAfterAccept.add(files[0].name);
+  const result = await reconcile(adapter);
+  assert.equal(result[0]?.action, 'recovered');
+  assert.equal(adapter.uploads.filter((name) => name === files[0].name).length, 1);
+  assert.deepEqual(
+    adapter.uploads,
+    files.map(({ name }) => name)
+  );
+});
+
+test('does not overwrite or report recovery for a conflicting asset after a remote write error', async () => {
+  const concurrentAsset = {
+    name: files[0].name,
+    digest: digestB,
+    size: files[0].size + 1,
+  };
+  const adapter = fakeAdapter();
+  adapter.uploadAsset = async (_tag, path) => {
+    const expected = files.find((file) => file.path === path);
+    assert.ok(expected, `unexpected upload path ${path}`);
+    adapter.uploads.push(expected.name);
+    // Model GitHub accepting a concurrent immutable asset while the CLI loses
+    // its response; the failed write must never replace the existing bytes.
+    adapter.assets.set(expected.name, concurrentAsset);
+    throw new Error('simulated lost response after immutable-name conflict');
+  };
+
+  await assert.rejects(reconcile(adapter), /conflicts with the verified file/u);
+
+  assert.deepEqual(adapter.uploads, [files[0].name]);
+  assert.deepEqual(adapter.assets.get(files[0].name), concurrentAsset);
+  assert.equal(adapter.assets.has(files[1].name), false);
+});
+
+test('keeps earlier uploads when a concurrent immutable conflict appears mid-reconciliation', async () => {
+  const concurrentAsset = {
+    name: files[1].name,
+    digest: digestA,
+    size: files[1].size + 1,
+  };
+  const adapter = fakeAdapter();
+  const uploadAsset = adapter.uploadAsset;
+  adapter.uploadAsset = async (tag, path) => {
+    if (path !== files[1].path) {
+      await uploadAsset(tag, path);
+      return;
+    }
+
+    adapter.uploads.push(files[1].name);
+    // A competing writer wins this immutable name while this upload fails.
+    adapter.assets.set(files[1].name, concurrentAsset);
+    throw new Error('simulated concurrent immutable-name conflict');
+  };
+
+  await assert.rejects(reconcile(adapter), /conflicts with the verified file/u);
+  assert.deepEqual(
+    adapter.uploads,
+    files.map(({ name }) => name)
+  );
+  assert.deepEqual(adapter.assets.get(files[0].name), {
+    name: files[0].name,
+    digest: files[0].digest,
+    size: files[0].size,
+  });
+  assert.deepEqual(adapter.assets.get(files[1].name), concurrentAsset);
+
+  await assert.rejects(reconcile(adapter), /conflicts with the verified file/u);
+  assert.deepEqual(
+    adapter.uploads,
+    files.map(({ name }) => name)
+  );
+  assert.deepEqual(adapter.assets.get(files[0].name), {
+    name: files[0].name,
+    digest: files[0].digest,
+    size: files[0].size,
+  });
+  assert.deepEqual(adapter.assets.get(files[1].name), concurrentAsset);
+});
+
+test('resumes a partially uploaded asset set without duplicating accepted assets', async () => {
+  const adapter = fakeAdapter();
+  adapter.failBeforeAccept.add(files[1].name);
+
+  await assert.rejects(reconcile(adapter), /Upload command failed/u);
+  assert.deepEqual(adapter.uploads, [files[0].name, files[1].name]);
+  assert.deepEqual([...adapter.assets.keys()], [files[0].name]);
+
+  adapter.failBeforeAccept.clear();
+  const retry = await reconcile(adapter);
+  assert.deepEqual(
+    retry.map(({ action }) => action),
+    ['reused', 'uploaded']
+  );
+  assert.deepEqual(adapter.uploads, [files[0].name, files[1].name, files[1].name]);
+});
+
+test('fails without retry when a failed upload is not present remotely', async () => {
+  const adapter = fakeAdapter();
+  adapter.failBeforeAccept.add(files[0].name);
+  await assert.rejects(reconcile(adapter), /Upload command failed/u);
+  assert.deepEqual(adapter.uploads, [files[0].name]);
+});
+
+test('stops after an accepted upload when remote verification is unavailable', async () => {
+  const adapter = fakeAdapter();
+  let inventoryReads = 0;
+  adapter.listAssets = async () => {
+    inventoryReads += 1;
+    if (inventoryReads === 2) throw new Error('simulated GitHub API outage');
+    return [...adapter.assets.values()];
+  };
+
+  await assert.rejects(reconcile(adapter), /Unable to verify release asset/u);
+  assert.deepEqual(adapter.uploads, [files[0].name]);
+  assert.deepEqual([...adapter.assets.keys()], [files[0].name]);
+
+  const retry = await reconcile(adapter);
+  assert.deepEqual(
+    retry.map(({ action }) => action),
+    ['reused', 'uploaded']
+  );
+  assert.deepEqual(adapter.uploads, [files[0].name, files[1].name]);
+});
+
+test('keeps retry read-only through consecutive inventory outages before recovering', async () => {
+  const adapter = fakeAdapter();
+  let inventoryReads = 0;
+  adapter.listAssets = async () => {
+    inventoryReads += 1;
+    if (inventoryReads === 2 || inventoryReads === 3)
+      throw new Error('simulated GitHub API outage');
+    return [...adapter.assets.values()];
+  };
+
+  await assert.rejects(reconcile(adapter), /Unable to verify release asset/u);
+  assert.deepEqual(adapter.uploads, [files[0].name]);
+  assert.deepEqual([...adapter.assets.keys()], [files[0].name]);
+
+  await assert.rejects(reconcile(adapter), /simulated GitHub API outage/u);
+  assert.deepEqual(adapter.uploads, [files[0].name]);
+  assert.deepEqual([...adapter.assets.keys()], [files[0].name]);
+
+  const retry = await reconcile(adapter);
+  assert.deepEqual(
+    retry.map(({ action }) => action),
+    ['reused', 'uploaded']
+  );
+  assert.deepEqual(adapter.uploads, [files[0].name, files[1].name]);
+  assert.deepEqual(
+    [...adapter.assets.keys()],
+    files.map(({ name }) => name)
+  );
+});
+
+test('rejects a wrong digest or byte size observed after upload', async () => {
+  const adapter = fakeAdapter();
+  adapter.uploadAsset = async (_tag, path) => {
+    const expected = files.find((file) => file.path === path);
+    if (!expected) throw new Error('unexpected file');
+    adapter.uploads.push(expected.name);
+    adapter.assets.set(expected.name, {
+      name: expected.name,
+      digest: expected.digest,
+      size: expected.size + 1,
+    });
+  };
+  await assert.rejects(reconcile(adapter), /conflicts with the verified file/u);
+});
+
+test('rejects duplicate names and malformed remote inventory', async () => {
+  const adapter = fakeAdapter();
+  await assert.rejects(
+    reconcile(adapter, { files: [files[0], { ...files[0] }] }),
+    /Duplicate expected/u
+  );
+  adapter.listAssets = async () => [{ ...files[0] }, { ...files[0] }];
+  await assert.rejects(reconcile(adapter), /duplicate asset/u);
+});

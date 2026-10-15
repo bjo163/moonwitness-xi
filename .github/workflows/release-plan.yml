@@ -1,0 +1,45 @@
+name: Release dry-run plan
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-plan-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup-pnpm
+        with:
+          node-version: '22'
+          pnpm-version: '11.17.0'
+      - name: Install frozen workspace dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
+      - name: Generate a read-only release plan
+        run: pnpm release:dry-run -- --output "$RUNNER_TEMP/release-plan.json"
+      - name: Summarize planned version, assets, and pending gates
+        run: |
+          set -euo pipefail
+          jq -r '"### Release dry-run\n- Status: `\(.status)`\n- Source SHA: `\(.source.headSha)`\n- Proposed version: `\(.version // "none")`\n- Planned assets: \(.assets | length)\n- Required assets not implemented: \(.readinessFindings | length)\n- Gates not run: \([.gates[] | select(.status == "not-run")] | length)\n- Writes performed: `\(.writesPerformed)`"' "$RUNNER_TEMP/release-plan.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the release plan for review
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: release-plan-${{ github.sha }}
+          path: ${{ runner.temp }}/release-plan.json
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 9

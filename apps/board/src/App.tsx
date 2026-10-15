@@ -2,7 +2,7 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/hooks/use-auth';
-import { TooltipProvider } from '@/components/ui/tooltip';
+import { TooltipProvider } from '@moonwitness/ui/components/tooltip';
 import { ProtectedRoute } from '@/components/layout/protected-route';
 
 const AuthPage = lazy(() =>

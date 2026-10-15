@@ -36,6 +36,8 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 Tidak ada horizontal overflow tak sengaja; kontrol utama dapat digunakan keyboard; automated a11y disertai audit manual.
 
+Audit M3.02 menghasilkan 33 screenshot di `test-results/visual-audit/`: enam route (login, dashboard, list, form, profile, settings) pada 375/768/1440 px; lima route terlindungi juga direkam dalam tema terang dan gelap. E2E memeriksa overflow pada seluruh kombinasi, Axe WCAG 2.1 A/AA pada login semua ukuran dan seluruh route terlindungi pada desktop kedua tema, serta keyboard order form login, fokus pembukaan navigasi mobile, dan Escape. Job browser mengunggah screenshot audit bersama JUnit sebagai artifact dengan retensi terbatas.
+
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M3.02.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 
 ## M3.03 — Test login sukses/gagal, logout, reload, expiry, refresh bersamaan, sesi dicabut, dan user nonaktif.
@@ -178,7 +180,7 @@ Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/
 
 ### Verifikasi dan syarat selesai
 
-Perubahan layout nyata menghasilkan diff; auth secrets tidak tersimpan dalam artefak publik.
+Perubahan layout pada baseline terpilih menghasilkan diff; auth secrets tidak tersimpan dalam artefak publik. Gunakan `pnpm board:visual:update` hanya setelah memeriksa setiap perubahan screenshot secara visual.
 
 Catat command/test case, actual result, SHA sumber dan lokasi bukti dalam `docs/roadmap/evidence/M3.10.md` sesuai template. Jika kemampuan eksternal belum tersedia, pisahkan implementasi lokal yang selesai dari aktivasi yang terblokir; jangan centang item penuh. Jangan menonaktifkan check yang gagal agar item dianggap selesai.
 

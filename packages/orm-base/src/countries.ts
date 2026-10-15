@@ -1,5 +1,12 @@
-// Country and area names keyed by ISO 3166-1 alpha-2 codes.
-// Source: https://github.com/umpirsky/country-list (English, CLDR-derived).
+/** Country names keyed by ISO 3166-1 alpha-2 codes. */
+export const countryDataSource = Object.freeze({
+  name: 'umpirsky/country-list (English, CLDR-derived)',
+  url: 'https://github.com/umpirsky/country-list',
+  standard: 'ISO 3166-1 alpha-2',
+  coverage: '249 assigned country and territory codes in the checked-in dataset',
+  verifiedDate: '2026-10-04',
+});
+
 export const countries = [
   { code: 'AD', name: 'Andorra' },
   { code: 'AE', name: 'United Arab Emirates' },

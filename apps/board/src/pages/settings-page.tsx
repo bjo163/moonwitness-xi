@@ -2,20 +2,21 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, MonitorCog, Moon, Sun } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@moonwitness/ui/components/toast';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
+import { NotificationPreferences } from '@/components/settings/notification-preferences';
+import { Button } from '@moonwitness/ui/components/button';
+import { Label } from '@moonwitness/ui/components/label';
+import { Input } from '@moonwitness/ui/components/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useAuth } from '@/hooks/use-auth';
+} from '@moonwitness/ui/components/select';
+import { Skeleton } from '@moonwitness/ui/components/skeleton';
+import { useAuth } from '@/hooks/use-auth-context';
 import { client } from '@/lib/client';
 import {
   DEFAULT_PREFERENCES,
@@ -169,6 +170,8 @@ export function SettingsPage() {
           })}
         </div>
       </section>
+
+      <NotificationPreferences />
 
       <section className="ink-panel space-y-6 bg-card p-5 sm:p-8">
         <div>

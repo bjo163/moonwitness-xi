@@ -1,0 +1,15 @@
+sequenceDiagram
+  participant developer as Developer
+  participant dev as dev branch CI
+  participant promotion as Promotion workflow
+  participant review as CODEOWNER / reviewer
+  participant main as main branch
+  participant release as Release workflow
+  developer->>dev: Commit and push reviewed work
+  dev->>promotion: Run full technical CI and classify changed risk
+  promotion->>review: Request fresh CODEOWNER approval for sensitive changes
+  review-->>promotion: Approve sensitive promotion
+  promotion->>main: Merge dev to main only after required gate
+  developer->>release: Create version tag and explicitly dispatch publish
+  release->>main: Verify version, checks, integration, and images
+  release-->>developer: Publish images and generated-notes GitHub Release when requested

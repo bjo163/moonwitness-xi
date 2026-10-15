@@ -3,14 +3,25 @@ import { Navigate, useLocation, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { ApiError } from '@moonwitness/client';
-import { useAuth } from '@/hooks/use-auth';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { useAuth } from '@/hooks/use-auth-context';
+import { Button } from '@moonwitness/ui/components/button';
+import { Input } from '@moonwitness/ui/components/input';
+import { Label } from '@moonwitness/ui/components/label';
 import { Doodle, InkUnderline, SpeechBubble, SpeedLines } from '@/components/manga/effects';
 import { Logo } from '@/components/manga/logo';
 
 type Mode = 'login' | 'register';
+
+function safeReturnPath(value: unknown): string {
+  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//')) return '/';
+  try {
+    const target = new URL(value, window.location.origin);
+    if (target.origin !== window.location.origin) return '/';
+    return `${target.pathname}${target.search}${target.hash}`;
+  } catch {
+    return '/';
+  }
+}
 
 export function AuthPage({ mode }: { mode: Mode }) {
   const { user, login, register } = useAuth();
@@ -18,7 +29,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
   const location = useLocation();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const from = (location.state as { from?: string } | null)?.from ?? '/';
+  const from = safeReturnPath((location.state as { from?: unknown } | null)?.from);
 
   if (user) return <Navigate to={from} replace />;
 
@@ -143,7 +154,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
                 role="alert"
                 initial={{ x: -8 }}
                 animate={{ x: [8, -6, 4, 0] }}
-                className="border-2 border-ink bg-pink px-3 py-2 text-sm font-bold text-white"
+                className="border-2 border-ink bg-pink px-3 py-2 text-sm font-bold text-on-pink"
               >
                 {error}
               </motion.p>

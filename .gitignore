@@ -6,9 +6,14 @@ dist
 !.env.production.example
 services/
 backups/
+storage/attachments/
 *.log
 logs/
 tmp-test-logs/
+roadmap-issue-plan.json
+.roadmap-lifecycle-snapshot.json
+.roadmap-issue-audit.json
 test-results/
+coverage/
 playwright-report/
 .DS_Store

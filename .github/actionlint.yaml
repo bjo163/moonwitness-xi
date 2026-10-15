@@ -1,0 +1,6 @@
+paths:
+  .github/workflows/ubuntu-runner-candidate.yml:
+    ignore:
+      # actionlint v1.7.12 predates GitHub's Ubuntu 26.04 runner release.
+      # Keep its unknown-label exception limited to this one confirmed runner.
+      - 'label "ubuntu-26\.04" is unknown\..+'

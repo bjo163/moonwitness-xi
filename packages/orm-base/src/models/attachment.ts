@@ -1,6 +1,6 @@
 import { defineModel, fields } from '@moonwitness/orm';
 
-/** File metadata only; binary data stays in the configured storage provider. */
+/** Attachment metadata; storage keys are server-managed and never returned to clients. */
 export const Attachment = defineModel('base.attachment', {
   table: 'attachments',
   order: 'id desc',
@@ -13,7 +13,7 @@ export const Attachment = defineModel('base.attachment', {
     resource_id: fields.integer({ required: true }),
     mimetype: fields.string({ required: true }),
     size_bytes: fields.integer({ required: true }),
-    storage_key: fields.string({ required: true }),
+    storage_key: fields.string({ required: true, hidden: true }),
     checksum: fields.string({ pattern: '^[A-Fa-f0-9]{64}$' }),
   },
 });

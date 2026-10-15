@@ -296,28 +296,58 @@ async function commitJobResult(
 ): Promise<void> {
   const trx = await Job.startTransaction();
   try {
-    const patch = await Job.query(trx)
+    const update = Job.query(trx)
       .where({
         id: claim.job.id,
         fencing_token: claim.job.fencing_token,
         lease_owner: claim.workerId,
       })
-      .where({ status: 'running' })
-      .patch({
-        status,
-        available_at: details.availableAt,
-        lease_owner: null,
-        lease_until: null,
-        cancel_requested: status === 'cancelled' ? false : claim.job.cancel_requested,
-      });
-    if (patch !== 1) throw new LeaseLostError();
-    const runStatus = status === 'queued' ? 'retrying' : status === 'dead' ? 'dead' : status;
+      .where({ status: 'running' });
+    if (status === 'succeeded') update.where({ cancel_requested: false });
+    let finalStatus = status;
+    const patch = await update.patch({
+      status,
+      available_at: details.availableAt,
+      lease_owner: null,
+      lease_until: null,
+      cancel_requested: status === 'cancelled' ? false : claim.job.cancel_requested,
+    });
+    let finalDetails = details;
+    if (patch !== 1 && status === 'succeeded') {
+      const cancellation = await Job.query(trx)
+        .where({
+          id: claim.job.id,
+          fencing_token: claim.job.fencing_token,
+          lease_owner: claim.workerId,
+          status: 'running',
+          cancel_requested: true,
+        })
+        .patch({
+          status: 'cancelled',
+          lease_owner: null,
+          lease_until: null,
+          cancel_requested: false,
+        });
+      if (cancellation === 1) {
+        finalStatus = 'cancelled';
+        finalDetails = {
+          errorCode: 'JOB_CANCELLED',
+          errorMessage: 'Job cancellation was requested before its result was committed',
+        };
+      } else {
+        throw new LeaseLostError();
+      }
+    } else if (patch !== 1) {
+      throw new LeaseLostError();
+    }
+    const runStatus =
+      finalStatus === 'queued' ? 'retrying' : finalStatus === 'dead' ? 'dead' : finalStatus;
     await JobRun.query(trx).findById(claim.run.id).patch({
       status: runStatus,
       finished_at: new Date().toISOString(),
-      error_code: details.errorCode,
-      error_message: details.errorMessage,
-      result: details.result,
+      error_code: finalDetails.errorCode,
+      error_message: finalDetails.errorMessage,
+      result: finalDetails.result,
     });
     await trx.commit();
   } catch (error) {
@@ -763,10 +793,14 @@ export async function cancelJob(jobId: number, transaction?: Transaction): Promi
   const job = await Job.query(transaction).findById(jobId);
   if (!job) return false;
   if (job.status === 'running') {
-    await Job.query(transaction).findById(jobId).patch({ cancel_requested: true });
-    return true;
+    const requested = await Job.query(transaction)
+      .where({ id: jobId, status: 'running' })
+      .patch({ cancel_requested: true });
+    return requested === 1;
   }
   if (job.status !== 'queued') return false;
-  await Job.query(transaction).findById(jobId).patch({ status: 'cancelled' });
-  return true;
+  const cancelled = await Job.query(transaction)
+    .where({ id: jobId, status: 'queued' })
+    .patch({ status: 'cancelled' });
+  return cancelled === 1;
 }
