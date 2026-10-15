@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "pnpm --filter @moonwitness/ui build && tsc -p tsconfig.json && vite build",
+    "build:built": "tsc -p tsconfig.json && vite build",
     "test": "playwright test",
     "preview": "vite preview"
   },

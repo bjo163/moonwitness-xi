@@ -9,6 +9,9 @@ const rootManifest = JSON.parse(
 const docsManifest = JSON.parse(
   await readFile(new URL('../apps/docs/package.json', import.meta.url), 'utf8')
 );
+const uiCatalogManifest = JSON.parse(
+  await readFile(new URL('../apps/ui-catalog/package.json', import.meta.url), 'utf8')
+);
 const workflow = await readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
 const quality = workflow.split('  quality:\n')[1]?.split('\n  automation:\n')[0] ?? '';
 
@@ -27,6 +30,10 @@ test('CI reuses the validated workspace build only inside its quality job', () =
   assert.match(rootManifest.scripts['docs:examples:check'], /--filter @moonwitness\/orm build/u);
   assert.match(docsManifest.scripts['portal:build'], /@moonwitness\/ui-catalog build/u);
   assert.match(docsManifest.scripts['portal:build'], /scripts\/docs\/build-guide\.mjs/u);
+  assert.match(rootManifest.scripts['test:ui-budget'], /@moonwitness\/ui-catalog build:built/u);
+  assert.match(uiCatalogManifest.scripts.build, /@moonwitness\/ui build/u);
+  assert.match(uiCatalogManifest.scripts['build:built'], /tsc -p tsconfig\.json && vite build/u);
+  assert.doesNotMatch(uiCatalogManifest.scripts['build:built'], /@moonwitness\/ui build/u);
 });
 
 test('built variants consume existing package output without invoking package builds', () => {
