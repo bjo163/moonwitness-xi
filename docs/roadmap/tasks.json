@@ -1581,7 +1581,9 @@
       "output": "Versioned dataset source snapshot and active projection switch",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
-      "priority": "p0"
+      "priority": "p0",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/K2-003.md"
     },
     {
       "id": "K2-004",

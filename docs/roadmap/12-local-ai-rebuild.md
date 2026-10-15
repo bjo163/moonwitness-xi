@@ -165,7 +165,7 @@ The source planning bundle is `MOONWITNESS_XI_LOCAL_AI_REBUILD_PLAN_2026-10-15/`
 - File scope: `packages/corpus/`, `corpus/manifests/`.
 - Deliverable: Versioned dataset source snapshot and active projection switch.
 - Acceptance: Rebuild deterministic; can select known-good version; no data loss on interrupted import.
-- Verification target: `snapshot replay/rollback tests`. This is a target, not evidence that the command exists or has passed.
+- Verification target: `snapshot replay/rollback tests`. This is a target, not evidence that the command exists or has passed. Manifest/pointer metadata alone does not complete dataset rebuild/replay acceptance.
 
 ## K2-004 — Revelation identity versus canon/edition ontology
 

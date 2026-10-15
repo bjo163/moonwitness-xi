@@ -1,4 +1,13 @@
 export { ingestDataset } from './ingestion.js';
+export {
+  activateDatasetRelease,
+  createDatasetRelease,
+  readActiveDatasetRelease,
+  type ActiveDatasetRelease,
+  type DatasetReleaseInput,
+  type DatasetReleaseManifest,
+  type DatasetReleaseSnapshot,
+} from './dataset-release.js';
 export { putRawArtifact, readRawArtifact } from './raw-artifact-store.js';
 export {
   createPrivateArchiveImportManifest,

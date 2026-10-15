@@ -57,3 +57,14 @@ workspace; never commit real account, witness, or consent data. Validation only
 checks declared structure and source binding; it does not prove that consent is
 authentic or legally sufficient. Retention, revocation, and any real-data import
 remain gated by K5-002 and the accepted privacy policy.
+
+## Dataset release pointers
+
+`createDatasetRelease` stores an immutable, content-addressed release manifest
+that binds a snapshot digest to independent ontology/corpus versions and the
+previously active release. `activateDatasetRelease` verifies the manifest
+digest before atomically replacing the active pointer; activating an older
+release performs rollback without deleting either manifest. Creating or
+activating metadata does not rebuild, copy, or publish dataset records. The
+caller remains responsible for retaining the source snapshot and raw artifacts
+until the offline rebuild/replay pipeline is implemented.
