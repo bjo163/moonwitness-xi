@@ -301,7 +301,10 @@ describe('private archive import manifest', () => {
   it('removes newly copied bytes when manifest creation fails', async () => {
     const fixture = await importFixture();
     const manifestDirectory = path.join(fixture.rootDirectory, 'manifests');
-    await mkdir(manifestDirectory);
+    await mkdir(manifestDirectory, { mode: 0o700 });
+    if (process.platform !== 'win32') {
+      await chmod(manifestDirectory, 0o700);
+    }
     const existingManifest = Buffer.from('preserve existing manifest', 'utf8');
     await writeFile(path.join(manifestDirectory, 'intake.json'), existingManifest);
 
