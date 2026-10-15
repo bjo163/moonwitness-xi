@@ -52,6 +52,7 @@ function isolatedInvocation() {
       'setpriv',
       `--reuid=${uid}`,
       `--regid=${gid}`,
+      '--clear-groups',
       '--',
       process.execPath,
     ],
