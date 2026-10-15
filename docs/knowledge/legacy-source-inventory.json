@@ -60,7 +60,7 @@
       "artifactClass": "snapshot_manifest_metadata",
       "observations": [
         {
-          "commit": "df00706c98e21fb3fb0146b8389b0f2978f3d833",
+          "commit": "23460f33d630d0e2c436bdfcb8ffd6e192951fa4",
           "gitBlobSha": "7045dfae0adbd29bc015a75d822795b55c335dc4"
         }
       ],
@@ -71,7 +71,12 @@
       "repositoryHead": "df00706c98e21fb3fb0146b8389b0f2978f3d833",
       "artifactPath": "fixtures/deterministic-ids/v1.json",
       "artifactClass": "deterministic_test_fixture",
-      "observations": [],
+      "observations": [
+        {
+          "commit": "f19281c83984081631dd91f9e21986e9c8877ec0",
+          "gitBlobSha": "feb26d4f671c1c15e6f3cbd299c054b41ea67ff0"
+        }
+      ],
       "limitations": "Fixture is not a complete historical ID map; tag v0.1.0 at commit cd23dcbfa9410383256ea95d0813da56569a3b5c is pinned separately and was not treated as proof that records migrate."
     },
     {
@@ -81,12 +86,16 @@
       "artifactClass": "versioned_schema_history",
       "observations": [
         {
-          "commit": null,
+          "commit": "34f7820963efd795646d61c66a22843086a152a7",
           "gitBlobSha": "63da81ee85bf7ed0a5f557badce6fae5053f58e9"
         },
         {
-          "commit": null,
+          "commit": "14f0db4b629e08b738c9b398d3787ba70e52d56a",
           "gitBlobSha": "51fa686cdab239774bbe7cdd02af08bdf896c3bf"
+        },
+        {
+          "commit": "54ea0c72916d096894915437911370af14390f38",
+          "gitBlobSha": "cdc6fc22adc2befe63eefc07b6446c2035fd393a"
         }
       ],
       "limitations": "Schema and provenance snapshot history exist, but no corpus-record validation or old-ID mapping was confirmed."
@@ -94,30 +103,92 @@
     {
       "repository": "bjo163/dev-mw-blueprint",
       "repositoryHead": "cc53d63da1f34f69e20516a0b1c13514fa898725",
-      "artifactPath": "versioned mizan-engine fixtures and sequential SQL migrations 0001–0003",
+      "artifactPath": "mizan-engine.fixtures.v1.json",
       "artifactClass": "database_and_test_fixture_history",
       "observations": [
         {
-          "commit": null,
+          "commit": "1834556771c6001ee360c997f0a85e076aba7101",
           "gitBlobSha": "514875a00533847eaa673679556dedb02a57b8d4"
-        },
+        }
+      ],
+      "limitations": "Versioned database/test fixture, not ontology/corpus release records or a record-ID crosswalk."
+    },
+    {
+      "repository": "bjo163/dev-mw-blueprint",
+      "repositoryHead": "cc53d63da1f34f69e20516a0b1c13514fa898725",
+      "artifactPath": "mizan-engine.fixtures.v1.1.json",
+      "artifactClass": "database_and_test_fixture_history",
+      "observations": [
         {
-          "commit": null,
+          "commit": "a4a4492bb7355804636675c0c1c70f42aec4c630",
           "gitBlobSha": "df18039a195f05af873fbeebfb51723952f582cd"
-        },
+        }
+      ],
+      "limitations": "Versioned database/test fixture, not ontology/corpus release records or a record-ID crosswalk."
+    },
+    {
+      "repository": "bjo163/dev-mw-blueprint",
+      "repositoryHead": "cc53d63da1f34f69e20516a0b1c13514fa898725",
+      "artifactPath": "mizan-analytical.fixtures.v1.2.json",
+      "artifactClass": "database_and_test_fixture_history",
+      "observations": [
         {
-          "commit": null,
+          "commit": "99486e242020dfc189168f9538554f73de4246ca",
           "gitBlobSha": "0595c25333420ef56b99b8d281973dc617668622"
         }
       ],
-      "limitations": "These identify database/test history, not ontology/corpus releases or a record-ID crosswalk."
+      "limitations": "Analytical test fixture, not ontology/corpus release records or a record-ID crosswalk."
+    },
+    {
+      "repository": "bjo163/dev-mw-blueprint",
+      "repositoryHead": "cc53d63da1f34f69e20516a0b1c13514fa898725",
+      "artifactPath": "crates/mizan-api/migrations/0001_mizan_ledger.sql",
+      "artifactClass": "database_and_test_fixture_history",
+      "observations": [
+        {
+          "commit": "a0ac3456241d7efaa0029f4e3650e8eab4d912bc",
+          "gitBlobSha": "aa4399e6b3296ca5871bd0ea674d528d306cb7d9"
+        }
+      ],
+      "limitations": "Application database migration history, not ontology/corpus record migration."
+    },
+    {
+      "repository": "bjo163/dev-mw-blueprint",
+      "repositoryHead": "cc53d63da1f34f69e20516a0b1c13514fa898725",
+      "artifactPath": "crates/mizan-api/migrations/0002_append_only_ledger.sql",
+      "artifactClass": "database_and_test_fixture_history",
+      "observations": [
+        {
+          "commit": "189bcc43f778c0cb0f8801e9070da690b761f8af",
+          "gitBlobSha": "4960c058af18b21a0c1cc0a85a467a347677aa2d"
+        }
+      ],
+      "limitations": "Application database migration history, not ontology/corpus record migration."
+    },
+    {
+      "repository": "bjo163/dev-mw-blueprint",
+      "repositoryHead": "cc53d63da1f34f69e20516a0b1c13514fa898725",
+      "artifactPath": "crates/mizan-api/migrations/0003_analytical_factors.sql",
+      "artifactClass": "database_and_test_fixture_history",
+      "observations": [
+        {
+          "commit": "b3413216b5a230247858e6579109df63f29322d8",
+          "gitBlobSha": "1a86d99c648348719a5b044f52aa05aaace56a10"
+        }
+      ],
+      "limitations": "Application database migration history, not ontology/corpus record migration."
     },
     {
       "repository": "bjo163/rocksoul-aws",
       "repositoryHead": "719413cc3d6c5c8349a87a1863e84c0e0f97e1c9",
-      "artifactPath": "repository/package/runtime identity migrations and aliases",
+      "artifactPath": "docs/AWS-IDENTITY-MIGRATION.md",
       "artifactClass": "application_identity_migration_history",
-      "observations": [],
+      "observations": [
+        {
+          "commit": "a00841d967f9180df36bf546b365242c0d9bd895",
+          "gitBlobSha": "8e4caf9b67f98a4588001fbdd9dbf7b585100ce9"
+        }
+      ],
       "limitations": "Observed migrations concern repository/package/runtime identity (including retired moonwitness-os and deprecated app.cosmic names), not corpus record identity."
     },
     {
@@ -125,7 +196,28 @@
       "repositoryHead": "89963d5f5801aec3d44d2d55538e2a882e37f86b",
       "artifactPath": "public/data/superhero.snapshot.json",
       "artifactClass": "snapshot_history",
-      "observations": [],
+      "observations": [
+        {
+          "commit": "d8c7c8f247beb9c3a36b70e37d002b00f1a2e9c8",
+          "gitBlobSha": "49a8a18f22584a6d85ff013d42294a26ba236bda"
+        },
+        {
+          "commit": "de37d78540cd11acc84320fbf76d15f10e97a2b2",
+          "gitBlobSha": "c3ed424287241a1b51671e6253fc345601a0291f"
+        },
+        {
+          "commit": "3b307e8efdf1cdd43b22fa6570d07904cc1904a5",
+          "gitBlobSha": "19d8996cfce48f5184f8bb44174fa30989363cca"
+        },
+        {
+          "commit": "55297d129466091a2e62cdfff26003cad42845cd",
+          "gitBlobSha": "5ee90032ef5532e630c446bb88f4205b81ca2313"
+        },
+        {
+          "commit": "adc2d4175ac2796e4f013f3429ebb52138a3f426",
+          "gitBlobSha": "a7304c31efd84e2b6c729eb9ff8d7e645280bd23"
+        }
+      ],
       "limitations": "Historical snapshot blobs exist; no schema compatibility validation or old-to-canonical record-ID mapping was established."
     }
   ],
