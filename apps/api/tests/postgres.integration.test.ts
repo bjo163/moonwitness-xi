@@ -51,6 +51,7 @@ import { manifest as baseManifest } from '@moonwitness/orm-base';
 import { manifest as notificationManifest } from '@moonwitness/orm-notification';
 import {
   OrganizationDepartment,
+  OrganizationMembership,
   manifest as organizationManifest,
 } from '@moonwitness/orm-organization';
 import { manifest as requestManifest } from '@moonwitness/orm-request';
@@ -2432,6 +2433,12 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       write: true,
       unlink: true,
     });
+    await ModelAccess.query().insert({
+      group_id: organizationGroup.id,
+      model_name: 'organization.membership',
+      create: true,
+      write: true,
+    });
     const localDepartment = await OrganizationDepartment.query().insertAndFetch({
       company_id: localCompany.id,
       code: 'postgres_local_operations',
@@ -2442,6 +2449,51 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       code: 'postgres_foreign_operations',
       name: 'PostgreSQL Foreign Operations',
     });
+
+    const allowedOrganizationMembership = await app.inject({
+      method: 'POST',
+      url: '/api/organization.membership',
+      headers,
+      payload: {
+        company_id: localCompany.id,
+        user_id: localUser.id,
+        department_id: localDepartment.id,
+        start_date: '2026-01-15',
+      },
+    });
+    expect(allowedOrganizationMembership.statusCode, allowedOrganizationMembership.payload).toBe(
+      201
+    );
+    const organizationMembershipId = allowedOrganizationMembership.json<{
+      data: { id: number };
+    }>().data.id;
+    expect(await OrganizationMembership.query().findById(organizationMembershipId)).toMatchObject({
+      company_id: localCompany.id,
+      user_id: localUser.id,
+      department_id: localDepartment.id,
+      start_date: '2026-01-15',
+    });
+    const organizationMembershipAudit = await AuditLog.query()
+      .where({ model: 'organization.membership', record_id: organizationMembershipId })
+      .orderBy('id', 'asc');
+    const deniedForeignDepartmentAssignment = await app.inject({
+      method: 'PATCH',
+      url: `/api/organization.membership/${organizationMembershipId}`,
+      headers,
+      payload: { department_id: foreignDepartment.id },
+    });
+    expect([400, 403]).toContain(deniedForeignDepartmentAssignment.statusCode);
+    expect(await OrganizationMembership.query().findById(organizationMembershipId)).toMatchObject({
+      company_id: localCompany.id,
+      user_id: localUser.id,
+      department_id: localDepartment.id,
+      start_date: '2026-01-15',
+    });
+    await expect(
+      AuditLog.query()
+        .where({ model: 'organization.membership', record_id: organizationMembershipId })
+        .orderBy('id', 'asc')
+    ).resolves.toEqual(organizationMembershipAudit);
 
     const allowedDepartmentWrite = await app.inject({
       method: 'PATCH',
