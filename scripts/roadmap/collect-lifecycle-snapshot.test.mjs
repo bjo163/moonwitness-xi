@@ -235,6 +235,12 @@ test('parses the explicit source commit marker and derives canonical roadmap tas
   );
 });
 
+test('parses K-series checkboxes through the shared lifecycle snapshot path', () => {
+  const tasks = [{ id: 'K0-001', dependsOn: [], status: 'complete', evidence: 'k-evidence.md' }];
+  const states = parseRoadmapTaskStates('- [x] K0-001 Approved ADR.\n', tasks);
+  assert.deepEqual(states.get('K0-001'), { status: 'complete', acceptanceVerified: true });
+});
+
 test('collects current checks and ancestry without confusing evidence SHA with implementation SHA', async () => {
   const partialSourceSha = 'f'.repeat(40);
   const snapshot = await collectLifecycleSnapshot({

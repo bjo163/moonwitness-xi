@@ -40,6 +40,28 @@ test('plan defaults to create and repeated identical remote state becomes no-op'
   assert.equal(plan([issue]).operations[0].operation, 'noop');
 });
 
+test('projects K-series IDs into the same issue marker and idempotent planner contract', () => {
+  const kTask = {
+    ...task,
+    id: 'K0-001',
+    title: 'K foundation',
+    milestone: 'K0',
+    dependsOn: [],
+    detailFile: 'docs/roadmap/12-local-ai-rebuild.md',
+  };
+  const first = plan([], [kTask]);
+  assert.match(first.operations[0].body, /moonwitness-task: 123456789:K0-001/u);
+  const issue = {
+    number: 51,
+    title: first.operations[0].title,
+    body: first.operations[0].body,
+    state: 'open',
+    labels: first.operations[0].labels.map((name) => ({ name })),
+    milestone: { number: 100, title: 'K0' },
+  };
+  assert.equal(plan([issue], [kTask]).operations[0].operation, 'noop');
+});
+
 test('task selection requires exact unique IDs and limits explicit writes to five tasks', () => {
   const tasks = Array.from({ length: 6 }, (_, index) => ({
     ...task,
@@ -57,6 +79,14 @@ test('task selection requires exact unique IDs and limits explicit writes to fiv
   assert.throws(
     () => selectTasksForSync(tasks, 'M11.01,M11.02,M11.03,M11.04,M11.05,M11.06', true),
     /limited to 5 tasks/u
+  );
+});
+
+test('selects a K-series task by its exact stable ID', () => {
+  const kTask = { ...task, id: 'K0-001', milestone: 'K0' };
+  assert.deepEqual(
+    selectTasksForSync([kTask], 'K0-001', true).map(({ id }) => id),
+    ['K0-001']
   );
 });
 

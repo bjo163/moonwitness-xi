@@ -5,6 +5,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { taskIdCaptureSource } from './task-ids.mjs';
 import { assertLifecycleSnapshotFresh, projectLifecycleSnapshot } from './lifecycle-snapshot.mjs';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -123,9 +124,24 @@ function subsection(markdown, heading) {
 
 export function renderTaskCardDetails(markdown, taskId) {
   const card = taskCardSection(markdown, taskId);
+  const field = (name) => {
+    const line = card.split(/\r?\n/u).find((entry) => entry.startsWith(`- ${name}:`));
+    return line?.slice(name.length + 3).trim() ?? '';
+  };
+  const deliverable = field('Deliverable');
+  const fileScope = field('File scope');
+  const verification = field('Verification target');
   return {
-    steps: subsection(card, 'Langkah pelaksanaan'),
-    acceptance: subsection(card, 'Verifikasi dan syarat selesai'),
+    steps:
+      subsection(card, 'Langkah pelaksanaan') ||
+      [
+        deliverable && `Deliver: ${deliverable}`,
+        fileScope && `Stay within file scope: ${fileScope}`,
+        verification && `Verify with: ${verification}`,
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    acceptance: subsection(card, 'Verifikasi dan syarat selesai') || field('Acceptance'),
   };
 }
 
@@ -211,7 +227,7 @@ export function planIssueSync({
     if (issue.pull_request || (issue.state !== 'open' && issue.state !== 'closed')) continue;
     const markers = [
       ...issue.body.matchAll(
-        /^<!-- moonwitness-task: ([1-9][0-9]*):(M(?:0|[1-9][0-9]*)\.[0-9]{2}) -->$/gmu
+        new RegExp(`^<!-- moonwitness-task: ([1-9][0-9]*):${taskIdCaptureSource} -->$`, 'gmu')
       ),
     ];
     for (const [, repoId, taskId] of markers) {

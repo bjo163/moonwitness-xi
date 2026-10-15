@@ -2,7 +2,7 @@
 
 Dokumen ini adalah sumber utama rencana lintas milestone. Dibuat 2026-10-04 berdasarkan seluruh rencana yang disepakati. Checkbox kosong berarti belum diverifikasi selesai, termasuk fitur yang implementasi awalnya sudah ada.
 
-**Panduan implementasi lengkap:** [docs/roadmap/README.md](docs/roadmap/README.md). Seluruh 148 ID di bawah mempunyai kartu kerja dengan prasyarat, source files, deliverable, langkah konkret, dan acceptance. Agen harus membaca [protokol eksekusi](docs/roadmap/EXECUTION.md) sebelum mengambil tugas. Dependensi terstruktur tersedia di [tasks.json](docs/roadmap/tasks.json); status resmi tetap checklist ini.
+**Panduan implementasi lengkap:** [docs/roadmap/README.md](docs/roadmap/README.md). Seluruh 148 M-series ID dan 65 K-series ID di bawah mempunyai kartu kerja dengan prasyarat, source files, deliverable, langkah konkret, dan acceptance. Agen harus membaca [protokol eksekusi](docs/roadmap/EXECUTION.md) sebelum mengambil tugas. Dependensi terstruktur tersedia di [tasks.json](docs/roadmap/tasks.json); status resmi tetap checklist ini.
 
 **Rencana eksekusi aktif (audit 2026-10-14):** [docs/roadmap/ACTIVE-PLAN.md](docs/roadmap/ACTIVE-PLAN.md) mengklasifikasikan semua 49 kartu terbuka menjadi release blockers, pekerjaan lokal, blocker approval/akses, dan backlog dengan exit condition. Mulai pekerjaan lokal independen tanpa menunggu hosted CI; pertahankan persetujuan CODEOWNER dan semua gate.
 
@@ -220,6 +220,76 @@ Jalur ini melengkapi M1/M7/M8, bukan membuat release pipeline kedua. Detail: [ka
 - [ ] M11.13 Gabungkan commit/push, version bump, docs dan issue sync tanpa release loop. Regression integration fixture membuktikan satu bump per source batch, status/docs dan `chore(release)` tidak mengubah candidate, serta prepare retry idempotent; docs generation, links, lint dan formatting lulus. Hosted release-prepare acceptance masih menunggu M7.05: [Evidence](docs/roadmap/evidence/M11.13.md).
 - [ ] M11.14 Uji seluruh siklus roadmap → issue → commit → CI → PR → merge → release → status. Fault fixtures lokal menguji selector task-level dan fail-closed; hosted create pilot `38121623513` membuat #25/#26. Read-only planner exact-source `cf3442f` mengusulkan 129 create + 19 update tanpa konflik; authenticated bounded backfill, remote no-op/recovery, auto-merge activation, release cycle dan out-of-order event tetap terbuka. Owner external: repository/roadmap automation maintainer melalui scoped Actions writer/dispatch: [Evidence](docs/roadmap/evidence/M11.14.md).
 - [ ] M11.15 Sediakan runbook audit/recovery dan pemeriksaan drift issue/roadmap. Anonymous read-only audit exact-source `cf3442f` menemukan 19 managed, 129 missing, 19 stale-source, 8 metadata drift, serta tanpa duplicate/orphan/broken-link/conflict; plan mengusulkan 129 create + 19 update. Backfill memerlukan authenticated scoped GitHub Actions writer (owner: repository/roadmap automation maintainer); pagination skala >100, fault recovery, scheduled activation dari `main`, dan M11.14 masih terbuka: [Evidence](docs/roadmap/evidence/M11.15.md).
+
+## K — Local AI knowledge rebuild (K0–K9)
+
+Track approved through ADR 0004 on 2026-10-15. The existing 148 M-series tasks and their statuses are preserved; K0–K9 is the separate 65-task knowledge rebuild track. Task index changes do not create GitHub Issues. Follow each task card, dependency, and review gate in [the K work plan](docs/roadmap/12-local-ai-rebuild.md).
+
+- [ ] K0-001 Centralization ADR and deployment boundary. Evidence: [K0-001](docs/roadmap/evidence/K0-001-002.md).
+- [ ] K0-002 Exact-SHA XI baseline and local capability survey. Evidence: [K0-002](docs/roadmap/evidence/K0-001-002.md).
+- [ ] K0-003 Canonical boundaries and domain ownership matrix. Evidence: [K0-003](docs/roadmap/evidence/K0-003.md).
+- [ ] K0-004 Legal rights and source ingestion policy. Evidence: [K0-004](docs/roadmap/evidence/K0-004.md).
+- [ ] K0-005 Witness privacy consent and minor-safety policy. Evidence: [K0-005](docs/roadmap/evidence/K0-005.md).
+- [ ] K0-006 Legacy knowledge inventory and migration ledger.
+- [ ] K0-007 Task lifecycle and local-agent trust contract. Evidence: [K0-007](docs/roadmap/evidence/K0-007.md).
+- [ ] K1-001 Knowledge record types and JSON schemas.
+- [ ] K1-002 Canonical ID/alias grammar and resolver.
+- [ ] K1-003 Source artifact and rights schemas.
+- [ ] K1-004 PROV-based activity and evidence contracts.
+- [ ] K1-005 Standalone offline knowledge validator CLI.
+- [ ] K1-006 Deterministic canonical JSON and snapshot hashing.
+- [ ] K1-007 Independent ontology/corpus schema versioning.
+- [ ] K2-001 Deterministic offline ingestion adapter.
+- [ ] K2-002 Content-addressed raw artifact store.
+- [ ] K2-003 Dataset release manifest and rollback pointers.
+- [ ] K2-004 Revelation identity versus canon/edition ontology.
+- [ ] K2-005 First rights-cleared Qur’an passage slice.
+- [ ] K2-006 Second-source textual witness sample with edition guard.
+- [ ] K2-007 Source/citation lookup API and SDK.
+- [ ] K2-008 Corpus offline rebuild and snapshot certification.
+- [ ] K3-001 Assertion with scope, polarity and epistemic status.
+- [ ] K3-002 Evidence links and exact source selectors.
+- [ ] K3-003 Alias/identity reconciliation with human decision.
+- [ ] K3-004 Typed reviewed relation graph projection.
+- [ ] K3-005 Research review and immutable decision event flow.
+- [ ] K3-006 Cross-domain explanation and alternative hypothesis API.
+- [ ] K3-007 Evidence-aware duplicate scoring candidates.
+- [ ] K4-001 Text segmentation and lexical metadata with offsets.
+- [ ] K4-002 Polarity/speaker/quotation semantic annotation.
+- [ ] K4-003 Pure Asma source-derived proof of concept.
+- [ ] K4-004 Semantic RUH/HIZAB concept scope and mappings.
+- [ ] K4-005 Four-tradition cross-reference alignment candidates.
+- [ ] K4-006 Semantics benchmark and drift ledger.
+- [ ] K5-001 Local-only memory/archive ingestion manifest.
+- [ ] K5-002 Privacy redaction, revocation and retention controls.
+- [ ] K5-003 Witness original/correction/provenance domain.
+- [ ] K5-004 Story, episode, page/media manifest contracts.
+- [ ] K5-005 Character canon and personal terminology reconciliation.
+- [ ] K5-006 33-BUG registry recovery and alias conflict review.
+- [ ] K6-001 Mizan blueprint evaluation and policy boundary ADR.
+- [ ] K6-002 Scoped analytic responsibility engine (optional).
+- [ ] K6-003 BUG case workflow reuse and action/outcome models.
+- [ ] K6-004 Child protection and publication risk gates.
+- [ ] K6-005 Evidence-backed outcome verification.
+- [ ] K7-001 Local AI runtime adapter contract with disabled default.
+- [ ] K7-002 Hardware survey and model artifact registry.
+- [ ] K7-003 Permission-scoped local retrieval and chunks.
+- [ ] K7-004 Staging-only structured suggestion workflow.
+- [ ] K7-005 Prompt injection and high-risk action isolation.
+- [ ] K7-006 Local AI evaluation and model-outage certification.
+- [ ] K8-001 Knowledge explorer in existing Board.
+- [ ] K8-002 Witness/editorial workbench and poster pages.
+- [ ] K8-003 Approved publication read API.
+- [ ] K8-004 Public website minimal knowledge shell.
+- [ ] K8-005 Role-safe case/status and submission prototype.
+- [ ] K8-006 Editorial/publication revision and takedown support.
+- [ ] K9-001 Exact-SHA full knowledge and app CI gate.
+- [ ] K9-002 Source license, PII, secrets and dependency scan.
+- [ ] K9-003 Migration, interrupted-write and backup/restore drill.
+- [ ] K9-004 Offline egress-denial certification.
+- [ ] K9-005 Measured performance and capacity decision.
+- [ ] K9-006 Protected promotion and rollback-ready release.
+- [ ] K9-007 Publication-production go/no-go assessment.
 
 ## Pemeliharaan jangka panjang
 

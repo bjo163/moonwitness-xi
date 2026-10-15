@@ -206,6 +206,19 @@ test('normalizes only managed maintainer comments into a bounded, redelivery-sta
   assert.equal(planned.proposal.deliveryId, 'issue_comment_7001');
 });
 
+test('normalizes a K-series task marker without changing the M-series contract', () => {
+  const payload = {
+    ...webhookPayload,
+    issue: {
+      ...webhookPayload.issue,
+      body: '<!-- moonwitness-task: 123456789:K0-001 -->\nManaged K-series task.',
+    },
+  };
+  const normalized = normalizeGitHubIssueComment({ payload, expectedRepositoryId: '123456789' });
+  assert.equal(normalized.disposition, 'event');
+  assert.equal(normalized.event.taskId, 'K0-001');
+});
+
 test('normalizer ignores unrelated, bot, pull-request, wrong-repository and non-managed events', () => {
   const normalize = (patch) =>
     normalizeGitHubIssueComment({

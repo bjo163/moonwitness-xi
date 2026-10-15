@@ -1,0 +1,116 @@
+# Proposed knowledge privacy, consent, and safeguarding policy
+
+- Status: proposed; named privacy/data and safeguarding owners must review
+- Related task: K0-005
+- Related decision: [ADR 0004](../decisions/0004-knowledge-rebuild-centralization.md)
+- Scope: witness, account-export, case, and child-sensitive knowledge records
+
+This proposal sets fail-closed product and data-handling boundaries. It does
+not establish legal compliance, authorize a private-data import, or assign a
+retention period. Do not create or use real witness, account-export, or child
+records in implementation fixtures.
+
+## Classification and default access
+
+Use the following proposed classifications, compatible with ADR 0004:
+
+| Classification    | Default access and handling                                                                                                                               |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PUBLIC_APPROVED` | Only a specific reviewed publication projection; never an automatic property of an imported source.                                                       |
+| `INTERNAL`        | Authenticated, role- and tenant-bounded XI users with a work need.                                                                                        |
+| `CONFIDENTIAL`    | Explicitly granted, least-privilege access; no public search or previews.                                                                                 |
+| `RESTRICTED`      | Named authorized handlers/stewards only; private by default, with access recorded.                                                                        |
+| `CHILD_SENSITIVE` | Deny public access and general-purpose search, AI, notifications, and analytics. Synthetic fixtures only until an authorized safeguarding process exists. |
+
+Missing classification, missing consent, unresolved identity, or an absent
+access decision fails closed. Source, attachment, relation, and derived record
+classification must propagate without downgrade; a public projection needs an
+explicit reviewer decision and a reviewed, minimized copy. A public record
+cannot be made from private data merely by removing a name.
+
+Use existing XI authentication and tenant boundaries. Do not introduce a
+parallel identity/role system in this policy. Never trust `created_by`, tenant,
+or reviewer identity from an untrusted request body.
+
+## Consent, minimization, and correction
+
+Before any private witness or personal archive import, obtain a recorded,
+scoped authorization from the data subject or an authorized data owner. It
+must identify the specific input, data categories, purposes, permitted
+reviewers, intended derived uses/publication scope, consent date, and the
+available withdrawal/correction path. Authorization for private analysis does
+not imply permission to publish, share with a model, or retain indefinitely.
+
+Collect only fields needed for the approved task. Keep original testimony and
+corrections distinguishable; never silently rewrite a historical claim. A
+withdrawal, correction, or deletion request requires a documented review of
+the original, attachments, replicas, indexes, exports, and publication
+projections, subject to qualified privacy/legal review of any retention duty.
+This policy sets no fixed retention duration; a named data owner must approve
+one before an import workflow is activated.
+
+Unprovided ChatGPT/account exports and private user archives are `MISSING` and
+must not be searched, reconstructed, or imported. The plan package alone is
+not consent evidence.
+
+## Prohibited exposure paths
+
+Without an independently approved, minimized publication projection, private
+or child-sensitive content must not appear in:
+
+- public APIs, pages, guessed-ID routes, search, autocomplete, previews, or
+  exports;
+- embeddings, vector stores, general analytics, support bundles, CI artifacts,
+  application logs, traces, or notifications;
+- prompts, retrieved context, model training, or any hosted inference service.
+
+Optional local AI remains disabled by default. A future local provider may see
+only the approved input scope and must return candidate output to human review;
+it cannot authorize publication or change canonical records directly.
+
+## Child-safety boundary
+
+Do not collect identifiable child testimony, allegations, contact details,
+location, or media through a general public form. Use synthetic child fixtures
+only. A future authorized child-protection workflow needs a named safeguarding
+owner, restricted access and storage, a response/escalation procedure,
+minimization and retention decisions, and specialist review before collection
+or publication. No such workflow or owner was verified during this task.
+
+## Revocation and incident response
+
+The data/privacy owner must define how revocation removes eligible content
+from operational views, search/embedding indexes, caches, previews, exports,
+and public releases; each derived artifact needs a reproducible invalidation
+or rebuild path. Preserve only the minimum sanitized audit event required by
+the approved retention policy; do not preserve withdrawn content in a log as a
+workaround.
+
+For suspected exposure, use the private
+[security incident response runbook](../operations/security-incident-response.md).
+Keep sensitive evidence private, record hashes and sanitized identifiers, and
+assign a privacy/legal contact when user data or regulated obligations may be
+involved. The repository runbook does not claim a private reporting channel or
+production deployment is configured.
+
+## Synthetic negative cases and approval gates
+
+Before implementation, design synthetic tests for absent/withdrawn consent,
+inherited `RESTRICTED` or `CHILD_SENSITIVE` classification, cross-tenant reads,
+guessable attachment IDs, public/search/preview/log/prompt leaks, self-approval,
+and revocation from derived indexes. A passing synthetic test does not
+authorize real-data use.
+
+Before a private import or public projection, maintainers must name and obtain
+approval from:
+
+- a data/privacy steward responsible for classification, consent, minimization,
+  retention, revocation, and access reviews;
+- a safeguarding owner before any child-sensitive collection or case workflow;
+- a publication reviewer for each proposed public projection; and
+- qualified privacy/legal counsel when a real sensitive case or jurisdictional
+  obligation requires interpretation.
+
+These roles are unassigned in the inspected workspace. This draft makes no
+claim of GDPR, child-protection, or other legal compliance and authorizes no
+real private or child-sensitive data import.

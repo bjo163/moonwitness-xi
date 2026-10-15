@@ -60,6 +60,7 @@ test('schema declares versioned tasks and optional prioritization/assignment fie
   assert.deepEqual(schema.$defs.task.properties.priority.enum, ['p0', 'p1', 'p2', 'p3']);
   assert.ok(schema.$defs.task.properties.assignee);
   assert.ok(schema.$defs.task.properties.labels);
+  assert.match(schema.$defs.task.properties.id.pattern, /K\(\?:0/u);
 });
 
 test('accepts stable unique IDs, safe cards, DAG dependencies, evidence and checkbox agreement', () => {
@@ -131,6 +132,49 @@ test('accepts a shared evidence file only when its roadmap range covers the task
       problem.includes(
         'M11.01.evidence must reference an existing evidence file linked to this task'
       )
+    )
+  );
+});
+
+test('accepts K-series task IDs, milestones, dependencies, and range evidence', () => {
+  const index = {
+    schemaVersion: 1,
+    description: 'K-series fixture',
+    tasks: [
+      {
+        id: 'K0-001',
+        title: 'Foundation',
+        milestone: 'K0',
+        dependsOn: [],
+        output: 'ADR',
+        detailFile: 'docs/roadmap/12-local-ai-rebuild.md',
+        status: 'complete',
+        evidence: 'docs/roadmap/evidence/K0-001-003.md',
+      },
+      {
+        id: 'K0-003',
+        title: 'Ownership',
+        milestone: 'K0',
+        dependsOn: ['K0-001'],
+        output: 'matrix',
+        detailFile: 'docs/roadmap/12-local-ai-rebuild.md',
+        evidence: 'docs/roadmap/evidence/K0-001-003.md',
+      },
+    ],
+  };
+  const roadmap = [
+    '- [x] K0-001 Foundation. Evidence: [K0-001–K0-003](docs/roadmap/evidence/K0-001-003.md).',
+    '- [x] K0-003 Ownership. Evidence: [K0-001–K0-003](docs/roadmap/evidence/K0-001-003.md).',
+  ].join('\n');
+  const documents = new Map([
+    ['docs/roadmap/12-local-ai-rebuild.md', '## K0-001 — Foundation\n## K0-003 — Ownership'],
+    ['docs/roadmap/evidence/K0-001-003.md', '# K0 evidence'],
+  ]);
+  assert.deepEqual(validateRoadmapIndex(index, roadmap, documents), []);
+  index.tasks[1].milestone = 'M0';
+  assert.ok(
+    validateRoadmapIndex(index, roadmap, documents).some((problem) =>
+      problem.includes('K0-003.milestone must match its task ID prefix')
     )
   );
 });

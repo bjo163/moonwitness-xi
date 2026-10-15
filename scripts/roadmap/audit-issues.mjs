@@ -4,10 +4,13 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL, URL } from 'node:url';
 import { createGitHubIssuesClient } from './sync-issues.mjs';
+import { taskIdCaptureSource } from './task-ids.mjs';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const markerPattern =
-  /^<!-- moonwitness-task: ([1-9][0-9]*):(M(?:0|[1-9][0-9]*)\.[0-9]{2}) -->$/gmu;
+const markerPattern = new RegExp(
+  `^<!-- moonwitness-task: ([1-9][0-9]*):${taskIdCaptureSource} -->$`,
+  'gmu'
+);
 const managedStart = '<!-- BEGIN MOONWITNESS MANAGED -->';
 const managedEnd = '<!-- END MOONWITNESS MANAGED -->';
 const fullShaPattern = /^[a-f0-9]{40}$/u;

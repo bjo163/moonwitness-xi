@@ -2,6 +2,7 @@ import { readFile, access } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { milestonePattern, parseTaskId, taskIdPattern, taskIdSource } from './task-ids.mjs';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const allowedTaskKeys = new Set([
@@ -18,8 +19,6 @@ const allowedTaskKeys = new Set([
   'evidence',
 ]);
 const allowedRootKeys = new Set(['schemaVersion', 'description', 'tasks']);
-const taskIdPattern = /^M(?:0|[1-9][0-9]*)\.[0-9]{2}$/u;
-const milestonePattern = /^M(?:0|[1-9][0-9]*)$/u;
 
 /** @typedef {'todo' | 'in_progress' | 'blocked' | 'complete'} TaskStatus */
 /** @typedef {'p0' | 'p1' | 'p2' | 'p3'} TaskPriority */
@@ -57,15 +56,16 @@ function evidenceLinksFromLine(line) {
 
 function evidenceLabelCoversTask(label, id) {
   if (label.includes(id)) return true;
-  const range = /^(M(?:0|[1-9][0-9]*)\.([0-9]{2}))[–-](M(?:0|[1-9][0-9]*)\.([0-9]{2}))$/u.exec(
-    label
-  );
-  if (!range || range[1].split('.')[0] !== range[3].split('.')[0]) return false;
-  const taskNumber = Number(id.split('.')[1]);
+  const range = new RegExp(`^(${taskIdSource})[–-](${taskIdSource})$`, 'u').exec(label);
+  if (!range) return false;
+  const start = parseTaskId(range[1]);
+  const end = parseTaskId(range[2]);
+  const task = parseTaskId(id);
+  if (!start || !end || !task || start.milestone !== end.milestone) return false;
   return (
-    id.split('.')[0] === range[1].split('.')[0] &&
-    taskNumber >= Number(range[2]) &&
-    taskNumber <= Number(range[4])
+    task.milestone === start.milestone &&
+    task.ordinal >= start.ordinal &&
+    task.ordinal <= end.ordinal
   );
 }
 
@@ -110,7 +110,9 @@ export function validateRoadmapIndex(input, roadmap, documents) {
     }
     const id = candidate.id;
     if (typeof id !== 'string' || !taskIdPattern.test(id)) {
-      problems.push(`${prefix}.id must use the stable M<n>.<two-digit task> format.`);
+      problems.push(
+        `${prefix}.id must use a stable M<n>.<two-digit> or K<n>-<three-digit> task ID.`
+      );
       continue;
     }
     if (seenIds.has(id)) problems.push(`${id} is duplicated in tasks.json.`);
@@ -119,8 +121,8 @@ export function validateRoadmapIndex(input, roadmap, documents) {
       problems.push(`${id}.title must be a non-empty string.`);
     }
     if (typeof candidate.milestone !== 'string' || !milestonePattern.test(candidate.milestone)) {
-      problems.push(`${id}.milestone must use the M<n> format.`);
-    } else if (id.split('.')[0] !== candidate.milestone) {
+      problems.push(`${id}.milestone must use the M<n> or K<n> format.`);
+    } else if (parseTaskId(id)?.milestone !== candidate.milestone) {
       problems.push(`${id}.milestone must match its task ID prefix.`);
     }
     if (
@@ -228,7 +230,7 @@ export function validateRoadmapIndex(input, roadmap, documents) {
 
   const roadmapEntries = new Map();
   for (const [index, line] of roadmap.split(/\r?\n/u).entries()) {
-    const match = /^\s*-\s*\[([ xX])\]\s+(M(?:0|[1-9][0-9]*)\.[0-9]{2})\b/u.exec(line);
+    const match = new RegExp(`^\\s*-\\s*\\[([ xX])\\]\\s+(${taskIdSource})\\b`, 'u').exec(line);
     if (!match) continue;
     const [, checked, id] = match;
     const existing = roadmapEntries.get(id) ?? [];
