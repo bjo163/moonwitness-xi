@@ -16,6 +16,22 @@ function parseVersion(value, label) {
   return match[1];
 }
 
+function compareVersions(left, right) {
+  const leftVersion = parseVersion(left, 'Current dependency range');
+  const rightVersion = parseVersion(right, 'Candidate version');
+  const leftCore = leftVersion.split(/[+-]/u, 1)[0].split('.').map(Number);
+  const rightCore = rightVersion.split(/[+-]/u, 1)[0].split('.').map(Number);
+  for (let index = 0; index < leftCore.length; index += 1) {
+    if (leftCore[index] !== rightCore[index]) {
+      return leftCore[index] < rightCore[index] ? -1 : 1;
+    }
+  }
+  const leftPrerelease = leftVersion.includes('-');
+  const rightPrerelease = rightVersion.includes('-');
+  if (leftPrerelease !== rightPrerelease) return leftPrerelease ? -1 : 1;
+  return 0;
+}
+
 function command(executable, args, cwd, capture = false) {
   const packageManager = executable === 'pnpm' ? resolvePackageManager() : undefined;
   if (executable === 'pnpm' && !packageManager) {
@@ -124,6 +140,9 @@ export async function applyCandidate({
       throw new Error(
         'Major dependency updates are report-only and cannot be applied by this executor.'
       );
+    }
+    if (compareVersions(oldVersion, exactVersion) >= 0) {
+      throw new Error('Dependency candidates must be newer than every current declaration.');
     }
   }
   const changedDeclarations = declarations.filter(

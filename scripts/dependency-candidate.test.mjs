@@ -100,11 +100,20 @@ test('rejects mismatched source SHA, major candidates, and unknown packages befo
       sourceSha: fixture.sourceSha,
       expectedSourceSha: 'f'.repeat(40),
       root: fixture.root,
+      execute: () => assert.fail('package manager must not run for a rejected candidate'),
     };
     await assert.rejects(applyCandidate(options), /must exactly match/);
     await assert.rejects(
       applyCandidate({ ...options, expectedSourceSha: fixture.sourceSha, version: '8.0.0' }),
       /Major dependency updates/
+    );
+    await assert.rejects(
+      applyCandidate({ ...options, expectedSourceSha: fixture.sourceSha, version: '7.0.0' }),
+      /must be newer than every current declaration/
+    );
+    await assert.rejects(
+      applyCandidate({ ...options, expectedSourceSha: fixture.sourceSha, version: '7.0.1' }),
+      /must be newer than every current declaration/
     );
     await assert.rejects(
       applyCandidate({ ...options, expectedSourceSha: fixture.sourceSha, version: '7.1.0-beta.1' }),
