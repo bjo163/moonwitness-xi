@@ -166,6 +166,7 @@
     },
     {
       "id": "M1.11",
+      "status": "complete",
       "title": "Hapus alur staging/production deployment yang tidak digunakan; pertahankan smoke test lokal runner.",
       "milestone": "M1",
       "dependsOn": ["M0.04"],
@@ -1216,7 +1217,7 @@
     },
     {
       "id": "M10.08",
-      "status": "in_progress",
+      "status": "complete",
       "evidence": "docs/roadmap/evidence/M10.08.md",
       "title": "Hanya main/dev ada pada repository asal; tidak ada workflow deployment aplikasi yang aktif.",
       "milestone": "M10",
