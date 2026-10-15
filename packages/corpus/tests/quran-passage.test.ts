@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { importQuranPassage, readQuranPassage } from '../src/index.js';
+import { importQuranPassage, readQuranPassage, readQuranPassageSnapshot } from '../src/index.js';
 
 const roots: string[] = [];
 const editionId = 'mw:edition:test-quran-v1';
@@ -86,6 +86,21 @@ describe('Qur’an passage retrieval and local import', () => {
     expect(passage.originalBytes).toEqual(sourceBytes);
     expect(passage.sha256).toBe(sha256);
     expect(passage.attribution).toBe('Synthetic fixture attribution');
+  });
+
+  it('returns the exact validated manifest bytes through the dedicated snapshot reader only', async () => {
+    const { root } = await setup();
+    const snapshot = await readQuranPassageSnapshot({
+      rootDirectory: root,
+      editionId,
+      locator: 'Q7:46',
+    });
+
+    expect(snapshot.sourceManifestBytes).toEqual(
+      await readFile(path.join(root, sourceManifestPath))
+    );
+    expect(snapshot.passage).not.toHaveProperty('sourceManifestBytes');
+    expect(snapshot.passage).not.toHaveProperty('source_manifest_bytes');
   });
 
   it('rejects unknown editions and passage locators', async () => {

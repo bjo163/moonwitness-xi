@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
+import { createHash } from 'node:crypto';
 import { cp, mkdtemp, readFile, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -115,6 +116,11 @@ test('reconstructs local source bytes offline from an empty output and emits ide
         )
       );
       assert.deepEqual(outputManifest, inputManifest, 'source manifest must be byte-identical');
+      assert.equal(
+        createHash('sha256').update(outputManifest).digest('hex'),
+        source.manifestSha256,
+        'report digest must identify the copied validated manifest bytes'
+      );
       assert.equal(outputArtifact.byteLength, source.byteLength);
       assert.deepEqual(
         outputArtifact,

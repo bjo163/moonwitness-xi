@@ -43,6 +43,11 @@ export interface TextualWitnessPassage {
   references: string[];
 }
 
+export interface TextualWitnessPassageSnapshot {
+  passage: TextualWitnessPassage;
+  sourceManifestBytes: Buffer;
+}
+
 const digestPattern = /^[a-f0-9]{64}$/u;
 const identityPattern = /^mw:(?:expression|edition|artifact):[a-z0-9][a-z0-9._-]{0,99}$/u;
 const locatorPattern = /^[A-Za-z][A-Za-z0-9 ]{0,63} [1-9][0-9]{0,2}:[1-9][0-9]{0,2}$/u;
@@ -146,6 +151,19 @@ function parseIndex(value: unknown): TextualWitnessIndex {
 export async function readTextualWitnessPassage(
   request: ReadTextualWitnessPassageRequest
 ): Promise<TextualWitnessPassage> {
+  return (await readTextualWitnessPassageSnapshotInternal(request)).passage;
+}
+
+/** Return a verified witness excerpt and the exact manifest bytes validated for it. */
+export async function readTextualWitnessPassageSnapshot(
+  request: ReadTextualWitnessPassageRequest
+): Promise<TextualWitnessPassageSnapshot> {
+  return readTextualWitnessPassageSnapshotInternal(request);
+}
+
+async function readTextualWitnessPassageSnapshotInternal(
+  request: ReadTextualWitnessPassageRequest
+): Promise<TextualWitnessPassageSnapshot> {
   if (
     !identityPattern.test(request.expressionId) ||
     !request.expressionId.startsWith('mw:expression:') ||
@@ -216,15 +234,18 @@ export async function readTextualWitnessPassage(
   }
 
   return {
-    sourceId: manifest.source_id,
-    expressionId: entry.expression_id,
-    editionId: entry.edition_id,
-    locale: manifest.locale,
-    locator: entry.locator,
-    text,
-    sha256: actualSha,
-    originalBytes: bytes,
-    attribution: manifest.attribution.text,
-    references: [...(manifest.references ?? [])],
+    passage: {
+      sourceId: manifest.source_id,
+      expressionId: entry.expression_id,
+      editionId: entry.edition_id,
+      locale: manifest.locale,
+      locator: entry.locator,
+      text,
+      sha256: actualSha,
+      originalBytes: bytes,
+      attribution: manifest.attribution.text,
+      references: [...(manifest.references ?? [])],
+    },
+    sourceManifestBytes: manifestBytes,
   };
 }

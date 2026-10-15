@@ -1,9 +1,13 @@
 export { ingestDataset, replayDatasetRelease } from './ingestion.js';
-export { importQuranPassage, readQuranPassage } from './quran-passage.js';
-export { readTextualWitnessPassage } from './textual-witness-passage.js';
+export { importQuranPassage, readQuranPassage, readQuranPassageSnapshot } from './quran-passage.js';
+export {
+  readTextualWitnessPassage,
+  readTextualWitnessPassageSnapshot,
+} from './textual-witness-passage.js';
 export type {
   ReadTextualWitnessPassageRequest,
   TextualWitnessPassage,
+  TextualWitnessPassageSnapshot,
 } from './textual-witness-passage.js';
 export {
   activateDatasetRelease,
@@ -35,5 +39,6 @@ export type {
   ImportQuranPassageRequest,
   ImportedQuranPassage,
   QuranPassage,
+  QuranPassageSnapshot,
   ReadQuranPassageRequest,
 } from './quran-passage.js';

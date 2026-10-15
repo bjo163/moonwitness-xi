@@ -43,6 +43,11 @@ export interface QuranPassage {
   attribution: string;
 }
 
+export interface QuranPassageSnapshot {
+  passage: QuranPassage;
+  sourceManifestBytes: Buffer;
+}
+
 export interface ImportQuranPassageRequest extends ReadQuranPassageRequest {
   artifactStorePath: string;
 }
@@ -138,9 +143,12 @@ function parseIndex(value: unknown): QuranPassageIndex {
   return { format: 'moonwitness-quran-passage-index/v1', entries };
 }
 
-async function lookupPassage(
-  request: ReadQuranPassageRequest
-): Promise<{ entry: QuranPassageIndexEntry; manifest: SourceBytesManifest; bytes: Buffer }> {
+async function lookupPassage(request: ReadQuranPassageRequest): Promise<{
+  entry: QuranPassageIndexEntry;
+  manifest: SourceBytesManifest;
+  manifestBytes: Buffer;
+  bytes: Buffer;
+}> {
   if (!editionPattern.test(request.editionId) || !locatorPattern.test(request.locator)) {
     throw new TypeError('editionId or locator is invalid');
   }
@@ -192,12 +200,14 @@ async function lookupPassage(
   ) {
     throw new TypeError('Quran passage artifact checksum or size mismatch');
   }
-  return { entry: entry!, manifest, bytes };
+  return { entry: entry!, manifest, manifestBytes, bytes };
 }
 
 /** Return exact local source text for a pinned edition and verse; this function never fetches data. */
-export async function readQuranPassage(request: ReadQuranPassageRequest): Promise<QuranPassage> {
-  const { entry, manifest, bytes } = await lookupPassage(request);
+async function readQuranPassageSnapshotInternal(
+  request: ReadQuranPassageRequest
+): Promise<QuranPassageSnapshot> {
+  const { entry, manifest, manifestBytes, bytes } = await lookupPassage(request);
   const sourceLine = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
   const line = sourceLine.endsWith('\n') ? sourceLine.slice(0, -1) : sourceLine;
   if (line.includes('\n') || line.includes('\r')) {
@@ -214,13 +224,27 @@ export async function readQuranPassage(request: ReadQuranPassageRequest): Promis
     throw new TypeError('Quran passage source line does not match its edition locator');
   }
   return {
-    editionId: entry.edition_id,
-    locator: entry.locator,
-    text,
-    sha256: entry.sha256,
-    originalBytes: bytes,
-    attribution: manifest.attribution.text,
+    passage: {
+      editionId: entry.edition_id,
+      locator: entry.locator,
+      text,
+      sha256: entry.sha256,
+      originalBytes: bytes,
+      attribution: manifest.attribution.text,
+    },
+    sourceManifestBytes: manifestBytes,
   };
+}
+
+export async function readQuranPassage(request: ReadQuranPassageRequest): Promise<QuranPassage> {
+  return (await readQuranPassageSnapshotInternal(request)).passage;
+}
+
+/** Return a verified passage and the exact manifest bytes validated for it. */
+export async function readQuranPassageSnapshot(
+  request: ReadQuranPassageRequest
+): Promise<QuranPassageSnapshot> {
+  return readQuranPassageSnapshotInternal(request);
 }
 
 /** Idempotently add the passage's exact source bytes to a local content-addressed store. */

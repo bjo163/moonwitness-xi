@@ -3,7 +3,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { readTextualWitnessPassage } from '../src/textual-witness-passage.js';
+import {
+  readTextualWitnessPassage,
+  readTextualWitnessPassageSnapshot,
+} from '../src/textual-witness-passage.js';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const indexRelative = 'corpus/manifests/textual-witness-index.json';
@@ -52,6 +55,15 @@ describe('offline textual witness passage retrieval', () => {
     expect(passage.originalBytes).toEqual(sourceBytes);
     expect(passage.text.endsWith('.')).toBe(true);
     expect(passage.references).toContain('https://ebible.org/engwebp/GEN01.htm');
+  });
+
+  it('returns the exact validated manifest bytes only from the dedicated snapshot reader', async () => {
+    const root = await setup();
+    const snapshot = await readTextualWitnessPassageSnapshot({ rootDirectory: root, ...request });
+
+    expect(snapshot.sourceManifestBytes).toEqual(await readFile(path.join(root, manifestRelative)));
+    expect(snapshot.passage).not.toHaveProperty('sourceManifestBytes');
+    expect(snapshot.passage).not.toHaveProperty('source_manifest_bytes');
   });
 
   it('rejects unknown expression, edition, or locator tuples', async () => {

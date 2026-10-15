@@ -6,7 +6,10 @@ import path from 'node:path';
 import process from 'node:process';
 import { TextDecoder } from 'node:util';
 import { fileURLToPath } from 'node:url';
-import { readQuranPassage, readTextualWitnessPassage } from '../../packages/corpus/dist/index.js';
+import {
+  readQuranPassageSnapshot,
+  readTextualWitnessPassageSnapshot,
+} from '../../packages/corpus/dist/index.js';
 
 const usage =
   'Usage: node scripts/knowledge/rebuild.mjs --root <local-source-root> --output <empty-output-directory>';
@@ -15,7 +18,7 @@ const sourceDefinitions = [
     kind: 'quran-passage',
     indexPath: 'corpus/manifests/quran-passage-index.json',
     read: async (rootDirectory, entry) =>
-      readQuranPassage({
+      readQuranPassageSnapshot({
         rootDirectory,
         editionId: entry.edition_id,
         locator: entry.locator,
@@ -32,7 +35,7 @@ const sourceDefinitions = [
     kind: 'textual-witness',
     indexPath: 'corpus/manifests/textual-witness-index.json',
     read: async (rootDirectory, entry) =>
-      readTextualWitnessPassage({
+      readTextualWitnessPassageSnapshot({
         rootDirectory,
         expressionId: entry.expression_id,
         editionId: entry.edition_id,
@@ -91,34 +94,6 @@ async function ensureEmptyOutput(directory) {
   }
 }
 
-async function readManifestBytes(rootDirectory, manifestPath) {
-  if (
-    typeof manifestPath !== 'string' ||
-    manifestPath.length === 0 ||
-    path.isAbsolute(manifestPath) ||
-    manifestPath.includes('\\') ||
-    manifestPath.includes('\0') ||
-    manifestPath.split('/').some((segment) => !segment || segment === '.' || segment === '..')
-  ) {
-    throw new TypeError('Source manifest path must be a safe relative POSIX path');
-  }
-  const segments = manifestPath.split('/');
-  let current = rootDirectory;
-  for (const [index, segment] of segments.entries()) {
-    current = path.join(current, segment);
-    const info = await lstat(current);
-    if (info.isSymbolicLink())
-      throw new TypeError('Source manifest cannot traverse symbolic links');
-    if (index < segments.length - 1 && !info.isDirectory()) {
-      throw new TypeError('Source manifest parents must be directories');
-    }
-    if (index === segments.length - 1 && !info.isFile()) {
-      throw new TypeError('Source manifest must be a regular file');
-    }
-  }
-  return readFile(current);
-}
-
 async function resolvedPathForNewTarget(target) {
   let existing = target;
   const suffix = [];
@@ -145,8 +120,8 @@ async function readIndex(rootDirectory, indexPath) {
 }
 
 async function materializeSource(rootDirectory, outputDirectory, definition, entry) {
-  const sourceManifestBytes = await readManifestBytes(rootDirectory, entry.source_manifest_path);
-  const passage = await definition.read(rootDirectory, entry);
+  const snapshot = await definition.read(rootDirectory, entry);
+  const { passage, sourceManifestBytes } = snapshot;
   const sourceManifest = JSON.parse(
     new TextDecoder('utf-8', { fatal: true }).decode(sourceManifestBytes)
   );
@@ -154,13 +129,6 @@ async function materializeSource(rootDirectory, outputDirectory, definition, ent
   const digest = sha256(artifactBytes);
   if (digest !== entry.sha256 || digest !== passage.sha256) {
     throw new TypeError('Verified passage bytes do not match the pinned source digest');
-  }
-
-  // The corpus reader validates this manifest too. Confirm it did not change between
-  // the reader's validation and our read before copying it into the reconstruction.
-  const manifestAfterRead = await readManifestBytes(rootDirectory, entry.source_manifest_path);
-  if (!manifestAfterRead.equals(sourceManifestBytes)) {
-    throw new TypeError('Source manifest changed during reconstruction');
   }
 
   const manifestSha256 = sha256(sourceManifestBytes);
