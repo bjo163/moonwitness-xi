@@ -69,7 +69,7 @@ test('requester submits a request that superadmin approves or rejects in Board',
   await page.getByLabel('Login').fill(requesterLogin);
   await page.getByLabel('Password').fill(requesterPassword);
   await page.getByRole('button', { name: 'Enter the board' }).click();
-  await expect(page).toHaveURL(/\/$/u);
+  await expect(page.getByRole('button', { name: requesterLogin })).toBeVisible();
 
   const requesterSession = await page.evaluate(
     () => JSON.parse(localStorage.getItem('mw-board-session') ?? 'null') as BoardSession | null
@@ -262,4 +262,72 @@ test('requester submits a request that superadmin approves or rejects in Board',
       }),
     ])
   );
+
+  await page.getByRole('button', { name: 'superadmin' }).click();
+  await page.getByRole('menuitem', { name: 'Sign out' }).click();
+  await expect(page).toHaveURL(/\/login$/u);
+  await page.getByLabel('Login').fill(requesterLogin);
+  await page.getByLabel('Password').fill(requesterPassword);
+  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await expect(page.getByRole('button', { name: requesterLogin })).toBeVisible();
+
+  const finalRequesterSession = await page.evaluate(
+    () => JSON.parse(localStorage.getItem('mw-board-session') ?? 'null') as BoardSession | null
+  );
+  expect(finalRequesterSession).not.toBeNull();
+  const finalRequesterHeaders = {
+    authorization: `Bearer ${finalRequesterSession!.access_token}`,
+  };
+  let approvedNotificationId: number | undefined;
+  await expect
+    .poll(
+      async () => {
+        const inboxResponse = await page.request.get('/notifications/inbox', {
+          headers: finalRequesterHeaders,
+          params: { limit: '50' },
+        });
+        if (inboxResponse.status() !== 200) return false;
+        const inbox = (await inboxResponse.json()) as ApiRecord<{
+          notifications: Array<{
+            id: number;
+            title: string;
+            state: string;
+            resource_model?: string;
+            resource_id?: number;
+          }>;
+        }>;
+        const approvedNotification = inbox.data.notifications.find(
+          (notification) =>
+            notification.title === 'Request approved' &&
+            notification.resource_model === 'request.purchase' &&
+            notification.resource_id === createdRequest.data.id
+        );
+        approvedNotificationId = approvedNotification?.id;
+        return approvedNotification !== undefined;
+      },
+      { timeout: 15_000 }
+    )
+    .toBe(true);
+  expect(approvedNotificationId).toBeDefined();
+
+  await page.reload();
+  const notificationBell = page.getByRole('button', { name: /Notifications, \d+ unread/u });
+  await expect(notificationBell).toBeVisible();
+  await notificationBell.click();
+  const approvedNotification = page
+    .getByRole('list')
+    .locator('li')
+    .filter({ has: page.getByText('Request approved', { exact: true }) });
+  await expect(approvedNotification).toBeVisible();
+  await approvedNotification.getByRole('button', { name: /Mark read/u }).click();
+  await expect
+    .poll(async () => {
+      const response = await page.request.get(
+        `/api/notification.notification/${approvedNotificationId}`,
+        { headers: finalRequesterHeaders }
+      );
+      if (response.status() !== 200) return null;
+      return ((await response.json()) as ApiRecord<{ state: string }>).data.state;
+    })
+    .toBe('read');
 });

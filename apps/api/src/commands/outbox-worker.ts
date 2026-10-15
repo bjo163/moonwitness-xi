@@ -9,6 +9,7 @@ import {
   manifest as notificationAddon,
   registerNotificationOutboxConsumer,
 } from '@moonwitness/orm-notification';
+import { manifest as workflowAddon } from '@moonwitness/orm-workflow';
 import { readWorkerHealthPort, startWorkerHealthServer } from './worker-health.js';
 import {
   manifest as integrationAddon,
@@ -31,6 +32,7 @@ try {
     jobsManifest,
     notificationAddon,
     integrationAddon,
+    workflowAddon,
     requestAddon,
   ]);
   unregisterNotificationConsumer = registerNotificationOutboxConsumer();

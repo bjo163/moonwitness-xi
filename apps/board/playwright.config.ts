@@ -7,6 +7,7 @@ import { E2E_JWT_SECRET, E2E_SUPERADMIN_PASSWORD } from './e2e/constants.js';
 const repositoryRoot = resolve(import.meta.dirname, '../..');
 const apiPort = env.MW_E2E_API_PORT ?? '3010';
 const boardPort = env.MW_E2E_BOARD_PORT ?? '5174';
+const outboxPort = env.MW_E2E_OUTBOX_PORT ?? '3011';
 const baseURL = `http://127.0.0.1:${boardPort}`;
 const databaseUrl =
   env.POSTGRES_TEST_URL ?? 'postgresql://postgres:ci-only-password@127.0.0.1:55432/moonwitness_e2e';
@@ -87,6 +88,18 @@ export default defineConfig({
       timeout: 120_000,
       reuseExistingServer: false,
       env: { ...env, API_PORT: apiPort, BOARD_API_TARGET: `http://127.0.0.1:${apiPort}` },
+    },
+    {
+      command: 'pnpm jobs:outbox',
+      cwd: repositoryRoot,
+      url: `http://127.0.0.1:${outboxPort}/readyz`,
+      timeout: 120_000,
+      reuseExistingServer: false,
+      env: {
+        ...env,
+        DATABASE_URL: databaseUrl,
+        OUTBOX_WORKER_HEALTH_PORT: outboxPort,
+      },
     },
   ],
 });
