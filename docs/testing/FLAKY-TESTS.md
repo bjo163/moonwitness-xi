@@ -21,6 +21,8 @@ Run tests by changed behavior and dependency boundary. A local focused pass is e
 
   Set `POSTGRES_TEST_URL` to an isolated test database first. Direct Playwright is a local iteration shortcut; never use it to skip required CI preflights, typecheck, lint, security checks, or hosted gates. If source in a dependency used by the Board changed since the last build, run the canonical preflights before relying on the browser result.
 
+  To run one filtered test through the wrapper, use the package-manager delimiter explicitly, for example `pnpm test:e2e:built -- --grep=login`. The wrapper removes that delimiter before invoking Playwright so the filter is not mistaken for a positional test path.
+
 - For a visual-only change, run the affected visual spec at the target viewport. Run the full three-browser matrix when cross-browser behavior changed or when a scheduled/release gate requires it; a backend-only change does not need a local visual matrix.
 - Run formatting and lint on changed files while iterating. Run repository-wide checks once for the completed batch or when the change affects shared configuration, generated output, or repository-wide policy.
 

@@ -13,7 +13,8 @@ const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const config = resolve(root, 'apps/board/playwright.config.ts');
 const args = argv.slice(2);
 const built = args[0] === '--built';
-const playwrightArgs = built ? args.slice(1) : args;
+const forwardedArgs = built ? args.slice(1) : args;
+const playwrightArgs = forwardedArgs[0] === '--' ? forwardedArgs.slice(1) : forwardedArgs;
 if (!env.POSTGRES_TEST_URL) {
   stderr.write('POSTGRES_TEST_URL is required for test:e2e.\n');
   exit(2);
