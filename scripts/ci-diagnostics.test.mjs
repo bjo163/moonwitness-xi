@@ -13,7 +13,7 @@ const rootPackage = JSON.parse(readFileSync('package.json', 'utf8'));
 
 test('failed unit and PostgreSQL jobs annotate testcase names before report scanning', () => {
   assert.match(workflow, /id: unit_tests\s+run: pnpm test:unit:ci/u);
-  assert.match(workflow, /id: postgres_tests\s+run: pnpm test:integration/u);
+  assert.match(workflow, /id: postgres_tests\s+run: pnpm test:integration:built/u);
   assert.match(
     workflow,
     /if: always\(\) && \(steps\.unit_tests\.outcome == 'failure' \|\| steps\.postgres_tests\.outcome == 'failure'\)[\s\S]*?run: node scripts\/summarize-junit-failures\.mjs test-results\/junit/u

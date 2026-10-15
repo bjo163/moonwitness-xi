@@ -7,6 +7,7 @@ import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   collectLifecycleSnapshot,
+  completedExactDevPullRequestTechnicalGate,
   exactDevPullRequestTechnicalGate,
   flattenGitHubPages,
   isExactDevMainPullRequest,
@@ -42,6 +43,7 @@ async function ghJsonObject(args) {
 
 async function currentDevPullRequestTechnicalGate(repository, sourceSha) {
   const deadline = Date.now() + 25 * 60 * 1000;
+  let lastHeartbeat = 0;
   while (Date.now() < deadline) {
     const pages = await ghJson([
       `repos/${repository}/actions/workflows/ci.yml/runs?branch=dev&event=pull_request&per_page=100`,
@@ -61,8 +63,15 @@ async function currentDevPullRequestTechnicalGate(repository, sourceSha) {
       const jobPages = await ghJson([
         `repos/${repository}/actions/runs/${run.id}/jobs?per_page=100`,
       ]);
-      const gate = exactDevPullRequestTechnicalGate(run, jobPages);
-      if (gate?.status === 'completed') return [gate];
+      return completedExactDevPullRequestTechnicalGate(run, jobPages);
+    }
+    const now = Date.now();
+    if (now - lastHeartbeat >= 60_000) {
+      const runStatus = run ? `run ${run.id} is ${run.status}` : 'no exact-source PR run found yet';
+      process.stdout.write(
+        `Waiting for the exact dev-to-main PR technical gate at ${sourceSha}: ${runStatus}.\n`
+      );
+      lastHeartbeat = now;
     }
     await delay(15_000);
   }

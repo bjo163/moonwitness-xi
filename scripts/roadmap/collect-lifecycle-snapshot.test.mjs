@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   collectLifecycleSnapshot,
+  completedExactDevPullRequestTechnicalGate,
   exactDevPullRequestTechnicalGate,
   flattenGitHubPages,
   isExactDevMainPullRequest,
@@ -171,6 +172,48 @@ test('selects exact same-repository dev-to-main PR gate and ignores duplicate pu
   );
   assert.equal(exactDevPullRequestTechnicalGate(run, [{ jobs: [] }]), undefined);
   assert.equal(selectExactDevPullRequestCiRun([{ workflow_runs: [] }], devSha), undefined);
+});
+
+test('fails immediately when a completed PR CI run omits its technical gate', () => {
+  const run = { id: 42, head_sha: devSha, status: 'completed' };
+  assert.throws(
+    () => completedExactDevPullRequestTechnicalGate(run, [{ jobs: [] }]),
+    /did not report a completed ci-technical-gate/u
+  );
+  assert.throws(
+    () =>
+      completedExactDevPullRequestTechnicalGate(run, [
+        { jobs: [{ id: 4, name: 'ci-technical-gate', status: 'in_progress' }] },
+      ]),
+    /did not report a completed ci-technical-gate/u
+  );
+});
+
+test('accepts the completed exact PR technical gate for lifecycle evidence', () => {
+  const run = { id: 42, head_sha: devSha, status: 'completed' };
+  assert.deepEqual(
+    completedExactDevPullRequestTechnicalGate(run, [
+      {
+        jobs: [
+          {
+            id: 4,
+            name: 'ci-technical-gate',
+            status: 'completed',
+            conclusion: 'success',
+          },
+        ],
+      },
+    ]),
+    [
+      {
+        id: 4,
+        name: 'ci-technical-gate',
+        head_sha: devSha,
+        status: 'completed',
+        conclusion: 'success',
+      },
+    ]
+  );
 });
 
 test('parses the explicit source commit marker and derives canonical roadmap task states', () => {

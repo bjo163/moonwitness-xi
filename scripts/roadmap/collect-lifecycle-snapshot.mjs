@@ -102,6 +102,21 @@ export function exactDevPullRequestTechnicalGate(run, pages) {
   };
 }
 
+/**
+ * Require the exact PR CI run to expose its terminal technical gate.
+ * @param {{id:number,head_sha:string,status:string}} run
+ * @param {unknown} pages
+ */
+export function completedExactDevPullRequestTechnicalGate(run, pages) {
+  const gate = exactDevPullRequestTechnicalGate(run, pages);
+  if (!gate || gate.status !== 'completed') {
+    throw new Error(
+      `Completed PR CI run ${run.id} for ${run.head_sha} did not report a completed ci-technical-gate.`
+    );
+  }
+  return [gate];
+}
+
 /** @param {string} markdown */
 export function parseEvidenceSourceSha(markdown) {
   const matches = [...markdown.matchAll(sourceLinePattern)].map((match) => match[1]);

@@ -192,7 +192,7 @@ jobs:
         run: pnpm test:unit:ci
       - name: Run PostgreSQL integration tests
         id: postgres_tests
-        run: pnpm test:integration
+        run: pnpm test:integration:built
       - name: Annotate failed unit and integration testcase names
         if: always() && (steps.unit_tests.outcome == 'failure' || steps.postgres_tests.outcome == 'failure')
         continue-on-error: true
