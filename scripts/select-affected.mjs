@@ -64,7 +64,7 @@ export function expandWorkspaceDependencies(changedNames, projects) {
   return affected;
 }
 
-export function ciProjectsForAffectedPackages(affectedPackages) {
+export function ciProjectsForAffectedPackages(affectedPackages, changedFiles = []) {
   const affected = new Set(affectedPackages);
   const projects = new Set();
   const uiPackages = new Set(['@moonwitness/assets', '@moonwitness/ui', '@moonwitness/ui-catalog']);
@@ -86,6 +86,9 @@ export function ciProjectsForAffectedPackages(affectedPackages) {
     for (const project of ['quality', 'integration', 'browser', 'containers']) {
       projects.add(project);
     }
+  }
+  if (changedFiles.some((path) => path.startsWith('docs/roadmap/'))) {
+    projects.add('automation');
   }
   return [...projects];
 }
@@ -199,7 +202,7 @@ async function main() {
     .map((project) => project.name);
   const affected = expandWorkspaceDependencies(changedNames, workspaceProjects);
 
-  const ciProjects = ciProjectsForAffectedPackages(affected);
+  const ciProjects = ciProjectsForAffectedPackages(affected, changedFiles);
   const unclassifiedChanges = changedFiles.some(
     (path) =>
       !workspaceProjects.some((project) => path.startsWith(`${project.path}/`)) &&

@@ -143,6 +143,11 @@ test('automation and unrelated lanes are omitted when no workspace package is af
   deepEqual(ciProjectsForAffectedPackages([]), []);
 });
 
+test('roadmap documentation changes retain roadmap policy and lifecycle CI coverage', () => {
+  deepEqual(ciProjectsForAffectedPackages([], ['docs/roadmap/ACTIVE-PLAN.md']), ['automation']);
+  deepEqual(ciProjectsForAffectedPackages([], ['docs/guides/quickstart.md']), []);
+});
+
 test('catalog-only changes select UI quality and browser acceptance without unrelated database jobs', () => {
   const affected = expandWorkspaceDependencies(['@moonwitness/ui-catalog'], workspace);
   deepEqual(ciProjectsForAffectedPackages([...affected]).sort(), ['quality', 'ui']);
