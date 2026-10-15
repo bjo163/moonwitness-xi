@@ -78,6 +78,41 @@ test('record forms validate, edit relations, scope state by country, archive, re
   expect(duplicatePartner.status()).toBe(409);
 
   await page.goto(`/m/base.partner/${partnerId}`);
+  const tagName = `Board tag ${suffix}`;
+  await page.getByRole('button', { name: 'Tag', exact: true }).click();
+  await page.getByPlaceholder('New tag...').fill(tagName);
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  await expect(page.getByText(tagName, { exact: true })).toBeVisible();
+
+  const createdTagResponse = await page.request.get('/api/base.tag', {
+    headers: authorization,
+    params: { domain: JSON.stringify([['name', '=', tagName]]) },
+  });
+  expect(createdTagResponse.status()).toBe(200);
+  const createdTags = (await createdTagResponse.json()) as { data: CreatedRecord[] };
+  expect(createdTags.data).toHaveLength(1);
+  const tagLinkParams = {
+    headers: authorization,
+    params: {
+      domain: JSON.stringify([
+        ['resource_model', '=', 'base.partner'],
+        ['resource_id', '=', partnerId],
+        ['tag_id', '=', createdTags.data[0]!.id],
+      ]),
+    },
+  };
+  const attachedTagLinkResponse = await page.request.get('/api/base.tag_link', tagLinkParams);
+  expect(attachedTagLinkResponse.status()).toBe(200);
+  expect(((await attachedTagLinkResponse.json()) as { data: CreatedRecord[] }).data).toHaveLength(
+    1
+  );
+
+  await page.getByRole('button', { name: 'Remove tag' }).click();
+  await expect(page.getByText(tagName, { exact: true })).toHaveCount(0);
+  const removedTagLinkResponse = await page.request.get('/api/base.tag_link', tagLinkParams);
+  expect(removedTagLinkResponse.status()).toBe(200);
+  expect(((await removedTagLinkResponse.json()) as { data: CreatedRecord[] }).data).toHaveLength(0);
+
   await expect(page.getByRole('heading', { name: 'Addresses' })).toBeVisible();
   await page.getByRole('link', { name: 'Add New' }).click();
   await expect(page.getByRole('heading', { name: 'New Partner Address' })).toBeVisible();
