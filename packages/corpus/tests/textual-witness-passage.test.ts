@@ -1,0 +1,103 @@
+import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { afterEach, describe, expect, it } from 'vitest';
+import { readTextualWitnessPassage } from '../src/textual-witness-passage.js';
+
+const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+const indexRelative = 'corpus/manifests/textual-witness-index.json';
+const manifestRelative = 'corpus/manifests/webp-protestant-genesis-1-1.json';
+const artifactRelative =
+  'corpus/reference/sha256/ae/ae5c2799fad97b0e65334aa39be6193d487419f0d31713caaac58a47f6b4d8b1';
+const request = {
+  expressionId: 'mw:expression:webp-protestant',
+  editionId: 'mw:edition:webp-protestant-2020-stable',
+  locator: 'Genesis 1:1',
+};
+const roots: string[] = [];
+
+async function setup() {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'moonwitness-textual-witness-'));
+  roots.push(root);
+  await mkdir(path.join(root, 'corpus/manifests'), { recursive: true });
+  await mkdir(path.dirname(path.join(root, artifactRelative)), { recursive: true });
+  await Promise.all(
+    [indexRelative, manifestRelative, artifactRelative].map((relativePath) =>
+      copyFile(path.join(repositoryRoot, relativePath), path.join(root, relativePath))
+    )
+  );
+  return root;
+}
+
+afterEach(async () => {
+  await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
+});
+
+describe('offline textual witness passage retrieval', () => {
+  it('returns the exact verified WEBP excerpt with distinct expression and edition identities', async () => {
+    const root = await setup();
+    const passage = await readTextualWitnessPassage({ rootDirectory: root, ...request });
+    const sourceBytes = await readFile(path.join(root, artifactRelative));
+
+    expect(passage).toMatchObject({
+      sourceId: 'mw:source:ebible-webp-protestant',
+      expressionId: request.expressionId,
+      editionId: request.editionId,
+      locale: 'en-US',
+      locator: request.locator,
+      sha256: 'ae5c2799fad97b0e65334aa39be6193d487419f0d31713caaac58a47f6b4d8b1',
+    });
+    expect(passage.expressionId).not.toBe(passage.editionId);
+    expect(passage.originalBytes).toEqual(sourceBytes);
+    expect(passage.text.endsWith('.')).toBe(true);
+    expect(passage.references).toContain('https://ebible.org/engwebp/GEN01.htm');
+  });
+
+  it('rejects unknown expression, edition, or locator tuples', async () => {
+    const root = await setup();
+    await expect(
+      readTextualWitnessPassage({
+        rootDirectory: root,
+        ...request,
+        expressionId: 'mw:expression:unknown',
+      })
+    ).rejects.toThrow('Unknown textual witness');
+    await expect(
+      readTextualWitnessPassage({ rootDirectory: root, ...request, locator: 'Genesis 1:2' })
+    ).rejects.toThrow('Unknown textual witness');
+  });
+
+  it('fails closed when the manifest does not grant quote_excerpt', async () => {
+    const root = await setup();
+    const filePath = path.join(root, manifestRelative);
+    const manifest = JSON.parse(await readFile(filePath, 'utf8')) as {
+      rights: { allowed_uses: string[] };
+    };
+    manifest.rights.allowed_uses = ['redistribute_full'];
+    await writeFile(filePath, JSON.stringify(manifest));
+
+    await expect(readTextualWitnessPassage({ rootDirectory: root, ...request })).rejects.toThrow(
+      'rights do not permit excerpt quotation'
+    );
+  });
+
+  it('rejects traversal paths and corrupt bytes instead of returning unchecked text', async () => {
+    const root = await setup();
+    const indexFile = path.join(root, indexRelative);
+    const index = JSON.parse(await readFile(indexFile, 'utf8')) as {
+      entries: Array<{ artifact_path: string }>;
+    };
+    index.entries[0]!.artifact_path = '../outside';
+    await writeFile(indexFile, JSON.stringify(index));
+    await expect(readTextualWitnessPassage({ rootDirectory: root, ...request })).rejects.toThrow(
+      'parent segments'
+    );
+
+    const freshRoot = await setup();
+    await writeFile(path.join(freshRoot, artifactRelative), 'tampered text\n');
+    await expect(
+      readTextualWitnessPassage({ rootDirectory: freshRoot, ...request })
+    ).rejects.toThrow('checksum or size mismatch');
+  });
+});

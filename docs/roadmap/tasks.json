@@ -1617,7 +1617,9 @@
       "output": "Licensed metadata/full-text small source outside Quran, separately identified by expression",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
-      "priority": "p0"
+      "priority": "p0",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/K2-006.md"
     },
     {
       "id": "K2-007",
@@ -1627,7 +1629,9 @@
       "output": "Authenticated/public-filtered exact source and passage retrieval endpoints",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
-      "priority": "p0"
+      "priority": "p0",
+      "status": "complete",
+      "evidence": "docs/roadmap/evidence/K2-007.md"
     },
     {
       "id": "K2-008",

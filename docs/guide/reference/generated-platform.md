@@ -1,6 +1,6 @@
 # Generated platform reference
 
-Source fingerprint: `5ddd9752c6bbc22639cd7ee27de4c20206bf2e118b24e4facad783a4546fa8d3`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
+Source fingerprint: `eaa2cfad9047a8c7797a350458ebe28cad496ad3de6c277e9f4223a329f8aa6b`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
 
 ## Workspace packages and apps
 
@@ -58,6 +58,7 @@ Source fingerprint: `5ddd9752c6bbc22639cd7ee27de4c20206bf2e118b24e4facad783a4546
 | `LOG_PRETTY`                 | boolean        | Yes                       | No                       |
 | `LOG_TO_FILE`                | boolean        | Yes                       | No                       |
 | `METRICS_TOKEN`              | secret         | Yes                       | Yes                      |
+| `MOONWITNESS_CORPUS_ROOT`    | string         | No                        | No                       |
 | `NODE_ENV`                   | string         | Yes                       | No                       |
 | `OUTBOX_HANDLERS_MODULE`     | string         | Yes                       | No                       |
 | `OUTBOX_WORKER_HEALTH_PORT`  | integer        | Yes                       | No                       |

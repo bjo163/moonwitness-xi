@@ -6,6 +6,7 @@ function harness({ request } = {}) {
   const calls = [];
   const outputs = [];
   const options = [];
+  const requests = [];
   const execute = (args, settings) => {
     calls.push(args);
     options.push(settings);
@@ -16,6 +17,7 @@ function harness({ request } = {}) {
     calls,
     outputs,
     options,
+    requests,
     run: (overrides = {}) =>
       runContainerSmoke({
         root: 'X:/fixture',
@@ -23,7 +25,28 @@ function harness({ request } = {}) {
         execute,
         request:
           request ??
-          (async () => ({ ok: true, body: 'MoonWitness Enterprise ORM API "status":"healthy"' })),
+          (async (url, requestOptions = {}) => {
+            requests.push({ url, ...requestOptions });
+            if (url.endsWith('/auth/login')) {
+              return { ok: true, body: JSON.stringify({ data: { access_token: 'smoke-token' } }) };
+            }
+            if (url.includes('/mw%3Asource%3Atanzil-quran-text')) {
+              return { ok: true, body: 'mw:source:tanzil-quran-text' };
+            }
+            if (url.includes('/mw%3Aedition%3Atanzil-quran-text')) {
+              return { ok: true, body: 'mw:source:tanzil-quran-text Q7:46' };
+            }
+            if (url.includes('/mw%3Asource%3Aebible-webp-protestant')) {
+              return { ok: true, body: 'mw:source:ebible-webp-protestant' };
+            }
+            if (url.includes('/mw%3Aedition%3Awebp-protestant')) {
+              return {
+                ok: true,
+                body: 'In the beginning, God created the heavens and the earth.',
+              };
+            }
+            return { ok: true, body: 'MoonWitness Enterprise ORM API "status":"healthy"' };
+          }),
         pause: async () => {},
         reportFailure: (phase) => outputs.push(phase),
         getPort: async () => (port += 1),
@@ -53,6 +76,16 @@ test('runs isolated Compose smoke phases and always removes only its project vol
     fixture.options[0].environment.API_PORT,
     fixture.options[0].environment.BOARD_PORT
   );
+  const loginRequest = fixture.requests.find(({ url }) => url.endsWith('/auth/login'));
+  assert.equal(loginRequest.method, 'POST');
+  assert.deepEqual(JSON.parse(loginRequest.body), {
+    login: 'superadmin',
+    password: 'ci-smoke-superadmin-password',
+  });
+  const corpusRequests = fixture.requests.filter(({ url }) => url.includes('/api/corpus/'));
+  assert.equal(corpusRequests.length, 4);
+  assert.ok(corpusRequests.every(({ headers }) => headers.authorization === 'Bearer smoke-token'));
+  assert.ok(corpusRequests.some(({ url }) => url.includes('mw%3Aedition%3Awebp-protestant')));
 });
 
 test('reports the failing phase and still cleans up after an unhealthy endpoint', async () => {

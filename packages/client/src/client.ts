@@ -9,10 +9,12 @@ import {
 import { ModelRepository, type HttpClient, type RequestOptions } from './repository.js';
 import type {
   AuthTokens,
+  CorpusPassage,
   LoginParams,
   ModelInfo,
   MoonWitnessClientOptions,
   RegisterParams,
+  SourceCitation,
   TokenStorage,
   UserProfile,
 } from './types.js';
@@ -261,6 +263,22 @@ export class MoonWitnessClient implements HttpClient {
   async getMe(): Promise<UserProfile> {
     const res = await this.request<{ data: UserProfile }>('/auth/me');
     if (this.tokens) await this.saveTokens({ ...this.tokens, user: res.data });
+    return res.data;
+  }
+
+  /** Look up citation metadata for a locally published, rights-cleared source. */
+  async getSourceCitation(sourceId: string): Promise<SourceCitation> {
+    const res = await this.request<{ success: true; data: SourceCitation }>(
+      `/api/corpus/sources/${encodeURIComponent(sourceId)}`
+    );
+    return res.data;
+  }
+
+  /** Read one exact locally published passage; the API does not fetch external sources. */
+  async getCorpusPassage(editionId: string, locator: string): Promise<CorpusPassage> {
+    const res = await this.request<{ success: true; data: CorpusPassage }>(
+      `/api/corpus/passages/${encodeURIComponent(editionId)}/${encodeURIComponent(locator)}`
+    );
     return res.data;
   }
 

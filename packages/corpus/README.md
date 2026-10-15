@@ -33,8 +33,9 @@ validates every record against the knowledge contract, rejects duplicate IDs,
 and computes an RFC 8785 snapshot digest. It validates the complete input before
 writing. Output is staged beside its destination and published by rename; an
 existing release path is immutable and cannot be overwritten. A failed parse,
-checksum, or record validation leaves the prior release untouched. Synthetic
-fixtures are used in tests; no historical or third-party corpus is bundled.
+checksum, or record validation leaves the prior release untouched. Tests use
+synthetic fixtures; separately licensed excerpts under `corpus/reference/`
+have pinned manifests and source-specific scope.
 
 ## Content-addressed raw artifacts
 
@@ -60,6 +61,17 @@ fail closed. The function does not make network requests.
 store. Reimporting the same bytes is idempotent; it never overwrites a corrupt
 blob. Rights clearance and attribution are recorded in the source manifest and
 notice file, and are not inferred from artifact availability.
+
+## Second textual witness sample
+
+`corpus/manifests/textual-witness-index.json` maps the one-verse WEBP sample to
+its explicit `mw:expression:webp-protestant` and
+`mw:edition:webp-protestant-2020-stable` identities. The identity fixture links
+that edition only to the WEBP expression; it asserts no identity or witness
+relationship with Quran, Taurat, Zabur, Injil, or any other revelation. The
+source manifest records the public-domain source, excerpt operation, rights
+scope, and checksum. If a future source is restricted, a metadata-only manifest
+remains valid and no text bytes need to be checked in.
 
 ## Private archive intake manifest
 

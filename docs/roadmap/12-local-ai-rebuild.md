@@ -198,10 +198,10 @@ The source planning bundle is `MOONWITNESS_XI_LOCAL_AI_REBUILD_PLAN_2026-10-15/`
 
 - Priority: P0; risk: normal.
 - Depends on: `K2-005`, `K1-002`.
-- File scope: `apps/api/`, `packages/client/`.
-- Deliverable: Authenticated/public-filtered exact source and passage retrieval endpoints.
+- File scope: `apps/api/`, `packages/client/`, `packages/corpus/`, `Dockerfile`, container smoke and generated API reference.
+- Deliverable: Authenticated exact source/passage routes and typed SDK methods for the pinned Tanzil and WEBP samples, with checksum/rights verification and production image corpus data.
 - Acceptance: Unknown ID 404; privacy and rights enforced; API documented and typed.
-- Verification target: `API auth tests; corpus lookup integration`. This is a target, not evidence that the command exists or has passed.
+- Verification: [K2-007 evidence](evidence/K2-007.md): API auth/corpus integration, SDK typecheck/tests, corpus integrity, generated API docs, image packaging policy, and authenticated container smoke coverage.
 
 ## K2-008 — Corpus offline rebuild and snapshot certification
 

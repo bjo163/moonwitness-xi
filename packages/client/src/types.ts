@@ -181,3 +181,46 @@ export interface MoonWitnessClientOptions {
   onSessionExpired?: () => void;
   fetch?: typeof fetch;
 }
+
+interface SourceCitationBase {
+  publication: 'source_bytes';
+  citation: string;
+  references: string[];
+  availablePassages: string[];
+}
+
+/** Citation for one exact locally published and rights-cleared source slice. */
+export type SourceCitation =
+  | (SourceCitationBase & {
+      sourceId: 'mw:source:tanzil-quran-text';
+      editionId: 'mw:edition:tanzil-quran-text-v1.1-uthmani-txt2';
+      locale: 'ar';
+      availablePassages: ['Q7:46'];
+    })
+  | (SourceCitationBase & {
+      sourceId: 'mw:source:ebible-webp-protestant';
+      expressionId: 'mw:expression:webp-protestant';
+      editionId: 'mw:edition:webp-protestant-2020-stable';
+      locale: 'en-US';
+      availablePassages: ['Genesis 1:1'];
+    });
+
+/** Exact source text and citation for one of the locally published passages. */
+export type CorpusPassage =
+  | {
+      sourceId: 'mw:source:tanzil-quran-text';
+      editionId: 'mw:edition:tanzil-quran-text-v1.1-uthmani-txt2';
+      locator: 'Q7:46';
+      text: string;
+      sha256: string;
+      citation: string;
+    }
+  | {
+      sourceId: 'mw:source:ebible-webp-protestant';
+      expressionId: 'mw:expression:webp-protestant';
+      editionId: 'mw:edition:webp-protestant-2020-stable';
+      locator: 'Genesis 1:1';
+      text: string;
+      sha256: string;
+      citation: string;
+    };

@@ -541,6 +541,12 @@
       "valueType": "secret"
     },
     {
+      "name": "MOONWITNESS_CORPUS_ROOT",
+      "configuredInExample": false,
+      "secret": false,
+      "valueType": "string"
+    },
+    {
       "name": "NODE_ENV",
       "configuredInExample": true,
       "secret": false,
@@ -4564,6 +4570,14 @@
     },
     {
       "method": "GET",
+      "path": "/api/corpus/passages/:editionId/:locator"
+    },
+    {
+      "method": "GET",
+      "path": "/api/corpus/sources/:sourceId"
+    },
+    {
+      "method": "GET",
       "path": "/api/models"
     },
     {
@@ -4655,5 +4669,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "5ddd9752c6bbc22639cd7ee27de4c20206bf2e118b24e4facad783a4546fa8d3"
+  "generatedFromSha256": "eaa2cfad9047a8c7797a350458ebe28cad496ad3de6c277e9f4223a329f8aa6b"
 }

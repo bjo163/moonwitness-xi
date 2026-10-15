@@ -15,6 +15,7 @@ import { healthRoutes } from './routes/health.routes.js';
 import { jobsRoutes } from './routes/jobs.routes.js';
 import { notificationRoutes } from './routes/notification.routes.js';
 import { workflowRoutes } from './routes/workflow.routes.js';
+import { corpusRoutes } from './routes/corpus.routes.js';
 import { config, localAiConfig } from './config/env.js';
 import { LocalFileAttachmentStorage, type AttachmentStorage } from '@moonwitness/orm-storage';
 import { createDatabase } from './database/knex.js';
@@ -241,6 +242,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   await app.register(jobsRoutes);
   await app.register(notificationRoutes);
   await app.register(workflowRoutes);
+  await app.register(corpusRoutes);
 
   return app;
 }

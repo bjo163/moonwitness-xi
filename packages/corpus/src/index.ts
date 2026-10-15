@@ -1,5 +1,10 @@
 export { ingestDataset, replayDatasetRelease } from './ingestion.js';
 export { importQuranPassage, readQuranPassage } from './quran-passage.js';
+export { readTextualWitnessPassage } from './textual-witness-passage.js';
+export type {
+  ReadTextualWitnessPassageRequest,
+  TextualWitnessPassage,
+} from './textual-witness-passage.js';
 export {
   activateDatasetRelease,
   createDatasetRelease,

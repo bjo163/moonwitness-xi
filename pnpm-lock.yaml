@@ -60,6 +60,9 @@ importers:
       '@moonwitness/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@moonwitness/corpus':
+        specifier: workspace:*
+        version: link:../../packages/corpus
       '@moonwitness/jobs':
         specifier: workspace:*
         version: link:../../packages/jobs

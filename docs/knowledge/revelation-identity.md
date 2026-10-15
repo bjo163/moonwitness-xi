@@ -24,6 +24,13 @@ Injil. It intentionally contains no scripture text, canon assignment, edition,
 or witness assertion. A schema-valid synthetic test exercises the witness,
 canon, and edition relations; it is not a source record or rights decision.
 
+The separately licensed one-verse WEBP sample is recorded at
+[`corpus/reference/webp-protestant-genesis-1-1.identity.json`](../../corpus/reference/webp-protestant-genesis-1-1.identity.json).
+It gives the WEBP textual witness and 2020 edition distinct IDs and asserts only
+`edition_of`; it does not map the sample to a named revelation identity or
+infer equivalence with another tradition. Its passage bytes and source-specific
+rights record are indexed separately under `corpus/manifests/`.
+
 This contract keeps source rights and source availability separate from
 identity modeling. A witness must refer to a source artifact; an accepted
 relation still needs evidence, and schema validation does not verify the truth

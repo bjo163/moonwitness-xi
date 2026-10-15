@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import test from 'node:test';
@@ -21,9 +22,43 @@ const example = JSON.parse(
     'utf8'
   )
 );
+const webpIdentity = JSON.parse(
+  await readFile(
+    new URL('../../corpus/reference/webp-protestant-genesis-1-1.identity.json', import.meta.url),
+    'utf8'
+  )
+);
+const webpManifest = JSON.parse(
+  await readFile(
+    new URL('../../corpus/manifests/webp-protestant-genesis-1-1.json', import.meta.url),
+    'utf8'
+  )
+);
+const webpIndex = JSON.parse(
+  await readFile(
+    new URL('../../corpus/manifests/textual-witness-index.json', import.meta.url),
+    'utf8'
+  )
+);
+const quranIndex = JSON.parse(
+  await readFile(
+    new URL('../../corpus/manifests/quran-passage-index.json', import.meta.url),
+    'utf8'
+  )
+);
+const sourceArtifactSchema = JSON.parse(
+  await readFile(
+    new URL(
+      '../../packages/knowledge/schemas/source-artifact-manifest.schema.json',
+      import.meta.url
+    ),
+    'utf8'
+  )
+);
 const ajv = new Ajv2020({ allErrors: true, strict: true });
 addFormats(ajv);
 const validateSchema = ajv.compile(schema);
+const validateSourceArtifact = ajv.compile(sourceArtifactSchema);
 
 function validateDomain(dataset) {
   const errors = [];
@@ -219,4 +254,65 @@ test('requires reviewed evidence for accepted equivalence and rejects implicit c
     evidenceIds: [],
   });
   assert.ok(validateDomain(acceptedWithoutEvidence).length > 0);
+});
+
+test('WEBP witness sample keeps its expression and edition separate from Quran editions', async () => {
+  assert.deepEqual(validateDomain(webpIdentity), []);
+  assert.equal(webpIdentity.entities.length, 2);
+  const witness = webpIdentity.entities.find(
+    ({ identityClass }) => identityClass === 'TextualWitness'
+  );
+  const edition = webpIdentity.entities.find(({ identityClass }) => identityClass === 'Edition');
+  assert.equal(witness.id, 'mw:expression:webp-protestant');
+  assert.equal(edition.id, 'mw:edition:webp-protestant-2020-stable');
+  assert.notEqual(witness.id, edition.id);
+  assert.equal(witness.sourceArtifactId, 'mw:artifact:webp-protestant-genesis-1-1');
+  assert.deepEqual(webpIdentity.relations, [
+    {
+      id: 'mw:relation:webp-edition-of-witness',
+      subjectId: edition.id,
+      predicate: 'edition_of',
+      objectId: witness.id,
+      status: 'accepted',
+      evidenceIds: ['mw:evidence:ebible-webp-edition-source'],
+    },
+  ]);
+  assert.ok(
+    webpIdentity.relations.every(
+      ({ predicate }) => predicate !== 'witness_of' && predicate !== 'explicit_identity_equivalence'
+    )
+  );
+
+  const [sample] = webpIndex.entries;
+  const [quran] = quranIndex.entries;
+  assert.equal(sample.expression_id, witness.id);
+  assert.equal(sample.edition_id, edition.id);
+  assert.notEqual(sample.edition_id, quran.edition_id);
+  assert.equal(sample.locator, 'Genesis 1:1');
+  assert.equal(sample.source_manifest_path, 'corpus/manifests/webp-protestant-genesis-1-1.json');
+  assert.equal(sample.sha256, webpManifest.artifact.sha256);
+  assert.equal(webpManifest.edition_id, edition.id);
+  assert.equal(webpManifest.artifact.representation, 'source_bytes');
+  assert.equal(validateSourceArtifact(webpManifest), true);
+
+  const bytes = await readFile(new URL(`../../${sample.artifact_path}`, import.meta.url));
+  assert.equal(
+    bytes.toString('utf8'),
+    'In the beginning, God created the heavens and the earth.\n'
+  );
+  assert.equal(bytes.byteLength, webpManifest.artifact.byte_length);
+  assert.equal(createHash('sha256').update(bytes).digest('hex'), sample.sha256);
+});
+
+test('rights-restricted witness can retain metadata without exposing text bytes', () => {
+  const restricted = JSON.parse(JSON.stringify(webpManifest));
+  restricted.artifact = { representation: 'metadata_only' };
+  restricted.rights = { state: 'restricted', allowed_uses: [] };
+  restricted.publication = { mode: 'metadata_only' };
+  delete restricted.attribution;
+  delete restricted.complaint_process_owner;
+  delete restricted.transformations;
+  assert.equal(validateSourceArtifact(restricted), true);
+  assert.equal(restricted.artifact.representation, 'metadata_only');
+  assert.equal(restricted.publication.mode, 'metadata_only');
 });

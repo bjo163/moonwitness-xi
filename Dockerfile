@@ -49,6 +49,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=api-deploy --chown=node:node /deploy/api ./
+COPY --from=build --chown=node:node /workspace/corpus ./corpus
+ENV MOONWITNESS_CORPUS_ROOT=/app/corpus
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \

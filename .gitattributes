@@ -1,0 +1,2 @@
+# Source artifacts are content-addressed; Git must preserve their exact bytes.
+corpus/reference/sha256/** -text

@@ -34,6 +34,7 @@
     "@fastify/swagger": "^9.9.1",
     "@fastify/swagger-ui": "^6.1.1",
     "@moonwitness/auth": "workspace:*",
+    "@moonwitness/corpus": "workspace:*",
     "@moonwitness/jobs": "workspace:*",
     "@moonwitness/logger": "workspace:*",
     "@moonwitness/local-ai": "workspace:*",

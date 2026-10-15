@@ -1,11 +1,11 @@
 import { spawnSync } from 'node:child_process';
 import { Buffer } from 'node:buffer';
-import { get } from 'node:http';
+import { request as httpRequest } from 'node:http';
 import { createServer } from 'node:net';
 import { dirname, join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import process from 'node:process';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, URL } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const PROJECT_NAME_PATTERN = /^moonwitness-smoke-[a-z0-9-]+$/u;
@@ -44,9 +44,9 @@ function availablePort() {
   });
 }
 
-async function responseText(url) {
+async function responseText(url, { method = 'GET', headers, body } = {}) {
   return new Promise((resolveResponse, rejectResponse) => {
-    const request = get(url, (response) => {
+    const request = httpRequest(new URL(url), { method, headers }, (response) => {
       const chunks = [];
       response.on('data', (chunk) => chunks.push(chunk));
       response.on('end', () =>
@@ -61,6 +61,8 @@ async function responseText(url) {
     });
     request.setTimeout(5000, () => request.destroy(new Error('Endpoint request timed out.')));
     request.once('error', rejectResponse);
+    if (body) request.write(body);
+    request.end();
   });
 }
 
@@ -152,6 +154,59 @@ export async function runContainerSmoke({
       phase,
       includes: '"status":"healthy"',
       request,
+      pause,
+    });
+    phase = 'api_corpus_login';
+    const login = await request(`http://127.0.0.1:${apiPort}/auth/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        login: 'superadmin',
+        password: composeEnvironment.SUPERADMIN_PASSWORD,
+      }),
+    });
+    let accessToken;
+    try {
+      const payload = JSON.parse(login.body);
+      if (login.ok && typeof payload.data?.access_token === 'string') {
+        accessToken = payload.data.access_token;
+      }
+    } catch {
+      // Keep credentials and response bodies out of the smoke failure report.
+    }
+    if (!accessToken) throw new Error('Smoke login did not return an access token.');
+
+    const authorization = { authorization: `Bearer ${accessToken}` };
+    phase = 'api_corpus_tanzil_source';
+    await expectEndpoint({
+      url: `http://127.0.0.1:${apiPort}/api/corpus/sources/${encodeURIComponent('mw:source:tanzil-quran-text')}`,
+      phase,
+      includes: 'mw:source:tanzil-quran-text',
+      request: (url) => request(url, { headers: authorization }),
+      pause,
+    });
+    phase = 'api_corpus_tanzil_passage';
+    await expectEndpoint({
+      url: `http://127.0.0.1:${apiPort}/api/corpus/passages/${encodeURIComponent('mw:edition:tanzil-quran-text-v1.1-uthmani-txt2')}/${encodeURIComponent('Q7:46')}`,
+      phase,
+      includes: 'mw:source:tanzil-quran-text',
+      request: (url) => request(url, { headers: authorization }),
+      pause,
+    });
+    phase = 'api_corpus_webp_source';
+    await expectEndpoint({
+      url: `http://127.0.0.1:${apiPort}/api/corpus/sources/${encodeURIComponent('mw:source:ebible-webp-protestant')}`,
+      phase,
+      includes: 'mw:source:ebible-webp-protestant',
+      request: (url) => request(url, { headers: authorization }),
+      pause,
+    });
+    phase = 'api_corpus_webp_passage';
+    await expectEndpoint({
+      url: `http://127.0.0.1:${apiPort}/api/corpus/passages/${encodeURIComponent('mw:edition:webp-protestant-2020-stable')}/${encodeURIComponent('Genesis 1:1')}`,
+      phase,
+      includes: 'In the beginning, God created the heavens and the earth.',
+      request: (url) => request(url, { headers: authorization }),
       pause,
     });
     phase = 'board_root';
