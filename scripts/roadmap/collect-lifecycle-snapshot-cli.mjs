@@ -8,7 +8,6 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   collectLifecycleSnapshot,
   completedExactDevPullRequestTechnicalGate,
-  exactDevPullRequestTechnicalGate,
   flattenGitHubPages,
   isExactDevMainPullRequest,
   selectExactDevPullRequestCiRun,
