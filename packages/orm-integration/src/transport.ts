@@ -24,7 +24,7 @@ export function sendSignedRequest(
         port: options.port ?? 443,
         path: `${delivery.url.pathname}${delivery.url.search}`,
         method: 'POST',
-        timeout: REQUEST_TIMEOUT_MS,
+        timeout: timeoutMs,
         ...(options.ca ? { ca: options.ca } : {}),
         headers: {
           'content-type': 'application/json',
