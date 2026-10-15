@@ -20,12 +20,12 @@ test('CI cancels stale runs only within the same target branch and event type', 
 });
 
 test('security scans avoid duplicate dev push runs while CI retains its issue-lifecycle gate', () => {
-  assert.match(workflow, /^  pull_request:\r?\n    branches: \[dev, main\]$/mu);
-  assert.match(workflow, /^  push:\r?\n    branches: \[dev, main\]$/mu);
+  assert.match(workflow, /^ {2}pull_request:\r?\n {4}branches: \[dev, main\]$/mu);
+  assert.match(workflow, /^ {2}push:\r?\n {4}branches: \[dev, main\]$/mu);
 
   for (const source of [codeqlWorkflow, gitleaksWorkflow]) {
-    assert.match(source, /^  pull_request:\r?\n    branches: \[dev, main\]$/mu);
-    assert.match(source, /^  push:\r?\n    branches: \[main\]$/mu);
+    assert.match(source, /^ {2}pull_request:\r?\n {4}branches: \[dev, main\]$/mu);
+    assert.match(source, /^ {2}push:\r?\n {4}branches: \[main\]$/mu);
   }
 });
 
