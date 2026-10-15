@@ -39,7 +39,23 @@ function isolatedInvocation() {
     'linux',
     'Offline rebuild proof requires Node permission support or Linux network namespaces'
   );
-  return { command: 'sudo', prefix: ['-n', 'unshare', '--net', '--', process.execPath] };
+  const uid = process.getuid?.();
+  const gid = process.getgid?.();
+  assert.ok(Number.isInteger(uid) && Number.isInteger(gid), 'Linux UID/GID are required');
+  return {
+    command: 'sudo',
+    prefix: [
+      '-n',
+      'unshare',
+      '--net',
+      '--',
+      'setpriv',
+      `--reuid=${uid}`,
+      `--regid=${gid}`,
+      '--',
+      process.execPath,
+    ],
+  };
 }
 
 function spawnOffline(args, options = {}) {
