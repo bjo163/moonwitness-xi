@@ -1,6 +1,6 @@
 # Active release plan and open-work audit
 
-**Latest local security batch (2026-10-15):** M4.08 marks `base.partner_bank.acc_number` and `acc_holder_name` as audit/outbox-sensitive at source `3e7004616ebca03dce855075b37dc4769b232eda`. Focused API audit sentinel passed 3/3; ORM Base tests passed 22/22 and targeted lint/format passed. Both values remain available in normal authorized reads; only `sanitized_acc_number` remains in audit/outbox snapshots. Evidence: [M4.08](evidence/M4.08.md).
+**Latest local security batch (2026-10-15):** M4.08 marks partner bank account number/holder and `base.partner.vat` as audit/outbox-sensitive at source `218e1da8160bedffc633a8ce4da638ac511f66df`. Focused API audit sentinel passed 4/4; ORM Base tests passed 22/22 and targeted lint/format passed. Authorized reads remain unchanged; audit snapshots omit the marked values while retaining the masked account number. Evidence: [M4.08](evidence/M4.08.md).
 
 **Latest local batch (2026-10-15):** M10.01 `organization.membership` cross-company relation coverage is pushed as `a2fdc512d214ade0f0a9d42aabf86d444de5c5a0`. The focused PostgreSQL company-isolation test passed 1/1 (12 unrelated tests skipped); integration TypeScript, targeted ESLint/Prettier, diff checks and 148-card roadmap validation passed. Own-company membership persists; assigning a foreign-company department is denied without changing membership or audit. Evidence: [M10.01](evidence/M10.01.md). Hosted checks run asynchronously; the broader access matrix and release acceptance remain open.
 

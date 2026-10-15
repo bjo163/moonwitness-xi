@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defineModel, fields } from '@moonwitness/orm';
-import { PartnerBank } from '@moonwitness/orm-base';
+import { Partner, PartnerBank } from '@moonwitness/orm-base';
 import { auditSnapshot, isAuditSensitiveField } from '../src/routes/generic-audit.js';
 
 const CredentialProbe = defineModel('test.audit_credential_probe', {
@@ -18,7 +18,7 @@ const CredentialProbe = defineModel('test.audit_credential_probe', {
 });
 
 describe('generic audit snapshots', () => {
-  it('omits explicitly sensitive business fields but keeps safe fields', () => {
+  it('omits explicitly sensitive account fields but keeps the sanitized number', () => {
     const accountNumber = 'private-account-number-sentinel';
     const accountHolder = 'private-account-holder-sentinel';
     const snapshot = auditSnapshot(PartnerBank, {
@@ -36,6 +36,23 @@ describe('generic audit snapshots', () => {
     });
     expect(JSON.stringify(snapshot)).not.toContain(accountNumber);
     expect(JSON.stringify(snapshot)).not.toContain(accountHolder);
+  });
+
+  it('omits partner tax identifiers while preserving ordinary partner fields', () => {
+    const taxIdentifier = 'private-tax-identifier-sentinel';
+    const snapshot = auditSnapshot(Partner, {
+      id: 12,
+      name: 'Example Partner',
+      vat: taxIdentifier,
+      email: 'partner@example.invalid',
+    });
+
+    expect(snapshot).toEqual({
+      id: 12,
+      name: 'Example Partner',
+      email: 'partner@example.invalid',
+    });
+    expect(JSON.stringify(snapshot)).not.toContain(taxIdentifier);
   });
 
   it('excludes credential-like declared fields from audit and outbox snapshots', () => {

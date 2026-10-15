@@ -15,7 +15,7 @@ export const Partner = defineModel('base.partner', {
     is_company: fields.boolean({ default: false, label: 'Is a Company' }),
     parent: fields.belongsTo(parentPartnerModel, { label: 'Parent Company' }),
     job_title: fields.string({ label: 'Job Position' }),
-    vat: fields.string({ label: 'Tax ID / NPWP / VAT' }),
+    vat: fields.string({ sensitive: true, label: 'Tax ID / NPWP / VAT' }),
     email: fields.string({ unique: true, label: 'Email' }),
     phone: fields.string({ label: 'Phone' }),
     mobile: fields.string({ label: 'Mobile' }),
