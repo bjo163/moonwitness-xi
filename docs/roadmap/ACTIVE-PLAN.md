@@ -1,6 +1,32 @@
 # Jalur rilis aktif
 
-**Diperbarui: 2026-10-15 pada `dev` SHA `7c23988ff918580ce69636f257a383594f36ca4c`.** Jalur rilis pertama adalah prioritas/dependensi di dalam tujuan penuh 148 kartu roadmap; ia tidak menggantikan penyelesaian `ROADMAP.md` dan `docs/roadmap/`. Checklist master terakhir yang diverifikasi mencatat 101/148 kartu selesai dan 47 masih terbuka (9 `in_progress`, 38 belum dimulai/menunggu dependensi); hitung ulang hanya saat status kartu berubah. Kartu post-release tetap bagian goal dan harus dikerjakan setelah prasyaratnya tersedia. Catatan batch lama dipindahkan ke [arsip eksekusi](EXECUTION-HISTORY-2026-10-15.md); estimasi lama 8–13 hari tidak dipakai karena mencampur pekerjaan wajib dan pengulangan verifikasi. Percepatan mengurangi pengulangan dan mengurutkan dependensi, bukan scope maupun acceptance.
+**Diperbarui: 2026-10-15 pada `dev` SHA `2cee8e98968e16f4cd7f2e31d9e805c7dc5bc0bb`.** Jalur rilis pertama adalah prioritas/dependensi di dalam tujuan penuh 148 kartu roadmap; ia tidak menggantikan penyelesaian `ROADMAP.md` dan `docs/roadmap/`. `pnpm roadmap:progress -- --format json` pada SHA ini mencatat 101/148 complete, 9 running, dan 38 todo; hitung ulang hanya ketika status task berubah. Kartu post-release tetap bagian goal dan dikerjakan setelah prasyaratnya tersedia. Catatan batch lama ada di [arsip eksekusi](EXECUTION-HISTORY-2026-10-15.md); estimasi lama 8–13 hari tidak dipakai karena mencampur pekerjaan wajib dan pengulangan verifikasi. Percepatan mengurangi pengulangan dan mengurutkan dependensi, bukan scope maupun acceptance.
+
+## Checkpoint percepatan terbaru — 2026-10-15
+
+Tujuan penuh 148 kartu tetap aktif. Untuk mempercepat penyelesaiannya, bedakan **kode lokal**, **bukti satu kandidat**, dan **aktivasi/approval eksternal**; jangan membuat test atau implementasi baru hanya karena checkbox masih terbuka.
+
+- Batch terbaru menutup deduplikasi redelivery issue-intake secara lokal: kode `882d7d2c0fda0b786a2520bfa8303eea1d2d68e5` dan evidence/roadmap `2cee8e98968e16f4cd7f2e31d9e805c7dc5bc0bb` sudah ada di `origin/dev`. Roadmap suite 99/99, focused issue-intake/workflow-trust 40/40, workflow-trust 24/24, lint, format, actionlint dan action-pin checks lulus. Batasnya jelas: ledger Actions hanya menjamin dedup tujuh hari, gagal tertutup pada inventory tak lengkap, dan hosted pilot menunggu App/retention/promosi protected.
+- `M3.11`: Board PostgreSQL suite sudah lulus pada ketiga engine lokal; jangan mengulang matrix. Sisa penerimaan adalah scheduled hosted run dari `main` dan review artifact.
+- `M8.09`: incident automation dan regression lokal sudah ada; jangan membangun handler/test kedua untuk kasus sama. Sisa penerimaan memerlukan workflow tepercaya di `main` dan fault/recovery hosted.
+- `M9.03` dan jalur fungsional `M9.06`: runtime, seed, API, worker, PostgreSQL dan Board journey sudah punya bukti. Jangan refresh seluruh integration/E2E hanya untuk docs/evidence; sisa exact-candidate/security/CODEOWNER harus dikumpulkan bersama kandidat atau oleh owner.
+- `M9.08`: graph dan bundle budget sudah terbukti; controlled historical size comparison tetap di backlog sampai ada baseline setara atau ekstraksi besar baru. Jangan mengarang perbandingan.
+- Tidak ada hosted CI yang perlu ditunggu sebelum mengerjakan perubahan lokal independen. Pada batch roadmap-only, validasi roadmap, tes roadmap, format dan link docs cukup; test aplikasi hanya dijalankan bila source/perilaku aplikasi berubah.
+
+### Urutan kerja setelah checkpoint
+
+1. **Lanjutkan lokal:** untuk tiap task terbuka, baca hanya acceptance/task card dan evidence terakhir. Kerjakan jika ada gap implementasi lokal yang konkret dan berdampak pada jalur release; gabungkan task yang memakai source dan bukti sama. Jika tidak ada gap lokal, pindahkan tindak lanjut ke blocker/backlog dengan owner serta syarat buka kembali, tanpa mengulang audit.
+2. **Satu release candidate:** setelah perubahan lokal release-critical berhenti, catat satu SHA `dev`; jalankan release planner dan required exact-SHA technical/security/PostgreSQL/Board/container checks sekali pada kandidat itu. Perubahan source yang membatalkan bukti mengharuskan hanya lane terdampak diulang; perubahan docs/evidence saja tidak membatalkan tes aplikasi.
+3. **Promosi terlindungi:** CODEOWNER/repo admin meninjau exact head, security owner memberi disposition temuan privat/historis, lalu PR `dev` → `main` menyelesaikan required gates. Tidak ada bypass, promosi otomatis tanpa syarat, atau deployment aplikasi.
+4. **Penyelesaian automation/release:** setelah kandidat dipromosikan, gunakan run hosted yang sama untuk membuktikan Pages, tag/version/changelog/artifact/provenance dan issue lifecycle yang relevan. Jangan membuat release rehearsal terpisah per kartu bila satu run memenuhi acceptance beberapa kartu.
+5. **Lanjutkan backlog penuh:** item non-release tetap di roadmap; kerjakan setelah rilis pertama atau saat pemicu di `EXECUTION-BACKLOG.md` terpenuhi. Tidak ada kartu yang dihapus atau dianggap selesai hanya karena dipindahkan.
+
+### Kriteria berhenti agar tidak berputar
+
+- Satu batch maksimal satu gap perilaku yang nyata; sebelum mengedit, sebutkan task, acceptance yang gagal, file pemilik, dan satu command pembuktian utama.
+- Jangan menjalankan ulang `pnpm verify`, semua browser, semua PostgreSQL integration, release parity, atau audit visual karena SHA berubah oleh docs saja. Jalankan suite menyeluruh sekali pada kandidat; bila gagal, reproduksi lane gagal saja.
+- Setiap batch berhenti setelah diff direview, pemeriksaan terdampak lulus, commit/push `dev` terverifikasi, dan SHA dicatat. Sesudah push, lanjut ke batch independen tanpa menunggu hosted CI.
+- Jangan mengubah status master untuk mengejar angka; checkbox hanya berubah jika acceptance task terpenuhi. Blocker eksternal bukan alasan untuk menahan pekerjaan lokal lain dan bukan alasan untuk membuat mock pengganti aksi hosted.
 
 ## Perubahan cara mencapai goal agar cepat selesai
 
