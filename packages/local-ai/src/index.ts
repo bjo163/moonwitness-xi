@@ -1,5 +1,15 @@
 export type LocalAiMode = 'disabled' | 'local';
 export {
+  LocalRetrievalError,
+  retrieveLocalPassageChunk,
+  type CanonicalPassageReference,
+  type LocalPassageChunk,
+  type LocalPassageResolver,
+  type ResolvedCanonicalPassage,
+  type RetrievalVisibility,
+  type RetrieveLocalPassageRequest,
+} from './retrieval.js';
+export {
   isLocalModelRegistry,
   verifyLocalModelArtifact,
   type LocalModelArtifact,
