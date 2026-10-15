@@ -1484,6 +1484,35 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     });
     await CompanyMembership.query().findById(companyMembership.id).patch({ active: true });
 
+    const membershipAdminGroup = await AccessGroup.query().insert({
+      code: 'postgres_company_membership_admins',
+      name: 'PostgreSQL Company Membership Admins',
+    });
+    await GroupMembership.query().insert({
+      user_id: localUser.id,
+      group_id: membershipAdminGroup.id,
+    });
+    await ModelAccess.query().insert({
+      group_id: membershipAdminGroup.id,
+      model_name: 'base.company_membership',
+      read: true,
+      create: true,
+      write: true,
+      unlink: true,
+    });
+    const deniedCompanyMembershipMutation = await app.inject({
+      method: 'PATCH',
+      url: `/api/base.company_membership/${companyMembership.id}`,
+      headers,
+      payload: { active: false },
+    });
+    expect(deniedCompanyMembershipMutation.statusCode).toBe(403);
+    expect(await CompanyMembership.query().findById(companyMembership.id)).toMatchObject({
+      active: true,
+      company_id: localCompany.id,
+      user_id: localUser.id,
+    });
+
     const revocableGroup = await AccessGroup.query().insert({
       code: 'postgres_revocable_partner_writers',
       name: 'PostgreSQL Revocable Partner Writers',
