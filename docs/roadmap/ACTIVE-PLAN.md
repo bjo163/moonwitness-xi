@@ -2,6 +2,19 @@
 
 **Diperbarui: 2026-10-15.** Tujuan dekatnya adalah satu rilis pertama yang dapat dipakai, bukan menyelesaikan 148 kartu satu per satu. Seluruh kartu tetap ada di `tasks.json`; catatan batch lama dipindahkan ke [arsip eksekusi](EXECUTION-HISTORY-2026-10-15.md). Estimasi lama 8–13 hari tidak dipakai lagi karena mencampur pekerjaan wajib dengan backlog dan pengulangan verifikasi.
 
+## Batas waktu dan aturan berhenti mengulang
+
+Kesan pekerjaan tiga hari berulang datang dari dua sumber berbeda: sebagian catatan evidence historis memang mencatat refresh parity beberapa kali pada SHA baru, sedangkan quality/browser/integration/container CI adalah lane terpisah yang menguji kegagalan berbeda. Jangan mengulang lane kedua tanpa alasan; perbaiki temuan aktualnya.
+
+- **Iterasi biasa:** satu test yang membuktikan perubahan, lint/typecheck package terdampak bila kode berubah, lalu review diff. Perubahan docs/generated cukup `pnpm docs:check:built` setelah artifact dibangun dan `pnpm test:roadmap` jika roadmap ikut berubah. Jangan jalankan `pnpm verify`, release-plan parity, seluruh suite, atau browser matrix untuk perubahan docs-only.
+- **Generated docs:** bangun input sekali, jalankan `pnpm docs:generate`, kemudian gunakan `pnpm docs:check:built` dan bila perlu `pnpm docs:build:built`. Hindari pasangan `pnpm docs:generate` + `pnpm docs:build` yang masing-masing membangun semua package; gabungkan dalam satu `pnpm docs:build` hanya ketika perlu membuktikan seluruh Pages artifact.
+- **Area aplikasi:** jalankan focused suite dan PostgreSQL/Chromium journey hanya bila kode API/ORM/Board/setup yang relevan berubah. Satu hasil tetap berlaku selama source dan input terkait identik.
+- **Kandidat rilis:** seluruh required exact-SHA checks tetap berjalan satu kali, termasuk typecheck, lint, security, PostgreSQL, browser, container, artifact/provenance dan approval. Jangan melewati gate untuk mengejar waktu.
+- **Batas refresh evidence:** jangan menjalankan release prepare/dry-run hanya untuk mengganti fingerprint dokumentasi. Refresh parity sekali setelah ada perubahan material pada release policy atau input versi/changelog, bukan di setiap batch.
+- **Parallel CI:** jalankan pekerjaan lokal independen saat CI berlangsung. Job CI yang berbeda tetap tunggu sebagai evidence kandidat; jika gagal, ambil langkah gagal saja dan reproduksi lokal satu kali. Jangan mengulang seluruh workflow untuk satu kegagalan.
+
+Pada 2026-10-15, hosted quality menemukan empat generated reference stale. Output di-refresh dan `pnpm docs:build` lulus; hasil docs check setelah build lulus, `pnpm test:roadmap` lulus 94/94, dan PostgreSQL canonical integration suite lulus 15/15 pada DB disposable yang kemudian dihapus. Commit perbaikan docs ada pada SHA `9cc1cfce82886a1738e2547e7416a59f1760b173`. Tidak perlu mengulang suite tersebut untuk perubahan dokumentasi lain kecuali source/input-nya berubah atau exact-SHA candidate mewajibkannya.
+
 ## Diagnosis dan aturan percepatan
 
 Yang membuat pekerjaan terasa berulang adalah: acceptance per model meski memakai guard yang sama; menjalankan ulang seluruh suite setelah perubahan dokumentasi atau perubahan test terisolasi; menjalankan release-plan parity pada setiap batch; menunggu CI hosted sebelum mulai pekerjaan lokal independen; serta menghitung audit visual, audit platform, dan ekspansi addon sebagai prasyarat rilis.
