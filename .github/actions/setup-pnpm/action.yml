@@ -16,4 +16,5 @@ runs:
       with:
         version: ${{ inputs.pnpm-version }}
         runtime: node@${{ inputs.node-version }}
+        cache: true
         install: false
