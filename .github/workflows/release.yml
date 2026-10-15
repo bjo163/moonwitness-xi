@@ -103,13 +103,22 @@ jobs:
           done
           echo "Timed out waiting for a successful main ci-gate on $SOURCE_SHA." >&2
           exit 1
-      - run: pnpm lint
-      - run: pnpm format:check
-      - run: pnpm typecheck
-      - run: pnpm docs:check
-      - run: pnpm --filter @moonwitness/board lint
-      - run: pnpm test:unit
-      - run: pnpm test:integration
+      # Tag releases already require the successful exact-SHA main ci-gate above.
+      # Keep full local verification for workflow_dispatch dry runs and branch refs.
+      - if: github.ref_type != 'tag' || (github.event_name == 'workflow_dispatch' && !inputs.publish)
+        run: pnpm lint
+      - if: github.ref_type != 'tag' || (github.event_name == 'workflow_dispatch' && !inputs.publish)
+        run: pnpm format:check
+      - if: github.ref_type != 'tag' || (github.event_name == 'workflow_dispatch' && !inputs.publish)
+        run: pnpm typecheck
+      - if: github.ref_type != 'tag' || (github.event_name == 'workflow_dispatch' && !inputs.publish)
+        run: pnpm docs:check
+      - if: github.ref_type != 'tag' || (github.event_name == 'workflow_dispatch' && !inputs.publish)
+        run: pnpm --filter @moonwitness/board lint
+      - if: github.ref_type != 'tag' || (github.event_name == 'workflow_dispatch' && !inputs.publish)
+        run: pnpm test:unit
+      - if: github.ref_type != 'tag' || (github.event_name == 'workflow_dispatch' && !inputs.publish)
+        run: pnpm test:integration
       - name: Build the release images once with immutable source metadata
         env:
           RELEASE_VERSION: ${{ steps.version.outputs.version }}

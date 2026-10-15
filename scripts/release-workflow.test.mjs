@@ -55,6 +55,34 @@ test('release tags require exact main ancestry and successful ci-gate for the sa
   assert.match(verify, /\.name == "ci-gate" and \.conclusion == "success"/u);
 });
 
+test('tag releases reuse exact-SHA main CI while dry runs keep full local verification', () => {
+  const verificationSteps = [
+    'pnpm lint',
+    'pnpm format:check',
+    'pnpm typecheck',
+    'pnpm docs:check',
+    'pnpm --filter @moonwitness/board lint',
+    'pnpm test:unit',
+    'pnpm test:integration',
+  ];
+  const reusableCiCondition =
+    "github.ref_type != 'tag' || (github.event_name == 'workflow_dispatch' && !inputs.publish)";
+  assert.match(verify, /name: Require the exact source commit to be verified by main CI/u);
+  const exactShaGate = verify.indexOf(
+    'name: Require the exact source commit to be verified by main CI'
+  );
+  for (const command of verificationSteps) {
+    const commandIndex = verify.indexOf(`run: ${command}`);
+    assert.ok(commandIndex > exactShaGate, `${command} should follow the exact-SHA gate`);
+    assert.ok(
+      verify.slice(commandIndex - 150, commandIndex).includes(`if: ${reusableCiCondition}`),
+      `${command} should only be skipped for a tag already verified by main CI`
+    );
+  }
+  assert.match(verify, /name: Smoke test the exact release images against isolated PostgreSQL/u);
+  assert.match(verify, /name: Scan the exact release images for critical vulnerabilities/u);
+});
+
 test('the verified and scanned API and Board images are smoke-tested and handed off unchanged', () => {
   for (const image of ['moonwitness-api:production', 'moonwitness-board:production']) {
     assert.ok(verify.includes(`--tag ${image}`) || verify.includes(`--tag ${image} .`));
