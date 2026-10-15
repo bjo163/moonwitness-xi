@@ -346,10 +346,11 @@ pnpm format
 # Cek format kode:
 pnpm format:check
 
-# 6. Menjalankan API Server dalam Development Mode
+# 6. Menjalankan API dan Board dalam Development Mode
 pnpm dev
 
-# 7. Menjalankan board di terminal lain
+# Menjalankan API saja atau Board saja
+pnpm dev:api
 pnpm dev:board
 ```
 
