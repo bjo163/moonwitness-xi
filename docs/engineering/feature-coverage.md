@@ -1,8 +1,10 @@
-# Feature coverage inventory (local rechecks through `cafc45b`; 2026-10-15)
+# Feature coverage inventory (local rechecks through `ef23d43`; 2026-10-15)
 
 This report expands the initial [feature-to-test matrix](feature-matrix.md) with an explicit status, priority, accountable role, executed assertion references, and remaining gap for every inventory row. It is a coverage inventory, not a claim that every feature is release-ready.
 
 ## Latest exact-head execution
+
+- On exact checked-out `dev` SHA `ef23d433e77357ddf74420fcd9f5a6c4298e446b`, PostgreSQL integration/performance passed 13/13 and CI-mode Board E2E passed 24/24 on Chromium with one worker. Both used independent disposable PostgreSQL 16.15 databases, dropped and verified absent after the run. API and Board build preflights passed. This refreshes local evidence only; hosted exact-candidate checks, the scheduled Firefox/WebKit PostgreSQL matrix, security disposition, and protected promotion remain open.
 
 - On exact checked-out tree `5833012` (application/API source `d646657`), full `pnpm verify` completed successfully: ESLint, Prettier, workspace and Board typecheck/build, API 122/122, all configured package/unit and addon conformance tests, assets/UI/platform/bundle budgets, release/security policy suites, architecture validation (14 artifacts), generated README/API/model references, docs examples/links, and GitHub Pages build/fallback checks. The isolated PostgreSQL integration/performance lane passed 13/13 and CI-mode PostgreSQL-backed Board E2E passed 24/24 on the same application/API source. Auth tests passed 42/42. The only package-level skipped case is the existing Windows symlink guard in storage tests; PostgreSQL was run separately in an isolated disposable container. This strengthens local exact-source evidence but does not close hosted exact-candidate, scheduled cross-browser, security-disposition or protected-promotion gates.
 
