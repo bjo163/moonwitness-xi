@@ -6,6 +6,7 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { renderUnitRunnerFailureReport } from './unit-runner-report.mjs';
 import { resolvePackageManager } from './package-manager.mjs';
+import { getUnitRunnerCheckPlan } from './unit-runner-policy.mjs';
 import {
   findFailedWorkspacePackage,
   renderWorkspaceBuildFailure,
@@ -85,11 +86,22 @@ function run(args, label) {
   }
 }
 
+run(['run', 'test:unit-runner-policy'], 'Unit runner CI ownership policy');
 run(['build'], 'Build');
 run(['run', 'test:board-budget'], 'Board bundle budget contract');
 run(['run', 'board:budget'], 'Board production bundle budget');
 run(['exec', 'node', '--test', 'scripts/roadmap/addon-conformance.test.mjs'], 'Addon conformance');
-run(['run', 'test:versioned-docs'], 'Versioned documentation');
+for (const check of getUnitRunnerCheckPlan({
+  githubActions: process.env.GITHUB_ACTIONS === 'true',
+})) {
+  if (check.runInUnitRunner) {
+    run(check.args, check.name);
+  } else {
+    process.stdout.write(
+      `Skipping ${check.name}; its dedicated ${check.ciOwner} CI job owns this check.\n`
+    );
+  }
+}
 
 const suites = [
   {
@@ -183,7 +195,5 @@ for (const suite of suites) {
   run(args, `${suite.name} tests`);
 }
 
-run(['run', 'test:assets'], 'brand asset contracts');
-run(['run', 'test:ui'], 'shared UI token contracts');
 run(['exec', 'node', 'scripts/check-coverage.mjs'], 'Critical branch coverage');
 process.stdout.write(`JUnit reports written to ${path.relative(root, reportDirectory)}\n`);

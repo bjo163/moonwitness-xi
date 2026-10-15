@@ -36,6 +36,7 @@
     "test:e2e:visual:matrix": "node scripts/run-visual-matrix.mjs",
     "test:e2e:diagnostics": "node --test scripts/e2e-preflight-report.test.mjs scripts/summarize-playwright-failures.test.mjs scripts/summarize-junit-failures.test.mjs scripts/ci-diagnostics.test.mjs scripts/ci/build-workspace-package.test.mjs scripts/ci/workspace-build-diagnostics.test.mjs scripts/docker-workspace-manifests.test.mjs scripts/package-manager.test.mjs",
     "test:package-manager": "node --test scripts/package-manager.test.mjs",
+    "test:unit-runner-policy": "node --test scripts/unit-runner-policy.test.mjs",
     "board:visual:update": "pnpm test:e2e --grep 'responsive screen audit|responsive protected screens' --update-snapshots",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
