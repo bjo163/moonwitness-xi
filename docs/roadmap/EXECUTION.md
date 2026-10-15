@@ -4,7 +4,7 @@
 
 Project merupakan pnpm monorepo dengan API Fastify, ORM Objection/Knex, PostgreSQL, dan React/Vite Board. Baca file sumber untuk memastikan versi dan kontrak aktual; jangan mengandalkan ringkasan ini untuk memilih API dependency.
 
-Scope saat dokumen ini dibuat adalah perencanaan. Kartu di sini bukan instruksi untuk langsung menerbitkan release atau mengubah repository settings ketika pengguna hanya meminta memperbarui rencana.
+Scope aktif adalah menuntaskan jalur rilis pertama pada [active release plan](ACTIVE-PLAN.md). Seluruh roadmap tetap menjadi tujuan jangka panjang, tetapi 148 kartu tidak dikerjakan sebagai antrean prasyarat rilis. Ikuti [backlog tertunda](EXECUTION-BACKLOG.md) untuk item yang menunggu pemicu; jangan mengulang pekerjaan backlog tanpa pemicu tersebut.
 
 Jika pelaksanaan sudah diminta, kerjakan kartu dalam scope yang diotorisasi. Tidak perlu menanyakan kembali keputusan yang sudah eksplisit: dua branch main/dev, tidak ada deploy aplikasi, typed strict, programmatic schema/seed, dan identitas UI reusable. Keputusan stable release pertama tetap ditangani sesuai M7.03.
 
@@ -47,7 +47,7 @@ pnpm --filter @moonwitness/orm-base test
 git diff --check
 ```
 
-`typecheck`, `test:unit`, `test:integration`, `test:e2e`, `docs:*` dan `verify` pada root adalah deliverable roadmap jika belum tersedia. Jangan melaporkan command tersebut sukses sebelum dibuat dan dijalankan. Local PostgreSQL tests yang skipped tidak membuktikan integration lolos.
+Perintah root di atas sudah tersedia pada checkout saat ini. Pilih tes paling sempit yang membuktikan perilaku berubah dan jalankan typecheck/lint pada package terdampak. Jangan menjalankan `pnpm verify`, semua browser, atau semua integration berulang kali untuk perubahan docs-only/test-only; gunakan sekali pada kandidat rilis exact-SHA atau saat shared runtime/build/dependency berubah. PostgreSQL test yang skipped tidak membuktikan integration lolos. Strategi lengkap dan kondisi pembukaan ulang ada di [jalur aktif](ACTIVE-PLAN.md) dan [backlog](EXECUTION-BACKLOG.md).
 
 Jangan mencetak `.env`. Baca schema konfigurasi dan nama variable yang diperlukan; gunakan fixture credential sintetis. DB test harus terisolasi dan ditentukan eksplisit. Jangan menjalankan reset password terhadap akun pengguna saat menguji CLI.
 
