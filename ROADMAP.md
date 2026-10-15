@@ -260,8 +260,8 @@ Track approved through ADR 0004 on 2026-10-15. The existing 148 M-series tasks a
 - [ ] K4-004 Semantic RUH/HIZAB concept scope and mappings. Evidence: [K4-004](docs/roadmap/evidence/K4-004.md) (profile and trusted evidence-validation contract in progress; source-backed mappings remain open).
 - [ ] K4-005 Four-tradition cross-reference alignment candidates.
 - [ ] K4-006 Semantics benchmark and drift ledger.
-- [ ] K5-001 Local-only memory/archive ingestion manifest. Evidence: [K5-001](docs/roadmap/evidence/K5-001.md).
-- [ ] K5-002 Privacy redaction, revocation and retention controls.
+- [x] K5-001 Local-only memory/archive ingestion manifest. Evidence: [K5-001](docs/roadmap/evidence/K5-001.md).
+- [ ] K5-002 Privacy redaction, revocation and retention controls. Evidence: [K5-002](docs/roadmap/evidence/K5-002.md).
 - [ ] K5-003 Witness original/correction/provenance domain.
 - [ ] K5-004 Story, episode, page/media manifest contracts.
 - [ ] K5-005 Character canon and personal terminology reconciliation.

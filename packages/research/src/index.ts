@@ -95,3 +95,19 @@ export {
   type TrustedConceptEvidenceResolution,
   type TrustedConceptEvidenceResolver,
 } from './concept-profile.js';
+export {
+  createPrivacyRevocationPlan,
+  decidePrivacyRetention,
+  decideSensitiveRecordAccess,
+  excludeRevokedDerivedRecords,
+  type PrivacyConsentState,
+  type PrivacyRetentionDecision,
+  type PrivacyRetentionPolicy,
+  type PrivacyRevocationPlan,
+  type PrivacyUse,
+  type PublicationApproval,
+  type RevocableArtifactKind,
+  type RevocableArtifactReference,
+  type SensitiveRecordAccessDecision,
+  type SensitiveRecordAccessRequest,
+} from './privacy-lifecycle.js';

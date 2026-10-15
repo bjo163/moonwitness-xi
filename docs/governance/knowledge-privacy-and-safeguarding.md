@@ -96,13 +96,34 @@ assign a privacy/legal contact when user data or regulated obligations may be
 involved. The repository runbook does not claim a private reporting channel or
 production deployment is configured.
 
+## Local lifecycle controls (K5-002 in progress)
+
+The local research package now contains deny-by-default policy primitives in
+`packages/research/src/privacy-lifecycle.ts`. They require authenticated
+server-derived context, exact tenant scope for non-public records, granted
+consent, an approved purpose, and an explicit authorization for restricted
+records. Child-sensitive records are denied for search, export, publication,
+analytics, and model input. A public projection requires a minimized,
+revision-bound approval from a reviewer other than the requester.
+
+Retention is denied unless an owner-approved absolute expiry and decision
+reference are supplied; an expired policy denies use. Revocation plans contain
+hashed subject/decision/artifact references and instructions to block access
+and invalidate or rebuild derivatives. `excludeRevokedDerivedRecords` removes
+withdrawn subjects from a derived record list. These are pure local contracts,
+not persistence, API authorization, a deletion worker, or proof that every
+cache, index, export, replica, or public release has been cleared. The
+K5-002 task remains open until those adapters and negative API/search tests
+show end-to-end invalidation and no plaintext leakage.
+
 ## Synthetic negative cases and approval gates
 
-Before implementation, design synthetic tests for absent/withdrawn consent,
+Synthetic tests cover absent/withdrawn consent,
 inherited `RESTRICTED` or `CHILD_SENSITIVE` classification, cross-tenant reads,
-guessable attachment IDs, public/search/preview/log/prompt leaks, self-approval,
-and revocation from derived indexes. A passing synthetic test does not
-authorize real-data use.
+public projection self-approval, missing/expired retention, and revocation from
+a derived record list. Guessable attachment IDs and end-to-end
+public/search/preview/log/prompt leak checks remain required. A passing
+synthetic test does not authorize real-data use.
 
 Before a private import or public projection, the assigned owners must approve
 the specific workflow and obtain any additional required review from:
