@@ -17,7 +17,11 @@ describe('generic query relation graph policy', () => {
 
   it('limits ordinary users to explicitly approved model relation graphs', () => {
     expect(userGraphAllowed('user', 'base.partner', 'category_links.category')).toBe(true);
+    expect(userGraphAllowed('user', 'base.partner', 'company,country')).toBe(true);
+    expect(userGraphAllowed('user', 'base.partner', '[company, country]')).toBe(true);
     expect(userGraphAllowed('user', 'base.partner', 'partner,language')).toBe(false);
+    expect(userGraphAllowed('user', 'base.partner', 'company,internal_notes')).toBe(false);
+    expect(userGraphAllowed('user', 'base.partner', '[company,country')).toBe(false);
     expect(userGraphAllowed('user', 'base.user', 'partner')).toBe(false);
     expect(userGraphAllowed('superadmin', 'base.user', 'partner,language')).toBe(true);
     expect(userGraphAllowed('user', 'base.partner', undefined)).toBe(true);

@@ -1686,6 +1686,7 @@ describe('authentication and authorization', () => {
         .findOne({ code: 'customer' })
         .throwIfNotFound();
       const indonesia = await Country.query().findOne({ code: 'ID' }).throwIfNotFound();
+      await Partner.query().findById(aliceUser.partner_id).patch({ country_id: indonesia.id });
       await PartnerAddress.query().insert({
         partner_id: aliceUser.partner_id,
         label: 'Alice home',
@@ -1708,6 +1709,44 @@ describe('authentication and authorization', () => {
       expect(
         profile.json<{ data: { name: string; addresses: { city: string }[] }[] }>().data
       ).toMatchObject([{ name: 'Alice Regular', addresses: [{ city: 'Jakarta' }] }]);
+
+      const multipleSafeRelations = await as(alice.access_token, {
+        method: 'GET',
+        url: '/api/base.partner?with=company,country',
+      });
+      expect(multipleSafeRelations.statusCode, multipleSafeRelations.payload).toBe(200);
+      expect(
+        multipleSafeRelations.json<{
+          data: { company: { name: string }; country: { name: string } }[];
+        }>().data
+      ).toMatchObject([{ company: { name: 'MoonWitness' }, country: { name: 'Indonesia' } }]);
+
+      const multipleSafeRelationsRpc = await rpc(alice.access_token, [
+        'base.partner',
+        'search_read',
+        [[]],
+        { with: 'company,country' },
+      ]);
+      expect(multipleSafeRelationsRpc.statusCode).toBe(200);
+      expect(
+        multipleSafeRelationsRpc.json<{
+          result: { company: { name: string }; country: { name: string } }[];
+        }>().result
+      ).toMatchObject([{ company: { name: 'MoonWitness' }, country: { name: 'Indonesia' } }]);
+
+      const mixedSafeAndDeniedRelations = await as(alice.access_token, {
+        method: 'GET',
+        url: '/api/base.partner?with=company,private_notes',
+      });
+      expect(mixedSafeAndDeniedRelations.statusCode).toBe(403);
+
+      const mixedSafeAndDeniedRelationsRpc = await rpc(alice.access_token, [
+        'base.partner',
+        'search_read',
+        [[]],
+        { with: 'company,private_notes' },
+      ]);
+      expect(mixedSafeAndDeniedRelationsRpc.statusCode).toBe(403);
 
       const assignments = await as(alice.access_token, {
         method: 'GET',

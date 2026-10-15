@@ -1335,13 +1335,29 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
   }, 30000);
 
   it('enforces PostgreSQL company isolation for partner list, count, relations and foreign references', async () => {
-    if (!app) throw new Error('PostgreSQL API app is not initialized');
+    if (!app) {
+      apiDb = knex({
+        client: 'pg',
+        connection: connectionString,
+        searchPath: [apiSchema],
+        pool: { min: 0, max: 4 },
+      });
+      app = await buildApp({
+        db: apiDb,
+        superadminPassword: 'postgres-flow-initial-password',
+        jwtSecret: 'postgres-flow-jwt-secret-must-be-32-chars',
+        attachmentStorage: postgresAttachmentStorage,
+      });
+      await app.ready();
+      await verifyDefaultBaseAccounts(apiDb, true);
+    }
     const currentApp = app;
 
     const localCompany = await Company.query().findOne({ name: 'MoonWitness' }).throwIfNotFound();
     const localPartner = await Partner.query().insertAndFetch({
       name: 'PostgreSQL Tenant Contact',
       company_id: localCompany.id,
+      country_id: (await Country.query().findOne({ code: 'ID' }).throwIfNotFound()).id,
     });
     const localUser = await User.query().insertAndFetch({
       login: 'postgres-tenant-user',
@@ -1468,18 +1484,24 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
 
     const listed = await app.inject({
       method: 'GET',
-      url: '/api/base.partner?limit=500&count=true&with=company',
+      url: '/api/base.partner?limit=500&count=true&with=company,country',
       headers,
     });
     expect(listed.statusCode).toBe(200);
     const result = listed.json<{
       total: number;
-      data: { id: number; name: string; company: { name: string } | null }[];
+      data: {
+        id: number;
+        name: string;
+        company: { name: string } | null;
+        country: { name: string } | null;
+      }[];
     }>();
     expect(result.total).toBe(result.data.length);
     expect(result.data.map(({ id }) => id)).toContain(localPartner.id);
     expect(result.data.map(({ id }) => id)).not.toContain(foreignPartner.id);
     expect(result.data.find(({ id }) => id === localPartner.id)?.company?.name).toBe('MoonWitness');
+    expect(result.data.find(({ id }) => id === localPartner.id)?.country?.name).toBe('Indonesia');
 
     const allowedPartnerCreateName = `PostgreSQL tenant create ${randomUUID()}`;
     const allowedPartnerCreate = await app.inject({
@@ -1748,6 +1770,25 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
           params: { service: 'object', method: 'execute_kw', args },
         },
       });
+    const rpcWithMultipleSafeRelations = await rpc([
+      'base.partner',
+      'search_read',
+      [[]],
+      { with: 'company,country' },
+    ]);
+    expect(rpcWithMultipleSafeRelations.statusCode).toBe(200);
+    expect(
+      rpcWithMultipleSafeRelations.json<{
+        result: { company: { name: string }; country: { name: string } }[];
+      }>().result
+    ).toMatchObject([{ company: { name: 'MoonWitness' }, country: { name: 'Indonesia' } }]);
+    const rpcWithMixedSafeAndDeniedRelations = await rpc([
+      'base.partner',
+      'search_read',
+      [[]],
+      { with: 'company,private_notes' },
+    ]);
+    expect(rpcWithMixedSafeAndDeniedRelations.statusCode).toBe(403);
     await ModelAccess.query().insert({
       group_id: activityGroup.id,
       model_name: 'base.tag_link',

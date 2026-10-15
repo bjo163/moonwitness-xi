@@ -437,11 +437,13 @@ async function executeRpc(
   const [first, second] = args;
   const domain = [...(Array.isArray(first) ? (first as Domain) : []), ...readScope];
   switch (method) {
-    case 'search_read':
-      return (await model.search_read(
-        domain,
-        kwargs as Parameters<typeof model.search_read>[1]
-      )) as JsonValue;
+    case 'search_read': {
+      const relationGraph = typeof kwargs.with === 'string' ? kwargs.with : undefined;
+      return (await model.search_read(domain, {
+        ...(kwargs as Parameters<typeof model.search_read>[1]),
+        ...(relationGraph ? { withGraphFetched: relationGraph } : {}),
+      })) as JsonValue;
+    }
     case 'search':
       return (await model.search(domain, kwargs as Parameters<typeof model.search>[1])).map(
         (record) => record.id

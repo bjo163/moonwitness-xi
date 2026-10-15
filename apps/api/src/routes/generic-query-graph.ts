@@ -14,9 +14,17 @@ export function userGraphAllowed(
   modelName: string,
   graph: string | undefined
 ): boolean {
-  return (
-    role !== 'user' || graph === undefined || USER_RELATIONS[modelName]?.has(graph.trim()) === true
-  );
+  if (role !== 'user' || graph === undefined) return true;
+  const value = graph.trim();
+  if (!value) return true;
+  const startsWithBracket = value.startsWith('[');
+  const endsWithBracket = value.endsWith(']');
+  if (startsWithBracket !== endsWithBracket) return false;
+  const paths = (startsWithBracket ? value.slice(1, -1) : value)
+    .split(',')
+    .map((path) => path.trim());
+  const allowed = USER_RELATIONS[modelName];
+  return paths.length > 0 && paths.every((path) => path.length > 0 && allowed?.has(path) === true);
 }
 
 /** Accept comma-separated top-level relations and convert them to Objection's graph syntax. */
