@@ -37,7 +37,8 @@ COPY . .
 RUN pnpm build
 
 FROM build AS api-deploy
-RUN pnpm --filter @moonwitness/api deploy --prod --legacy /deploy/api
+RUN pnpm --filter @moonwitness/api deploy --prod --legacy /deploy/api \
+    && node scripts/prepare-api-runtime-assets.mjs /deploy/api
 
 FROM node:22-bookworm-slim AS runtime
 ENV NODE_ENV=production \
