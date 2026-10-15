@@ -44,3 +44,16 @@ the same write is idempotent; a corrupt existing object is reported and never
 replaced. `readRawArtifact` verifies the digest again before returning bytes.
 The store rejects malformed digests, symbolic links, and non-directory path
 segments. It stores bytes only; rights and publication decisions remain separate.
+
+## Private archive intake manifest
+
+`createPrivateArchiveImportManifest` records a user-supplied local archive's
+kind, export time, byte length, SHA-256, and source-scoped consent fields. It
+hashes the selected file locally, writes only the metadata manifest, and refuses
+denied or withdrawn consent, a source mismatch, unsafe paths, symbolic links,
+and manifest overwrites. It does not parse, copy, upload, or publish archive
+contents. The caller must keep manifests and source files in a private local
+workspace; never commit real account, witness, or consent data. Validation only
+checks declared structure and source binding; it does not prove that consent is
+authentic or legally sufficient. Retention, revocation, and any real-data import
+remain gated by K5-002 and the accepted privacy policy.

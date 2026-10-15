@@ -65,7 +65,7 @@ The source planning bundle is `MOONWITNESS_XI_LOCAL_AI_REBUILD_PLAN_2026-10-15/`
 - Depends on: `K0-003`, `K0-004`.
 - File scope: `docs/knowledge/`, `ontology/mappings/`.
 - Deliverable: Per-source repo/file/hash/license/old-id/target-decision inventory.
-- Acceptance: Historical metrics not marked confirmed; no runtime remote repo dependencies; alias conflicts visible.
+- Acceptance: Historical metrics not marked confirmed; no runtime remote repository dependencies; alias conflicts and missing historical ID mappings remain explicitly unresolved. The owner-approved no-legacy-import disposition may close the migration ledger without copying legacy records or reconciling IDs.
 - Verification target: `inventory schema validation and link review`. This is a target, not evidence that the command exists or has passed.
 
 ## K0-007 — Task lifecycle and local-agent trust contract

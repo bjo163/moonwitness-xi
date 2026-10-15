@@ -8,6 +8,7 @@ export {
   type KnowledgeIdentityResolution,
 } from './identity.js';
 export * from './types.js';
+export * from './json-schema.js';
 export * from './validate.js';
 export * from './provenance.js';
 export * from './source-artifact.js';

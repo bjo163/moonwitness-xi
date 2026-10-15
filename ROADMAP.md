@@ -230,7 +230,7 @@ Track approved through ADR 0004 on 2026-10-15. The existing 148 M-series tasks a
 - [x] K0-003 Canonical boundaries and domain ownership matrix. Evidence: [K0-003](docs/roadmap/evidence/K0-003.md).
 - [x] K0-004 Legal rights and source ingestion policy. Evidence: [K0-004](docs/roadmap/evidence/K0-004.md).
 - [x] K0-005 Witness privacy consent and minor-safety policy. Evidence: [K0-005](docs/roadmap/evidence/K0-005.md).
-- [ ] K0-006 Legacy knowledge inventory and migration ledger. Evidence: [K0-006](docs/roadmap/evidence/K0-006.md).
+- [x] K0-006 Legacy knowledge inventory and migration ledger. Owner-approved disposition: rebuild locally, no legacy code/data import or external repository connections. Evidence: [K0-006](docs/roadmap/evidence/K0-006.md).
 - [x] K0-007 Task lifecycle and local-agent trust contract. Evidence: [K0-007](docs/roadmap/evidence/K0-007.md).
 - [x] K1-001 Knowledge record types and JSON schemas. Evidence: [K1-001](docs/roadmap/evidence/K1-001.md).
 - [x] K1-002 Canonical ID/alias grammar and resolver. Evidence: [K1-002](docs/roadmap/evidence/K1-002.md).
@@ -238,7 +238,7 @@ Track approved through ADR 0004 on 2026-10-15. The existing 148 M-series tasks a
 - [x] K1-004 PROV-based activity and evidence contracts. Evidence: [K1-004](docs/roadmap/evidence/K1-004.md).
 - [x] K1-005 Standalone offline knowledge validator CLI. Evidence: [K1-005](docs/roadmap/evidence/K1-005.md).
 - [x] K1-006 Deterministic canonical JSON and snapshot hashing. Evidence: [K1-006](docs/roadmap/evidence/K1-006.md).
-- [ ] K1-007 Independent ontology/corpus schema versioning (historical-record verification awaits K0-006 inventory). Evidence: [K1-007](docs/roadmap/evidence/K1-007.md).
+- [ ] K1-007 Independent ontology/corpus schema versioning (K0-006 records no legacy imports; historical-record acceptance remains out of scope for this rebuild). Evidence: [K1-007](docs/roadmap/evidence/K1-007.md).
 - [x] K2-001 Deterministic offline ingestion adapter. Evidence: [K2-001](docs/roadmap/evidence/K2-001.md).
 - [x] K2-002 Content-addressed raw artifact store. Evidence: [K2-002](docs/roadmap/evidence/K2-002.md).
 - [ ] K2-003 Dataset release manifest and rollback pointers.
@@ -260,7 +260,7 @@ Track approved through ADR 0004 on 2026-10-15. The existing 148 M-series tasks a
 - [ ] K4-004 Semantic RUH/HIZAB concept scope and mappings.
 - [ ] K4-005 Four-tradition cross-reference alignment candidates.
 - [ ] K4-006 Semantics benchmark and drift ledger.
-- [ ] K5-001 Local-only memory/archive ingestion manifest.
+- [ ] K5-001 Local-only memory/archive ingestion manifest. Evidence: [K5-001](docs/roadmap/evidence/K5-001.md).
 - [ ] K5-002 Privacy redaction, revocation and retention controls.
 - [ ] K5-003 Witness original/correction/provenance domain.
 - [ ] K5-004 Story, episode, page/media manifest contracts.

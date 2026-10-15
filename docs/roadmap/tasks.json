@@ -1450,7 +1450,7 @@
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
       "priority": "p0",
-      "status": "in_progress",
+      "status": "complete",
       "evidence": "docs/roadmap/evidence/K0-006.md"
     },
     {
@@ -1773,7 +1773,9 @@
       "output": "Opt-in import from user-supplied exports with source kind/time/consent and checksum",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
-      "priority": "p0"
+      "priority": "p0",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/K5-001.md"
     },
     {
       "id": "K5-002",
