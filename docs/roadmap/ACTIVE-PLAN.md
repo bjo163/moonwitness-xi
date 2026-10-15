@@ -1,6 +1,6 @@
 # Jalur rilis aktif
 
-**Diperbarui: 2026-10-15.** Tujuan dekatnya adalah satu rilis pertama yang dapat dipakai, bukan menyelesaikan 148 kartu satu per satu. Seluruh kartu tetap ada di `tasks.json`; catatan batch lama dipindahkan ke [arsip eksekusi](EXECUTION-HISTORY-2026-10-15.md). Estimasi lama 8–13 hari tidak dipakai lagi karena mencampur pekerjaan wajib dengan backlog dan pengulangan verifikasi. Perubahan ini mempercepat urutan eksekusi, bukan menghapus acceptance atau menutup kartu tanpa bukti.
+**Diperbarui: 2026-10-15.** Jalur rilis pertama adalah prioritas/dependensi di dalam tujuan penuh 148 kartu roadmap; ia tidak menggantikan penyelesaian `ROADMAP.md` dan `docs/roadmap/`. Pada `dev` SHA `11a21dae8db79e7156df61cdfb193ae3adcfec6d`, checklist master mencatat 101/148 kartu selesai dan 47 masih terbuka (9 `in_progress`, 38 belum dimulai/menunggu dependensi). Kartu post-release tetap bagian goal dan harus dikerjakan setelah prasyaratnya tersedia. Catatan batch lama dipindahkan ke [arsip eksekusi](EXECUTION-HISTORY-2026-10-15.md); estimasi lama 8–13 hari tidak dipakai karena mencampur pekerjaan wajib dan pengulangan verifikasi. Percepatan hanya mengubah urutan/pengulangan, bukan scope maupun acceptance.
 
 ## Batas waktu dan aturan berhenti mengulang
 
@@ -96,4 +96,4 @@ M9.08 controlled size comparison tetap ditunda sampai ada baseline same-runner/t
 
 ### Definisi selesai goal
 
-Goal belum selesai hanya karena implementasi lokal atau CI `dev` lulus. Selesai setelah blocker rilis di atas punya evidence exact-SHA, approval/security owner lengkap, promosi protected ke `main`, stable docs/Pages dan release trace cocok, serta acceptance roadmap yang memang termasuk rilis ditutup. Semua sisanya tetap bisa dilanjutkan sebagai backlog eksplisit tanpa memperpanjang jalur rilis pertama.
+Goal penuh belum selesai hanya karena implementasi lokal atau CI `dev` lulus, dan tidak selesai hanya dengan merilis subset awal. Selesai setelah seluruh 148 kartu master checklist punya acceptance/evidence yang sesuai, semua required owner/hosted blocker ditutup melalui akses dan gate resmi, promosi protected serta siklus version/release/docs/Pages/issue trace dibuktikan, dan tidak ada kartu yang diam-diam dipindahkan keluar dari scope. Post-release/backlog adalah urutan pengerjaan setelah rilis pertama, bukan pengecualian dari goal.
