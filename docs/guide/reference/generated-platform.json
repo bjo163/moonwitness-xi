@@ -306,7 +306,7 @@
       "test:assets:source": "pnpm assets:validate && node --test packages/assets/tests/*.test.mjs scripts/export-doc-assets.test.mjs",
       "test:board-budget": "node --test scripts/check-board-bundle.test.mjs",
       "test:board-csv": "node --experimental-strip-types --test scripts/board/csv-export.test.mjs",
-      "test:ci-gate": "node --test scripts/ci-gate.test.mjs",
+      "test:ci-gate": "node --test scripts/ci-gate.test.mjs scripts/review-ci-evidence.test.mjs",
       "test:coverage-policy": "node --test scripts/check-coverage.test.mjs",
       "test:dependency-candidate": "node --test scripts/dependency-candidate.test.mjs scripts/smoke-containers.test.mjs",
       "test:dependency-plan": "node --test scripts/dependency-update-plan.test.mjs",
@@ -4600,5 +4600,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "02d350aef379d0bbec1da0bc5438849bf7a4933bf49225ed94c758dbba4b7630"
+  "generatedFromSha256": "1ddd074ddca5c063182ad7dc02e635b5061421d4c0777ba35f5eddd9f929b158"
 }

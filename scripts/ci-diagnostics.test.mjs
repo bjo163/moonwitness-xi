@@ -171,10 +171,7 @@ test('documentation builds are isolated and portal failures annotate sanitized J
     pagesWorkflow,
     /name: Test documented addon examples\s+run: pnpm --filter @moonwitness\/orm exec vitest run tests\/addon\.test\.ts/u
   );
-  assert.match(
-    pagesWorkflow,
-    /name: Build documentation portal site\s+run: pnpm --filter @moonwitness\/docs portal:build/u
-  );
+  assert.doesNotMatch(pagesWorkflow, /name: Build documentation portal site/u);
   const docsPackage = JSON.parse(readFileSync('apps/docs/package.json', 'utf8'));
   assert.match(
     docsPackage.scripts['portal:build'],
