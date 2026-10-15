@@ -252,7 +252,7 @@ Track approved through ADR 0004 on 2026-10-15. The existing 148 M-series tasks a
 - [x] K3-003 Alias/identity reconciliation with human decision. Evidence: [K3-003](docs/roadmap/evidence/K3-003.md).
 - [x] K3-004 Typed reviewed relation graph projection. Evidence: [K3-004](docs/roadmap/evidence/K3-004.md).
 - [ ] K3-005 Research review and immutable decision event flow. Evidence: [K3-005](docs/roadmap/evidence/K3-005.md).
-- [ ] K3-006 Cross-domain explanation and alternative hypothesis API.
+- [ ] K3-006 Cross-domain explanation and alternative hypothesis API. Evidence: [K3-006](docs/roadmap/evidence/K3-006.md).
 - [ ] K3-007 Evidence-aware duplicate scoring candidates.
 - [x] K4-001 Text segmentation and lexical metadata with offsets. Evidence: [K4-001](docs/roadmap/evidence/K4-001.md).
 - [x] K4-002 Polarity/speaker/quotation semantic annotation. Evidence: [K4-002](docs/roadmap/evidence/K4-002.md).
