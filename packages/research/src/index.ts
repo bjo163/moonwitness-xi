@@ -113,6 +113,24 @@ export {
   type NarrativePersonaRole,
 } from './persona-canon.js';
 export {
+  researchSuggestionEnvelopeSchema,
+  SuggestionEnvelopeError,
+  validateResearchSuggestionEnvelope,
+  validateResearchSuggestionEnvelopeWithResolver,
+  type DuplicateSuggestion,
+  type ResearchSuggestion,
+  type ResearchSuggestionEnvelope,
+  type SuggestionCitation,
+  type SuggestionEnvelopeErrorCode,
+  type SuggestionSpanSelector,
+  type SummarySuggestion,
+  type TermSuggestion,
+  type TrustedSuggestionAssertion,
+  type TrustedSuggestionEvidence,
+  type TrustedSuggestionPassage,
+  type TrustedSuggestionResolver,
+} from './suggestion-envelope.js';
+export {
   createPrivacyRevocationPlan,
   decidePrivacyRetention,
   decideSensitiveRecordAccess,

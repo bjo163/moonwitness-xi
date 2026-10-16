@@ -1964,7 +1964,9 @@
       "output": "Summaries/term/duplicate suggestions stored as unreviewed candidate",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
-      "priority": "p0"
+      "priority": "p0",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/K7-004.md"
     },
     {
       "id": "K7-005",

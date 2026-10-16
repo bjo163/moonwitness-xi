@@ -465,6 +465,7 @@ The source planning bundle is `MOONWITNESS_XI_LOCAL_AI_REBUILD_PLAN_2026-10-15/`
 - Deliverable: Summaries/term/duplicate suggestions stored as unreviewed candidate.
 - Acceptance: Invalid JSON/citations/unsupported claims rejected; model cannot write canonical.
 - Verification target: `schema hallucinated citation/prompt injection tests`. This is a target, not evidence that the command exists or has passed.
+- Evidence: [K7-004](evidence/K7-004.md).
 
 ## K7-005 — Prompt injection and high-risk action isolation
 
