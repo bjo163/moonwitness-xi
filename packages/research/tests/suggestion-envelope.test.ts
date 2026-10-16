@@ -121,6 +121,49 @@ describe('local AI suggestion envelope', () => {
     ).rejects.toMatchObject({ code: 'unsupported_text' });
   });
 
+  it('requires every summary and term citation to resolve a readable Assertion and bound Evidence', async () => {
+    const { envelope, resolver } = fixture();
+    const term = envelope.suggestions[0]!;
+    const candidates = [
+      envelope,
+      { ...envelope, suggestions: [{ ...term, kind: 'summary' as const }] },
+    ];
+    const deniedAssertion: TrustedSuggestionResolver = {
+      ...resolver,
+      async resolveAssertion() {
+        return { active: false, readable: true };
+      },
+    };
+    const deniedEvidence: TrustedSuggestionResolver = {
+      ...resolver,
+      async resolveEvidence() {
+        return { assertion_id: term.citations[0]!.assertion_id, active: true, readable: false };
+      },
+    };
+    const mismatchedEvidence: TrustedSuggestionResolver = {
+      ...resolver,
+      async resolveEvidence() {
+        return {
+          assertion_id: 'mw:assertion:another-subject',
+          active: true,
+          readable: true,
+        };
+      },
+    };
+
+    for (const candidate of candidates) {
+      await expect(
+        validateResearchSuggestionEnvelopeWithResolver(candidate, deniedAssertion)
+      ).rejects.toMatchObject({ code: 'assertion_unavailable' });
+      await expect(
+        validateResearchSuggestionEnvelopeWithResolver(candidate, deniedEvidence)
+      ).rejects.toMatchObject({ code: 'evidence_unavailable' });
+      await expect(
+        validateResearchSuggestionEnvelopeWithResolver(candidate, mismatchedEvidence)
+      ).rejects.toMatchObject({ code: 'evidence_binding_mismatch' });
+    }
+  });
+
   it('requires summary to be exact span concatenation and duplicate pair evidence to bind on both sides', async () => {
     const { resolver, citation } = fixture('alpha beta');
     const first = {

@@ -227,7 +227,7 @@ async function verifiedReviewHistory(trx: Knex.Transaction, subjectId: string) {
  * does not persist or publish concept profiles.
  */
 export async function resolveConceptProfileEvidence(
-  db: Knex,
+  db: Knex | Knex.Transaction,
   evidenceId: string,
   input: ResolveConceptProfileEvidenceInput
 ): Promise<TrustedConceptEvidenceResolution | null> {

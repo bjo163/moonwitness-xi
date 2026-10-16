@@ -1987,6 +1987,7 @@
       "dependsOn": ["K7-002", "K7-005"],
       "output": "Measured latency/memory/source coverage; local model-off resilience report",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
+      "evidence": "docs/roadmap/evidence/K7-006.md",
       "labels": ["local-ai-rebuild"],
       "priority": "p0"
     },

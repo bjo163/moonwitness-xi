@@ -6153,6 +6153,10 @@
       "path": "/api/research/reviews/:subjectId/history"
     },
     {
+      "method": "POST",
+      "path": "/api/research/suggestions/generate"
+    },
+    {
       "method": "GET",
       "path": "/api/research/witnesses/:witnessId"
     },
@@ -6245,5 +6249,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "f22fae229249e3af8d5db0372add537e6bf52f8577594792e383e18ce3b6b6b9"
+  "generatedFromSha256": "6c81f9df55ceee10ba524935ed7b7e80baab67a61710401fb91fb190367389c9"
 }

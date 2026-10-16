@@ -475,7 +475,7 @@ The source planning bundle is `MOONWITNESS_XI_LOCAL_AI_REBUILD_PLAN_2026-10-15/`
 - Deliverable: Untrusted content handling and human-approved action boundary.
 - Acceptance: Malicious retrieved text cannot alter system rules, run shell, publish, leak secret.
 - Verification target: `OWASP-inspired adversarial fixtures`. This is a target, not evidence that the command exists or has passed.
-- Evidence: [K7-005](evidence/K7-005.md); local adapter slice only, remaining integration and adversarial acceptance are listed there.
+- Evidence: [K7-005](evidence/K7-005.md); restricted local API pilot implemented, with model-specific evaluation and broader adversarial acceptance still open.
 
 ## K7-006 — Local AI evaluation and model-outage certification
 
@@ -485,6 +485,7 @@ The source planning bundle is `MOONWITNESS_XI_LOCAL_AI_REBUILD_PLAN_2026-10-15/`
 - Deliverable: Measured latency/memory/source coverage; local model-off resilience report.
 - Acceptance: Same-source comparison, named machine; no fictional score; non-AI flow passes offline.
 - Verification target: `offline egress-denied and G1–G3 regression tests`. This is a target, not evidence that the command exists or has passed.
+- Local baseline: AI-disabled runtime and API startup/authentication checks pass. Model identity/endpoint are not configured, so performance, memory, source coverage, same-source comparison, and OS-level egress denial remain unmeasured. See [evaluation protocol](../../research/evaluations/K7-006-protocol.md), [operations report](../operations/local-ai-evaluation.md), and [K7-006 evidence](evidence/K7-006.md).
 
 ## K8-001 — Knowledge explorer in existing Board
 

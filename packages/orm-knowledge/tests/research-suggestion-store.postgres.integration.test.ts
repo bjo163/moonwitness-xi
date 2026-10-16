@@ -47,7 +47,7 @@ const envelopeFor = (text: string, locator: string) =>
 
 const envelope = envelopeFor(sourceText, 'fixture://postgres/suggestion/1');
 
-const resolver = {
+const resolverForTransaction = (_trx: Knex.Transaction) => ({
   async resolvePassage(
     selector: (typeof envelope.suggestions)[number]['citations'][number]['selector']
   ) {
@@ -76,7 +76,7 @@ const resolver = {
       readable: true,
     };
   },
-};
+});
 
 postgresDescribe('research suggestion PostgreSQL integration', () => {
   const schema = `mw_suggestion_${randomUUID().replaceAll('-', '')}`;
@@ -116,7 +116,7 @@ postgresDescribe('research suggestion PostgreSQL integration', () => {
     const input = {
       authenticatedActor: { userId, companyId, role: 'superadmin' as const },
       envelope,
-      resolver,
+      resolverForTransaction,
     };
     const concurrent = await Promise.all([
       storeResearchSuggestions(db, input),

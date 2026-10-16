@@ -73,6 +73,24 @@ const resolver = {
   },
 };
 
+function resolverForTransaction(trx: Knex.Transaction) {
+  return {
+    ...resolver,
+    async resolveEvidence(evidenceId: string) {
+      const row = await trx('test_research_evidence_access')
+        .where({ evidence_id: evidenceId })
+        .first('assertion_id', 'active', 'readable');
+      return row
+        ? {
+            assertion_id: String(row.assertion_id),
+            active: Boolean(row.active),
+            readable: Boolean(row.readable),
+          }
+        : null;
+    },
+  };
+}
+
 const actor = () => ({ userId, companyId, role: 'superadmin' as const });
 
 beforeEach(async () => {
@@ -88,6 +106,18 @@ beforeEach(async () => {
     workflowManifest,
     manifest,
   ]);
+  await db.schema.createTable('test_research_evidence_access', (table) => {
+    table.string('evidence_id').primary();
+    table.string('assertion_id').notNullable();
+    table.boolean('active').notNullable();
+    table.boolean('readable').notNullable();
+  });
+  await db('test_research_evidence_access').insert({
+    evidence_id: 'mw:evidence:synthetic-evidence',
+    assertion_id: 'mw:assertion:synthetic-assertion',
+    active: true,
+    readable: true,
+  });
   userId = Number((await db('users').where({ login: 'superadmin' }).first('id'))?.id);
   companyId = Number((await db('companies').first('id'))?.id);
   await db('company_memberships')
@@ -100,7 +130,11 @@ afterEach(async () => db.destroy());
 
 describe('tenant-scoped INTERNAL research suggestion versions', () => {
   it('persists only unreviewed candidates, supports idempotent replay and immutable revisions', async () => {
-    const input = { authenticatedActor: actor(), envelope: envelope(), resolver };
+    const input = {
+      authenticatedActor: actor(),
+      envelope: envelope(),
+      resolverForTransaction,
+    };
     const [first] = await storeResearchSuggestions(db, input);
     const [retry] = await storeResearchSuggestions(db, input);
     const [changed] = await storeResearchSuggestions(db, {
@@ -136,13 +170,13 @@ describe('tenant-scoped INTERNAL research suggestion versions', () => {
       storeResearchSuggestions(db, {
         authenticatedActor: actor(),
         envelope: { suggestions: [] },
-        resolver,
+        resolverForTransaction,
       })
     ).rejects.toThrow(/schema check/u);
     await storeResearchSuggestions(db, {
       authenticatedActor: actor(),
       envelope: envelope(),
-      resolver,
+      resolverForTransaction,
     });
     await expect(
       readResearchSuggestionVersion(db, {
@@ -178,7 +212,10 @@ describe('tenant-scoped INTERNAL research suggestion versions', () => {
     const [stored] = await storeResearchSuggestions(db, {
       authenticatedActor: mutableActor,
       envelope: candidate,
-      resolver: mutatingResolver,
+      resolverForTransaction: (trx) => ({
+        ...mutatingResolver,
+        resolveEvidence: resolverForTransaction(trx).resolveEvidence,
+      }),
     });
 
     expect(stored?.suggestion.text).toBe('Synthetic extractive passage.');
@@ -190,11 +227,28 @@ describe('tenant-scoped INTERNAL research suggestion versions', () => {
     ).resolves.toMatchObject({ suggestion: { text: 'Synthetic extractive passage.' } });
   });
 
+  it('revalidates authoritative evidence inside the storage transaction', async () => {
+    const input = {
+      authenticatedActor: actor(),
+      envelope: envelope(),
+      resolverForTransaction,
+    };
+
+    // Access is revoked after candidate preparation and before the storage transaction begins.
+    await db('test_research_evidence_access')
+      .where({ evidence_id: 'mw:evidence:synthetic-evidence' })
+      .update({ active: false, readable: false });
+    await expect(storeResearchSuggestions(db, input)).rejects.toThrow(
+      /trusted source and evidence validation/u
+    );
+    expect(await db('knowledge_research_suggestion_versions')).toHaveLength(0);
+  });
+
   it('snapshots the reader tenant before asynchronous database checks', async () => {
     await storeResearchSuggestions(db, {
       authenticatedActor: actor(),
       envelope: envelope(),
-      resolver,
+      resolverForTransaction,
     });
     const mutableReader = actor();
     const read = readResearchSuggestionVersion(db, {
@@ -212,7 +266,7 @@ describe('tenant-scoped INTERNAL research suggestion versions', () => {
     await storeResearchSuggestions(db, {
       authenticatedActor: actor(),
       envelope: envelope(),
-      resolver,
+      resolverForTransaction,
     });
     const forged = canonicalResearchJson({
       ...suggestion(),

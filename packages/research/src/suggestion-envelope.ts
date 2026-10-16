@@ -168,7 +168,7 @@ export async function validateResearchSuggestionEnvelopeWithResolver(
           'Cited source digest does not match its bytes'
         );
       }
-      if (!passage.readable)
+      if (passage.readable !== true)
         throw new SuggestionEnvelopeError('source_access_denied', 'Cited passage is not readable');
       const scalars = Array.from(passage.text);
       const { start, end } = selector.range;
@@ -180,6 +180,26 @@ export async function validateResearchSuggestionEnvelopeWithResolver(
         throw new SuggestionEnvelopeError(
           'span_digest_mismatch',
           'Selected span digest does not match'
+        );
+      }
+      const assertion = await resolver.resolveAssertion(citation.assertion_id);
+      if (!assertion || assertion.active !== true || assertion.readable !== true) {
+        throw new SuggestionEnvelopeError(
+          'assertion_unavailable',
+          'Cited Assertion is not active and readable'
+        );
+      }
+      const evidence = await resolver.resolveEvidence(citation.evidence_id);
+      if (!evidence || evidence.active !== true || evidence.readable !== true) {
+        throw new SuggestionEnvelopeError(
+          'evidence_unavailable',
+          'Cited Evidence is not active and readable'
+        );
+      }
+      if (evidence.assertion_id !== citation.assertion_id) {
+        throw new SuggestionEnvelopeError(
+          'evidence_binding_mismatch',
+          'Cited Evidence is not bound to its Assertion'
         );
       }
       excerpts.push(excerpt);
@@ -204,33 +224,11 @@ export async function validateResearchSuggestionEnvelopeWithResolver(
           'invalid_envelope',
           'Duplicate pair must contain distinct Assertions'
         );
-      for (const assertionId of suggestion.assertion_ids) {
-        const assertion = await resolver.resolveAssertion(assertionId);
-        if (!assertion?.active || !assertion.readable) {
-          throw new SuggestionEnvelopeError(
-            'assertion_unavailable',
-            'Duplicate Assertion is not active and readable'
-          );
-        }
-      }
       for (const citation of suggestion.citations) {
         if (!suggestion.assertion_ids.includes(citation.assertion_id)) {
           throw new SuggestionEnvelopeError(
             'evidence_binding_mismatch',
             'Duplicate citation must bind to one requested Assertion'
-          );
-        }
-        const evidence = await resolver.resolveEvidence(citation.evidence_id);
-        if (!evidence?.active || !evidence.readable) {
-          throw new SuggestionEnvelopeError(
-            'evidence_unavailable',
-            'Duplicate Evidence is not active and readable'
-          );
-        }
-        if (evidence.assertion_id !== citation.assertion_id) {
-          throw new SuggestionEnvelopeError(
-            'evidence_binding_mismatch',
-            'Duplicate Evidence is not bound to its requested Assertion'
           );
         }
       }

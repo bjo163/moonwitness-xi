@@ -275,8 +275,8 @@ Track approved through ADR 0004 on 2026-10-15. The existing 148 M-series tasks a
 - [ ] K7-002 Hardware survey and model artifact registry. Evidence: [K7-002](docs/roadmap/evidence/K7-002.md) (hardware and empty registry recorded; real artifact/license review remains open).
 - [x] K7-003 Permission-scoped local retrieval and chunks. Evidence: [K7-003](docs/roadmap/evidence/K7-003.md) (Q7:46-only authenticated retrieval with exact citation/span; SQLite and PostgreSQL tests deny restricted and `CHILD_SENSITIVE` records).
 - [ ] K7-004 Staging-only structured suggestion workflow.
-- [ ] K7-005 Prompt injection and high-risk action isolation (in progress; tool-free local adapter slice, API integration remains open). Evidence: [K7-005](docs/roadmap/evidence/K7-005.md).
-- [ ] K7-006 Local AI evaluation and model-outage certification.
+- [ ] K7-005 Prompt injection and high-risk action isolation (in progress; tool-free local adapter and restricted API pilot are implemented, model-specific evaluation remains open). Evidence: [K7-005](docs/roadmap/evidence/K7-005.md).
+- [ ] K7-006 Local AI evaluation and model-outage certification. Model-off runtime/API baseline passes on the named local workstation; no model endpoint is configured, so same-source comparison, latency/memory/source coverage and OS-level egress denial remain unmeasured: [evidence](docs/roadmap/evidence/K7-006.md).
 - [ ] K8-001 Knowledge explorer in existing Board. Local partial read-only pilot adds role-gated browsing of the two pinned source passages and verified-release relation explanations by exact ID, with source/evidence and alternative navigation. Client/Board typecheck and builds plus Chromium source/relation, keyboard, and ordinary-user access flows are covered; graph search/assertion navigation, live API-to-PostgreSQL Board flow, and broader theme/screen-reader review remain open. [Evidence](docs/roadmap/evidence/K8-001.md).
 - [ ] K8-002 Witness/editorial workbench and poster pages.
 - [ ] K8-003 Approved publication read API.

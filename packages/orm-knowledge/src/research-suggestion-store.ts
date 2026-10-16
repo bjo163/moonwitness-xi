@@ -14,8 +14,8 @@ const suggestionIdPattern = /^mw:suggestion:[a-z0-9][a-z0-9._-]{0,179}$/u;
 
 export interface StoreResearchSuggestionsInput {
   readonly authenticatedActor: AuthenticatedResearchReviewer;
-  /** Must resolve authoritative tenant-scoped source, Assertion, and Evidence records. */
-  readonly resolver: TrustedSuggestionResolver;
+  /** Must resolve current authoritative tenant-scoped records using this transaction. */
+  readonly resolverForTransaction: (trx: Knex.Transaction) => TrustedSuggestionResolver;
   readonly envelope: unknown;
 }
 
@@ -92,7 +92,7 @@ async function validatedSuggestions(
   return envelope.suggestions;
 }
 
-/** Store a pre-validated envelope as immutable, company-scoped INTERNAL review candidates. */
+/** Validate and store an envelope as immutable, company-scoped INTERNAL review candidates. */
 export async function storeResearchSuggestions(
   db: Knex,
   input: StoreResearchSuggestionsInput
@@ -104,12 +104,15 @@ export async function storeResearchSuggestions(
     companyId: requestedActor.companyId,
     role: requestedActor.role,
   };
-  const suggestions = await validatedSuggestions(input.envelope, input.resolver);
   const results: StoredResearchSuggestionVersion[] = [];
   await db.transaction(async (trx) => {
     await assertActiveCompanyActor(trx, actor);
     // Serializes version allocation without allowing model or generated text to mutate canonical graph data.
     await trx('companies').where({ id: actor.companyId }).forUpdate().first('id');
+    // Resolve after authorization and under the same transaction used for insertion so a
+    // transaction-aware resolver can observe canonical evidence/access changes atomically.
+    const resolver = input.resolverForTransaction(trx);
+    const suggestions = await validatedSuggestions(input.envelope, resolver);
     for (const suggestion of suggestions) {
       const suggestionJson = canonicalResearchJson(suggestion);
       const suggestionDigest = digest(suggestionJson);
