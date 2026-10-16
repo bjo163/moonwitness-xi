@@ -11,6 +11,8 @@ import {
   activateResearchGraphRelease,
   createResearchGraphRelease,
   manifest as knowledgeManifest,
+  readActiveResearchGraphRelease,
+  readResearchReviewHistory,
   ResearchGraphRecord,
   transitionResearchReview,
 } from '../src/index.js';
@@ -290,6 +292,126 @@ function reviewInput(
 }
 
 describe('transactional research review service', () => {
+  it('rechecks active company membership inside the decision transaction', async () => {
+    const started = await startReviewWorkflow();
+    await db('company_memberships')
+      .where({ user_id: superadminId, company_id: companyId })
+      .update({ active: false });
+
+    await expect(transitionResearchReview(db, reviewInput(started.id))).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    expect(
+      await db('workflow_instances').where({ id: started.id }).first('revision')
+    ).toMatchObject({ revision: 0 });
+    expect(await db('workflow_events').where({ instance_id: started.id })).toHaveLength(1);
+    expect(await db('knowledge_research_review_events')).toHaveLength(0);
+  });
+
+  it('rejects confidential subjects before changing workflow or decision history', async () => {
+    const current = await db.transaction((trx) => readActiveResearchGraphRelease(trx, corpusKey));
+    expect(current).not.toBeNull();
+    const next = await db.transaction((trx) =>
+      createResearchGraphRelease(trx, {
+        corpusKey,
+        schemaVersion: 'research-graph/v1',
+        previousReleaseDigest: current!.releaseDigest,
+        records: current!.records.map((record) =>
+          record.key === assertionId
+            ? {
+                ...record,
+                visibility: 'RESTRICTED',
+                content: {
+                  ...(record.content as Record<string, unknown>),
+                  visibility: 'RESTRICTED',
+                },
+              }
+            : record
+        ),
+      })
+    );
+    await db.transaction((trx) =>
+      activateResearchGraphRelease(trx, {
+        corpusKey,
+        releaseDigest: next.releaseDigest,
+        expectedCurrentReleaseDigest: current!.releaseDigest,
+        activatedAt: '2026-10-16T00:00:02.000Z',
+      })
+    );
+    activeRecordId = Number(
+      (
+        await db('knowledge_research_graph_records')
+          .where({
+            release_id: (await db('knowledge_research_active_releases').first('release_id'))
+              .release_id,
+            record_key: assertionId,
+          })
+          .first('id')
+      )?.id
+    );
+    const started = await startReviewWorkflow();
+    await expect(transitionResearchReview(db, reviewInput(started.id))).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    expect(
+      await db('workflow_instances').where({ id: started.id }).first('revision')
+    ).toMatchObject({ revision: 0 });
+    expect(await db('workflow_events')).toHaveLength(1);
+    expect(await db('knowledge_research_review_events')).toHaveLength(0);
+  });
+
+  it('rejects confidential evidence without committing a workflow or decision event', async () => {
+    const current = await db.transaction((trx) => readActiveResearchGraphRelease(trx, corpusKey));
+    expect(current).not.toBeNull();
+    const next = await db.transaction((trx) =>
+      createResearchGraphRelease(trx, {
+        corpusKey,
+        schemaVersion: 'research-graph/v1',
+        previousReleaseDigest: current!.releaseDigest,
+        records: current!.records.map((record) =>
+          record.key === evidenceId || record.key === relationId
+            ? {
+                ...record,
+                visibility: 'RESTRICTED',
+                content: {
+                  ...(record.content as Record<string, unknown>),
+                  visibility: 'RESTRICTED',
+                },
+              }
+            : record
+        ),
+      })
+    );
+    await db.transaction((trx) =>
+      activateResearchGraphRelease(trx, {
+        corpusKey,
+        releaseDigest: next.releaseDigest,
+        expectedCurrentReleaseDigest: current!.releaseDigest,
+        activatedAt: '2026-10-16T00:00:02.000Z',
+      })
+    );
+    activeRecordId = Number(
+      (
+        await db('knowledge_research_graph_records')
+          .where({
+            release_id: (await db('knowledge_research_active_releases').first('release_id'))
+              .release_id,
+            record_key: assertionId,
+          })
+          .first('id')
+      )?.id
+    );
+    const started = await startReviewWorkflow();
+    await expect(transitionResearchReview(db, reviewInput(started.id))).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    expect(
+      await db('workflow_instances').where({ id: started.id }).first('revision')
+    ).toMatchObject({ revision: 0 });
+    expect(await db('workflow_events')).toHaveLength(1);
+    expect(await db('knowledge_research_review_events')).toHaveLength(0);
+  });
+
   it('binds the decision to the active graph release and commits it with the workflow event', async () => {
     const started = await startReviewWorkflow();
     const completed = await transitionResearchReview(db, reviewInput(started.id));
@@ -310,6 +432,15 @@ describe('transactional research review service', () => {
       await db('workflow_events').where({ instance_id: started.id, sequence: 1 })
     ).toHaveLength(1);
     expect(await db('knowledge_research_review_events')).toHaveLength(1);
+    await expect(
+      readResearchReviewHistory(db, { subjectId: assertionId, companyId })
+    ).resolves.toMatchObject({
+      events: [{ workflow_instance_id: started.id, research_release_digest: releaseDigest }],
+      truncated: false,
+    });
+    await expect(
+      readResearchReviewHistory(db, { subjectId: assertionId, companyId: companyId + 1 })
+    ).resolves.toMatchObject({ events: [], truncated: false, nextCursor: null });
   });
 
   it('replays exact intent without a second event and conflicts on changed evidence', async () => {
@@ -477,6 +608,9 @@ describe('transactional research review service', () => {
       event_json: '{}',
     });
     await expect(
+      readResearchReviewHistory(db, { subjectId: assertionId, companyId })
+    ).rejects.toMatchObject({ code: 'INVALID_EVENT_PAYLOAD' });
+    await expect(
       transitionResearchReview(
         db,
         reviewInput(second.id, { idempotencyKey: 'research-review-after-corruption-01' })
@@ -487,5 +621,55 @@ describe('transactional research review service', () => {
         revision: 0,
       }
     );
+  });
+
+  it('rejects review history whose indexed tenant binding disagrees with the event payload', async () => {
+    const first = await startReviewWorkflow();
+    await transitionResearchReview(db, reviewInput(first.id));
+    const otherCompanyId = Number(
+      await db('companies').insert({
+        name: 'Research review isolation company',
+        timezone: 'UTC',
+        active: true,
+      })
+    );
+    const otherCompanyWorkflow = await startWorkflow(db, {
+      code: 'research.review',
+      companyId: otherCompanyId,
+      actorId: systemId,
+      role: 'system',
+      resourceModel: ResearchGraphRecord.modelName,
+      resourceId: activeRecordId,
+      idempotencyKey: 'research-review-other-company-01',
+      now: new Date('2026-10-16T00:03:00.000Z'),
+    });
+    const followup = await startWorkflow(db, {
+      code: 'research.review',
+      companyId,
+      actorId: systemId,
+      role: 'system',
+      resourceModel: ResearchGraphRecord.modelName,
+      resourceId: activeRecordId,
+      idempotencyKey: 'research-review-binding-followup-01',
+      now: new Date('2026-10-16T00:03:01.000Z'),
+    });
+
+    await db.raw('DROP TRIGGER knowledge_research_review_events_reject_update');
+    await db('knowledge_research_review_events')
+      .where({ workflow_instance_id: first.id })
+      .update({ workflow_instance_id: otherCompanyWorkflow.id });
+
+    await expect(
+      readResearchReviewHistory(db, { subjectId: assertionId, companyId: otherCompanyId })
+    ).rejects.toMatchObject({ code: 'INVALID_EVENT_PAYLOAD' });
+    await expect(
+      transitionResearchReview(
+        db,
+        reviewInput(followup.id, { idempotencyKey: 'research-review-binding-decision-01' })
+      )
+    ).rejects.toMatchObject({ code: 'INVALID_EVENT_PAYLOAD' });
+    expect(
+      await db('workflow_instances').where({ id: followup.id }).first('revision')
+    ).toMatchObject({ revision: 0 });
   });
 });

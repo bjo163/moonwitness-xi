@@ -20,6 +20,8 @@ import { evidenceRoutes } from './routes/evidence.routes.js';
 import { researchExplanationRoutes } from './routes/research-explanation.routes.js';
 import { researchActorIdentityRoutes } from './routes/research-actor-identity.routes.js';
 import { researchDuplicateCandidateRoutes } from './routes/research-duplicate-candidates.routes.js';
+import { researchReviewRoutes } from './routes/research-review.routes.js';
+import { ensureResearchReviewWorkflow } from './research-review-workflow.js';
 import { config, localAiConfig } from './config/env.js';
 import { LocalFileAttachmentStorage, type AttachmentStorage } from '@moonwitness/orm-storage';
 import { createDatabase } from './database/knex.js';
@@ -95,6 +97,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       workflowAddon,
       knowledgeAddon,
     ]);
+    await ensureResearchReviewWorkflow(db);
     await initializeSuperadminPassword(superadminPassword);
   } catch (error) {
     if (!options.db) await db.destroy();
@@ -253,6 +256,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   await app.register(researchExplanationRoutes);
   await app.register(researchActorIdentityRoutes);
   await app.register(researchDuplicateCandidateRoutes);
+  await app.register(researchReviewRoutes);
 
   return app;
 }

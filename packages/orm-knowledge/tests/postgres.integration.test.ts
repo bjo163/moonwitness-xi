@@ -14,6 +14,7 @@ import {
   createResearchGraphRelease,
   manifest,
   readActiveResearchGraphRelease,
+  readResearchReviewHistory,
   ResearchGraphRecord,
   transitionResearchReview,
   WitnessCorrection,
@@ -424,6 +425,16 @@ postgresDescribe('knowledge addon PostgreSQL integration', () => {
       workflow_event_sequence: 1,
       workflow_revision: 1,
       research_release_digest: release.releaseDigest,
+    });
+    await expect(readResearchReviewHistory(db, { subjectId, companyId })).resolves.toMatchObject({
+      truncated: false,
+      events: [
+        {
+          subject_id: subjectId,
+          research_release_digest: release.releaseDigest,
+          workflow_instance_id: started.id,
+        },
+      ],
     });
     await expect(review(started.id, 'pg-review-action-primary-01')).resolves.toMatchObject({
       revision: 1,

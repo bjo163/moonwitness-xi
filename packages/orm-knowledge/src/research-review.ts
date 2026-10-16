@@ -225,9 +225,11 @@ async function verifiedActorIds(
   if (!actor || actor.role !== role)
     fail('FORBIDDEN', 'Authenticated reviewer identity is invalid');
   const membership = await trx('company_memberships')
-    .where({ user_id: actorId, company_id: companyId })
+    .where({ user_id: actorId, company_id: companyId, active: true })
     .first('id');
   if (!membership) fail('FORBIDDEN', 'Reviewer is not authorized for this company');
+  const company = await trx('companies').where({ id: companyId, active: true }).first('id');
+  if (!company) fail('FORBIDDEN', 'Reviewer is not authorized for this company');
   const identities = await trx('knowledge_research_actor_identities')
     .whereIn('user_id', [...new Set([actorId, requesterId])])
     .select('user_id', 'canonical_user_id');
@@ -276,8 +278,23 @@ async function verifiedReviewHistory(trx: Knex.Transaction, subjectId: string) {
         'Stored research review history failed schema verification'
       );
     }
-    return event as ResearchReviewEvent;
+    const verified = event as ResearchReviewEvent;
+    if (!reviewRowMatchesEvent(row, verified)) {
+      fail('INVALID_EVENT_PAYLOAD', 'Stored research review history failed binding verification');
+    }
+    return verified;
   });
+}
+
+function reviewRowMatchesEvent(row: Record<string, unknown>, event: ResearchReviewEvent): boolean {
+  return (
+    Number(row.workflow_instance_id) === event.workflow_instance_id &&
+    Number(row.workflow_event_sequence) === event.workflow_event_sequence &&
+    String(row.subject_id) === event.subject_id &&
+    Number(row.subject_revision) === event.subject_revision &&
+    String(row.research_release_digest) === event.research_release_digest &&
+    String(row.idempotency_key) === event.idempotency_key
+  );
 }
 
 export function validateResearchRelease(records: readonly StoredResearchGraphRecord[]) {
@@ -478,6 +495,16 @@ export async function transitionResearchReview(db: Knex, input: TransitionResear
         record,
         assertObject(record.content, 'Review subject is invalid')
       );
+      if (visibilityOrder[currentVisibility] > visibilityOrder.INTERNAL) {
+        fail('FORBIDDEN', 'Research review is unavailable for this record');
+      }
+      if (
+        [...evidenceVisibility.values()].some(
+          (visibility) => visibilityOrder[visibility] > visibilityOrder.INTERNAL
+        )
+      ) {
+        fail('FORBIDDEN', 'Research review is unavailable for this record');
+      }
       const authorizedSubject = {
         ...subject,
         visibility: currentVisibility,
@@ -517,4 +544,132 @@ export async function transitionResearchReview(db: Knex, input: TransitionResear
     },
   };
   return transitionWorkflow(db, transition);
+}
+
+/** Read a bounded, integrity-checked review history for an INTERNAL active subject. */
+export async function readResearchReviewHistory(
+  db: Knex,
+  input: {
+    readonly subjectId: string;
+    readonly companyId: number;
+    readonly limit?: number;
+    readonly before?: {
+      readonly workflowInstanceId: number;
+      readonly workflowEventSequence: number;
+    };
+  }
+) {
+  const limit = input.limit ?? 50;
+  if (
+    !canonicalId(input.subjectId) ||
+    !Number.isSafeInteger(input.companyId) ||
+    input.companyId < 1 ||
+    !Number.isSafeInteger(limit) ||
+    limit < 1 ||
+    limit > 100 ||
+    (input.before !== undefined &&
+      (!Number.isSafeInteger(input.before.workflowInstanceId) ||
+        input.before.workflowInstanceId < 1 ||
+        !Number.isSafeInteger(input.before.workflowEventSequence) ||
+        input.before.workflowEventSequence < 0))
+  ) {
+    throw new WorkflowError('INVALID_EVENT_PAYLOAD', 'Research review history request is invalid');
+  }
+  return db.transaction(async (trx) => {
+    const release = await readResearchGraphRelease(
+      trx,
+      String(
+        (
+          await trx('knowledge_research_active_releases as active')
+            .join('knowledge_research_graph_releases as release', 'release.id', 'active.release_id')
+            .where('active.corpus_key', corpusKey)
+            .first('release.release_digest')
+        )?.release_digest ?? ''
+      )
+    );
+    if (!release) fail('INVALID_EVENT_PAYLOAD', 'Research review history is unavailable');
+    const graph = validateResearchRelease(release.records);
+    const subject = graph.contentById.get(input.subjectId);
+    if (
+      !subject ||
+      !['Assertion', 'ResearchRelation'].includes(String(subject.kind)) ||
+      visibilityOrder[getVisibility(subject.visibility)] > visibilityOrder.INTERNAL
+    ) {
+      fail('FORBIDDEN', 'Research review history is unavailable');
+    }
+
+    const historyQuery = trx('knowledge_research_review_events as review')
+      .join('workflow_instances as instance', 'instance.id', 'review.workflow_instance_id')
+      .where({ 'review.subject_id': input.subjectId, 'instance.company_id': input.companyId });
+    const before = input.before;
+    if (before) {
+      historyQuery.andWhere(function () {
+        this.where('review.workflow_instance_id', '<', before.workflowInstanceId).orWhere(
+          function () {
+            this.where('review.workflow_instance_id', before.workflowInstanceId).andWhere(
+              'review.workflow_event_sequence',
+              '<',
+              before.workflowEventSequence
+            );
+          }
+        );
+      });
+    }
+    const rows = await historyQuery
+      .orderBy('review.workflow_instance_id', 'desc')
+      .orderBy('review.workflow_event_sequence', 'desc')
+      .limit(limit + 1)
+      .select(
+        'review.workflow_instance_id',
+        'review.workflow_event_sequence',
+        'review.subject_id',
+        'review.subject_revision',
+        'review.research_release_digest',
+        'review.idempotency_key',
+        'review.event_json',
+        'review.event_digest'
+      );
+    const truncated = rows.length > limit;
+    const events = rows.slice(0, limit).map((row) => {
+      const eventJson = String(row.event_json);
+      if (createHash('sha256').update(eventJson, 'utf8').digest('hex') !== row.event_digest) {
+        fail(
+          'INVALID_EVENT_PAYLOAD',
+          'Stored research review history failed integrity verification'
+        );
+      }
+      let event: unknown;
+      try {
+        event = JSON.parse(eventJson) as unknown;
+      } catch {
+        fail('INVALID_EVENT_PAYLOAD', 'Stored research review history is malformed');
+      }
+      if (canonicalResearchJson(event) !== eventJson || !validateResearchReviewEvent(event).valid) {
+        fail('INVALID_EVENT_PAYLOAD', 'Stored research review history failed schema verification');
+      }
+      const verified = event as ResearchReviewEvent;
+      if (!reviewRowMatchesEvent(row, verified)) {
+        fail('INVALID_EVENT_PAYLOAD', 'Stored research review history failed binding verification');
+      }
+      if (
+        verified.subject_id !== input.subjectId ||
+        visibilityOrder[verified.visibility] > visibilityOrder.INTERNAL
+      ) {
+        fail('FORBIDDEN', 'Research review history is unavailable');
+      }
+      return verified;
+    });
+    const lastEvent = events.at(-1);
+    return {
+      events,
+      truncated,
+      nextCursor:
+        truncated && lastEvent
+          ? {
+              workflowInstanceId: lastEvent.workflow_instance_id,
+              workflowEventSequence: lastEvent.workflow_event_sequence,
+            }
+          : null,
+    };
+  });
 }

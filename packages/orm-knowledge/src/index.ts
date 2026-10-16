@@ -19,6 +19,7 @@ export {
   readResearchGraphRelease,
 } from './research-release.js';
 export { transitionResearchReview } from './research-review.js';
+export { readResearchReviewHistory, validateResearchRelease } from './research-review.js';
 export {
   provisionResearchActorIdentity,
   ResearchActorIdentityProvisioningError,
