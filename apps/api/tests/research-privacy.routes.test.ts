@@ -223,7 +223,10 @@ describe('synthetic research privacy API', () => {
   });
 
   it('records a hash-only withdrawal, clears one projection, and replays idempotently', async () => {
-    const subjectHash = sha256('synthetic-api-subject');
+    const subjectRef = 'synthetic-api-subject';
+    const consentDecisionRef = 'synthetic-api-consent';
+    const subjectHash = sha256(subjectRef);
+    const consentHash = sha256(consentDecisionRef);
     await db('knowledge_privacy_projections').insert({
       company_id: companyId,
       projection_key: 'synthetic-api-search-001',
@@ -261,6 +264,20 @@ describe('synthetic research privacy API', () => {
       })
     ).toHaveLength(0);
     expect(await db('knowledge_privacy_revocations')).toHaveLength(1);
+
+    const afterRevocation = await app.inject({
+      method: 'GET',
+      url: '/api/research/privacy/projections',
+      headers: { 'x-test-role': 'superadmin' },
+    });
+    expect(afterRevocation.statusCode).toBe(200);
+    expect(afterRevocation.headers['cache-control']).toBe('private, no-store');
+    expect(afterRevocation.body).not.toContain('SYNTHETIC-API-ONLY-CANARY');
+    expect(afterRevocation.body).not.toContain('synthetic-api-search-001');
+    expect(afterRevocation.body).not.toContain(subjectRef);
+    expect(afterRevocation.body).not.toContain(consentDecisionRef);
+    expect(afterRevocation.body).not.toContain(subjectHash);
+    expect(afterRevocation.body).not.toContain(consentHash);
   });
 
   it('rejects a client-supplied decision timestamp', async () => {
