@@ -72,10 +72,12 @@ export async function completeGitHubRelease({ tag, prerelease, updateLatest, fil
   for (const file of files) await adapter.verifyAsset(tag, file.path);
 
   let publishError;
-  try {
-    await adapter.publishRelease(tag, { prerelease, updateLatest });
-  } catch (error) {
-    publishError = error;
+  if (release.isDraft) {
+    try {
+      await adapter.publishRelease(tag, { prerelease, updateLatest });
+    } catch (error) {
+      publishError = error;
+    }
   }
 
   let finalRelease;

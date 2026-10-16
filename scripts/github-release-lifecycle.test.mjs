@@ -129,6 +129,25 @@ test('recovers a publish accepted remotely when the CLI response is lost', async
   assert.equal(releases.get('v1.2.3')?.isDraft, false);
 });
 
+test('reuses an already published release without attempting a second publication', async () => {
+  const { adapter, calls, releases, assets } = fakeAdapter();
+  releases.set('v1.2.3', {
+    id: 42,
+    tagName: 'v1.2.3',
+    isDraft: false,
+    isPrerelease: false,
+  });
+  for (const file of files)
+    assets.set(file.name, { name: file.name, digest: file.digest, size: file.size });
+
+  const result = await complete(adapter);
+
+  assert.equal(result.releaseAction, 'reused');
+  assert.equal(result.recoveredPublish, false);
+  assert.equal(calls.publishes, 0);
+  assert.equal(releases.get('v1.2.3')?.isDraft, false);
+});
+
 test('rejects a tag already bound to a release with a different identity', async () => {
   const { adapter } = fakeAdapter();
   adapter.getReleaseByTag = async () => ({
