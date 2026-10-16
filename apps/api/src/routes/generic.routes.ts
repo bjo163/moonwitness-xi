@@ -341,6 +341,7 @@ async function hasValidResourceReference(
   if (
     typeof resourceModel !== 'string' ||
     !Registry.has(resourceModel) ||
+    !canAccess(req.auth?.role, resourceModel, 'read', req.auth?.groupPermissions) ||
     typeof resourceId !== 'number' ||
     !Number.isSafeInteger(resourceId) ||
     resourceId < 1
@@ -706,6 +707,9 @@ export const genericRoutes: FastifyPluginAsync<GenericRoutesOptions> = async (fa
       ) {
         return reply.code(400).send({ success: false, error: 'Invalid attachment metadata' });
       }
+      if (!canAccess(req.auth?.role, resourceModel, 'read', req.auth?.groupPermissions)) {
+        return reply.code(404).send({ success: false, error: 'Record not found' });
+      }
       const resource = await scopedRecord(
         req,
         resolveModel(req, resourceModel) ?? BaseModel,
@@ -784,6 +788,9 @@ export const genericRoutes: FastifyPluginAsync<GenericRoutesOptions> = async (fa
       !Number.isSafeInteger(resourceId) ||
       resourceId < 1
     ) {
+      return reply.code(404).send({ success: false, error: 'Attachment not found' });
+    }
+    if (!canAccess(req.auth?.role, resourceModel, 'read', req.auth?.groupPermissions)) {
       return reply.code(404).send({ success: false, error: 'Attachment not found' });
     }
     const resource = await scopedRecord(

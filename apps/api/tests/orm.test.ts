@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { randomUUID } from 'node:crypto';
 import knex, { type Knex } from 'knex';
 import { Model } from 'objection';
 import type { QueryContext } from 'objection';
@@ -138,6 +139,58 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
 
   it('should register models in Registry', () => {
     expect(Registry.has('test.item')).toBe(true);
+  });
+
+  it('blocks generic attachments for witness records excluded from generic access', async () => {
+    const witness = await testDb('knowledge_witness_testimonies')
+      .where({ external_key: 'synthetic-witness-scoped-001' })
+      .first('id');
+    const superadmin = await testDb('users').where({ login: 'superadmin' }).first('id');
+    if (!witness || !superadmin) throw new Error('Synthetic witness fixture is required');
+
+    const key = randomUUID();
+    const content = Buffer.from('SYNTHETIC-WITNESS-ATTACHMENT-CANARY');
+    await new LocalFileAttachmentStorage(attachmentStorageDirectory).put(key, content);
+    await testDb('attachments').insert({
+      name: 'synthetic-witness-attachment-canary.txt',
+      resource_model: 'knowledge.witness_testimony',
+      resource_id: Number(witness.id),
+      mimetype: 'text/plain',
+      size_bytes: content.length,
+      storage_key: key,
+      checksum: 'a'.repeat(64),
+      create_uid: Number(superadmin.id),
+    });
+    const attachment = await testDb('attachments')
+      .where({ name: 'synthetic-witness-attachment-canary.txt' })
+      .first('id');
+    if (!attachment) throw new Error('Synthetic witness attachment fixture is required');
+
+    attachmentStorageOperations.splice(0, attachmentStorageOperations.length);
+    const download = await send({
+      method: 'GET',
+      url: `/api/base.attachment/${attachment.id}/download`,
+    });
+    expect(download.statusCode).toBe(404);
+    expect(download.payload).not.toContain('SYNTHETIC-WITNESS-ATTACHMENT-CANARY');
+    expect(attachmentStorageOperations).not.toContain('get');
+
+    const upload = await send({
+      method: 'POST',
+      url: `/api/base.attachment/upload?resource_model=knowledge.witness_testimony&resource_id=${witness.id}&name=blocked.txt`,
+      headers: {
+        'content-type': 'application/octet-stream',
+        'x-file-mime': 'text/plain',
+      },
+      payload: Buffer.from('SHOULD-NOT-BE-STORED'),
+    });
+    expect(upload.statusCode).toBe(404);
+    expect(attachmentStorageOperations).not.toContain('put');
+    expect(
+      await testDb('attachments').where({ name: 'blocked.txt', resource_id: witness.id })
+    ).toHaveLength(0);
+    await testDb('attachments').where({ id: attachment.id }).delete();
+    await new LocalFileAttachmentStorage(attachmentStorageDirectory).delete(key);
   });
 
   it('does not expose password hashes in database error responses', async () => {
