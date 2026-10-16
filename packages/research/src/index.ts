@@ -88,12 +88,15 @@ export {
 export {
   validateConceptProfile,
   validateConceptProfileWithEvidence,
+  validateConceptProfileTextualObservations,
+  type CanonicalConceptPassage,
   type ConceptProfileEvidenceAccess,
   type ConceptProfileReviewStatus,
   type ConceptProfileValidationIssue,
   type ConceptProfileValidationResult,
   type TrustedConceptEvidenceResolution,
   type TrustedConceptEvidenceResolver,
+  type TrustedConceptPassageResolver,
 } from './concept-profile.js';
 export {
   createPrivacyRevocationPlan,

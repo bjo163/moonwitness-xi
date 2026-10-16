@@ -1,9 +1,12 @@
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
+import { createHash } from 'node:crypto';
 import { URL } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
   validateConceptProfileWithEvidence,
+  validateConceptProfileTextualObservations,
+  type CanonicalConceptPassage,
   type TrustedConceptEvidenceResolution,
 } from '../src/index.js';
 
@@ -64,6 +67,44 @@ const profile = (id: string, tradition: string, text: string) => ({
     },
   ],
 });
+
+const syntheticPassage: CanonicalConceptPassage = {
+  source_id: 'mw:source:synthetic-text',
+  edition_id: 'mw:edition:synthetic-v1',
+  locator: 'sample-1',
+  content_sha256: 'b'.repeat(64),
+  text: 'A 🧭 bounded source span.',
+  access: 'readable',
+};
+
+function textualObservationDocument() {
+  const text = Array.from(syntheticPassage.text);
+  const selected = text.slice(2, 3).join('');
+  return {
+    format: 'moonwitness-concept-profiles/v1',
+    profiles: [
+      {
+        ...profile(
+          'source-observation',
+          'Synthetic source scope',
+          'No semantic interpretation is asserted.'
+        ),
+        textual_observations: [
+          {
+            id: 'mw:text-observation:synthetic-span',
+            source_id: syntheticPassage.source_id,
+            edition_id: syntheticPassage.edition_id,
+            locator: syntheticPassage.locator,
+            content_sha256: syntheticPassage.content_sha256,
+            range: { unit: 'unicode_scalar', start: 2, end: 3 },
+            selected_text_sha256: createHash('sha256').update(selected, 'utf8').digest('hex'),
+            review_status: 'unreviewed',
+          },
+        ],
+      },
+    ],
+  };
+}
 
 describe('scoped concept profiles', () => {
   it('preserves divergent interpretations of one concept as separate situated profiles', () => {
@@ -223,6 +264,112 @@ describe('scoped concept profiles', () => {
       if (!result.valid) {
         expect(result.issues[0]?.code).toMatch(/resolver_output_invalid|evidence_mismatch/u);
       }
+    }
+  });
+
+  it('validates an exact source span without storing its text or making an interpretation', async () => {
+    const document = textualObservationDocument();
+    expect(validate(document), JSON.stringify(validate.errors)).toBe(true);
+    await expect(
+      validateConceptProfileTextualObservations(document, async () => syntheticPassage)
+    ).resolves.toEqual({ valid: true, issues: [] });
+    expect(JSON.stringify(document)).not.toContain('🧭');
+    expect(JSON.stringify(document)).toContain('No semantic interpretation is asserted.');
+  });
+
+  it('fails closed when source identity, rights access, artifact digest, or selected span differ', async () => {
+    const document = textualObservationDocument();
+    const invalidCases: Array<{
+      passage: unknown;
+      code: string;
+    }> = [
+      { passage: null, code: 'passage_missing' },
+      {
+        passage: { ...syntheticPassage, edition_id: 'mw:edition:other' },
+        code: 'passage_mismatch',
+      },
+      { passage: { ...syntheticPassage, access: 'denied' }, code: 'access_denied' },
+      {
+        passage: { ...syntheticPassage, content_sha256: 'c'.repeat(64) },
+        code: 'content_hash_mismatch',
+      },
+    ];
+    for (const { passage, code } of invalidCases) {
+      const result = await validateConceptProfileTextualObservations(document, async () => passage);
+      expect(result.valid).toBe(false);
+      if (!result.valid) expect(result.issues[0]?.code).toBe(code);
+    }
+
+    const wrongSpan = structuredClone(document);
+    wrongSpan.profiles[0]!.textual_observations![0]!.selected_text_sha256 = 'd'.repeat(64);
+    const result = await validateConceptProfileTextualObservations(
+      wrongSpan,
+      async () => syntheticPassage
+    );
+    expect(result.valid).toBe(false);
+    if (!result.valid) expect(result.issues[0]?.code).toBe('selected_text_hash_mismatch');
+  });
+
+  it('rejects invalid offsets and caller mutation while resolving a source span', async () => {
+    const invalidRange = textualObservationDocument();
+    invalidRange.profiles[0]!.textual_observations![0]!.range.end = 999;
+    const rangeResult = await validateConceptProfileTextualObservations(
+      invalidRange,
+      async () => syntheticPassage
+    );
+    expect(rangeResult.valid).toBe(false);
+    if (!rangeResult.valid) expect(rangeResult.issues[0]?.code).toBe('range_invalid');
+
+    const changing = textualObservationDocument();
+    const selected = changing.profiles[0]!.textual_observations![0]!;
+    const mutationResult = await validateConceptProfileTextualObservations(changing, async () => {
+      selected.range.end += 1;
+      await Promise.resolve();
+      return syntheticPassage;
+    });
+    expect(mutationResult.valid).toBe(false);
+    if (!mutationResult.valid) expect(mutationResult.issues[0]?.code).toBe('input_changed');
+  });
+
+  it('rejects duplicate observation identities and malformed or failed resolvers', async () => {
+    const duplicate = textualObservationDocument();
+    duplicate.profiles[0]!.textual_observations!.push(
+      structuredClone(duplicate.profiles[0]!.textual_observations![0]!)
+    );
+    const duplicateResult = await validateConceptProfileTextualObservations(
+      duplicate,
+      async () => syntheticPassage
+    );
+    expect(duplicateResult.valid).toBe(false);
+    if (!duplicateResult.valid) {
+      expect(
+        duplicateResult.issues.some((issue) => issue.code === 'duplicate_observation_id')
+      ).toBe(true);
+    }
+
+    const document = textualObservationDocument();
+    for (const resolver of [
+      async () => undefined,
+      async () => {
+        throw new Error('synthetic resolver failure');
+      },
+    ]) {
+      const result = await validateConceptProfileTextualObservations(document, resolver);
+      expect(result.valid).toBe(false);
+      if (!result.valid) {
+        expect(result.issues[0]?.code).toMatch(/resolver_output_invalid|resolver_failure/u);
+      }
+    }
+
+    const invalidText = textualObservationDocument();
+    const invalidPassage = { ...syntheticPassage, text: '\ud800' };
+    const invalidTextResult = await validateConceptProfileTextualObservations(
+      invalidText,
+      async () => invalidPassage
+    );
+    expect(invalidTextResult.valid).toBe(false);
+    if (!invalidTextResult.valid) {
+      expect(invalidTextResult.issues[0]?.code).toBe('passage_text_invalid');
     }
   });
 });

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import {
   createJsonSchemaValidator,
   type JsonSchemaContract,
@@ -21,6 +22,22 @@ export interface TrustedConceptEvidenceResolution {
 }
 
 export type TrustedConceptEvidenceResolver = (evidenceId: string) => Promise<unknown>;
+
+export interface CanonicalConceptPassage {
+  source_id: string;
+  edition_id: string;
+  locator: string;
+  content_sha256: string;
+  text: string;
+  access: ConceptProfileEvidenceAccess;
+}
+
+/** The resolver must load locally and validate the rights manifest/source artifact before returning. */
+export type TrustedConceptPassageResolver = (
+  sourceId: string,
+  editionId: string,
+  locator: string
+) => Promise<unknown>;
 
 export interface ConceptProfileValidationIssue {
   path: string;
@@ -210,6 +227,207 @@ export async function validateConceptProfileWithEvidence(
           path: '',
           code: 'input_changed',
           message: 'profile input changed while evidence validation was in progress',
+        },
+      ],
+    };
+  }
+  return issues.length ? { valid: false, issues } : { valid: true, issues: [] };
+}
+
+/**
+ * Verify source-span observations against a trusted, local canonical passage
+ * resolver. This verifies only exact source identity, bytes, and offsets; it
+ * does not interpret the selected text or make a theological claim.
+ */
+export async function validateConceptProfileTextualObservations(
+  value: unknown,
+  resolveCanonicalPassage: TrustedConceptPassageResolver
+): Promise<ConceptProfileValidationResult> {
+  const structural = validateSchema(value);
+  if (!structural.valid) {
+    return {
+      valid: false,
+      issues: structural.issues.map(({ path, keyword, message }) => ({
+        path,
+        code: keyword,
+        message,
+      })),
+    };
+  }
+
+  let snapshotJson: string;
+  let snapshot: unknown;
+  try {
+    snapshotJson = stableJson(value);
+    snapshot = JSON.parse(snapshotJson) as unknown;
+  } catch {
+    return {
+      valid: false,
+      issues: [
+        {
+          path: '',
+          code: 'input_snapshot_failed',
+          message: 'profile input could not be safely snapshotted',
+        },
+      ],
+    };
+  }
+
+  const document = snapshot as {
+    profiles: Array<{
+      textual_observations?: Array<{
+        id: string;
+        source_id: string;
+        edition_id: string;
+        locator: string;
+        content_sha256: string;
+        range: { unit: 'unicode_scalar'; start: number; end: number };
+        selected_text_sha256: string;
+      }>;
+    }>;
+  };
+  const targets = document.profiles.flatMap((profile, profileIndex) =>
+    (profile.textual_observations ?? []).map((observation, observationIndex) => ({
+      observation,
+      path: `/profiles/${profileIndex}/textual_observations/${observationIndex}`,
+    }))
+  );
+  const issues: ConceptProfileValidationIssue[] = [];
+  const seenObservationIds = new Set<string>();
+  for (const { observation, path } of targets) {
+    if (seenObservationIds.has(observation.id)) {
+      issues.push({
+        path,
+        code: 'duplicate_observation_id',
+        message: 'text observation identity is duplicated',
+      });
+      continue;
+    }
+    seenObservationIds.add(observation.id);
+    let rawPassage: unknown;
+    try {
+      rawPassage = await resolveCanonicalPassage(
+        observation.source_id,
+        observation.edition_id,
+        observation.locator
+      );
+    } catch {
+      issues.push({ path, code: 'resolver_failure', message: 'trusted passage resolver failed' });
+      continue;
+    }
+    if (rawPassage === null) {
+      issues.push({
+        path,
+        code: 'passage_missing',
+        message: 'canonical source passage did not resolve',
+      });
+      continue;
+    }
+    if (
+      !isRecord(rawPassage) ||
+      typeof rawPassage.source_id !== 'string' ||
+      typeof rawPassage.edition_id !== 'string' ||
+      typeof rawPassage.locator !== 'string' ||
+      typeof rawPassage.content_sha256 !== 'string' ||
+      typeof rawPassage.text !== 'string' ||
+      (rawPassage.access !== 'readable' && rawPassage.access !== 'denied')
+    ) {
+      issues.push({
+        path,
+        code: 'resolver_output_invalid',
+        message: 'trusted passage resolver returned malformed metadata',
+      });
+      continue;
+    }
+    if (
+      rawPassage.source_id !== observation.source_id ||
+      rawPassage.edition_id !== observation.edition_id ||
+      rawPassage.locator !== observation.locator
+    ) {
+      issues.push({
+        path,
+        code: 'passage_mismatch',
+        message: 'resolved canonical passage identity does not match',
+      });
+      continue;
+    }
+    if (rawPassage.access !== 'readable') {
+      issues.push({
+        path,
+        code: 'access_denied',
+        message: 'canonical source passage is not readable',
+      });
+      continue;
+    }
+    if (rawPassage.content_sha256 !== observation.content_sha256) {
+      issues.push({
+        path,
+        code: 'content_hash_mismatch',
+        message: 'canonical passage bytes do not match the observation',
+      });
+      continue;
+    }
+    const encodedPassage = Buffer.from(rawPassage.text, 'utf8');
+    try {
+      if (new TextDecoder('utf-8', { fatal: true }).decode(encodedPassage) !== rawPassage.text) {
+        issues.push({
+          path,
+          code: 'passage_text_invalid',
+          message: 'canonical passage text is not a valid UTF-8 round trip',
+        });
+        continue;
+      }
+    } catch {
+      issues.push({
+        path,
+        code: 'passage_text_invalid',
+        message: 'canonical passage text is not valid UTF-8',
+      });
+      continue;
+    }
+    const scalars = Array.from(rawPassage.text);
+    const { start, end } = observation.range;
+    if (start >= end || end > scalars.length) {
+      issues.push({
+        path,
+        code: 'range_invalid',
+        message: 'text observation range is outside the source passage',
+      });
+      continue;
+    }
+    const selectedHash = createHash('sha256')
+      .update(scalars.slice(start, end).join(''), 'utf8')
+      .digest('hex');
+    if (selectedHash !== observation.selected_text_sha256) {
+      issues.push({
+        path,
+        code: 'selected_text_hash_mismatch',
+        message: 'selected source span does not match its digest',
+      });
+    }
+  }
+
+  try {
+    if (stableJson(value) !== snapshotJson) {
+      return {
+        valid: false,
+        issues: [
+          {
+            path: '',
+            code: 'input_changed',
+            message: 'profile input changed while passage validation was in progress',
+          },
+        ],
+      };
+    }
+  } catch {
+    return {
+      valid: false,
+      issues: [
+        {
+          path: '',
+          code: 'input_changed',
+          message: 'profile input changed while passage validation was in progress',
         },
       ],
     };

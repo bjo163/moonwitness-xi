@@ -1,5 +1,5 @@
 import Fastify from 'fastify';
-import { readQuranPassage } from '@moonwitness/corpus';
+import { readQuranPassage, readTextualWitnessPassage } from '@moonwitness/corpus';
 import { workflowRoutes } from '../src/routes/workflow.routes.js';
 import { resolveCorpusDataRoot } from '../src/routes/corpus.routes.js';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -20,10 +20,16 @@ import { researchReviewRoutes } from '../src/routes/research-review.routes.js';
 
 const subjectId = 'mw:assertion:api-review-001';
 const scopeId = 'mw:concept:api-review-scope';
+const webpSubjectId = 'mw:assertion:api-review-webp-001';
+const webpScopeId = 'mw:concept:api-review-webp-scope';
 const sourceId = 'mw:source:tanzil-quran-text';
 const editionId = 'mw:edition:tanzil-quran-text-v1.1-uthmani-txt2';
 const evidenceId = 'mw:evidence:api-review-quran';
-const releaseInput = (contentSha256: string) => ({
+const webpEvidenceId = 'mw:evidence:api-review-webp';
+const webpSourceId = 'mw:source:ebible-webp-protestant';
+const webpExpressionId = 'mw:expression:webp-protestant';
+const webpEditionId = 'mw:edition:webp-protestant-2020-stable';
+const releaseInput = (contentSha256: string, webpContentSha256: string) => ({
   corpusKey: 'research',
   schemaVersion: 'research-graph/v1',
   records: [
@@ -38,6 +44,24 @@ const releaseInput = (contentSha256: string) => ({
       kind: 'expression' as const,
       visibility: 'PUBLIC' as const,
       content: { id: editionId, kind: 'Edition', visibility: 'PUBLIC_APPROVED' },
+    },
+    {
+      key: webpSourceId,
+      kind: 'source' as const,
+      visibility: 'PUBLIC' as const,
+      content: { id: webpSourceId, kind: 'Artifact', visibility: 'PUBLIC_APPROVED' },
+    },
+    {
+      key: webpExpressionId,
+      kind: 'expression' as const,
+      visibility: 'PUBLIC' as const,
+      content: { id: webpExpressionId, kind: 'Expression', visibility: 'PUBLIC_APPROVED' },
+    },
+    {
+      key: webpEditionId,
+      kind: 'expression' as const,
+      visibility: 'PUBLIC' as const,
+      content: { id: webpEditionId, kind: 'Edition', visibility: 'PUBLIC_APPROVED' },
     },
     {
       key: scopeId,
@@ -73,6 +97,39 @@ const releaseInput = (contentSha256: string) => ({
       },
     },
     {
+      key: webpScopeId,
+      kind: 'node' as const,
+      visibility: 'INTERNAL' as const,
+      content: {
+        id: webpScopeId,
+        kind: 'Concept',
+        identity_class: 'ConceptIdentity',
+        visibility: 'INTERNAL',
+      },
+    },
+    {
+      key: webpSubjectId,
+      kind: 'assertion' as const,
+      visibility: 'INTERNAL' as const,
+      content: {
+        id: webpSubjectId,
+        kind: 'Assertion',
+        schema_version: 1,
+        lifecycle: 'candidate',
+        created_at: '2026-10-16T00:00:00.000Z',
+        updated_at: '2026-10-16T00:00:00.000Z',
+        origin_ref: 'fixture://research/api-review/webp-001',
+        visibility: 'INTERNAL',
+        content_revision: 1,
+        claim: 'Synthetic review fixture scoped only to the approved WEBP Genesis 1:1 sample.',
+        polarity: 'positive',
+        scope: { kind: 'research_context', reference_id: webpScopeId },
+        context: { mode: 'analysis', reference_id: webpScopeId },
+        epistemic_status: 'hypothesized',
+        review_status: 'pending',
+      },
+    },
+    {
       key: evidenceId,
       kind: 'evidence' as const,
       visibility: 'INTERNAL' as const,
@@ -87,6 +144,25 @@ const releaseInput = (contentSha256: string) => ({
           edition_id: editionId,
           locator: 'Q7:46',
           content_sha256: contentSha256,
+        },
+      },
+    },
+    {
+      key: webpEvidenceId,
+      kind: 'evidence' as const,
+      visibility: 'INTERNAL' as const,
+      content: {
+        id: webpEvidenceId,
+        kind: 'Evidence',
+        visibility: 'INTERNAL',
+        assertion_id: webpSubjectId,
+        direction: 'supporting',
+        selector: {
+          source_id: webpSourceId,
+          expression_id: webpExpressionId,
+          edition_id: webpEditionId,
+          locator: 'Genesis 1:1',
+          content_sha256: webpContentSha256,
         },
       },
     },
@@ -162,8 +238,15 @@ describe('research review API', () => {
       locator: 'Q7:46',
       use: 'read_analyze',
     });
+    const webp = await readTextualWitnessPassage({
+      rootDirectory: resolveCorpusDataRoot(),
+      expressionId: webpExpressionId,
+      editionId: webpEditionId,
+      locator: 'Genesis 1:1',
+    });
+    expect(webp.sha256).toBe('ae5c2799fad97b0e65334aa39be6193d487419f0d31713caaac58a47f6b4d8b1');
     const release = await db.transaction((trx) =>
-      createResearchGraphRelease(trx, releaseInput(quran.sha256))
+      createResearchGraphRelease(trx, releaseInput(quran.sha256, webp.sha256))
     );
     await db.transaction((trx) =>
       activateResearchGraphRelease(trx, {
@@ -227,6 +310,19 @@ describe('research review API', () => {
     });
     expect(await db('workflow_instances')).toHaveLength(1);
     expect(await db('workflow_events')).toHaveLength(1);
+  });
+
+  it('keeps the approved Quran and WEBP samples on separate subjects without a relation claim', async () => {
+    const release = await db.transaction((trx) => readActiveResearchGraphRelease(trx, 'research'));
+    expect(release).not.toBeNull();
+    const quranEvidence = release!.records.find((record) => record.key === evidenceId);
+    const webpEvidence = release!.records.find((record) => record.key === webpEvidenceId);
+    expect((quranEvidence?.content as Record<string, unknown>).assertion_id).toBe(subjectId);
+    expect((webpEvidence?.content as Record<string, unknown>).assertion_id).toBe(webpSubjectId);
+    expect((quranEvidence?.content as Record<string, unknown>).assertion_id).not.toBe(
+      (webpEvidence?.content as Record<string, unknown>).assertion_id
+    );
+    expect(release!.records.filter((record) => record.kind === 'relation')).toHaveLength(0);
   });
 
   it('fails closed when a newer enabled review workflow version changes the API contract', async () => {
@@ -322,6 +418,51 @@ describe('research review API', () => {
       success: true,
       data: { events: [], truncated: false, nextCursor: null },
     });
+  });
+
+  it('reviews the approved WEBP sample as an independent INTERNAL subject', async () => {
+    const start = await app.inject({
+      method: 'POST',
+      url: '/api/research/reviews',
+      headers: { 'x-test-auth': 'superadmin' },
+      payload: { subject_id: webpSubjectId, idempotency_key: 'api-review-webp-start-01' },
+    });
+    expect(start.statusCode, start.body).toBe(201);
+
+    const decision = await app.inject({
+      method: 'POST',
+      url: `/api/research/reviews/${start.json().data.id}/decision`,
+      headers: { 'x-test-auth': 'user' },
+      payload: {
+        action: 'approve',
+        expected_workflow_revision: 0,
+        subject_id: webpSubjectId,
+        expected_subject_revision: 1,
+        evidence_ids: [webpEvidenceId],
+        idempotency_key: 'api-review-webp-decision-01',
+      },
+    });
+    expect(decision.statusCode, decision.body).toBe(200);
+
+    const stored = await db('knowledge_research_review_events')
+      .where({ subject_id: webpSubjectId })
+      .first('event_json');
+    expect(JSON.parse(String(stored?.event_json))).toMatchObject({
+      subject_id: webpSubjectId,
+      evidence_ids: [webpEvidenceId],
+      visibility: 'INTERNAL',
+      reviewer_role: 'user',
+    });
+    const history = await app.inject({
+      method: 'GET',
+      url: `/api/research/reviews/${webpSubjectId}/history`,
+      headers: { 'x-test-auth': 'user' },
+    });
+    expect(history.statusCode, history.body).toBe(200);
+    expect(history.json().data.events).toMatchObject([
+      { subject_id: webpSubjectId, evidence_ids: [webpEvidenceId], visibility: 'INTERNAL' },
+    ]);
+    expect(history.body).not.toContain('In the beginning, God created the heavens and the earth.');
   });
 
   it('records a decision atomically and blocks generic workflow paths for research reviews', async () => {

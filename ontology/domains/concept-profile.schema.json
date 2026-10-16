@@ -68,7 +68,45 @@
               }
             ]
           }
+        },
+        "textual_observations": {
+          "description": "Exact source-bound text spans without a gloss, semantic mapping, or doctrinal interpretation.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/textualObservation" }
         }
+      }
+    },
+    "textualObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "source_id",
+        "edition_id",
+        "locator",
+        "content_sha256",
+        "range",
+        "selected_text_sha256",
+        "review_status"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^mw:text-observation:[a-z0-9][a-z0-9._-]{0,179}$" },
+        "source_id": { "type": "string", "pattern": "^mw:source:[a-z0-9][a-z0-9._-]{0,179}$" },
+        "edition_id": { "type": "string", "pattern": "^mw:edition:[a-z0-9][a-z0-9._-]{0,179}$" },
+        "locator": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "content_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "range": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["unit", "start", "end"],
+          "properties": {
+            "unit": { "const": "unicode_scalar" },
+            "start": { "type": "integer", "minimum": 0 },
+            "end": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "selected_text_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "review_status": { "const": "unreviewed" }
       }
     }
   }
