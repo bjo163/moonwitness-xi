@@ -1,6 +1,6 @@
 # Generated model and addon reference
 
-Source fingerprint: `272abb144f9a4feee402189af20a42a910b63106554b3d3ac5bcac6d83fd324a`. Seed values and field defaults are intentionally omitted.
+Source fingerprint: `8745ce199ac24479d51110c6e7feb30ea341635905bc666e563944f59edecb3b`. Seed values and field defaults are intentionally omitted.
 
 ## Addon `auth`
 
@@ -287,12 +287,20 @@ Models: 4; declared views: 0; menu entries: 0; seed rows: 1.
 
 ## Addon `knowledge`
 
-Version: `1.4.0`; dependencies: `base`.
+Version: `1.5.0`; dependencies: `base`.
 
-Models: 10; declared views: 3; menu entries: 3; seed rows: 21.
+Models: 11; declared views: 3; menu entries: 3; seed rows: 21.
 
 | Model                               | Table                                 | Field                         | Kind      | Required | Optional | Default    | Relation                           |
 | ----------------------------------- | ------------------------------------- | ----------------------------- | --------- | -------- | -------- | ---------- | ---------------------------------- |
+| `knowledge.concept_profile_version` | `knowledge_concept_profile_versions`  | `company`                     | belongsTo | Yes      | No       | No         | `base.company`                     |
+| `knowledge.concept_profile_version` | `knowledge_concept_profile_versions`  | `concept_id`                  | string    | Yes      | No       | No         | —                                  |
+| `knowledge.concept_profile_version` | `knowledge_concept_profile_versions`  | `profile_digest`              | string    | Yes      | No       | No         | —                                  |
+| `knowledge.concept_profile_version` | `knowledge_concept_profile_versions`  | `profile_id`                  | string    | Yes      | No       | No         | —                                  |
+| `knowledge.concept_profile_version` | `knowledge_concept_profile_versions`  | `profile_json`                | text      | Yes      | No       | No         | —                                  |
+| `knowledge.concept_profile_version` | `knowledge_concept_profile_versions`  | `recorded_by`                 | belongsTo | Yes      | No       | No         | `base.user`                        |
+| `knowledge.concept_profile_version` | `knowledge_concept_profile_versions`  | `version`                     | integer   | Yes      | No       | No         | —                                  |
+| `knowledge.concept_profile_version` | `knowledge_concept_profile_versions`  | `visibility`                  | enum      | No       | Yes      | [redacted] | —                                  |
 | `knowledge.privacy_projection`      | `knowledge_privacy_projections`       | `company`                     | belongsTo | Yes      | No       | No         | `base.company`                     |
 | `knowledge.privacy_projection`      | `knowledge_privacy_projections`       | `projection_digest`           | string    | No       | Yes      | No         | —                                  |
 | `knowledge.privacy_projection`      | `knowledge_privacy_projections`       | `projection_json`             | text      | Yes      | No       | No         | —                                  |

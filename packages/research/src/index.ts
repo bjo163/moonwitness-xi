@@ -99,6 +99,14 @@ export {
   type TrustedConceptPassageResolver,
 } from './concept-profile.js';
 export {
+  projectTextualAlignmentCandidate,
+  type TextualAlignmentCandidate,
+  type TextualAlignmentMethod,
+  type TextualAlignmentPassage,
+  type TextualAlignmentPassageResolver,
+  type TextualAlignmentSelector,
+} from './textual-alignment.js';
+export {
   createPrivacyRevocationPlan,
   decidePrivacyRetention,
   decideSensitiveRecordAccess,

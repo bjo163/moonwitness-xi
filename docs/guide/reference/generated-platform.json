@@ -3041,9 +3041,100 @@
     },
     {
       "name": "knowledge",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "depends": ["base"],
       "models": [
+        {
+          "name": "knowledge.concept_profile_version",
+          "table": "knowledge_concept_profile_versions",
+          "fields": [
+            {
+              "name": "company",
+              "kind": "belongsTo",
+              "column": "company_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.company"
+            },
+            {
+              "name": "concept_id",
+              "kind": "string",
+              "column": "concept_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "profile_digest",
+              "kind": "string",
+              "column": "profile_digest",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "profile_id",
+              "kind": "string",
+              "column": "profile_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "profile_json",
+              "kind": "text",
+              "column": "profile_json",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "recorded_by",
+              "kind": "belongsTo",
+              "column": "recorded_by_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.user"
+            },
+            {
+              "name": "version",
+              "kind": "integer",
+              "column": "version",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "visibility",
+              "kind": "enum",
+              "column": "visibility",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]",
+              "values": ["INTERNAL"]
+            }
+          ],
+          "uniqueConstraints": [["company", "profile_id", "version"]]
+        },
         {
           "name": "knowledge.privacy_projection",
           "table": "knowledge_privacy_projections",
@@ -5766,5 +5857,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "272abb144f9a4feee402189af20a42a910b63106554b3d3ac5bcac6d83fd324a"
+  "generatedFromSha256": "8745ce199ac24479d51110c6e7feb30ea341635905bc666e563944f59edecb3b"
 }

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "addons": ["auth", "base", "jobs", "notification"],
   "generatedFrom": "core addon manifests and model field metadata; no seed values included",
-  "sourceSha256": "8fff0f81319e0c6634aa5df5ebc971418b9ddbe66ae29d05dd2aeec3d3b3a697",
+  "sourceSha256": "5b1e54458223f0b82fb2047d3bdbf87b37d5c350585a9d0217c1ba2e1ef16ef9",
   "models": [
     {
       "name": "auth.refresh_token",
@@ -119,6 +119,10 @@
     {
       "name": "integration.webhook_endpoint",
       "table": "integration_webhook_endpoints"
+    },
+    {
+      "name": "knowledge.concept_profile_version",
+      "table": "knowledge_concept_profile_versions"
     },
     {
       "name": "knowledge.privacy_projection",
@@ -480,6 +484,20 @@
       "from": "integration.webhook_endpoint",
       "field": "company",
       "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "knowledge.concept_profile_version",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "knowledge.concept_profile_version",
+      "field": "recorded_by",
+      "to": "base.user",
       "cardinality": "N:1",
       "kind": "belongsTo"
     },
