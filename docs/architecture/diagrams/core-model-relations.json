@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "addons": ["auth", "base", "jobs", "notification"],
   "generatedFrom": "core addon manifests and model field metadata; no seed values included",
-  "sourceSha256": "77c8183b67976d86d349f01341bf45918a84251dba721282f5878fdae8d07836",
+  "sourceSha256": "8fff0f81319e0c6634aa5df5ebc971418b9ddbe66ae29d05dd2aeec3d3b3a697",
   "models": [
     {
       "name": "auth.refresh_token",
@@ -557,6 +557,13 @@
       "from": "knowledge.witness_interpretation",
       "field": "testimony",
       "to": "knowledge.witness_testimony",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "knowledge.witness_testimony",
+      "field": "company",
+      "to": "base.company",
       "cardinality": "N:1",
       "kind": "belongsTo"
     },

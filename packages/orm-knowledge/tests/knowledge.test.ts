@@ -40,7 +40,16 @@ describe('knowledge witness records addon', () => {
     const testimony = await WitnessTestimony.query().findOne({
       external_key: 'synthetic-witness-001',
     });
-    expect(testimony).toMatchObject({ visibility: 'RESTRICTED', received_time_text: 'spring' });
+    expect(testimony).toMatchObject({
+      visibility: 'RESTRICTED',
+      synthetic: true,
+      received_time_text: 'spring',
+    });
+    const scopedWitness = await WitnessTestimony.query().findOne({
+      external_key: 'synthetic-witness-scoped-001',
+    });
+    expect(scopedWitness).toMatchObject({ synthetic: true, visibility: 'RESTRICTED' });
+    expect(Number(scopedWitness?.company_id)).toBeGreaterThan(0);
     expect(await WitnessCorrection.query().where('testimony_id', testimony?.id)).toHaveLength(1);
     const interpretation = await WitnessInterpretation.query().findOne({
       assertion_ref: 'assertion://synthetic/meeting-after-noon',
@@ -57,6 +66,54 @@ describe('knowledge witness records addon', () => {
         ModelAccess.query().findOne({ model_name: model.modelName, read: false })
       ).resolves.toBeDefined();
     }
+  });
+
+  it('upgrades populated 1.3 witness tables without classifying legacy rows as synthetic', async () => {
+    await installAddons(db, [baseManifest]);
+    const system = await User.query().findOne({ login: 'system' });
+    await db.schema.createTable('knowledge_witness_testimonies', (table) => {
+      table.increments('id').primary();
+      table.boolean('active').notNullable().defaultTo(true);
+      table.timestamp('create_date');
+      table.timestamp('write_date');
+      table.integer('create_uid');
+      table.integer('write_uid');
+      table.string('external_key').notNullable();
+      table.text('original_text').notNullable();
+      table.string('source_label').notNullable();
+      table.string('source_locator').notNullable();
+      table.string('source_digest').notNullable();
+      table.string('received_time_text').notNullable();
+      table.string('received_time_precision').notNullable();
+      table.text('uncertainty_note');
+      table.string('visibility').notNullable();
+      table.integer('created_by_id').notNullable();
+    });
+    await db('knowledge_witness_testimonies').insert({
+      external_key: 'legacy-unclassified-witness',
+      original_text: 'Legacy record must remain unclassified.',
+      source_label: 'Legacy fixture',
+      source_locator: 'fixture://legacy-unclassified',
+      source_digest: digest,
+      received_time_text: 'unknown',
+      received_time_precision: 'unknown',
+      visibility: 'RESTRICTED',
+      created_by_id: Number(system?.id),
+    });
+    await db('_orm_addons').insert({ name: 'knowledge', version: '1.3.0' });
+
+    await installAddons(db, [baseManifest, manifest]);
+
+    const legacy = await WitnessTestimony.query().findOne({
+      external_key: 'legacy-unclassified-witness',
+    });
+    expect(legacy).toMatchObject({ synthetic: false, company_id: null });
+    expect(
+      await WitnessTestimony.query().where({
+        external_key: 'legacy-unclassified-witness',
+        synthetic: true,
+      })
+    ).toHaveLength(0);
   });
 
   it('rejects ordinary model updates and deletes to source and correction records', async () => {

@@ -67,7 +67,7 @@ const installAppendOnlyGuards: NonNullable<Addon['setup']> = async (trx) => {
 
 export const manifest = defineAddon({
   name: 'knowledge',
-  version: '1.3.0',
+  version: '1.4.0',
   depends: ['base'],
   models: [
     WitnessTestimony,
@@ -92,6 +92,15 @@ export const manifest = defineAddon({
       user: ref('base.user_superadmin'),
       group: ref('knowledge.group_privacy_steward'),
     }),
+    seed(AccessGroup, 'knowledge.group_witness_steward', {
+      code: 'knowledge_witness_steward',
+      name: 'Knowledge Witness Steward',
+      description: 'Least-privilege access to owner-scoped synthetic witness examples.',
+    }),
+    seed(GroupMembership, 'knowledge.membership_witness_steward_superadmin', {
+      user: ref('base.user_superadmin'),
+      group: ref('knowledge.group_witness_steward'),
+    }),
     seed(ResearchPrivacyProjection, 'knowledge.synthetic_privacy_projection_001', {
       company: ref('base.company_default'),
       projection_key: 'synthetic-search-001',
@@ -111,6 +120,7 @@ export const manifest = defineAddon({
       received_time_text: 'spring',
       received_time_precision: 'unknown',
       uncertainty_note: 'The source says spring but gives no year or exact date.',
+      synthetic: true,
       created_by: ref('base.user_system'),
     }),
     seed(WitnessCorrection, 'knowledge.synthetic_witness_001_correction_001', {
@@ -123,6 +133,7 @@ export const manifest = defineAddon({
       source_digest: 'b'.repeat(64),
       asserted_time_text: '2026-01-01T12:00:00Z',
       asserted_time_precision: 'instant',
+      synthetic: true,
       recorded_by: ref('base.user_system'),
     }),
     seed(WitnessInterpretation, 'knowledge.synthetic_witness_001_interpretation_001', {
@@ -133,7 +144,47 @@ export const manifest = defineAddon({
       method_label: 'Synthetic source comparison',
       method_version: '1',
       epistemic_status: 'hypothesis',
+      synthetic: true,
       recorded_by: ref('base.user_system'),
+    }),
+    seed(WitnessTestimony, 'knowledge.synthetic_witness_scoped_001', {
+      external_key: 'synthetic-witness-scoped-001',
+      original_text: 'Synthetic owner-scoped example: a lamp was near the doorway.',
+      source_label: 'Synthetic access fixture',
+      source_locator: 'fixture://witness/scoped/001',
+      source_digest: 'd'.repeat(64),
+      received_time_text: '2026',
+      received_time_precision: 'year',
+      uncertainty_note: 'Synthetic fixture with intentionally coarse date precision.',
+      visibility: 'RESTRICTED',
+      synthetic: true,
+      company: ref('base.company_default'),
+      created_by: ref('base.user_superadmin'),
+    }),
+    seed(WitnessCorrection, 'knowledge.synthetic_witness_scoped_001_correction_001', {
+      testimony: ref('knowledge.synthetic_witness_scoped_001'),
+      sequence: 1,
+      correction_text: 'Synthetic correction: the lamp was beside the side entrance.',
+      reason: 'A second synthetic fixture provides an alternative location.',
+      source_label: 'Synthetic correction access fixture',
+      source_locator: 'fixture://witness/scoped/001/correction/001',
+      source_digest: 'e'.repeat(64),
+      asserted_time_text: '2026',
+      asserted_time_precision: 'year',
+      synthetic: true,
+      recorded_by: ref('base.user_superadmin'),
+    }),
+    seed(WitnessInterpretation, 'knowledge.synthetic_witness_scoped_001_interpretation_001', {
+      testimony: ref('knowledge.synthetic_witness_scoped_001'),
+      assertion_ref: 'assertion://synthetic/witness-scoped-001',
+      evidence_ref: 'evidence://synthetic/witness-scoped-001/correction-001',
+      interpretation_text: 'Synthetic hypothesis: the lamp marked a secondary entrance.',
+      method_label: 'Synthetic fixture comparison',
+      method_version: '1',
+      epistemic_status: 'hypothesis',
+      visibility: 'RESTRICTED',
+      synthetic: true,
+      recorded_by: ref('base.user_superadmin'),
     }),
     seed(ModelAccess, 'knowledge.access_user_testimony_read', {
       group: ref('base.group_user'),

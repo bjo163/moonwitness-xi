@@ -1,6 +1,6 @@
 # Generated model and addon reference
 
-Source fingerprint: `5ae51c8d2fd80e33780a5c55f1d99ca779023d9c9016e5e86f4e716c6a9bf527`. Seed values and field defaults are intentionally omitted.
+Source fingerprint: `041f61efb3ee1256e951c244aef389f14b8decc9f3526c027aca33df462a5282`. Seed values and field defaults are intentionally omitted.
 
 ## Addon `auth`
 
@@ -287,9 +287,9 @@ Models: 4; declared views: 0; menu entries: 0; seed rows: 1.
 
 ## Addon `knowledge`
 
-Version: `1.3.0`; dependencies: `base`.
+Version: `1.4.0`; dependencies: `base`.
 
-Models: 10; declared views: 3; menu entries: 3; seed rows: 16.
+Models: 10; declared views: 3; menu entries: 3; seed rows: 21.
 
 | Model                               | Table                                 | Field                         | Kind      | Required | Optional | Default    | Relation                           |
 | ----------------------------------- | ------------------------------------- | ----------------------------- | --------- | -------- | -------- | ---------- | ---------------------------------- |
@@ -347,6 +347,7 @@ Models: 10; declared views: 3; menu entries: 3; seed rows: 16.
 | `knowledge.witness_correction`      | `knowledge_witness_corrections`       | `source_digest`               | string    | Yes      | No       | No         | —                                  |
 | `knowledge.witness_correction`      | `knowledge_witness_corrections`       | `source_label`                | string    | Yes      | No       | No         | —                                  |
 | `knowledge.witness_correction`      | `knowledge_witness_corrections`       | `source_locator`              | string    | Yes      | No       | No         | —                                  |
+| `knowledge.witness_correction`      | `knowledge_witness_corrections`       | `synthetic`                   | boolean   | No       | Yes      | [redacted] | —                                  |
 | `knowledge.witness_correction`      | `knowledge_witness_corrections`       | `testimony`                   | belongsTo | Yes      | No       | No         | `knowledge.witness_testimony`      |
 | `knowledge.witness_correction`      | `knowledge_witness_corrections`       | `uncertainty_note`            | text      | No       | Yes      | No         | —                                  |
 | `knowledge.witness_interpretation`  | `knowledge_witness_interpretations`   | `assertion_ref`               | string    | Yes      | No       | No         | —                                  |
@@ -356,8 +357,10 @@ Models: 10; declared views: 3; menu entries: 3; seed rows: 16.
 | `knowledge.witness_interpretation`  | `knowledge_witness_interpretations`   | `method_label`                | string    | Yes      | No       | No         | —                                  |
 | `knowledge.witness_interpretation`  | `knowledge_witness_interpretations`   | `method_version`              | string    | Yes      | No       | No         | —                                  |
 | `knowledge.witness_interpretation`  | `knowledge_witness_interpretations`   | `recorded_by`                 | belongsTo | Yes      | No       | No         | `base.user`                        |
+| `knowledge.witness_interpretation`  | `knowledge_witness_interpretations`   | `synthetic`                   | boolean   | No       | Yes      | [redacted] | —                                  |
 | `knowledge.witness_interpretation`  | `knowledge_witness_interpretations`   | `testimony`                   | belongsTo | Yes      | No       | No         | `knowledge.witness_testimony`      |
 | `knowledge.witness_interpretation`  | `knowledge_witness_interpretations`   | `visibility`                  | enum      | No       | Yes      | [redacted] | —                                  |
+| `knowledge.witness_testimony`       | `knowledge_witness_testimonies`       | `company`                     | belongsTo | No       | Yes      | No         | `base.company`                     |
 | `knowledge.witness_testimony`       | `knowledge_witness_testimonies`       | `created_by`                  | belongsTo | Yes      | No       | No         | `base.user`                        |
 | `knowledge.witness_testimony`       | `knowledge_witness_testimonies`       | `external_key`                | string    | Yes      | No       | No         | —                                  |
 | `knowledge.witness_testimony`       | `knowledge_witness_testimonies`       | `original_text`               | text      | Yes      | No       | No         | —                                  |
@@ -366,6 +369,7 @@ Models: 10; declared views: 3; menu entries: 3; seed rows: 16.
 | `knowledge.witness_testimony`       | `knowledge_witness_testimonies`       | `source_digest`               | string    | Yes      | No       | No         | —                                  |
 | `knowledge.witness_testimony`       | `knowledge_witness_testimonies`       | `source_label`                | string    | Yes      | No       | No         | —                                  |
 | `knowledge.witness_testimony`       | `knowledge_witness_testimonies`       | `source_locator`              | string    | Yes      | No       | No         | —                                  |
+| `knowledge.witness_testimony`       | `knowledge_witness_testimonies`       | `synthetic`                   | boolean   | No       | Yes      | [redacted] | —                                  |
 | `knowledge.witness_testimony`       | `knowledge_witness_testimonies`       | `uncertainty_note`            | text      | No       | Yes      | No         | —                                  |
 | `knowledge.witness_testimony`       | `knowledge_witness_testimonies`       | `visibility`                  | enum      | No       | Yes      | [redacted] | —                                  |
 
@@ -377,13 +381,13 @@ Models: 10; declared views: 3; menu entries: 3; seed rows: 16.
 | `knowledge.witness_interpretation` | Witness Interpretations | Knowledge |       82 | Development mode |
 | `knowledge.witness_testimony`      | Witness Testimony       | Knowledge |       80 | Development mode |
 
-- Seed coverage: `base.access_group` has 1 declared seed row(s); seed values are not included.
-- Seed coverage: `base.group_membership` has 1 declared seed row(s); seed values are not included.
+- Seed coverage: `base.access_group` has 2 declared seed row(s); seed values are not included.
+- Seed coverage: `base.group_membership` has 2 declared seed row(s); seed values are not included.
 - Seed coverage: `base.model_access` has 10 declared seed row(s); seed values are not included.
 - Seed coverage: `knowledge.privacy_projection` has 1 declared seed row(s); seed values are not included.
-- Seed coverage: `knowledge.witness_correction` has 1 declared seed row(s); seed values are not included.
-- Seed coverage: `knowledge.witness_interpretation` has 1 declared seed row(s); seed values are not included.
-- Seed coverage: `knowledge.witness_testimony` has 1 declared seed row(s); seed values are not included.
+- Seed coverage: `knowledge.witness_correction` has 2 declared seed row(s); seed values are not included.
+- Seed coverage: `knowledge.witness_interpretation` has 2 declared seed row(s); seed values are not included.
+- Seed coverage: `knowledge.witness_testimony` has 2 declared seed row(s); seed values are not included.
 
 ### Seeded model access rules
 

@@ -1,5 +1,5 @@
 import { defineModel, fields, type BaseModel } from '@moonwitness/orm';
-import { User } from '@moonwitness/orm-base';
+import { Company, User } from '@moonwitness/orm-base';
 import type { StaticHookArguments } from 'objection';
 
 function testimonyModel(): typeof BaseModel {
@@ -26,6 +26,9 @@ export const WitnessTestimony = defineModel('knowledge.witness_testimony', {
       required: true,
       default: 'RESTRICTED',
     }),
+    /** Legacy or unclassified records stay outside the scoped API until explicitly marked. */
+    synthetic: fields.boolean({ required: true, default: false }),
+    company: fields.belongsTo(Company),
     created_by: fields.belongsTo(User, { required: true }),
   },
 });
@@ -48,6 +51,7 @@ export const WitnessCorrection = defineModel('knowledge.witness_correction', {
       required: true,
       default: 'unknown',
     }),
+    synthetic: fields.boolean({ required: true, default: false }),
     uncertainty_note: fields.text(),
     recorded_by: fields.belongsTo(User, { required: true }),
   },
@@ -72,6 +76,7 @@ export const WitnessInterpretation = defineModel('knowledge.witness_interpretati
       required: true,
       default: 'RESTRICTED',
     }),
+    synthetic: fields.boolean({ required: true, default: false }),
     recorded_by: fields.belongsTo(User, { required: true }),
   },
 });

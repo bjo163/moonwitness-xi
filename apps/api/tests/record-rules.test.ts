@@ -143,22 +143,25 @@ describe('central access policy', () => {
     };
     expect(canAccess('user', 'auth.refresh_token', 'read')).toBe(false);
     expect(canAccess('user', 'base.user', 'read')).toBe(false);
-    expect(canAccess('user', 'knowledge.witness_testimony', 'read')).toBe(false);
-    expect(canAccess('user', 'knowledge.witness_correction', 'read')).toBe(false);
-    expect(canAccess('user', 'knowledge.witness_interpretation', 'read')).toBe(false);
-    expect(canAccess('user', 'knowledge.witness_testimony', 'create')).toBe(false);
-    expect(
-      canAccess('user', 'knowledge.witness_testimony', 'read', [
-        {
-          model_name: 'knowledge.witness_testimony',
-          read: true,
-          create: true,
-          write: true,
-          unlink: true,
-        },
-      ])
-    ).toBe(false);
-    expect(canAccess('superadmin', 'knowledge.witness_testimony', 'read')).toBe(true);
+    for (const model of [
+      'knowledge.witness_testimony',
+      'knowledge.witness_correction',
+      'knowledge.witness_interpretation',
+    ]) {
+      const fullWitnessGrant = {
+        model_name: model,
+        read: true,
+        create: true,
+        write: true,
+        unlink: true,
+      };
+      for (const operation of ['read', 'create', 'write', 'unlink', 'action'] as const) {
+        expect(canAccess('user', model, operation)).toBe(false);
+        expect(canAccess('user', model, operation, [fullWitnessGrant])).toBe(false);
+        expect(canAccess('superadmin', model, operation)).toBe(false);
+        expect(canAccess('system', model, operation)).toBe(false);
+      }
+    }
     expect(canAccess('user', 'base.partner', 'read')).toBe(true);
     expect(canAccess('user', 'base.partner', 'action', [grant])).toBe(false);
     expect(canAccess('user', 'base.partner', 'create', [grant])).toBe(true);
@@ -168,7 +171,7 @@ describe('central access policy', () => {
     expect(canAccess('superadmin', 'base.audit_log', 'write')).toBe(false);
   });
 
-  it('keeps privacy lifecycle models out of generic access for every role and operation', () => {
+  it('keeps privacy and witness records out of generic access for every role and operation', () => {
     const roles = ['user', 'superadmin', 'system'];
     const operations = ['read', 'create', 'write', 'unlink', 'action'] as const;
     const grants = [
@@ -181,7 +184,13 @@ describe('central access policy', () => {
       },
     ];
 
-    for (const model of ['knowledge.privacy_revocation', 'knowledge.privacy_projection']) {
+    for (const model of [
+      'knowledge.privacy_revocation',
+      'knowledge.privacy_projection',
+      'knowledge.witness_testimony',
+      'knowledge.witness_correction',
+      'knowledge.witness_interpretation',
+    ]) {
       for (const role of roles) {
         for (const operation of operations) {
           expect(canAccess(role, model, operation, grants)).toBe(false);

@@ -4,10 +4,13 @@ export type Operation = 'read' | 'create' | 'write' | 'unlink' | 'action';
 /** Never reachable through the generic API, whatever the role (tokens, sessions, ...). */
 const INTERNAL_PREFIXES = ['auth.', 'base.job', 'base.cron', 'base.outbox_event', 'workflow.'];
 
-/** Privacy lifecycle tables are reachable only through their scoped API routes. */
+/** Sensitive knowledge tables are reachable only through their dedicated scoped API routes. */
 const NON_GENERIC_MODELS = new Set([
   'knowledge.privacy_revocation',
   'knowledge.privacy_projection',
+  'knowledge.witness_testimony',
+  'knowledge.witness_correction',
+  'knowledge.witness_interpretation',
 ]);
 
 /** Only administrative roles may touch these; ordinary users use dedicated endpoints. */
@@ -19,11 +22,6 @@ const ADMIN_ONLY_MODELS = new Set([
   'base.model_access',
   'base.company_membership',
   'base.partner_bank',
-  // Witness material defaults to restricted; ordinary users must use a future
-  // purpose- and consent-scoped endpoint instead of generic CRUD/RPC access.
-  'knowledge.witness_testimony',
-  'knowledge.witness_correction',
-  'knowledge.witness_interpretation',
 ]);
 
 const ADMIN_ROLES = new Set(['system', 'superadmin']);

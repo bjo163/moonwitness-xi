@@ -14,6 +14,7 @@ import {
   createResearchGraphRelease,
   manifest,
   readActiveResearchGraphRelease,
+  readOwnedSyntheticWitness,
   readResearchReviewHistory,
   ResearchGraphRecord,
   transitionResearchReview,
@@ -80,6 +81,7 @@ postgresDescribe('knowledge addon PostgreSQL integration', () => {
     });
     expect(testimony).toMatchObject({
       visibility: 'RESTRICTED',
+      synthetic: true,
       received_time_text: 'spring',
       original_text: 'Synthetic example: the meeting began sometime in spring.',
     });
@@ -87,6 +89,39 @@ postgresDescribe('knowledge addon PostgreSQL integration', () => {
     expect(await WitnessInterpretation.query().where('testimony_id', testimony?.id)).toHaveLength(
       1
     );
+    const superadmin = await db('users').where({ login: 'superadmin' }).first('id');
+    const company = await db('companies').first('id');
+    const ownerScopedFixture = await db('knowledge_witness_testimonies')
+      .where({ external_key: 'synthetic-witness-scoped-001' })
+      .first('id', 'company_id', 'synthetic');
+    expect(superadmin && company && ownerScopedFixture).toBeTruthy();
+    expect(ownerScopedFixture).toMatchObject({ synthetic: true });
+    expect(Number(ownerScopedFixture?.company_id)).toBe(Number(company?.id));
+    const scopedWitness = await readOwnedSyntheticWitness(
+      db,
+      {
+        userId: Number(superadmin?.id),
+        companyId: Number(company?.id),
+        role: 'superadmin',
+      },
+      Number(ownerScopedFixture?.id)
+    );
+    expect(scopedWitness).toMatchObject({
+      externalKey: 'synthetic-witness-scoped-001',
+      corrections: [{ sequence: 1 }],
+      interpretations: [{ epistemicStatus: 'hypothesis' }],
+    });
+    await expect(
+      readOwnedSyntheticWitness(
+        db,
+        {
+          userId: Number(superadmin?.id),
+          companyId: Number(company?.id),
+          role: 'superadmin',
+        },
+        Number(testimony?.id)
+      )
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
     const correction = await WitnessCorrection.query().findOne({ sequence: 1 });
     const interpretation = await WitnessInterpretation.query().first();
     await expect(WitnessTestimony.query().patch({ original_text: 'replacement' })).rejects.toThrow(

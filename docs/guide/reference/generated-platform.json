@@ -3041,7 +3041,7 @@
     },
     {
       "name": "knowledge",
-      "version": "1.3.0",
+      "version": "1.4.0",
       "depends": ["base"],
       "models": [
         {
@@ -3658,6 +3658,17 @@
               "hasDefault": false
             },
             {
+              "name": "synthetic",
+              "kind": "boolean",
+              "column": "synthetic",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
               "name": "testimony",
               "kind": "belongsTo",
               "column": "testimony_id",
@@ -3759,6 +3770,17 @@
               "relation": "base.user"
             },
             {
+              "name": "synthetic",
+              "kind": "boolean",
+              "column": "synthetic",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
               "name": "testimony",
               "kind": "belongsTo",
               "column": "testimony_id",
@@ -3788,6 +3810,17 @@
           "name": "knowledge.witness_testimony",
           "table": "knowledge_witness_testimonies",
           "fields": [
+            {
+              "name": "company",
+              "kind": "belongsTo",
+              "column": "company_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false,
+              "relation": "base.company"
+            },
             {
               "name": "created_by",
               "kind": "belongsTo",
@@ -3872,6 +3905,17 @@
               "hasDefault": false
             },
             {
+              "name": "synthetic",
+              "kind": "boolean",
+              "column": "synthetic",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
               "name": "uncertainty_note",
               "kind": "text",
               "column": "uncertainty_note",
@@ -3926,12 +3970,12 @@
         "knowledge.witness_testimony"
       ],
       "seeds": {
-        "base.access_group": 1,
-        "base.group_membership": 1,
+        "base.access_group": 2,
+        "base.group_membership": 2,
         "knowledge.privacy_projection": 1,
-        "knowledge.witness_testimony": 1,
-        "knowledge.witness_correction": 1,
-        "knowledge.witness_interpretation": 1,
+        "knowledge.witness_testimony": 2,
+        "knowledge.witness_correction": 2,
+        "knowledge.witness_interpretation": 2,
         "base.model_access": 10
       },
       "accessRules": [
@@ -5626,6 +5670,10 @@
       "path": "/api/research/reviews/:subjectId/history"
     },
     {
+      "method": "GET",
+      "path": "/api/research/witnesses/:witnessId"
+    },
+    {
       "method": "POST",
       "path": "/auth/login"
     },
@@ -5714,5 +5762,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "5ae51c8d2fd80e33780a5c55f1d99ca779023d9c9016e5e86f4e716c6a9bf527"
+  "generatedFromSha256": "041f61efb3ee1256e951c244aef389f14b8decc9f3526c027aca33df462a5282"
 }
