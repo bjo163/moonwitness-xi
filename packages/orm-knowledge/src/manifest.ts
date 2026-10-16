@@ -67,7 +67,7 @@ const installAppendOnlyGuards: NonNullable<Addon['setup']> = async (trx) => {
 
 export const manifest = defineAddon({
   name: 'knowledge',
-  version: '1.2.0',
+  version: '1.3.0',
   depends: ['base'],
   models: [
     WitnessTestimony,
@@ -98,6 +98,7 @@ export const manifest = defineAddon({
       subject_ref_sha256: '357a432635adf14e8fcde203cfc900cb0ad8e43d9768a59a9052a4f52aca7623',
       projection_json: syntheticPrivacyProjectionJson,
       projection_digest: '3a71c3c81696759d8ccef0975ee7a5316ceeec035ed4d15dc959259b3082a011',
+      synthetic: true,
       visibility: 'RESTRICTED',
       state: 'active',
     }),

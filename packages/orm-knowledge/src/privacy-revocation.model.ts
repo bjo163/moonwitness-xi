@@ -28,6 +28,7 @@ export const ResearchPrivacyProjection = defineModel('knowledge.privacy_projecti
     subject_ref_sha256: fields.string({ required: true, pattern: '^[a-f0-9]{64}$' }),
     projection_json: fields.text({ required: true, hidden: true }),
     projection_digest: fields.string({ pattern: '^[a-f0-9]{64}$' }),
+    synthetic: fields.boolean({ required: true, default: false }),
     visibility: fields.enum(['RESTRICTED', 'INTERNAL'], { required: true, default: 'RESTRICTED' }),
     state: fields.enum(['active', 'revoked'], { required: true, default: 'active' }),
     revoked_at: fields.string(),

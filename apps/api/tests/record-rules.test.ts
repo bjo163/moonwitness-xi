@@ -168,6 +168,28 @@ describe('central access policy', () => {
     expect(canAccess('superadmin', 'base.audit_log', 'write')).toBe(false);
   });
 
+  it('keeps privacy lifecycle models out of generic access for every role and operation', () => {
+    const roles = ['user', 'superadmin', 'system'];
+    const operations = ['read', 'create', 'write', 'unlink', 'action'] as const;
+    const grants = [
+      {
+        model_name: 'knowledge.privacy_projection',
+        read: true,
+        create: true,
+        write: true,
+        unlink: true,
+      },
+    ];
+
+    for (const model of ['knowledge.privacy_revocation', 'knowledge.privacy_projection']) {
+      for (const role of roles) {
+        for (const operation of operations) {
+          expect(canAccess(role, model, operation, grants)).toBe(false);
+        }
+      }
+    }
+  });
+
   it('protects system users and maps HTTP and RPC operations with default deny', () => {
     expect(canManageBaseUser('system', 'unlink', 'system')).toBe(true);
     expect(canManageBaseUser('user', 'read')).toBe(false);

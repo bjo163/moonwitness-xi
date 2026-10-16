@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, randomInt, randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import knex, { type Knex } from 'knex';
 import { installAddons } from '@moonwitness/orm';
@@ -19,6 +19,7 @@ function sha256(value: string): string {
 
 postgresDescribe('synthetic privacy revocation PostgreSQL integration', () => {
   const schema = `mw_privacy_${randomUUID().replaceAll('-', '')}`;
+  const applicationName = `mw_privacy_test_${randomUUID().replaceAll('-', '')}`;
   let adminDb: Knex;
   let db: Knex;
   let steward: AuthenticatedPrivacySteward;
@@ -28,9 +29,11 @@ postgresDescribe('synthetic privacy revocation PostgreSQL integration', () => {
     adminDb = knex({ client: 'pg', connection: connectionString, pool: { min: 0, max: 2 } });
     await adminDb.raw('select 1');
     await adminDb.raw('create schema ??', [schema]);
+    const testConnection = new URL(connectionString);
+    testConnection.searchParams.set('application_name', applicationName);
     db = knex({
       client: 'pg',
-      connection: connectionString,
+      connection: testConnection.toString(),
       searchPath: [schema],
       pool: { min: 0, max: 2 },
     });
@@ -49,6 +52,99 @@ postgresDescribe('synthetic privacy revocation PostgreSQL integration', () => {
     }
   });
 
+  it('replays concurrent exact idempotency requests after the projection lock wait', async () => {
+    const subjectRefSha256 = sha256(`synthetic-pg-race-${randomUUID()}`);
+    const consentDecisionRefSha256 = sha256(`synthetic-pg-race-consent-${randomUUID()}`);
+    const idempotencyKey = `privacy-pg-race-${randomUUID()}`;
+    const projectionKey = `synthetic-search-race-${randomUUID()}`;
+    const lockId = randomInt(1, 2_000_000_000);
+    await db('knowledge_privacy_projections').insert({
+      company_id: steward.companyId,
+      projection_key: projectionKey,
+      subject_ref_sha256: subjectRefSha256,
+      projection_json: JSON.stringify({ excerpt: 'POSTGRES-CONCURRENCY-CANARY' }),
+      projection_digest: sha256(JSON.stringify({ excerpt: 'POSTGRES-CONCURRENCY-CANARY' })),
+      synthetic: true,
+      visibility: 'RESTRICTED',
+      state: 'active',
+    });
+    await db.raw(`
+      CREATE FUNCTION hold_privacy_projection_update()
+      RETURNS trigger AS $$
+      BEGIN
+        PERFORM pg_advisory_xact_lock(${lockId});
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql
+    `);
+    await db.raw(`
+      CREATE TRIGGER hold_privacy_projection_update
+      BEFORE UPDATE ON knowledge_privacy_projections
+      FOR EACH ROW EXECUTE FUNCTION hold_privacy_projection_update()
+    `);
+
+    const gate = await adminDb.transaction();
+    await gate.raw('SELECT pg_advisory_lock(?)', [lockId]);
+    const input = {
+      steward,
+      subjectRefSha256,
+      consentDecisionRefSha256,
+      idempotencyKey,
+    };
+    const pending: Promise<Awaited<ReturnType<typeof applyPrivacyRevocation>>>[] = [];
+    const waitForLockWaiters = async (minimum: number) => {
+      for (let attempt = 0; attempt < 200; attempt += 1) {
+        const result = await adminDb.raw(
+          `SELECT count(*)::int AS count
+           FROM pg_stat_activity
+           WHERE wait_event_type = 'Lock'
+             AND query LIKE '%knowledge_privacy_projections%'
+             AND application_name = ?
+             AND pid <> pg_backend_pid()`,
+          [applicationName]
+        );
+        if (Number(result.rows[0]?.count) >= minimum) return;
+        await new Promise<void>((resolve) => setTimeout(resolve, 25));
+      }
+      throw new Error(`Expected ${minimum} privacy projection lock waiters`);
+    };
+
+    let waiterError: unknown;
+    try {
+      pending.push(applyPrivacyRevocation(db, input));
+      await waitForLockWaiters(1);
+      pending.push(applyPrivacyRevocation(db, input));
+      await waitForLockWaiters(2);
+    } catch (error) {
+      waiterError = error;
+    } finally {
+      await gate.raw('SELECT pg_advisory_unlock(?)', [lockId]);
+      await gate.commit();
+    }
+
+    if (waiterError) {
+      await Promise.allSettled(pending);
+      throw waiterError;
+    }
+
+    const results = await Promise.all(pending);
+    expect(results.map((result) => result.replayed).sort()).toEqual([false, true]);
+    expect(new Set(results.map((result) => result.revocationId)).size).toBe(1);
+    expect(results.reduce((count, result) => count + result.invalidatedProjectionCount, 0)).toBe(1);
+    expect(
+      await db('knowledge_privacy_revocations').where({
+        company_id: steward.companyId,
+        idempotency_key: idempotencyKey,
+      })
+    ).toHaveLength(1);
+    expect(
+      await db('knowledge_privacy_projections').where({
+        projection_key: projectionKey,
+        state: 'active',
+      })
+    ).toHaveLength(0);
+  }, 30000);
+
   it('atomically persists redaction, idempotent replay, tenant denial, and rollback', async () => {
     const subjectRef = `synthetic-pg-subject-${randomUUID()}`;
     const consentDecisionRef = `synthetic-pg-consent-${randomUUID()}`;
@@ -62,6 +158,7 @@ postgresDescribe('synthetic privacy revocation PostgreSQL integration', () => {
       subject_ref_sha256: subjectRefSha256,
       projection_json: JSON.stringify({ excerpt: 'POSTGRES-SYNTHETIC-CANARY' }),
       projection_digest: sha256(JSON.stringify({ excerpt: 'POSTGRES-SYNTHETIC-CANARY' })),
+      synthetic: true,
       visibility: 'RESTRICTED',
       state: 'active',
     });
@@ -70,7 +167,6 @@ postgresDescribe('synthetic privacy revocation PostgreSQL integration', () => {
       subjectRefSha256,
       consentDecisionRefSha256,
       idempotencyKey,
-      decidedAt: '2026-10-16T04:00:00.000Z',
     };
 
     const first = await applyPrivacyRevocation(db, input);
@@ -107,6 +203,7 @@ postgresDescribe('synthetic privacy revocation PostgreSQL integration', () => {
       subject_ref_sha256: rollbackSubjectSha256,
       projection_json: JSON.stringify({ excerpt: 'ROLLBACK-SYNTHETIC-CANARY' }),
       projection_digest: sha256(JSON.stringify({ excerpt: 'ROLLBACK-SYNTHETIC-CANARY' })),
+      synthetic: true,
       visibility: 'RESTRICTED',
       state: 'active',
     });
@@ -129,7 +226,6 @@ postgresDescribe('synthetic privacy revocation PostgreSQL integration', () => {
         subjectRefSha256: rollbackSubjectSha256,
         consentDecisionRefSha256: sha256(`synthetic-pg-rollback-consent-${randomUUID()}`),
         idempotencyKey: `privacy-pg-rollback-${randomUUID()}`,
-        decidedAt: '2026-10-16T04:05:00.000Z',
       })
     ).rejects.toThrow('fixture projection invalidation failure');
     expect(

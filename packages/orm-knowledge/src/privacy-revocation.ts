@@ -17,7 +17,6 @@ export interface ApplyPrivacyRevocationInput {
   readonly subjectRefSha256: string;
   readonly consentDecisionRefSha256: string;
   readonly idempotencyKey: string;
-  readonly decidedAt: string;
 }
 
 export interface ApplyPrivacyRevocationResult {
@@ -33,7 +32,11 @@ export interface ActivePrivacyProjection {
 }
 
 export type PrivacyRevocationErrorCode =
-  'INVALID_REQUEST' | 'FORBIDDEN' | 'IDEMPOTENCY_CONFLICT' | 'INVALID_STORED_PROJECTION';
+  | 'INVALID_REQUEST'
+  | 'FORBIDDEN'
+  | 'SUBJECT_NOT_FOUND'
+  | 'IDEMPOTENCY_CONFLICT'
+  | 'INVALID_STORED_PROJECTION';
 
 export class PrivacyRevocationError extends Error {
   constructor(
@@ -60,7 +63,6 @@ function validSteward(steward: AuthenticatedPrivacySteward): boolean {
 }
 
 function validateInput(input: ApplyPrivacyRevocationInput): void {
-  const timestamp = new Date(input.decidedAt);
   if (
     !validSteward(input.steward) ||
     input.steward.role !== 'superadmin' ||
@@ -69,9 +71,7 @@ function validateInput(input: ApplyPrivacyRevocationInput): void {
     typeof input.consentDecisionRefSha256 !== 'string' ||
     !digestPattern.test(input.consentDecisionRefSha256) ||
     typeof input.idempotencyKey !== 'string' ||
-    !idempotencyPattern.test(input.idempotencyKey) ||
-    Number.isNaN(timestamp.getTime()) ||
-    timestamp.toISOString() !== input.decidedAt
+    !idempotencyPattern.test(input.idempotencyKey)
   ) {
     throw new PrivacyRevocationError('INVALID_REQUEST', 'Explicit revocation fields are required');
   }
@@ -115,9 +115,28 @@ function eventDigest(input: ApplyPrivacyRevocationInput): string {
       subjectRefSha256: input.subjectRefSha256,
       consentDecisionRefSha256: input.consentDecisionRefSha256,
       idempotencyKey: input.idempotencyKey,
-      decidedAt: input.decidedAt,
     })
   );
+}
+
+async function replayExistingRevocation(
+  trx: Knex.Transaction,
+  companyId: number,
+  idempotencyKey: string,
+  digest: string
+): Promise<ApplyPrivacyRevocationResult | null> {
+  const existing = await trx(revocationTable)
+    .where({ company_id: companyId, idempotency_key: idempotencyKey })
+    .forUpdate()
+    .first('id', 'event_digest');
+  if (!existing) return null;
+  if (existing.event_digest !== digest) {
+    throw new PrivacyRevocationError(
+      'IDEMPOTENCY_CONFLICT',
+      'Revocation idempotency key was already used for a different decision'
+    );
+  }
+  return { revocationId: Number(existing.id), replayed: true, invalidatedProjectionCount: 0 };
 }
 
 /**
@@ -131,22 +150,42 @@ export async function applyPrivacyRevocation(
   validateInput(input);
   const subjectRefSha256 = input.subjectRefSha256;
   const consentDecisionRefSha256 = input.consentDecisionRefSha256;
+  const decidedAt = new Date().toISOString();
   const digest = eventDigest(input);
 
   return db.transaction(async (trx) => {
     await verifySteward(trx, input.steward);
-    const current = await trx(revocationTable)
-      .where({ company_id: input.steward.companyId, idempotency_key: input.idempotencyKey })
+    const current = await replayExistingRevocation(
+      trx,
+      input.steward.companyId,
+      input.idempotencyKey,
+      digest
+    );
+    if (current) return current;
+
+    const syntheticProjection = await trx(projectionTable)
+      .where({
+        company_id: input.steward.companyId,
+        subject_ref_sha256: subjectRefSha256,
+        state: 'active',
+        synthetic: true,
+      })
       .forUpdate()
-      .first('id', 'event_digest');
-    if (current) {
-      if (current.event_digest !== digest) {
-        throw new PrivacyRevocationError(
-          'IDEMPOTENCY_CONFLICT',
-          'Revocation idempotency key was already used for a different decision'
-        );
-      }
-      return { revocationId: Number(current.id), replayed: true, invalidatedProjectionCount: 0 };
+      .first('id');
+    if (!syntheticProjection) {
+      // A same-key request can wait on this projection row while its peer
+      // commits the revocation. Recheck after the lock wait before returning 404.
+      const concurrentReplay = await replayExistingRevocation(
+        trx,
+        input.steward.companyId,
+        input.idempotencyKey,
+        digest
+      );
+      if (concurrentReplay) return concurrentReplay;
+      throw new PrivacyRevocationError(
+        'SUBJECT_NOT_FOUND',
+        'Synthetic privacy projection not found'
+      );
     }
 
     const inserted = await trx(revocationTable)
@@ -157,24 +196,21 @@ export async function applyPrivacyRevocation(
         consent_decision_ref_sha256: consentDecisionRefSha256,
         idempotency_key: input.idempotencyKey,
         event_digest: digest,
-        decided_at: input.decidedAt,
+        decided_at: decidedAt,
       })
       .onConflict(['company_id', 'idempotency_key'])
       .ignore()
       .returning('id');
 
     if (inserted.length === 0) {
-      const replay = await trx(revocationTable)
-        .where({ company_id: input.steward.companyId, idempotency_key: input.idempotencyKey })
-        .forUpdate()
-        .first('id', 'event_digest');
-      if (replay?.event_digest === digest) {
-        return { revocationId: Number(replay.id), replayed: true, invalidatedProjectionCount: 0 };
-      }
-      throw new PrivacyRevocationError(
-        'IDEMPOTENCY_CONFLICT',
-        'Revocation idempotency key was already used for a different decision'
+      const replay = await replayExistingRevocation(
+        trx,
+        input.steward.companyId,
+        input.idempotencyKey,
+        digest
       );
+      if (replay) return replay;
+      throw new PrivacyRevocationError('IDEMPOTENCY_CONFLICT', 'Revocation could not be replayed');
     }
 
     const invalidatedProjectionCount = await trx(projectionTable)
@@ -182,12 +218,13 @@ export async function applyPrivacyRevocation(
         company_id: input.steward.companyId,
         subject_ref_sha256: subjectRefSha256,
         state: 'active',
+        synthetic: true,
       })
       .update({
         state: 'revoked',
         projection_json: '{}',
         projection_digest: null,
-        revoked_at: input.decidedAt,
+        revoked_at: decidedAt,
       });
 
     return {
@@ -210,7 +247,11 @@ export async function readActivePrivacyProjections(
     await verifySteward(trx, steward);
 
     const rows = await trx(`${projectionTable} as projection`)
-      .where({ 'projection.company_id': steward.companyId, 'projection.state': 'active' })
+      .where({
+        'projection.company_id': steward.companyId,
+        'projection.state': 'active',
+        'projection.synthetic': true,
+      })
       .whereNotExists(
         trx(`${revocationTable} as revocation`)
           .select(trx.raw('1'))

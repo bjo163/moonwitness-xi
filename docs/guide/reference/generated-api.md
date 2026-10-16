@@ -1,6 +1,6 @@
 # Generated API route reference
 
-Extracted from literal Fastify route declarations. Source fingerprint: `a433a0db70fdc2bfdeea742e2b41309a5b1b40630acf526db6115336704d71d3`. Generic handler request payloads are not inferred where the source does not declare a static schema.
+Extracted from literal Fastify route declarations. Source fingerprint: `5ae51c8d2fd80e33780a5c55f1d99ca779023d9c9016e5e86f4e716c6a9bf527`. Generic handler request payloads are not inferred where the source does not declare a static schema.
 
 | Method | Path                                              |
 | ------ | ------------------------------------------------- |
@@ -34,6 +34,8 @@ Extracted from literal Fastify route declarations. Source fingerprint: `a433a0db
 | POST   | `/api/research/actor-identities`                  |
 | GET    | `/api/research/duplicate-candidates`              |
 | POST   | `/api/research/evidence/resolve`                  |
+| GET    | `/api/research/privacy/projections`               |
+| POST   | `/api/research/privacy/revocations`               |
 | GET    | `/api/research/relations/:relationId/explanation` |
 | POST   | `/api/research/reviews`                           |
 | POST   | `/api/research/reviews/:id/decision`              |

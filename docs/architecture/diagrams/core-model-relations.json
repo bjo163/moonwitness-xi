@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "addons": ["auth", "base", "jobs", "notification"],
   "generatedFrom": "core addon manifests and model field metadata; no seed values included",
-  "sourceSha256": "60793109e396194792800ae95f1eb9333f39cdc13357fc48b971967d5dd0b75b",
+  "sourceSha256": "77c8183b67976d86d349f01341bf45918a84251dba721282f5878fdae8d07836",
   "models": [
     {
       "name": "auth.refresh_token",
@@ -119,6 +119,14 @@
     {
       "name": "integration.webhook_endpoint",
       "table": "integration_webhook_endpoints"
+    },
+    {
+      "name": "knowledge.privacy_projection",
+      "table": "knowledge_privacy_projections"
+    },
+    {
+      "name": "knowledge.privacy_revocation",
+      "table": "knowledge_privacy_revocations"
     },
     {
       "name": "knowledge.research_active_release",
@@ -470,6 +478,27 @@
     },
     {
       "from": "integration.webhook_endpoint",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "knowledge.privacy_projection",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "knowledge.privacy_revocation",
+      "field": "actor",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "knowledge.privacy_revocation",
       "field": "company",
       "to": "base.company",
       "cardinality": "N:1",

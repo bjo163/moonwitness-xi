@@ -3041,9 +3041,191 @@
     },
     {
       "name": "knowledge",
-      "version": "1.1.0",
+      "version": "1.3.0",
       "depends": ["base"],
       "models": [
+        {
+          "name": "knowledge.privacy_projection",
+          "table": "knowledge_privacy_projections",
+          "fields": [
+            {
+              "name": "company",
+              "kind": "belongsTo",
+              "column": "company_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.company"
+            },
+            {
+              "name": "projection_digest",
+              "kind": "string",
+              "column": "projection_digest",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "projection_json",
+              "kind": "text",
+              "column": "projection_json",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "projection_key",
+              "kind": "string",
+              "column": "projection_key",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "revoked_at",
+              "kind": "string",
+              "column": "revoked_at",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "state",
+              "kind": "enum",
+              "column": "state",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]",
+              "values": ["active", "revoked"]
+            },
+            {
+              "name": "subject_ref_sha256",
+              "kind": "string",
+              "column": "subject_ref_sha256",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "synthetic",
+              "kind": "boolean",
+              "column": "synthetic",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]"
+            },
+            {
+              "name": "visibility",
+              "kind": "enum",
+              "column": "visibility",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]",
+              "values": ["INTERNAL", "RESTRICTED"]
+            }
+          ],
+          "uniqueConstraints": [["company", "projection_key"]]
+        },
+        {
+          "name": "knowledge.privacy_revocation",
+          "table": "knowledge_privacy_revocations",
+          "fields": [
+            {
+              "name": "actor",
+              "kind": "belongsTo",
+              "column": "actor_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.user"
+            },
+            {
+              "name": "company",
+              "kind": "belongsTo",
+              "column": "company_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.company"
+            },
+            {
+              "name": "consent_decision_ref_sha256",
+              "kind": "string",
+              "column": "consent_decision_ref_sha256",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "decided_at",
+              "kind": "string",
+              "column": "decided_at",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "event_digest",
+              "kind": "string",
+              "column": "event_digest",
+              "declaredRequired": true,
+              "required": true,
+              "unique": true,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "idempotency_key",
+              "kind": "string",
+              "column": "idempotency_key",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "subject_ref_sha256",
+              "kind": "string",
+              "column": "subject_ref_sha256",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            }
+          ],
+          "uniqueConstraints": [["company", "idempotency_key"]]
+        },
         {
           "name": "knowledge.research_active_release",
           "table": "knowledge_research_active_releases",
@@ -3744,12 +3926,31 @@
         "knowledge.witness_testimony"
       ],
       "seeds": {
+        "base.access_group": 1,
+        "base.group_membership": 1,
+        "knowledge.privacy_projection": 1,
         "knowledge.witness_testimony": 1,
         "knowledge.witness_correction": 1,
         "knowledge.witness_interpretation": 1,
-        "base.model_access": 8
+        "base.model_access": 10
       },
       "accessRules": [
+        {
+          "group": "base.group_user",
+          "model": "knowledge.privacy_projection",
+          "read": false,
+          "create": false,
+          "write": false,
+          "unlink": false
+        },
+        {
+          "group": "base.group_user",
+          "model": "knowledge.privacy_revocation",
+          "read": false,
+          "create": false,
+          "write": false,
+          "unlink": false
+        },
         {
           "group": "base.group_user",
           "model": "knowledge.research_active_release",
@@ -5402,6 +5603,14 @@
     },
     {
       "method": "GET",
+      "path": "/api/research/privacy/projections"
+    },
+    {
+      "method": "POST",
+      "path": "/api/research/privacy/revocations"
+    },
+    {
+      "method": "GET",
       "path": "/api/research/relations/:relationId/explanation"
     },
     {
@@ -5505,5 +5714,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "a433a0db70fdc2bfdeea742e2b41309a5b1b40630acf526db6115336704d71d3"
+  "generatedFromSha256": "5ae51c8d2fd80e33780a5c55f1d99ca779023d9c9016e5e86f4e716c6a9bf527"
 }

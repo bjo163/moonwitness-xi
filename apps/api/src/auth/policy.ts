@@ -4,6 +4,12 @@ export type Operation = 'read' | 'create' | 'write' | 'unlink' | 'action';
 /** Never reachable through the generic API, whatever the role (tokens, sessions, ...). */
 const INTERNAL_PREFIXES = ['auth.', 'base.job', 'base.cron', 'base.outbox_event', 'workflow.'];
 
+/** Privacy lifecycle tables are reachable only through their scoped API routes. */
+const NON_GENERIC_MODELS = new Set([
+  'knowledge.privacy_revocation',
+  'knowledge.privacy_projection',
+]);
+
 /** Only administrative roles may touch these; ordinary users use dedicated endpoints. */
 const ADMIN_ONLY_MODELS = new Set([
   'base.user',
@@ -44,6 +50,7 @@ export function canAccess(
   groupGrants: readonly GroupModelGrant[] = []
 ): boolean {
   if (INTERNAL_PREFIXES.some((prefix) => modelName.startsWith(prefix))) return false;
+  if (NON_GENERIC_MODELS.has(modelName)) return false;
   if (modelName === 'base.audit_log') return ADMIN_ROLES.has(role ?? '') && op === 'read';
   if (role !== undefined && ADMIN_ROLES.has(role)) return true;
   if (role === 'user') {

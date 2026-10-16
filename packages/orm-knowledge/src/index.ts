@@ -42,6 +42,10 @@ export type {
 export { isNextCorrectionSequence, isValidCorrectionProvenance } from './validation.js';
 export type { CorrectionProvenance } from './validation.js';
 export {
+  ResearchPrivacyProjection,
+  ResearchPrivacyRevocation,
+} from './privacy-revocation.model.js';
+export {
   applyPrivacyRevocation,
   PrivacyRevocationError,
   readActivePrivacyProjections,

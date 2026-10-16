@@ -57,7 +57,6 @@ describe('persisted synthetic privacy revocation', () => {
       subjectRefSha256: sha256(subjectRef),
       consentDecisionRefSha256: sha256(consentDecisionRef),
       idempotencyKey,
-      decidedAt: '2026-10-16T04:00:00.000Z',
     };
   }
 
@@ -68,6 +67,7 @@ describe('persisted synthetic privacy revocation', () => {
       subject_ref_sha256: subjectHash,
       projection_json: JSON.stringify({ excerpt: 'SYNTHETIC-PRIVATE-CANARY' }),
       projection_digest: sha256(JSON.stringify({ excerpt: 'SYNTHETIC-PRIVATE-CANARY' })),
+      synthetic: true,
       visibility: 'RESTRICTED',
       state: 'active',
     });
@@ -79,6 +79,16 @@ describe('persisted synthetic privacy revocation', () => {
     const consentDecisionRef = `synthetic-consent-decision-${randomUUID()}`;
     const input = revocationInput(subjectRef, consentDecisionRef);
     const projectionKey = await addProjection(input.subjectRefSha256);
+    await db('knowledge_privacy_projections').insert({
+      company_id: companyId,
+      projection_key: `non-synthetic-${randomUUID()}`,
+      subject_ref_sha256: input.subjectRefSha256,
+      projection_json: JSON.stringify({ excerpt: 'NON-SYNTHETIC-CANARY' }),
+      projection_digest: sha256(JSON.stringify({ excerpt: 'NON-SYNTHETIC-CANARY' })),
+      synthetic: false,
+      visibility: 'RESTRICTED',
+      state: 'active',
+    });
     const initialProjections = await readActivePrivacyProjections(db, steward);
     expect(
       initialProjections.find((projection) => projection.projectionKey === projectionKey)
@@ -101,7 +111,6 @@ describe('persisted synthetic privacy revocation', () => {
       actor_id: steward.userId,
       subject_ref_sha256: input.subjectRefSha256,
       consent_decision_ref_sha256: input.consentDecisionRefSha256,
-      decided_at: input.decidedAt,
     });
     expect(JSON.stringify(stored)).not.toContain(subjectRef);
     expect(JSON.stringify(stored)).not.toContain(consentDecisionRef);
@@ -122,9 +131,26 @@ describe('persisted synthetic privacy revocation', () => {
       projection_json: '{}',
       projection_digest: null,
     });
+    expect(
+      await db('knowledge_privacy_projections')
+        .where({
+          company_id: companyId,
+          subject_ref_sha256: input.subjectRefSha256,
+          synthetic: false,
+        })
+        .first('state')
+    ).toMatchObject({ state: 'active' });
   });
 
-  it('replays an exact idempotency key and rejects a conflicting decision', async () => {
+  it('does not record a withdrawal without an active synthetic projection', async () => {
+    const input = revocationInput();
+    await expect(applyPrivacyRevocation(db, input)).rejects.toMatchObject({
+      code: 'SUBJECT_NOT_FOUND',
+    });
+    expect(await db('knowledge_privacy_revocations')).toHaveLength(0);
+  });
+
+  it('replays an exact intent and rejects a conflicting decision', async () => {
     const input = revocationInput();
     await addProjection(input.subjectRefSha256);
     const first = await applyPrivacyRevocation(db, input);
@@ -140,12 +166,11 @@ describe('persisted synthetic privacy revocation', () => {
         subjectRefSha256: sha256(`different-${randomUUID()}`),
       })
     ).rejects.toMatchObject({ code: 'IDEMPOTENCY_CONFLICT' });
-    await expect(
-      applyPrivacyRevocation(db, {
-        ...input,
-        decidedAt: '2026-10-16T04:01:00.000Z',
-      })
-    ).rejects.toMatchObject({ code: 'IDEMPOTENCY_CONFLICT' });
+    const storedEvent = await db('knowledge_privacy_revocations')
+      .where({ id: first.revocationId })
+      .first('decided_at');
+    expect(storedEvent?.decided_at).toEqual(expect.any(String));
+    expect(new Date(String(storedEvent?.decided_at)).toISOString()).toBe(storedEvent?.decided_at);
     expect(await db('knowledge_privacy_revocations')).toHaveLength(1);
   });
 
