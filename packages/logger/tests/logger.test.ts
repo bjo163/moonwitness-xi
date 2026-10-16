@@ -83,7 +83,7 @@ describe('Centralized Logger (@moonwitness/logger)', () => {
     expect(content).toContain('[redacted]');
   });
 
-  it('removes query strings and fragments from logged request URLs', async () => {
+  it('does not log raw paths when no matched route template is available', async () => {
     const log = createLogger({
       name: 'request-url-redaction',
       level: 'info',
@@ -116,8 +116,7 @@ describe('Centralized Logger (@moonwitness/logger)', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 200));
     const content = fs.readFileSync(path.join(testLogDir, 'request-url-redaction.log'), 'utf8');
-    expect(content).toContain('/api/base.user');
-    expect(content).toContain('/admin');
+    expect(content.match(/\[unmatched\]/g)).toHaveLength(3);
     for (const sensitiveValue of [
       'private-canary',
       'query-token',

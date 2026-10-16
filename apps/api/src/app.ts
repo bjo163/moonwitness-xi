@@ -1,4 +1,4 @@
-import Fastify from 'fastify';
+import Fastify, { LogController } from 'fastify';
 import type { FastifyBaseLogger, FastifyInstance } from 'fastify';
 import { createLocalAiRuntime, type LocalAiRuntime } from '@moonwitness/local-ai';
 import { randomUUID } from 'node:crypto';
@@ -42,6 +42,7 @@ import { manifest as requestAddon } from '@moonwitness/orm-request';
 import { manifest as knowledgeAddon } from '@moonwitness/orm-knowledge';
 
 import { createLogger, type LogLevel } from '@moonwitness/logger';
+import { installPrivacySafeNotFoundHandler } from './not-found.js';
 import { isRecord } from '@moonwitness/types';
 import observabilityPlugin from './plugins/observability.plugin.js';
 
@@ -118,6 +119,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   const app = Fastify({
     bodyLimit: 1024 * 1024,
     requestIdHeader: false,
+    logController: new LogController({ disableRequestLogging: true }),
     genReqId: (request) => requestIdFromHeader(request.headers['x-request-id']) ?? randomUUID(),
     loggerInstance: appLogger,
     ajv: {
@@ -127,6 +129,10 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     },
   });
   app.decorate('localAi', createLocalAiRuntime(localAiConfig));
+
+  app.addHook('onResponse', async (request, reply) => {
+    request.log.info({ req: request, res: { statusCode: reply.statusCode } }, 'request completed');
+  });
 
   app.addHook('onSend', async (request, reply, payload) => {
     reply.header('x-request-id', request.id);
@@ -233,6 +239,8 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       error: error instanceof Error ? error.message : 'Internal Server Error',
     });
   });
+
+  installPrivacySafeNotFoundHandler(app);
 
   // Install the handler before route plugins inherit their error handling scope.
   await app.register(healthRoutes, { metricsToken: options.metricsToken ?? config.metricsToken });

@@ -20,23 +20,19 @@ export interface CreateLoggerOptions {
   }>;
 }
 
-function requestUrlPath(value: unknown): string | undefined {
-  if (typeof value !== 'string') return undefined;
-  try {
-    return new URL(value, 'http://moonwitness.invalid').pathname || '/';
-  } catch {
-    return undefined;
-  }
-}
-
 function serializeRequest(value: object): Record<string, unknown> {
   const request = value as Record<string, unknown>;
+  const routeOptions = request.routeOptions;
+  const routeTemplate =
+    typeof routeOptions === 'object' &&
+    routeOptions !== null &&
+    !Array.isArray(routeOptions) &&
+    typeof (routeOptions as Record<string, unknown>).url === 'string'
+      ? (routeOptions as Record<string, string>).url
+      : undefined;
   return {
     method: typeof request.method === 'string' ? request.method : undefined,
-    url: requestUrlPath(request.url),
-    hostname: typeof request.hostname === 'string' ? request.hostname : undefined,
-    remoteAddress: typeof request.remoteAddress === 'string' ? request.remoteAddress : undefined,
-    remotePort: typeof request.remotePort === 'number' ? request.remotePort : undefined,
+    url: routeTemplate ?? '[unmatched]',
   };
 }
 
