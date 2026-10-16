@@ -5,6 +5,7 @@ import {
   type TrustedConceptEvidenceResolution,
 } from '@moonwitness/research';
 import type { Knex } from 'knex';
+import { readQuranPassageSnapshot, readTextualWitnessPassageSnapshot } from '@moonwitness/corpus';
 import { canonicalResearchJson } from './research-release.js';
 import {
   resolveConceptProfileEvidence,
@@ -13,6 +14,11 @@ import {
 
 const profileIdPattern = /^mw:concept-profile:[a-z0-9][a-z0-9._-]{0,179}$/u;
 const conceptIdPattern = /^mw:concept:[a-z0-9][a-z0-9._-]{0,179}$/u;
+const quranSourceId = 'mw:source:tanzil-quran-text';
+const quranEditionId = 'mw:edition:tanzil-quran-text-v1.1-uthmani-txt2';
+const webpSourceId = 'mw:source:ebible-webp-protestant';
+const webpEditionId = 'mw:edition:webp-protestant-2020-stable';
+const webpExpressionId = 'mw:expression:webp-protestant';
 
 export interface StoreConceptProfilesInput {
   readonly authenticatedActor: AuthenticatedResearchReviewer;
@@ -80,6 +86,51 @@ function oneProfileDocument(profile: unknown) {
   return { format: 'moonwitness-concept-profiles/v1', profiles: [profile] };
 }
 
+/** Resolve only the exact locally pinned source identities currently admitted by the corpus APIs. */
+async function resolveCanonicalConceptPassage(
+  sourceId: string,
+  editionId: string,
+  locator: string,
+  corpusRootDirectory: string
+) {
+  if (sourceId === quranSourceId && editionId === quranEditionId && locator === 'Q7:46') {
+    const resolved = await readQuranPassageSnapshot({
+      rootDirectory: corpusRootDirectory,
+      editionId,
+      locator,
+      use: 'read_analyze',
+    });
+    if (resolved.sourceId !== sourceId) return null;
+    return {
+      source_id: resolved.sourceId,
+      edition_id: resolved.passage.editionId,
+      locator: resolved.passage.locator,
+      content_sha256: resolved.passage.sha256,
+      text: resolved.passage.text,
+      access: 'readable' as const,
+    };
+  }
+  if (sourceId === webpSourceId && editionId === webpEditionId && locator === 'Genesis 1:1') {
+    const resolved = await readTextualWitnessPassageSnapshot({
+      rootDirectory: corpusRootDirectory,
+      expressionId: webpExpressionId,
+      editionId,
+      locator,
+      use: 'read_analyze',
+    });
+    if (resolved.passage.sourceId !== sourceId) return null;
+    return {
+      source_id: resolved.passage.sourceId,
+      edition_id: resolved.passage.editionId,
+      locator: resolved.passage.locator,
+      content_sha256: resolved.passage.sha256,
+      text: resolved.passage.text,
+      access: 'readable' as const,
+    };
+  }
+  return null;
+}
+
 async function validateForCompany(
   db: Knex,
   document: unknown,
@@ -126,9 +177,11 @@ async function validateForCompany(
       fail('Concept profile evidence is missing or unreadable in this company context');
     }
   }
-  const observations = await validateConceptProfileTextualObservations(document, async () => ({
-    access: 'denied',
-  }));
+  const observations = await validateConceptProfileTextualObservations(
+    document,
+    (sourceId, editionId, locator) =>
+      resolveCanonicalConceptPassage(sourceId, editionId, locator, corpusRootDirectory)
+  );
   if (!observations.valid) {
     fail(
       'Concept profile contains textual observations that this local adapter cannot safely resolve'

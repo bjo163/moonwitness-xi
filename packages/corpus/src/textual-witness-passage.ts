@@ -27,6 +27,8 @@ export interface ReadTextualWitnessPassageRequest {
   expressionId: string;
   editionId: string;
   locator: string;
+  /** Requested use is checked against the pinned source manifest. */
+  use?: 'read_analyze' | 'quote_excerpt';
   indexPath?: string;
 }
 
@@ -206,6 +208,7 @@ async function readTextualWitnessPassageSnapshotInternal(
     throw new TypeError('Textual witness source manifest is invalid or missing rights evidence');
   }
   const manifest = manifestValue as unknown as SourceBytesManifest;
+  const use = request.use ?? 'quote_excerpt';
   if (
     !manifest.source_id.startsWith('mw:source:') ||
     manifest.edition_id !== entry.edition_id ||
@@ -213,9 +216,13 @@ async function readTextualWitnessPassageSnapshotInternal(
     manifest.artifact.sha256 !== entry.sha256 ||
     manifest.publication.mode !== 'source_bytes' ||
     manifest.rights.state !== 'permitted' ||
-    !manifest.rights.allowed_uses.includes('quote_excerpt')
+    !manifest.rights.allowed_uses.includes(use)
   ) {
-    throw new TypeError('Textual witness rights do not permit excerpt quotation');
+    throw new TypeError(
+      use === 'quote_excerpt'
+        ? 'Textual witness rights do not permit excerpt quotation'
+        : `Textual witness rights do not permit requested use: ${use}`
+    );
   }
 
   const bytes = await readRegularFile(root, entry.artifact_path, 'artifactPath');

@@ -97,6 +97,20 @@ describe('offline textual witness passage retrieval', () => {
     );
   });
 
+  it('checks the explicitly requested read_analyze use against the local manifest', async () => {
+    const root = await setup();
+    const filePath = path.join(root, manifestRelative);
+    const manifest = JSON.parse(await readFile(filePath, 'utf8')) as {
+      rights: { allowed_uses: string[] };
+    };
+    manifest.rights.allowed_uses = ['redistribute_full'];
+    await writeFile(filePath, JSON.stringify(manifest));
+
+    await expect(
+      readTextualWitnessPassage({ rootDirectory: root, ...request, use: 'read_analyze' })
+    ).rejects.toThrow('rights do not permit requested use: read_analyze');
+  });
+
   it('rejects traversal paths and corrupt bytes instead of returning unchecked text', async () => {
     const root = await setup();
     const indexFile = path.join(root, indexRelative);
