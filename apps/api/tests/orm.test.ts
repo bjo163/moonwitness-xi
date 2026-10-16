@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import knex, { type Knex } from 'knex';
 import { Model } from 'objection';
 import type { QueryContext } from 'objection';
@@ -191,6 +191,63 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
     ).toHaveLength(0);
     await testDb('attachments').where({ id: attachment.id }).delete();
     await new LocalFileAttachmentStorage(attachmentStorageDirectory).delete(key);
+  });
+
+  it('keeps synthetic privacy projections out of generic REST and JSON-RPC', async () => {
+    const witness = await testDb('knowledge_witness_testimonies')
+      .where({ external_key: 'synthetic-witness-scoped-001' })
+      .first('company_id');
+    if (!witness) throw new Error('Synthetic witness fixture is required');
+
+    const projectionKey = `generic-api-canary-${randomUUID()}`;
+    const canary = `SYNTHETIC-PRIVACY-GENERIC-CANARY-${randomUUID()}`;
+    const projection = JSON.stringify({ excerpt: canary });
+    await testDb('knowledge_privacy_projections').insert({
+      company_id: witness.company_id,
+      projection_key: projectionKey,
+      subject_ref_sha256: 'a'.repeat(64),
+      projection_json: projection,
+      projection_digest: createHash('sha256').update(projection, 'utf8').digest('hex'),
+      synthetic: true,
+      visibility: 'RESTRICTED',
+      state: 'active',
+    });
+
+    try {
+      const rest = await send({
+        method: 'GET',
+        url: '/api/knowledge.privacy_projection',
+      });
+      expect(rest.statusCode).toBe(403);
+      expect(rest.payload).not.toContain(canary);
+      expect(rest.payload).not.toContain(projectionKey);
+
+      const rpc = await send({
+        method: 'POST',
+        url: '/jsonrpc',
+        payload: {
+          jsonrpc: '2.0',
+          id: 'privacy-projection-canary',
+          method: 'call',
+          params: {
+            service: 'object',
+            method: 'execute_kw',
+            args: ['knowledge.privacy_projection', 'search_read', [[]], {}],
+          },
+        },
+      });
+      expect(rpc.statusCode, rpc.payload).toBe(403);
+      expect(rpc.json<{ error: { code: number; message: string } }>().error).toMatchObject({
+        code: -32003,
+        message: 'Forbidden',
+      });
+      expect(rpc.payload).not.toContain(canary);
+      expect(rpc.payload).not.toContain(projectionKey);
+    } finally {
+      await testDb('knowledge_privacy_projections')
+        .where({ projection_key: projectionKey })
+        .delete();
+    }
   });
 
   it('does not expose password hashes in database error responses', async () => {
