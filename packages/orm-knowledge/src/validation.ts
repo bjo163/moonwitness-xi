@@ -32,10 +32,12 @@ export async function isNextCorrectionSequence(
 ): Promise<boolean> {
   if (!Number.isSafeInteger(testimonyId) || testimonyId <= 0) return false;
   if (!Number.isSafeInteger(sequence) || sequence <= 0) return false;
-  const latest = await WitnessCorrection.query()
+  const corrections = await WitnessCorrection.query()
     .where('testimony_id', testimonyId)
-    .orderBy('sequence', 'desc')
-    .first();
-  const maximum = Number(latest?.sequence ?? 0);
-  return sequence === maximum + 1;
+    .orderBy('sequence', 'asc')
+    .select('sequence');
+  if (corrections.some((correction, index) => Number(correction.sequence) !== index + 1)) {
+    return false;
+  }
+  return sequence === corrections.length + 1;
 }

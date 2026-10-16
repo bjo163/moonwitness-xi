@@ -215,6 +215,22 @@ describe('knowledge witness records addon', () => {
         recorded_by_id: system?.id ?? 0,
       })
     ).toBe(false);
+
+    await db('knowledge_witness_corrections').insert({
+      testimony_id: testimony?.id,
+      sequence: 3,
+      correction_text: 'Synthetic correction inserted after an intentional sequence gap.',
+      reason: 'Synthetic gap detection fixture.',
+      source_label: 'Synthetic test source',
+      source_locator: 'fixture://correction-gap',
+      source_digest: digest,
+      asserted_time_text: 'unknown',
+      asserted_time_precision: 'unknown',
+      recorded_by_id: system?.id,
+      synthetic: true,
+    });
+    expect(await isNextCorrectionSequence(testimony?.id ?? 0, 4)).toBe(false);
+    expect(await isNextCorrectionSequence(testimony?.id ?? 0, 2)).toBe(false);
   });
 
   it('serializes concurrent correction inserts with the database unique constraint', async () => {
