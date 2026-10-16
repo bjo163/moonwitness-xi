@@ -452,7 +452,7 @@ The source planning bundle is `MOONWITNESS_XI_LOCAL_AI_REBUILD_PLAN_2026-10-15/`
 
 - Priority: P0; risk: privacy-sensitive.
 - Depends on: `K7-001`, `K3-002`.
-- File scope: `packages/local-ai/`, `packages/research/`.
+- File scope: `packages/local-ai/`, `packages/research/`, `packages/orm-knowledge/`, `apps/api/`.
 - Deliverable: Retriever with canonical source spans, citation identity and visibility constraints.
 - Acceptance: No private/child snippets exposed; exact citation metadata returns.
 - Verification target: `restricted retrieval and citation coverage tests`. This is a target, not evidence that the command exists or has passed.

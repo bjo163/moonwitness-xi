@@ -23,6 +23,7 @@ import { researchDuplicateCandidateRoutes } from './routes/research-duplicate-ca
 import { researchReviewRoutes } from './routes/research-review.routes.js';
 import { researchPrivacyRoutes } from './routes/research-privacy.routes.js';
 import { researchWitnessRoutes } from './routes/research-witness.routes.js';
+import { localRetrievalRoutes } from './routes/local-retrieval.routes.js';
 import { ensureResearchReviewWorkflow } from './research-review-workflow.js';
 import { config, localAiConfig } from './config/env.js';
 import { LocalFileAttachmentStorage, type AttachmentStorage } from '@moonwitness/orm-storage';
@@ -261,6 +262,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   await app.register(researchReviewRoutes);
   await app.register(researchPrivacyRoutes);
   await app.register(researchWitnessRoutes);
+  await app.register(localRetrievalRoutes);
 
   return app;
 }
