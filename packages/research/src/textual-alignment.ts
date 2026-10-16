@@ -265,6 +265,7 @@ export async function projectTextualAlignmentCandidate(
   ]);
   const left = resolveSide(input.left, leftRaw);
   const right = resolveSide(input.right, rightRaw);
+  if (left.tradition_context_id === right.tradition_context_id) return fail();
   const leftCitation = citationOnly(left);
   const rightCitation = citationOnly(right);
 

@@ -7,6 +7,7 @@ import {
   ResearchGraphRelease,
   ResearchReviewEvent,
   ConceptProfileVersion,
+  TextualAlignmentCandidateVersion,
   WitnessCorrection,
   WitnessInterpretation,
   WitnessTestimony,
@@ -30,6 +31,7 @@ const installAppendOnlyGuards: NonNullable<Addon['setup']> = async (trx) => {
     'knowledge_research_graph_records',
     'knowledge_research_review_events',
     'knowledge_concept_profile_versions',
+    'knowledge_textual_alignment_candidate_versions',
     'knowledge_research_actor_identities',
     'knowledge_privacy_revocations',
   ] as const;
@@ -42,6 +44,9 @@ const installAppendOnlyGuards: NonNullable<Addon['setup']> = async (trx) => {
       BEGIN
       IF TG_TABLE_NAME = 'knowledge_concept_profile_versions' THEN
         RAISE EXCEPTION 'Knowledge concept profiles are append-only';
+      END IF;
+      IF TG_TABLE_NAME = 'knowledge_textual_alignment_candidate_versions' THEN
+        RAISE EXCEPTION 'Knowledge textual alignment candidates are append-only';
       END IF;
       RAISE EXCEPTION 'Knowledge witness records are append-only';
       END;
@@ -63,7 +68,9 @@ const installAppendOnlyGuards: NonNullable<Addon['setup']> = async (trx) => {
       const errorMessage =
         table === 'knowledge_concept_profile_versions'
           ? 'Knowledge concept profiles are append-only'
-          : 'Knowledge witness records are append-only';
+          : table === 'knowledge_textual_alignment_candidate_versions'
+            ? 'Knowledge textual alignment candidates are append-only'
+            : 'Knowledge witness records are append-only';
       await trx.raw(
         `CREATE TRIGGER IF NOT EXISTS ${table}_reject_update BEFORE UPDATE ON ${table} BEGIN SELECT RAISE(ABORT, '${errorMessage}'); END`
       );
@@ -87,6 +94,7 @@ export const manifest = defineAddon({
     ResearchActiveRelease,
     ResearchReviewEvent,
     ConceptProfileVersion,
+    TextualAlignmentCandidateVersion,
     ResearchActorIdentity,
     ResearchPrivacyRevocation,
     ResearchPrivacyProjection,
@@ -226,6 +234,8 @@ export const manifest = defineAddon({
         ResearchGraphRecord,
         ResearchActiveRelease,
         ResearchReviewEvent,
+        ConceptProfileVersion,
+        TextualAlignmentCandidateVersion,
         ResearchActorIdentity,
         ResearchPrivacyRevocation,
         ResearchPrivacyProjection,

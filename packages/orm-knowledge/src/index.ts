@@ -6,6 +6,7 @@ export {
   ResearchGraphRelease,
   ResearchReviewEvent,
   ConceptProfileVersion,
+  TextualAlignmentCandidateVersion,
   WitnessCorrection,
   WitnessInterpretation,
   WitnessTestimony,
@@ -26,6 +27,15 @@ export type {
   StoreConceptProfilesInput,
   StoredConceptProfileVersion,
 } from './concept-profile-store.js';
+export {
+  storeTextualAlignmentCandidates,
+  readTextualAlignmentCandidateVersion,
+} from './textual-alignment-candidate-store.js';
+export type {
+  StoreTextualAlignmentCandidatesInput,
+  ReadTextualAlignmentCandidateInput,
+  StoredTextualAlignmentCandidateVersion,
+} from './textual-alignment-candidate-store.js';
 export { readResearchReviewHistory, validateResearchRelease } from './research-review.js';
 export {
   provisionResearchActorIdentity,

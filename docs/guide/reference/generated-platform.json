@@ -3652,6 +3652,87 @@
           ]
         },
         {
+          "name": "knowledge.textual_alignment_candidate_version",
+          "table": "knowledge_textual_alignment_candidate_versions",
+          "fields": [
+            {
+              "name": "candidate_digest",
+              "kind": "string",
+              "column": "candidate_digest",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "candidate_id",
+              "kind": "string",
+              "column": "candidate_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "candidate_json",
+              "kind": "text",
+              "column": "candidate_json",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "company",
+              "kind": "belongsTo",
+              "column": "company_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.company"
+            },
+            {
+              "name": "recorded_by",
+              "kind": "belongsTo",
+              "column": "recorded_by_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.user"
+            },
+            {
+              "name": "version",
+              "kind": "integer",
+              "column": "version",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "visibility",
+              "kind": "enum",
+              "column": "visibility",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]",
+              "values": ["INTERNAL"]
+            }
+          ],
+          "uniqueConstraints": [["candidate_id", "company", "version"]]
+        },
+        {
           "name": "knowledge.witness_correction",
           "table": "knowledge_witness_corrections",
           "fields": [
@@ -4067,9 +4148,17 @@
         "knowledge.witness_testimony": 2,
         "knowledge.witness_correction": 2,
         "knowledge.witness_interpretation": 2,
-        "base.model_access": 10
+        "base.model_access": 12
       },
       "accessRules": [
+        {
+          "group": "base.group_user",
+          "model": "knowledge.concept_profile_version",
+          "read": false,
+          "create": false,
+          "write": false,
+          "unlink": false
+        },
         {
           "group": "base.group_user",
           "model": "knowledge.privacy_projection",
@@ -4121,6 +4210,14 @@
         {
           "group": "base.group_user",
           "model": "knowledge.research_review_event",
+          "read": false,
+          "create": false,
+          "write": false,
+          "unlink": false
+        },
+        {
+          "group": "base.group_user",
+          "model": "knowledge.textual_alignment_candidate_version",
           "read": false,
           "create": false,
           "write": false,
@@ -5857,5 +5954,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "8745ce199ac24479d51110c6e7feb30ea341635905bc666e563944f59edecb3b"
+  "generatedFromSha256": "306b22ca27b0623c1be8876d56d443f4a4d361ffce408c4d317b6c1fa5b7ecd2"
 }

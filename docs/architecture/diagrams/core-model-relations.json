@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "addons": ["auth", "base", "jobs", "notification"],
   "generatedFrom": "core addon manifests and model field metadata; no seed values included",
-  "sourceSha256": "5b1e54458223f0b82fb2047d3bdbf87b37d5c350585a9d0217c1ba2e1ef16ef9",
+  "sourceSha256": "8318c8395bdf38efdce502b87e6ada81cf3346aad998b4680cb1184409a48ce6",
   "models": [
     {
       "name": "auth.refresh_token",
@@ -151,6 +151,10 @@
     {
       "name": "knowledge.research_review_event",
       "table": "knowledge_research_review_events"
+    },
+    {
+      "name": "knowledge.textual_alignment_candidate_version",
+      "table": "knowledge_textual_alignment_candidate_versions"
     },
     {
       "name": "knowledge.witness_correction",
@@ -547,6 +551,20 @@
       "from": "knowledge.research_graph_record",
       "field": "release",
       "to": "knowledge.research_graph_release",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "knowledge.textual_alignment_candidate_version",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "knowledge.textual_alignment_candidate_version",
+      "field": "recorded_by",
+      "to": "base.user",
       "cardinality": "N:1",
       "kind": "belongsTo"
     },

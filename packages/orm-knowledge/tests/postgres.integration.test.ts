@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import knex, { type Knex } from 'knex';
@@ -17,7 +17,9 @@ import {
   readConceptProfileVersion,
   readOwnedSyntheticWitness,
   readResearchReviewHistory,
+  readTextualAlignmentCandidateVersion,
   ResearchGraphRecord,
+  storeTextualAlignmentCandidates,
   transitionResearchReview,
   storeConceptProfiles,
   WitnessCorrection,
@@ -353,6 +355,114 @@ postgresDescribe('knowledge addon PostgreSQL integration', () => {
         .where({ profile_id: 'mw:concept-profile:pg-synthetic-profile' })
         .delete()
     ).rejects.toThrow('Knowledge concept profiles are append-only');
+  }, 30000);
+
+  it('persists tenant-scoped INTERNAL textual alignment candidate versions in PostgreSQL', async () => {
+    await installAddons(db, [baseManifest, manifest]);
+    const userId = Number((await db('users').where({ login: 'superadmin' }).first('id'))?.id);
+    const companyId = Number((await db('companies').first('id'))?.id);
+    if (!userId || !companyId) throw new Error('Required synthetic alignment actor is missing');
+    await db('company_memberships')
+      .insert({ user_id: userId, company_id: companyId, is_default: true })
+      .onConflict(['user_id', 'company_id'])
+      .ignore();
+    const actor = { userId, companyId, role: 'superadmin' as const };
+    const passages = [
+      {
+        evidence_id: 'mw:evidence:pg-alignment-left',
+        tradition_context_id: 'mw:tradition:synthetic-left',
+        source_id: 'mw:source:synthetic-left',
+        expression_id: 'mw:expression:synthetic-left',
+        edition_id: 'mw:edition:synthetic-left-v1',
+        locator: 'synthetic:left:1',
+        text: 'Synthetic PostgreSQL alignment passage left.',
+      },
+      {
+        evidence_id: 'mw:evidence:pg-alignment-right',
+        tradition_context_id: 'mw:tradition:synthetic-right',
+        source_id: 'mw:source:synthetic-right',
+        expression_id: 'mw:expression:synthetic-right',
+        edition_id: 'mw:edition:synthetic-right-v1',
+        locator: 'synthetic:right:1',
+        text: 'Synthetic PostgreSQL alignment passage right.',
+      },
+    ].map((passage) => {
+      const quote = passage.text;
+      return {
+        evidence_id: passage.evidence_id,
+        tradition_context_id: passage.tradition_context_id,
+        source_id: passage.source_id,
+        expression_id: passage.expression_id,
+        edition_id: passage.edition_id,
+        locator: passage.locator,
+        content_sha256: createHash('sha256').update(passage.text, 'utf8').digest('hex'),
+        range: { unit: 'unicode_scalar' as const, start: 0, end: Array.from(quote).length },
+        quote,
+        text: passage.text,
+      };
+    });
+    const resolvePassage = async (evidenceId: string) =>
+      passages.find((passage) => passage.evidence_id === evidenceId) ?? null;
+    const candidate = (note = 'Synthetic only; review subject intentionally unresolved.') => ({
+      id: 'mw:textual-alignment-candidate:pg-synthetic-pair',
+      left: {
+        evidence_id: passages[0]!.evidence_id,
+        selector: {
+          source_id: passages[0]!.source_id,
+          expression_id: passages[0]!.expression_id,
+          edition_id: passages[0]!.edition_id,
+          locator: passages[0]!.locator,
+          content_sha256: passages[0]!.content_sha256,
+          range: passages[0]!.range,
+          quote: passages[0]!.quote,
+        },
+      },
+      right: {
+        evidence_id: passages[1]!.evidence_id,
+        selector: {
+          source_id: passages[1]!.source_id,
+          expression_id: passages[1]!.expression_id,
+          edition_id: passages[1]!.edition_id,
+          locator: passages[1]!.locator,
+          content_sha256: passages[1]!.content_sha256,
+          range: passages[1]!.range,
+          quote: passages[1]!.quote,
+        },
+      },
+      similarity_score: 0.42,
+      method: { id: 'mw:alignment-method:synthetic', version: '1.0.0' },
+      uncertainty: { level: 'high', note },
+    });
+    const input = { authenticatedActor: actor, resolvePassage, candidates: [candidate()] };
+    const parallel = await Promise.all([
+      storeTextualAlignmentCandidates(db, input),
+      storeTextualAlignmentCandidates(db, input),
+    ]);
+    expect(parallel.flat().map((entry) => entry.version)).toEqual([1, 1]);
+    expect(parallel.flat().filter((entry) => entry.idempotent)).toHaveLength(1);
+    const [changed] = await storeTextualAlignmentCandidates(db, {
+      ...input,
+      candidates: [candidate('Changed synthetic uncertainty; still unreviewed.')],
+    });
+    expect(changed).toMatchObject({ version: 2, visibility: 'INTERNAL', idempotent: false });
+    expect(changed!.candidate.left).not.toHaveProperty('text');
+    expect(
+      await readTextualAlignmentCandidateVersion(db, {
+        authenticatedReader: actor,
+        candidateId: 'mw:textual-alignment-candidate:pg-synthetic-pair',
+      })
+    ).toMatchObject({ version: 2, visibility: 'INTERNAL' });
+    await expect(
+      readTextualAlignmentCandidateVersion(db, {
+        authenticatedReader: { ...actor, companyId: companyId + 1000 },
+        candidateId: 'mw:textual-alignment-candidate:pg-synthetic-pair',
+      })
+    ).rejects.toThrow('unavailable in this company context');
+    await expect(
+      db('knowledge_textual_alignment_candidate_versions')
+        .where({ candidate_id: 'mw:textual-alignment-candidate:pg-synthetic-pair' })
+        .delete()
+    ).rejects.toThrow('Knowledge textual alignment candidates are append-only');
   }, 30000);
 
   it('commits and replays a review decision atomically with the PostgreSQL workflow event', async () => {

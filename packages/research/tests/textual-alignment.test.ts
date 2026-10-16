@@ -138,6 +138,14 @@ describe('synthetic textual alignment candidates', () => {
         return { ...found.passage, locator: 'synthetic:wrong:locator' };
       })
     ).rejects.toThrow();
+    await expect(
+      projectTextualAlignmentCandidate(valid, async (id) => {
+        const found = syntheticPassages.find(({ passage }) => passage.evidence_id === id)!.passage;
+        return id === valid.right.evidence_id
+          ? { ...found, tradition_context_id: syntheticPassages[0]!.passage.tradition_context_id }
+          : found;
+      })
+    ).rejects.toThrow();
   });
 
   it('rejects unpaired UTF-16 surrogates and preserves supplementary-plane scalar offsets', async () => {

@@ -168,6 +168,28 @@ export const ConceptProfileVersion = defineModel('knowledge.concept_profile_vers
   },
 });
 
+/** Immutable tenant-scoped INTERNAL citation-only textual alignment candidate version. */
+export const TextualAlignmentCandidateVersion = defineModel(
+  'knowledge.textual_alignment_candidate_version',
+  {
+    table: 'knowledge_textual_alignment_candidate_versions',
+    order: 'company_id asc, candidate_id asc, version asc',
+    unique: [['company', 'candidate_id', 'version']],
+    fields: {
+      company: fields.belongsTo(Company, { required: true }),
+      candidate_id: fields.string({
+        required: true,
+        pattern: '^mw:textual-alignment-candidate:[a-z0-9][a-z0-9._-]{0,159}$',
+      }),
+      version: fields.integer({ required: true }),
+      visibility: fields.enum(['INTERNAL'], { required: true, default: 'INTERNAL' }),
+      candidate_json: fields.text({ required: true, hidden: true }),
+      candidate_digest: fields.string({ required: true, pattern: '^[a-f0-9]{64}$' }),
+      recorded_by: fields.belongsTo(User, { required: true }),
+    },
+  }
+);
+
 /** Explicit, stable ontology identities for database users; IDs are never inferred from SQL rows. */
 export const ResearchActorIdentity = defineModel('knowledge.research_actor_identity', {
   table: 'knowledge_research_actor_identities',
@@ -199,6 +221,7 @@ for (const model of [
   ResearchGraphRecord,
   ResearchReviewEvent,
   ConceptProfileVersion,
+  TextualAlignmentCandidateVersion,
   ResearchActorIdentity,
 ]) {
   model.beforeUpdate = (_args: StaticHookArguments<InstanceType<typeof model>>): never =>
