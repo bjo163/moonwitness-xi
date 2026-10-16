@@ -1976,7 +1976,9 @@
       "output": "Untrusted content handling and human-approved action boundary",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
-      "priority": "p0"
+      "priority": "p0",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/K7-005.md"
     },
     {
       "id": "K7-006",

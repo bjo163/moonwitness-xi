@@ -16,6 +16,14 @@ export {
   type LocalModelRegistry,
   type ModelArtifactVerification,
 } from './models.js';
+export {
+  generateLocalAiSuggestion,
+  type LocalAiSuggestionKind,
+  type LocalAiSuggestionRequest,
+  type LocalAiSuggestionPassage,
+  type LocalAiSuggestionResult,
+  type SuggestionCandidateValidator,
+} from './suggestion-generation.js';
 
 export interface LocalAiConfig {
   mode: LocalAiMode;

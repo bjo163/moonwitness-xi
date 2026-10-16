@@ -475,6 +475,7 @@ The source planning bundle is `MOONWITNESS_XI_LOCAL_AI_REBUILD_PLAN_2026-10-15/`
 - Deliverable: Untrusted content handling and human-approved action boundary.
 - Acceptance: Malicious retrieved text cannot alter system rules, run shell, publish, leak secret.
 - Verification target: `OWASP-inspired adversarial fixtures`. This is a target, not evidence that the command exists or has passed.
+- Evidence: [K7-005](evidence/K7-005.md); local adapter slice only, remaining integration and adversarial acceptance are listed there.
 
 ## K7-006 — Local AI evaluation and model-outage certification
 
