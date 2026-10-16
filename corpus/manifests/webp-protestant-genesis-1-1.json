@@ -21,10 +21,10 @@
     "reviewer": "bjo163",
     "decision_date": "2026-10-16",
     "evidence_ref": "docs/roadmap/evidence/K2-006.md#source-and-rights",
-    "scope": "Only the exact English WEBP Genesis 1:1 verse body is stored and redistributed. The words and terminal punctuation are copied verbatim from the official WEBP text; HTML markup, its verse number, and an inline explanatory footnote anchor are omitted from the excerpt representation. No other verse, canon claim, textual equivalence, model training, or runtime fetch is included."
+    "scope": "Only the exact English WEBP Genesis 1:1 verse body is stored and redistributed. The words and terminal punctuation are copied verbatim from the official WEBP text; HTML markup, its verse number, and an inline explanatory footnote anchor are omitted from the excerpt representation. World English Bible is an eBible.org trademark; this unchanged excerpt is attributed without implying endorsement, and any altered translation text must not be labeled World English Bible. No other verse, canon claim, textual equivalence, model training, or runtime fetch is included."
   },
   "attribution": {
-    "text": "World English Bible Protestant (WEBP), Genesis 1:1; eBible.org. 2020 stable text edition, public domain. Source: https://ebible.org/engwebp/GEN01.htm . Edition: https://ebible.org/find/show.php?id=engwebp .",
+    "text": "World English Bible Protestant (WEBP), Genesis 1:1; eBible.org. 2020 stable text edition, public domain. “World English Bible” is an eBible.org trademark; this unchanged excerpt does not imply eBible.org endorsement. If translation words are changed, do not label the changed text “World English Bible”. Source: https://ebible.org/engwebp/GEN01.htm . Edition: https://ebible.org/find/show.php?id=engwebp . Rights: https://ebible.org/engwebp/copyright.htm .",
     "display_locations": [
       "corpus/manifests/webp-protestant-genesis-1-1.json",
       "corpus/reference/sha256/ae/ae5c2799fad97b0e65334aa39be6193d487419f0d31713caaac58a47f6b4d8b1",

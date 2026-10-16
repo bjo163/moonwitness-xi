@@ -54,6 +54,9 @@ describe('offline textual witness passage retrieval', () => {
     expect(passage.expressionId).not.toBe(passage.editionId);
     expect(passage.originalBytes).toEqual(sourceBytes);
     expect(passage.text.endsWith('.')).toBe(true);
+    expect(passage.attribution).toContain('“World English Bible” is an eBible.org trademark');
+    expect(passage.attribution).toContain('does not imply eBible.org endorsement');
+    expect(passage.attribution).toContain('do not label the changed text “World English Bible”');
     expect(passage.references).toContain('https://ebible.org/engwebp/GEN01.htm');
   });
 

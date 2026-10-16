@@ -70,8 +70,11 @@ its explicit `mw:expression:webp-protestant` and
 that edition only to the WEBP expression; it asserts no identity or witness
 relationship with Quran, Taurat, Zabur, Injil, or any other revelation. The
 source manifest records the public-domain source, excerpt operation, rights
-scope, and checksum. If a future source is restricted, a metadata-only manifest
-remains valid and no text bytes need to be checked in.
+scope, and checksum. The returned citation also records that “World English
+Bible” is an eBible.org trademark, the unchanged excerpt does not imply
+endorsement, and changed translation wording must not be labeled World English
+Bible. If a future source is restricted, a metadata-only manifest remains valid
+and no text bytes need to be checked in.
 
 ## Private archive intake manifest
 
