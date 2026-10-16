@@ -2,7 +2,7 @@ import { createHash, randomInt, randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import knex, { type Knex } from 'knex';
 import { installAddons } from '@moonwitness/orm';
-import { manifest as baseManifest } from '@moonwitness/orm-base';
+import { Company, manifest as baseManifest } from '@moonwitness/orm-base';
 import { manifest } from '../src/manifest.js';
 import {
   applyPrivacyRevocation,
@@ -38,6 +38,7 @@ postgresDescribe('synthetic privacy revocation PostgreSQL integration', () => {
       pool: { min: 0, max: 2 },
     });
     await installAddons(db, [baseManifest, manifest]);
+    Company.knex(db);
     const user = await db('users').where({ login: 'superadmin' }).first('id');
     const company = await db('companies').first('id');
     if (!user || !company) throw new Error('Synthetic superadmin and company seed are required');
@@ -152,6 +153,11 @@ postgresDescribe('synthetic privacy revocation PostgreSQL integration', () => {
     const consentDecisionRefSha256 = sha256(consentDecisionRef);
     const idempotencyKey = `privacy-pg-${randomUUID()}`;
     const projectionKey = `search-pg-${randomUUID()}`;
+    const secondProjectionKey = `search-pg-second-${randomUUID()}`;
+    const otherCompany = await Company.query().insertAndFetch({
+      name: `Synthetic isolation ${randomUUID()}`,
+    });
+    const otherCompanyProjectionKey = `search-pg-other-company-${randomUUID()}`;
     await db('knowledge_privacy_projections').insert({
       company_id: steward.companyId,
       projection_key: projectionKey,
@@ -162,6 +168,28 @@ postgresDescribe('synthetic privacy revocation PostgreSQL integration', () => {
       visibility: 'RESTRICTED',
       state: 'active',
     });
+    await db('knowledge_privacy_projections').insert([
+      {
+        company_id: steward.companyId,
+        projection_key: secondProjectionKey,
+        subject_ref_sha256: subjectRefSha256,
+        projection_json: JSON.stringify({ excerpt: 'POSTGRES-SYNTHETIC-CANARY-SECOND' }),
+        projection_digest: sha256(JSON.stringify({ excerpt: 'POSTGRES-SYNTHETIC-CANARY-SECOND' })),
+        synthetic: true,
+        visibility: 'RESTRICTED',
+        state: 'active',
+      },
+      {
+        company_id: otherCompany.id,
+        projection_key: otherCompanyProjectionKey,
+        subject_ref_sha256: subjectRefSha256,
+        projection_json: JSON.stringify({ excerpt: 'POSTGRES-OTHER-COMPANY-CANARY' }),
+        projection_digest: sha256(JSON.stringify({ excerpt: 'POSTGRES-OTHER-COMPANY-CANARY' })),
+        synthetic: true,
+        visibility: 'RESTRICTED',
+        state: 'active',
+      },
+    ]);
     const input = {
       steward,
       subjectRefSha256,
@@ -171,7 +199,7 @@ postgresDescribe('synthetic privacy revocation PostgreSQL integration', () => {
 
     const first = await applyPrivacyRevocation(db, input);
     const replay = await applyPrivacyRevocation(db, input);
-    expect(first).toMatchObject({ replayed: false, invalidatedProjectionCount: 1 });
+    expect(first).toMatchObject({ replayed: false, invalidatedProjectionCount: 2 });
     expect(replay).toEqual({
       revocationId: first.revocationId,
       replayed: true,
@@ -185,12 +213,34 @@ postgresDescribe('synthetic privacy revocation PostgreSQL integration', () => {
     expect(
       activeAfterRevocation.some((projection) => projection.projectionKey === projectionKey)
     ).toBe(false);
+    expect(
+      activeAfterRevocation.some((projection) => projection.projectionKey === secondProjectionKey)
+    ).toBe(false);
     const revocation = await db('knowledge_privacy_revocations')
       .where({ id: first.revocationId })
       .first();
     expect(JSON.stringify(revocation)).not.toContain(subjectRef);
     expect(JSON.stringify(revocation)).not.toContain(consentDecisionRef);
     expect(JSON.stringify(first)).not.toContain('POSTGRES-SYNTHETIC-CANARY');
+    const revokedProjections = await db('knowledge_privacy_projections')
+      .whereIn('projection_key', [projectionKey, secondProjectionKey])
+      .orderBy('projection_key');
+    expect(revokedProjections).toHaveLength(2);
+    expect(revokedProjections.every((projection) => projection.state === 'revoked')).toBe(true);
+    expect(revokedProjections.every((projection) => projection.projection_json === '{}')).toBe(
+      true
+    );
+    expect(revokedProjections.every((projection) => projection.projection_digest === null)).toBe(
+      true
+    );
+    const otherCompanyProjection = await db('knowledge_privacy_projections')
+      .where({ projection_key: otherCompanyProjectionKey })
+      .first();
+    expect(otherCompanyProjection).toMatchObject({
+      company_id: otherCompany.id,
+      state: 'active',
+      projection_json: JSON.stringify({ excerpt: 'POSTGRES-OTHER-COMPANY-CANARY' }),
+    });
     await expect(
       readActivePrivacyProjections(db, { ...steward, companyId: steward.companyId + 999 })
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });

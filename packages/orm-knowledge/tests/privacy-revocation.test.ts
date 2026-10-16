@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import knex, { type Knex } from 'knex';
 import { installAddons } from '@moonwitness/orm';
-import { manifest as baseManifest, ModelAccess, User } from '@moonwitness/orm-base';
+import { manifest as baseManifest, Company, ModelAccess, User } from '@moonwitness/orm-base';
 import {
   applyPrivacyRevocation,
   manifest,
@@ -41,6 +41,7 @@ describe('persisted synthetic privacy revocation', () => {
     const company = await db('companies').first('id');
     if (!user || !company) throw new Error('Synthetic superadmin and company seed are required');
     User.knex(db);
+    Company.knex(db);
     steward = { userId: Number(user.id), companyId: Number(company.id), role: 'superadmin' };
     companyId = Number(company.id);
   });
@@ -60,14 +61,19 @@ describe('persisted synthetic privacy revocation', () => {
     };
   }
 
-  async function addProjection(subjectHash: string, projectionKey = `search-${randomUUID()}`) {
+  async function addProjection(
+    subjectHash: string,
+    projectionKey = `search-${randomUUID()}`,
+    projectionCompanyId = companyId,
+    synthetic = true
+  ) {
     await db('knowledge_privacy_projections').insert({
-      company_id: companyId,
+      company_id: projectionCompanyId,
       projection_key: projectionKey,
       subject_ref_sha256: subjectHash,
       projection_json: JSON.stringify({ excerpt: 'SYNTHETIC-PRIVATE-CANARY' }),
       projection_digest: sha256(JSON.stringify({ excerpt: 'SYNTHETIC-PRIVATE-CANARY' })),
-      synthetic: true,
+      synthetic,
       visibility: 'RESTRICTED',
       state: 'active',
     });
@@ -79,6 +85,15 @@ describe('persisted synthetic privacy revocation', () => {
     const consentDecisionRef = `synthetic-consent-decision-${randomUUID()}`;
     const input = revocationInput(subjectRef, consentDecisionRef);
     const projectionKey = await addProjection(input.subjectRefSha256);
+    const secondProjectionKey = await addProjection(input.subjectRefSha256);
+    const otherCompany = await Company.query().insertAndFetch({
+      name: `Synthetic isolation ${randomUUID()}`,
+    });
+    const otherCompanyProjectionKey = await addProjection(
+      input.subjectRefSha256,
+      `other-company-${randomUUID()}`,
+      Number(otherCompany.id)
+    );
     await db('knowledge_privacy_projections').insert({
       company_id: companyId,
       projection_key: `non-synthetic-${randomUUID()}`,
@@ -98,10 +113,13 @@ describe('persisted synthetic privacy revocation', () => {
 
     const result = await applyPrivacyRevocation(db, input);
 
-    expect(result).toMatchObject({ replayed: false, invalidatedProjectionCount: 1 });
+    expect(result).toMatchObject({ replayed: false, invalidatedProjectionCount: 2 });
     const activeAfterRevocation = await readActivePrivacyProjections(db, steward);
     expect(
       activeAfterRevocation.some((projection) => projection.projectionKey === projectionKey)
+    ).toBe(false);
+    expect(
+      activeAfterRevocation.some((projection) => projection.projectionKey === secondProjectionKey)
     ).toBe(false);
     const stored = await db('knowledge_privacy_revocations')
       .where({ id: result.revocationId })
@@ -130,6 +148,22 @@ describe('persisted synthetic privacy revocation', () => {
       state: 'revoked',
       projection_json: '{}',
       projection_digest: null,
+    });
+    const secondProjection = await db('knowledge_privacy_projections')
+      .where({ projection_key: secondProjectionKey })
+      .first();
+    expect(secondProjection).toMatchObject({
+      state: 'revoked',
+      projection_json: '{}',
+      projection_digest: null,
+    });
+    const otherCompanyProjection = await db('knowledge_privacy_projections')
+      .where({ projection_key: otherCompanyProjectionKey })
+      .first();
+    expect(otherCompanyProjection).toMatchObject({
+      company_id: otherCompany.id,
+      state: 'active',
+      projection_json: JSON.stringify({ excerpt: 'SYNTHETIC-PRIVATE-CANARY' }),
     });
     expect(
       await db('knowledge_privacy_projections')
