@@ -300,8 +300,8 @@ async function verifiedReviewHistory(trx: Knex.Transaction, subjectId: string) {
  * snapshot. Authentication, tenant scope, visibility, local corpus provenance,
  * and the active-company review consensus are rechecked in this transaction.
  * The returned status is accepted only for a decision on this exact subject
- * revision, release digest, and evidence ID. This function does not persist or
- * publish concept profiles.
+ * revision with no contradictory outcome in company history. This function
+ * does not persist or publish concept profiles.
  */
 export async function resolveConceptProfileEvidence(
   db: Knex,
@@ -324,12 +324,15 @@ export async function resolveConceptProfileEvidence(
   return db.transaction(async (trx) => {
     const user = await trx('users')
       .where({ id: reader.userId, role: reader.role, active: true })
+      .forUpdate()
       .first('id');
     const company = await trx('companies')
       .where({ id: reader.companyId, active: true })
+      .forUpdate()
       .first('id');
     const membership = await trx('company_memberships')
       .where({ user_id: reader.userId, company_id: reader.companyId, active: true })
+      .forUpdate()
       .first('id');
     if (!user || !company || !membership) {
       fail('FORBIDDEN', 'Research evidence is unavailable in this company context');
@@ -345,7 +348,7 @@ export async function resolveConceptProfileEvidence(
       .first('id');
     if (!evidenceRow) return null;
 
-    const { release, records } = await verifiedActiveResearchRecords(trx, Number(evidenceRow.id));
+    const { records } = await verifiedActiveResearchRecords(trx, Number(evidenceRow.id));
     const graph = validateResearchRelease(records);
     const recordById = new Map(records.map((record) => [record.key, record]));
     const evidenceRecord = recordById.get(evidenceId);
@@ -499,19 +502,9 @@ export async function resolveConceptProfileEvidence(
       Number(subject.content_revision),
       history
     );
-    let reviewStatus = consensus.status;
-    if (consensus.status === 'accepted') {
-      const currentDecision = consensus.events.some(
-        (event) =>
-          event.outcome === 'accepted' &&
-          event.research_release_digest === release.releaseDigest &&
-          event.evidence_ids.includes(evidenceId)
-      );
-      if (!currentDecision) reviewStatus = 'unreviewed';
-    }
     return {
       canonicalEvidence: reference,
-      reviewStatus,
+      reviewStatus: consensus.status,
       access: 'readable',
     };
   });

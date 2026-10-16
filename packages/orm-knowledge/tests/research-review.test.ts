@@ -359,6 +359,47 @@ describe('transactional research review service', () => {
     ).resolves.toMatchObject({ reviewStatus: 'unreviewed', access: 'readable' });
   });
 
+  it('retains acceptance for the same assertion revision after an unrelated graph release', async () => {
+    const started = await startReviewWorkflow();
+    await transitionResearchReview(db, reviewInput(started.id));
+    const current = await db.transaction((trx) => readActiveResearchGraphRelease(trx, corpusKey));
+    expect(current).not.toBeNull();
+    const next = await db.transaction((trx) =>
+      createResearchGraphRelease(trx, {
+        corpusKey,
+        schemaVersion: 'research-graph/v1',
+        previousReleaseDigest: current!.releaseDigest,
+        records: current!.records.map((record) => {
+          if (record.key !== relationId) return record;
+          const content = record.content as Record<string, unknown>;
+          return {
+            ...record,
+            content: {
+              ...content,
+              updated_at: '2026-10-16T00:04:00.000Z',
+              content_revision: 2,
+            },
+          };
+        }),
+      })
+    );
+    await db.transaction((trx) =>
+      activateResearchGraphRelease(trx, {
+        corpusKey,
+        releaseDigest: next.releaseDigest,
+        expectedCurrentReleaseDigest: current!.releaseDigest,
+        activatedAt: '2026-10-16T00:04:01.000Z',
+      })
+    );
+
+    await expect(
+      resolveConceptProfileEvidence(db, evidenceId, {
+        authenticatedReader: { userId: superadminId, companyId, role: 'superadmin' },
+        corpusRootDirectory,
+      })
+    ).resolves.toMatchObject({ reviewStatus: 'accepted', access: 'readable' });
+  });
+
   it('fails closed on conflicting decisions in the authenticated company history', async () => {
     const first = await startReviewWorkflow();
     await transitionResearchReview(db, reviewInput(first.id));
