@@ -1782,6 +1782,8 @@
       "id": "K4-005",
       "title": "Four-tradition cross-reference alignment candidates",
       "milestone": "K4",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/K4-005.md",
       "dependsOn": ["K4-002", "K3-004", "K2-006"],
       "output": "Reviewed textual parallel candidates across available witnesses",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
