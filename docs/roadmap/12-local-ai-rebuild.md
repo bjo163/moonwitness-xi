@@ -349,13 +349,13 @@ The source planning bundle is `MOONWITNESS_XI_LOCAL_AI_REBUILD_PLAN_2026-10-15/`
 
 ## K5-003 — Witness original/correction/provenance domain
 
-- Status: in progress; synthetic ORM addon and ontology contract are implemented. Actor/tenant row authorization, route enforcement, database-level immutability, and real-data privacy approval remain open.
+- Status: in progress; synthetic ORM addon and ontology contract are implemented. Generic REST/RPC access is now denied to ordinary users by the central API policy, and PostgreSQL/SQLite triggers prevent ordinary SQL `UPDATE`/`DELETE`. Actor/tenant-scoped user access, a dedicated endpoint, and real-data privacy approval remain open; database owners can still alter or remove triggers, so this is not tamper-proof storage.
 - Priority: P0; risk: privacy-sensitive.
 - Depends on: `K5-001`, `K3-001`.
 - File scope: `packages/orm-knowledge/`, `ontology/domains/`, workspace quality and architecture registries.
 - Deliverable: First-person testimony plus correction chain, separate interpretation and evidence links.
 - Acceptance: Original witness immutable in ordinary workflow; uncertainty/time precision kept; privacy default private.
-- Verification: [K5-003 evidence](evidence/K5-003.md): synthetic SQLite addon tests cover seed visibility, source/correction/interpretation ORM mutation denial, correction ordering/provenance validation, and addon conformance. Actor/tenant access verification is not met because the current ORM access model has no row-level actor policy and API wiring is absent; direct SQL immutability is also not enforced. Keep real testimony disabled until those controls and privacy review pass.
+- Verification: [K5-003 evidence](evidence/K5-003.md): synthetic SQLite/PostgreSQL addon tests cover seed visibility, source/correction/interpretation ORM and ordinary SQL mutation denial, correction ordering/provenance validation, and addon conformance. API tests also verify ordinary-user denial across registered models and policy denial despite an explicit group grant. Owner/tenant-scoped access, dedicated API wiring, and privacy review are not met. Keep real testimony disabled until those controls and review pass.
 
 ## K5-004 — Story, episode, page/media manifest contracts
 

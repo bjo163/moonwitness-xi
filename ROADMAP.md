@@ -262,7 +262,7 @@ Track approved through ADR 0004 on 2026-10-15. The existing 148 M-series tasks a
 - [ ] K4-006 Semantics benchmark and drift ledger.
 - [x] K5-001 Local-only memory/archive ingestion manifest. Evidence: [K5-001](docs/roadmap/evidence/K5-001.md).
 - [ ] K5-002 Privacy redaction, revocation and retention controls. Evidence: [K5-002](docs/roadmap/evidence/K5-002.md).
-- [ ] K5-003 Witness original/correction/provenance domain.
+- [ ] K5-003 Witness original/correction/provenance domain. Synthetic models, correction provenance, ordinary-SQL append-only guards, and generic API denial for regular users are implemented; actor/tenant-scoped access endpoints and privacy review remain open. Evidence: [K5-003](docs/roadmap/evidence/K5-003.md).
 - [ ] K5-004 Story, episode, page/media manifest contracts.
 - [ ] K5-005 Character canon and personal terminology reconciliation.
 - [ ] K5-006 33-BUG registry recovery and alias conflict review.

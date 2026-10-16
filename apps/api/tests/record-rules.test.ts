@@ -143,6 +143,22 @@ describe('central access policy', () => {
     };
     expect(canAccess('user', 'auth.refresh_token', 'read')).toBe(false);
     expect(canAccess('user', 'base.user', 'read')).toBe(false);
+    expect(canAccess('user', 'knowledge.witness_testimony', 'read')).toBe(false);
+    expect(canAccess('user', 'knowledge.witness_correction', 'read')).toBe(false);
+    expect(canAccess('user', 'knowledge.witness_interpretation', 'read')).toBe(false);
+    expect(canAccess('user', 'knowledge.witness_testimony', 'create')).toBe(false);
+    expect(
+      canAccess('user', 'knowledge.witness_testimony', 'read', [
+        {
+          model_name: 'knowledge.witness_testimony',
+          read: true,
+          create: true,
+          write: true,
+          unlink: true,
+        },
+      ])
+    ).toBe(false);
+    expect(canAccess('superadmin', 'knowledge.witness_testimony', 'read')).toBe(true);
     expect(canAccess('user', 'base.partner', 'read')).toBe(true);
     expect(canAccess('user', 'base.partner', 'action', [grant])).toBe(false);
     expect(canAccess('user', 'base.partner', 'create', [grant])).toBe(true);

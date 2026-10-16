@@ -13,6 +13,11 @@ const ADMIN_ONLY_MODELS = new Set([
   'base.model_access',
   'base.company_membership',
   'base.partner_bank',
+  // Witness material defaults to restricted; ordinary users must use a future
+  // purpose- and consent-scoped endpoint instead of generic CRUD/RPC access.
+  'knowledge.witness_testimony',
+  'knowledge.witness_correction',
+  'knowledge.witness_interpretation',
 ]);
 
 const ADMIN_ROLES = new Set(['system', 'superadmin']);
