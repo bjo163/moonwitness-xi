@@ -277,7 +277,7 @@ Track approved through ADR 0004 on 2026-10-15. The existing 148 M-series tasks a
 - [ ] K7-004 Staging-only structured suggestion workflow.
 - [ ] K7-005 Prompt injection and high-risk action isolation.
 - [ ] K7-006 Local AI evaluation and model-outage certification.
-- [ ] K8-001 Knowledge explorer in existing Board.
+- [ ] K8-001 Knowledge explorer in existing Board. Local partial read-only pilot adds role-gated browsing of the two pinned source passages and verified-release relation explanations by exact ID, with source/evidence and alternative navigation. Client/Board typecheck and builds plus Chromium source/relation, keyboard, and ordinary-user access flows are covered; graph search/assertion navigation, live API-to-PostgreSQL Board flow, and broader theme/screen-reader review remain open. [Evidence](docs/roadmap/evidence/K8-001.md).
 - [ ] K8-002 Witness/editorial workbench and poster pages.
 - [ ] K8-003 Approved publication read API.
 - [ ] K8-004 Public website minimal knowledge shell.

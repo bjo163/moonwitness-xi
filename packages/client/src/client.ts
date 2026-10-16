@@ -14,6 +14,7 @@ import type {
   ModelInfo,
   MoonWitnessClientOptions,
   RegisterParams,
+  ResearchRelationExplanation,
   SourceCitation,
   TokenStorage,
   UserProfile,
@@ -280,6 +281,18 @@ export class MoonWitnessClient implements HttpClient {
       `/api/corpus/passages/${encodeURIComponent(editionId)}/${encodeURIComponent(locator)}`
     );
     return res.data;
+  }
+
+  /** Explain one relation from the verified active research release. */
+  async getResearchRelationExplanation(relationId: string): Promise<{
+    releaseDigest: string;
+    explanation: ResearchRelationExplanation;
+  }> {
+    const res = await this.request<{
+      success: true;
+      data: { release_digest: string; explanation: ResearchRelationExplanation };
+    }>(`/api/research/relations/${encodeURIComponent(relationId)}/explanation`);
+    return { releaseDigest: res.data.release_digest, explanation: res.data.explanation };
   }
 
   /** Odoo-style JSON-RPC call; exposes search_read, search, create, write and unlink. */

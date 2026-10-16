@@ -224,3 +224,53 @@ export type CorpusPassage =
       sha256: string;
       citation: string;
     };
+
+export interface ResearchExplanationEvidence {
+  evidence: {
+    id: string;
+    assertion_id: string;
+    direction: 'supporting' | 'counterevidence';
+    selector: {
+      source_id: string;
+      edition_id: string;
+      locator: string;
+      content_sha256: string;
+      expression_id?: string;
+      quote?: string;
+      range?: { unit: 'unicode_scalar'; start: number; end: number };
+    };
+  };
+  direction: 'supporting' | 'counterevidence';
+  source_id: string;
+  expression_id?: string;
+  edition_id: string;
+  locator: string;
+  content_sha256: string;
+  citation: string;
+  excerpt: string;
+  range?: { unit: 'unicode_scalar'; start: number; end: number };
+}
+
+export interface ResearchRelationSummary {
+  id: string;
+  kind: 'ResearchRelation';
+  schema_version: 1;
+  content_revision: number;
+  predicate: string;
+  subject_id: string;
+  object_id: string;
+  scope: { kind: string; reference_id: string };
+  epistemic_status: string;
+  review_status: string;
+  interpretation_boundary: 'linked_evidence_only';
+}
+
+export interface ResearchRelationExplanation extends ResearchRelationSummary {
+  supporting_evidence: ResearchExplanationEvidence[];
+  counterevidence: ResearchExplanationEvidence[];
+  alternatives: Array<{
+    relation: ResearchRelationSummary;
+    supporting_evidence: ResearchExplanationEvidence[];
+    counterevidence: ResearchExplanationEvidence[];
+  }>;
+}

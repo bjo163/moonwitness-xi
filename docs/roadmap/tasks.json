@@ -1987,6 +1987,7 @@
       "dependsOn": ["K3-006", "K2-007"],
       "output": "Source/edition/assertion/evidence/graph navigation with roles",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
+      "evidence": "docs/roadmap/evidence/K8-001.md",
       "labels": ["local-ai-rebuild"],
       "priority": "p0"
     },
