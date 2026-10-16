@@ -10,6 +10,8 @@ export {
   WitnessTestimony,
 } from './models.js';
 export {
+  MAX_RESEARCH_RELEASE_CANONICAL_BYTES,
+  MAX_RESEARCH_RELEASE_RECORDS,
   activateResearchGraphRelease,
   canonicalResearchJson,
   createResearchGraphRelease,

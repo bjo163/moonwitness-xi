@@ -19,6 +19,7 @@ import { corpusRoutes } from './routes/corpus.routes.js';
 import { evidenceRoutes } from './routes/evidence.routes.js';
 import { researchExplanationRoutes } from './routes/research-explanation.routes.js';
 import { researchActorIdentityRoutes } from './routes/research-actor-identity.routes.js';
+import { researchDuplicateCandidateRoutes } from './routes/research-duplicate-candidates.routes.js';
 import { config, localAiConfig } from './config/env.js';
 import { LocalFileAttachmentStorage, type AttachmentStorage } from '@moonwitness/orm-storage';
 import { createDatabase } from './database/knex.js';
@@ -251,6 +252,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   await app.register(evidenceRoutes);
   await app.register(researchExplanationRoutes);
   await app.register(researchActorIdentityRoutes);
+  await app.register(researchDuplicateCandidateRoutes);
 
   return app;
 }

@@ -29,6 +29,10 @@ export interface StoredResearchGraphRelease {
   readonly records: readonly StoredResearchGraphRecord[];
 }
 
+/** Active graph readers fail closed before materializing an unbounded release snapshot. */
+export const MAX_RESEARCH_RELEASE_RECORDS = 5_000;
+export const MAX_RESEARCH_RELEASE_CANONICAL_BYTES = 8 * 1024 * 1024;
+
 function writeCanonicalJson(value: unknown): string {
   if (value === null || typeof value === 'boolean') return JSON.stringify(value);
   if (typeof value === 'string') {
@@ -93,7 +97,11 @@ function normalizeInput(input: CreateResearchGraphReleaseInput) {
     throw new TypeError('Previous research release digest must be a SHA-256 hex digest');
   }
   if (input.records.length === 0) throw new TypeError('A research graph release cannot be empty');
+  if (input.records.length > MAX_RESEARCH_RELEASE_RECORDS) {
+    throw new TypeError('A research graph release exceeds the supported record limit');
+  }
   const seen = new Set<string>();
+  let aggregateContentBytes = 0;
   const records = input.records
     .map((record) => {
       if (!record.key.trim() || record.key.length > 255 || seen.has(record.key)) {
@@ -109,6 +117,13 @@ function normalizeInput(input: CreateResearchGraphReleaseInput) {
       }
       seen.add(record.key);
       const contentJson = canonicalResearchJson(record.content);
+      aggregateContentBytes += Buffer.byteLength(contentJson, 'utf8');
+      if (
+        Buffer.byteLength(contentJson, 'utf8') > MAX_RESEARCH_RELEASE_CANONICAL_BYTES ||
+        aggregateContentBytes > MAX_RESEARCH_RELEASE_CANONICAL_BYTES
+      ) {
+        throw new TypeError('A research graph record exceeds the supported content limit');
+      }
       return {
         ...record,
         contentJson,
@@ -127,12 +142,27 @@ function normalizeInput(input: CreateResearchGraphReleaseInput) {
       contentDigest,
     })),
   });
+  if (
+    aggregateContentBytes + Buffer.byteLength(manifestJson, 'utf8') >
+    MAX_RESEARCH_RELEASE_CANONICAL_BYTES
+  ) {
+    throw new TypeError('A research graph release exceeds the supported byte limit');
+  }
   const manifestDigest = digest(manifestJson);
   return { records, manifestJson, manifestDigest };
 }
 
 async function readByDigest(trx: Knex.Transaction, releaseDigest: string) {
   return trx('knowledge_research_graph_releases').where({ release_digest: releaseDigest }).first();
+}
+
+function contentSizeExpression(trx: Knex.Transaction): string {
+  const client = String(trx.client.config.client);
+  if (client.includes('sqlite')) return 'length(CAST(content_json AS BLOB))';
+  if (client === 'pg' || client === 'postgres' || client === 'postgresql') {
+    return 'octet_length(content_json)';
+  }
+  throw new TypeError('Research release reader does not support this database client');
 }
 
 /**
@@ -302,12 +332,46 @@ export async function readResearchGraphRelease(
 ): Promise<StoredResearchGraphRelease | null> {
   const release = await readByDigest(trx, releaseDigest);
   if (!release) return null;
+  if (
+    !Number.isInteger(release.record_count) ||
+    Number(release.record_count) < 1 ||
+    Number(release.record_count) > MAX_RESEARCH_RELEASE_RECORDS ||
+    Buffer.byteLength(String(release.manifest_json), 'utf8') > MAX_RESEARCH_RELEASE_CANONICAL_BYTES
+  ) {
+    return null;
+  }
+  const boundedRecordSizes = trx('knowledge_research_graph_records')
+    .where({ release_id: release.id })
+    .select(trx.raw(`${contentSizeExpression(trx)} AS content_bytes`))
+    .limit(MAX_RESEARCH_RELEASE_RECORDS + 1)
+    .as('bounded_record_sizes');
+  const sizeRow = await trx
+    .select(
+      trx.raw(
+        'COUNT(*) AS bounded_record_count, COALESCE(SUM(content_bytes), 0) AS total_content_bytes'
+      )
+    )
+    .from(boundedRecordSizes)
+    .first();
+  if (
+    !sizeRow ||
+    Number(sizeRow.bounded_record_count) !== Number(release.record_count) ||
+    Number(sizeRow.bounded_record_count) > MAX_RESEARCH_RELEASE_RECORDS ||
+    Number(sizeRow.total_content_bytes) + Buffer.byteLength(String(release.manifest_json), 'utf8') >
+      MAX_RESEARCH_RELEASE_CANONICAL_BYTES
+  ) {
+    return null;
+  }
   const rows = await trx('knowledge_research_graph_records')
     .where({ release_id: release.id })
+    .limit(MAX_RESEARCH_RELEASE_RECORDS + 1)
     .orderBy('record_key', 'asc');
   if (rows.length !== release.record_count) return null;
+  let canonicalBytes = Buffer.byteLength(String(release.manifest_json), 'utf8');
   const parsed = rows.map((row) => {
     const contentJson = String(row.content_json);
+    canonicalBytes += Buffer.byteLength(contentJson, 'utf8');
+    if (canonicalBytes > MAX_RESEARCH_RELEASE_CANONICAL_BYTES) return null;
     if (digest(contentJson) !== row.content_digest) return null;
     try {
       const content = JSON.parse(contentJson) as unknown;

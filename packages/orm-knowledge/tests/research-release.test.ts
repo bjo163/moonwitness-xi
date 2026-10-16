@@ -7,6 +7,8 @@ import {
   canonicalResearchJson,
   createResearchGraphRelease,
   manifest,
+  MAX_RESEARCH_RELEASE_CANONICAL_BYTES,
+  MAX_RESEARCH_RELEASE_RECORDS,
   readActiveResearchGraphRelease,
   readResearchGraphRelease,
 } from '../src/index.js';
@@ -99,6 +101,73 @@ describe('canonical PostgreSQL-compatible research release pilot', () => {
         ModelAccess.query().findOne({ model_name: modelName, read: false, write: false })
       ).resolves.toBeDefined();
     }
+  });
+
+  it('rejects oversized releases before persistence and fails closed on oversized stored manifests', async () => {
+    await expect(
+      db.transaction((trx) =>
+        createResearchGraphRelease(trx, {
+          ...releaseInput,
+          records: Array.from({ length: MAX_RESEARCH_RELEASE_RECORDS + 1 }, (_, index) => ({
+            key: `mw:concept:oversized-${index}`,
+            kind: 'node' as const,
+            visibility: 'INTERNAL' as const,
+            content: {
+              id: `mw:concept:oversized-${index}`,
+              kind: 'Concept',
+              visibility: 'INTERNAL',
+            },
+          })),
+        })
+      )
+    ).rejects.toThrow('record limit');
+    await expect(
+      db.transaction((trx) =>
+        createResearchGraphRelease(trx, {
+          ...releaseInput,
+          records: releaseInput.records.map((record) => ({
+            ...record,
+            content: {
+              id: record.key,
+              kind: 'Concept',
+              visibility: 'INTERNAL',
+              payload: 'x'.repeat(MAX_RESEARCH_RELEASE_CANONICAL_BYTES),
+            },
+          })),
+        })
+      )
+    ).rejects.toThrow('content limit');
+    const oversizedAggregate = 'x'.repeat(MAX_RESEARCH_RELEASE_CANONICAL_BYTES / 2 + 128);
+    await expect(
+      db.transaction((trx) =>
+        createResearchGraphRelease(trx, {
+          ...releaseInput,
+          records: [0, 1].map((index) => ({
+            key: `mw:concept:aggregate-${index}`,
+            kind: 'node' as const,
+            visibility: 'INTERNAL' as const,
+            content: {
+              id: `mw:concept:aggregate-${index}`,
+              kind: 'Concept',
+              visibility: 'INTERNAL',
+              payload: oversizedAggregate,
+            },
+          })),
+        })
+      )
+    ).rejects.toThrow('content limit');
+
+    const valid = await db.transaction((trx) => createResearchGraphRelease(trx, releaseInput));
+    const releaseRow = await db('knowledge_research_graph_releases')
+      .where({ release_digest: valid.releaseDigest })
+      .first();
+    await db.raw('DROP TRIGGER knowledge_research_graph_releases_reject_update');
+    await db('knowledge_research_graph_releases')
+      .where({ id: releaseRow.id })
+      .update({ manifest_json: ' '.repeat(MAX_RESEARCH_RELEASE_CANONICAL_BYTES + 1) });
+    await expect(
+      db.transaction((trx) => readResearchGraphRelease(trx, valid.releaseDigest))
+    ).resolves.toBeNull();
   });
 
   it('stores content-addressed immutable releases and activates/rolls back by expected head', async () => {

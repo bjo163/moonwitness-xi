@@ -1168,6 +1168,8 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
     const researchRelationId = 'mw:relation:postgres-api-explanation';
     const researchEvidenceId = 'mw:evidence:postgres-api-explanation';
     const researchAssertionId = 'mw:assertion:postgres-api-explanation';
+    const duplicateAssertionId = 'mw:assertion:postgres-api-duplicate';
+    const restrictedAssertionId = 'mw:assertion:postgres-api-restricted-duplicate';
     const researchScopeId = 'mw:concept:postgres-api-explanation-scope';
     const researchLeftId = 'mw:entity:postgres-api-explanation-left';
     const researchRightId = 'mw:entity:postgres-api-explanation-right';
@@ -1226,6 +1228,50 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
               updated_at: '2026-10-16T00:00:00.000Z',
               origin_ref: 'fixture://research/postgres-api/001',
               visibility: 'PUBLIC_APPROVED',
+              content_revision: 1,
+              claim: 'Synthetic PostgreSQL API explanation fixture.',
+              polarity: 'positive',
+              scope: { kind: 'research_context', reference_id: researchScopeId },
+              context: { mode: 'analysis', reference_id: researchScopeId },
+              epistemic_status: 'hypothesized',
+              review_status: 'pending',
+            },
+          },
+          {
+            key: duplicateAssertionId,
+            kind: 'assertion',
+            visibility: 'INTERNAL',
+            content: {
+              id: duplicateAssertionId,
+              kind: 'Assertion',
+              schema_version: 1,
+              lifecycle: 'candidate',
+              created_at: '2026-10-16T00:00:00.000Z',
+              updated_at: '2026-10-16T00:00:00.000Z',
+              origin_ref: 'fixture://research/postgres-api/duplicate-001',
+              visibility: 'INTERNAL',
+              content_revision: 1,
+              claim: 'Synthetic PostgreSQL API explanation fixture.',
+              polarity: 'positive',
+              scope: { kind: 'research_context', reference_id: researchScopeId },
+              context: { mode: 'analysis', reference_id: researchScopeId },
+              epistemic_status: 'hypothesized',
+              review_status: 'pending',
+            },
+          },
+          {
+            key: restrictedAssertionId,
+            kind: 'assertion',
+            visibility: 'RESTRICTED',
+            content: {
+              id: restrictedAssertionId,
+              kind: 'Assertion',
+              schema_version: 1,
+              lifecycle: 'candidate',
+              created_at: '2026-10-16T00:00:00.000Z',
+              updated_at: '2026-10-16T00:00:00.000Z',
+              origin_ref: 'fixture://research/postgres-api/restricted-001',
+              visibility: 'RESTRICTED',
               content_revision: 1,
               claim: 'Synthetic PostgreSQL API explanation fixture.',
               polarity: 'positive',
@@ -1314,6 +1360,38 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
         },
       },
     });
+
+    const anonymousCandidates = await app.inject({
+      method: 'GET',
+      url: '/api/research/duplicate-candidates',
+    });
+    expect(anonymousCandidates.statusCode).toBe(401);
+    const postgresCandidates = await app.inject({
+      method: 'GET',
+      url: '/api/research/duplicate-candidates',
+      headers: authorization,
+    });
+    expect(postgresCandidates.statusCode, postgresCandidates.payload).toBe(200);
+    expect(postgresCandidates.headers['cache-control']).toBe('private, no-store');
+    expect(postgresCandidates.json()).toMatchObject({
+      success: true,
+      data: {
+        release_digest: researchRelease.releaseDigest,
+        candidates: [
+          {
+            left_id: duplicateAssertionId,
+            right_id: researchAssertionId,
+            status: 'unresolved',
+            kind: 'duplicate',
+          },
+        ],
+        truncated: false,
+      },
+    });
+    expect(postgresCandidates.payload).not.toContain(restrictedAssertionId);
+    expect(postgresCandidates.payload).not.toContain(
+      'Synthetic PostgreSQL API explanation fixture.'
+    );
 
     const users = await app.inject({
       method: 'GET',
