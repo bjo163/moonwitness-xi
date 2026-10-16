@@ -101,6 +101,7 @@ describe('Qur’an passage retrieval and local import', () => {
     );
     expect(snapshot.passage).not.toHaveProperty('sourceManifestBytes');
     expect(snapshot.passage).not.toHaveProperty('source_manifest_bytes');
+    expect(snapshot.sourceId).toBe('mw:source:test-quran');
   });
 
   it('rejects unknown editions and passage locators', async () => {

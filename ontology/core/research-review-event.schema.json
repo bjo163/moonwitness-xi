@@ -11,6 +11,7 @@
     "schema_version",
     "subject_id",
     "subject_revision",
+    "research_release_digest",
     "workflow_instance_id",
     "workflow_event_sequence",
     "workflow_revision",
@@ -32,6 +33,7 @@
       "pattern": "^mw:(?:assertion|relation):[a-z0-9][a-z0-9._-]{0,179}$"
     },
     "subject_revision": { "type": "integer", "minimum": 1 },
+    "research_release_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "workflow_instance_id": { "type": "integer", "minimum": 1 },
     "workflow_event_sequence": { "type": "integer", "minimum": 1 },
     "workflow_revision": { "type": "integer", "minimum": 1 },

@@ -15,7 +15,7 @@ troubleshooting tersedia di [Developer guide](docs/guide/index.md).
 
 ## Generated workspace reference
 
-Monorepo version: `1.0.0-rc.1` · metadata fingerprint: `4e8c7dffe5674b19e805bd2d092adbf638040311ebbc488b3852ead70e5e903e`.
+Monorepo version: `1.0.0-rc.1` · metadata fingerprint: `f909c4b80439da9c93fac122f0ff91fd4d303624e8df39690b3b71309adaabc2`.
 
 | App/package                     | Kind    | Version      | Workspace scripts                                                                                                                                                                    |
 | ------------------------------- | ------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

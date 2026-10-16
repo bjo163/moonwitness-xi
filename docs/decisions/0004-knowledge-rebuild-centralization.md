@@ -1,7 +1,7 @@
 # ADR 0004: XI knowledge rebuild boundaries and deployment review
 
 - Status: accepted
-- Date: 2026-10-15
+- Date: 2026-10-15 (storage selection recorded 2026-10-16)
 - Decision owners: MoonWitness maintainers (maintainer approval recorded 2026-10-15)
 - Related plan: `MOONWITNESS_XI_LOCAL_AI_REBUILD_PLAN_2026-10-15/MOONWITNESS_XI_MASTER_PLAN.md`
 - Related task: K0-001
@@ -27,11 +27,18 @@ unlicensed corpus bytes, changing live schemas, or publishing application data.
    contracts, domain modules, adapters, and user experiences that maintainers
    accept. Legacy repositories remain research references or individually
    reviewed import candidates; they are not runtime dependencies.
-2. Separate canonical knowledge records and immutable source artifacts from
-   operational PostgreSQL state and from reproducible derived indexes. Do not
+2. Store canonical knowledge records, immutable graph releases, and
+   operational workflow/review events in the local PostgreSQL database. The
+   owner selected "all in PostgreSQL" on 2026-10-16 for the graph snapshot and
+   review-storage choice after reviewing the typed K3 storage pilot. This
+   selection does not copy approved corpus source bytes into PostgreSQL: those
+   remain pinned local repository assets and are resolved offline with their
+   rights metadata. Keep these responsibilities distinct through the
+   addon/schema boundary; derived indexes remain reproducible outputs. Do not
    make Board state, AI memory, a vector index, or an external legacy service a
-   second canonical source. Select concrete storage only after a typed pilot
-   and compatibility review; no schema or persistence design is approved here.
+   second canonical source. Complete hosted PostgreSQL and recovery
+   compatibility checks before exposing authenticated K3 adapters or treating
+   the persistence path as production-ready.
 3. Keep existing runtime and delivery contracts. Any new persistent schema
    must use the accepted programmatic addon/upgrade path and preserve existing
    user data. Any new package or adapter needs a bounded responsibility,
@@ -64,6 +71,8 @@ unlicensed corpus bytes, changing live schemas, or publishing application data.
   not inferred from plan documents.
 - Subsequent K0/K1 work should be split into reviewable task batches. Schema,
   corpus ingestion, private-data import, runtime AI, and deployment each retain
-  their own acceptance and approval gates.
+  their own acceptance and approval gates. The K3 PostgreSQL selection does
+  not approve new source imports or private data, and does not close the hosted
+  compatibility or restore evidence gates.
 - This proposal does not close a roadmap item, create issues, change an
   accepted ADR, or certify a release.

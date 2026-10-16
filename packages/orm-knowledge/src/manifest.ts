@@ -1,6 +1,15 @@
 import { defineAddon, ref, seed, type Addon } from '@moonwitness/orm';
 import { ModelAccess } from '@moonwitness/orm-base';
-import { WitnessCorrection, WitnessInterpretation, WitnessTestimony } from './models.js';
+import {
+  ResearchActiveRelease,
+  ResearchActorIdentity,
+  ResearchGraphRecord,
+  ResearchGraphRelease,
+  ResearchReviewEvent,
+  WitnessCorrection,
+  WitnessInterpretation,
+  WitnessTestimony,
+} from './models.js';
 import { views } from './views.js';
 
 const syntheticDigest = 'a'.repeat(64);
@@ -10,6 +19,10 @@ const installAppendOnlyGuards: NonNullable<Addon['setup']> = async (trx) => {
     'knowledge_witness_testimonies',
     'knowledge_witness_corrections',
     'knowledge_witness_interpretations',
+    'knowledge_research_graph_releases',
+    'knowledge_research_graph_records',
+    'knowledge_research_review_events',
+    'knowledge_research_actor_identities',
   ] as const;
   const client = String(trx.client.config.client);
 
@@ -18,7 +31,7 @@ const installAppendOnlyGuards: NonNullable<Addon['setup']> = async (trx) => {
       CREATE OR REPLACE FUNCTION moonwitness_reject_knowledge_witness_mutation()
       RETURNS trigger AS $$
       BEGIN
-        RAISE EXCEPTION 'Knowledge witness records are append-only';
+      RAISE EXCEPTION 'Knowledge witness records are append-only';
       END;
       $$ LANGUAGE plpgsql
     `);
@@ -47,9 +60,18 @@ const installAppendOnlyGuards: NonNullable<Addon['setup']> = async (trx) => {
 
 export const manifest = defineAddon({
   name: 'knowledge',
-  version: '1.0.0',
+  version: '1.1.0',
   depends: ['base'],
-  models: [WitnessTestimony, WitnessCorrection, WitnessInterpretation],
+  models: [
+    WitnessTestimony,
+    WitnessCorrection,
+    WitnessInterpretation,
+    ResearchGraphRelease,
+    ResearchGraphRecord,
+    ResearchActiveRelease,
+    ResearchReviewEvent,
+    ResearchActorIdentity,
+  ],
   setup: installAppendOnlyGuards,
   data: [
     seed(WitnessTestimony, 'knowledge.synthetic_witness_001', {
@@ -109,6 +131,24 @@ export const manifest = defineAddon({
       write: false,
       unlink: false,
     }),
+    ...(
+      [
+        ResearchGraphRelease,
+        ResearchGraphRecord,
+        ResearchActiveRelease,
+        ResearchReviewEvent,
+        ResearchActorIdentity,
+      ] as const
+    ).map((model) =>
+      seed(ModelAccess, `knowledge.access_user_${model.modelName.replaceAll('.', '_')}_read`, {
+        group: ref('base.group_user'),
+        model_name: model.modelName,
+        read: false,
+        create: false,
+        write: false,
+        unlink: false,
+      })
+    ),
   ],
   views,
   menus: [

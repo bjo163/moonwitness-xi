@@ -3041,9 +3041,312 @@
     },
     {
       "name": "knowledge",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "depends": ["base"],
       "models": [
+        {
+          "name": "knowledge.research_active_release",
+          "table": "knowledge_research_active_releases",
+          "fields": [
+            {
+              "name": "activated_at",
+              "kind": "string",
+              "column": "activated_at",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "corpus_key",
+              "kind": "string",
+              "column": "corpus_key",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "release",
+              "kind": "belongsTo",
+              "column": "release_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "knowledge.research_graph_release"
+            }
+          ],
+          "uniqueConstraints": [["corpus_key"]]
+        },
+        {
+          "name": "knowledge.research_actor_identity",
+          "table": "knowledge_research_actor_identities",
+          "fields": [
+            {
+              "name": "canonical_user_id",
+              "kind": "string",
+              "column": "canonical_user_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": true,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "user",
+              "kind": "belongsTo",
+              "column": "user_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": true,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.user"
+            }
+          ],
+          "uniqueConstraints": [["user"]]
+        },
+        {
+          "name": "knowledge.research_graph_record",
+          "table": "knowledge_research_graph_records",
+          "fields": [
+            {
+              "name": "content_digest",
+              "kind": "string",
+              "column": "content_digest",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "content_json",
+              "kind": "text",
+              "column": "content_json",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "record_key",
+              "kind": "string",
+              "column": "record_key",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "record_kind",
+              "kind": "enum",
+              "column": "record_kind",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "values": ["assertion", "evidence", "expression", "node", "relation", "source"]
+            },
+            {
+              "name": "release",
+              "kind": "belongsTo",
+              "column": "release_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "knowledge.research_graph_release"
+            },
+            {
+              "name": "visibility",
+              "kind": "enum",
+              "column": "visibility",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "values": ["INTERNAL", "PUBLIC", "RESTRICTED"]
+            }
+          ],
+          "uniqueConstraints": [["record_key", "release"]]
+        },
+        {
+          "name": "knowledge.research_graph_release",
+          "table": "knowledge_research_graph_releases",
+          "fields": [
+            {
+              "name": "manifest_digest",
+              "kind": "string",
+              "column": "manifest_digest",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "manifest_json",
+              "kind": "text",
+              "column": "manifest_json",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "previous_release_digest",
+              "kind": "string",
+              "column": "previous_release_digest",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "record_count",
+              "kind": "integer",
+              "column": "record_count",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "release_digest",
+              "kind": "string",
+              "column": "release_digest",
+              "declaredRequired": true,
+              "required": true,
+              "unique": true,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "schema_version",
+              "kind": "string",
+              "column": "schema_version",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            }
+          ],
+          "uniqueConstraints": []
+        },
+        {
+          "name": "knowledge.research_review_event",
+          "table": "knowledge_research_review_events",
+          "fields": [
+            {
+              "name": "event_digest",
+              "kind": "string",
+              "column": "event_digest",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "event_id",
+              "kind": "string",
+              "column": "event_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": true,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "event_json",
+              "kind": "text",
+              "column": "event_json",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "idempotency_key",
+              "kind": "string",
+              "column": "idempotency_key",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "research_release_digest",
+              "kind": "string",
+              "column": "research_release_digest",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "subject_id",
+              "kind": "string",
+              "column": "subject_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "subject_revision",
+              "kind": "integer",
+              "column": "subject_revision",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "workflow_event_sequence",
+              "kind": "integer",
+              "column": "workflow_event_sequence",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "workflow_instance_id",
+              "kind": "integer",
+              "column": "workflow_instance_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            }
+          ],
+          "uniqueConstraints": [
+            ["idempotency_key"],
+            ["workflow_event_sequence", "workflow_instance_id"]
+          ]
+        },
         {
           "name": "knowledge.witness_correction",
           "table": "knowledge_witness_corrections",
@@ -3413,9 +3716,49 @@
         "knowledge.witness_testimony": 1,
         "knowledge.witness_correction": 1,
         "knowledge.witness_interpretation": 1,
-        "base.model_access": 3
+        "base.model_access": 8
       },
       "accessRules": [
+        {
+          "group": "base.group_user",
+          "model": "knowledge.research_active_release",
+          "read": false,
+          "create": false,
+          "write": false,
+          "unlink": false
+        },
+        {
+          "group": "base.group_user",
+          "model": "knowledge.research_actor_identity",
+          "read": false,
+          "create": false,
+          "write": false,
+          "unlink": false
+        },
+        {
+          "group": "base.group_user",
+          "model": "knowledge.research_graph_record",
+          "read": false,
+          "create": false,
+          "write": false,
+          "unlink": false
+        },
+        {
+          "group": "base.group_user",
+          "model": "knowledge.research_graph_release",
+          "read": false,
+          "create": false,
+          "write": false,
+          "unlink": false
+        },
+        {
+          "group": "base.group_user",
+          "model": "knowledge.research_review_event",
+          "read": false,
+          "create": false,
+          "write": false,
+          "unlink": false
+        },
         {
           "group": "base.group_user",
           "model": "knowledge.witness_correction",
@@ -5107,5 +5450,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "4e8c7dffe5674b19e805bd2d092adbf638040311ebbc488b3852ead70e5e903e"
+  "generatedFromSha256": "f909c4b80439da9c93fac122f0ff91fd4d303624e8df39690b3b71309adaabc2"
 }

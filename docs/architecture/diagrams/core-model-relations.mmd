@@ -28,21 +28,26 @@ flowchart LR
   model26["base.user"]
   model27["integration.webhook_delivery"]
   model28["integration.webhook_endpoint"]
-  model29["knowledge.witness_correction"]
-  model30["knowledge.witness_interpretation"]
-  model31["knowledge.witness_testimony"]
-  model32["notification.notification"]
-  model33["notification.preference"]
-  model34["notification.template"]
-  model35["organization.department"]
-  model36["organization.membership"]
-  model37["organization.position"]
-  model38["organization.team"]
-  model39["request.purchase"]
-  model40["workflow.approval"]
-  model41["workflow.definition"]
-  model42["workflow.event"]
-  model43["workflow.instance"]
+  model29["knowledge.research_active_release"]
+  model30["knowledge.research_actor_identity"]
+  model31["knowledge.research_graph_record"]
+  model32["knowledge.research_graph_release"]
+  model33["knowledge.research_review_event"]
+  model34["knowledge.witness_correction"]
+  model35["knowledge.witness_interpretation"]
+  model36["knowledge.witness_testimony"]
+  model37["notification.notification"]
+  model38["notification.preference"]
+  model39["notification.template"]
+  model40["organization.department"]
+  model41["organization.membership"]
+  model42["organization.position"]
+  model43["organization.team"]
+  model44["request.purchase"]
+  model45["workflow.approval"]
+  model46["workflow.definition"]
+  model47["workflow.event"]
+  model48["workflow.instance"]
   model0 -->|user N:1| model26
   model2 -->|assigned_to N:1| model26
   model5 -->|country N:1| model8
@@ -82,36 +87,39 @@ flowchart LR
   model27 -->|company N:1| model6
   model27 -->|endpoint N:1| model28
   model28 -->|company N:1| model6
-  model29 -->|recorded_by N:1| model26
-  model29 -->|testimony N:1| model31
-  model30 -->|recorded_by N:1| model26
-  model30 -->|testimony N:1| model31
-  model31 -->|created_by N:1| model26
-  model32 -->|company N:1| model6
-  model32 -->|recipient N:1| model26
-  model32 -->|template N:1| model34
-  model33 -->|company N:1| model6
-  model33 -->|user N:1| model26
-  model35 -->|company N:1| model6
-  model35 -->|parent N:1| model35
-  model36 -->|company N:1| model6
-  model36 -->|department N:1| model35
-  model36 -->|manager N:1| model36
-  model36 -->|position N:1| model37
-  model36 -->|team N:1| model38
-  model36 -->|user N:1| model26
+  model29 -->|release N:1| model32
+  model30 -->|user 1:1| model26
+  model31 -->|release N:1| model32
+  model34 -->|recorded_by N:1| model26
+  model34 -->|testimony N:1| model36
+  model35 -->|recorded_by N:1| model26
+  model35 -->|testimony N:1| model36
+  model36 -->|created_by N:1| model26
   model37 -->|company N:1| model6
-  model37 -->|department N:1| model35
+  model37 -->|recipient N:1| model26
+  model37 -->|template N:1| model39
   model38 -->|company N:1| model6
-  model38 -->|department N:1| model35
-  model38 -->|parent N:1| model38
-  model39 -->|company N:1| model6
-  model39 -->|currency N:1| model11
-  model39 -->|vendor N:1| model18
-  model40 -->|actor N:1| model26
-  model40 -->|instance N:1| model43
-  model42 -->|actor N:1| model26
-  model42 -->|instance N:1| model43
+  model38 -->|user N:1| model26
+  model40 -->|company N:1| model6
+  model40 -->|parent N:1| model40
+  model41 -->|company N:1| model6
+  model41 -->|department N:1| model40
+  model41 -->|manager N:1| model41
+  model41 -->|position N:1| model42
+  model41 -->|team N:1| model43
+  model41 -->|user N:1| model26
+  model42 -->|company N:1| model6
+  model42 -->|department N:1| model40
   model43 -->|company N:1| model6
-  model43 -->|definition N:1| model41
-  model43 -->|started_by N:1| model26
+  model43 -->|department N:1| model40
+  model43 -->|parent N:1| model43
+  model44 -->|company N:1| model6
+  model44 -->|currency N:1| model11
+  model44 -->|vendor N:1| model18
+  model45 -->|actor N:1| model26
+  model45 -->|instance N:1| model48
+  model47 -->|actor N:1| model26
+  model47 -->|instance N:1| model48
+  model48 -->|company N:1| model6
+  model48 -->|definition N:1| model46
+  model48 -->|started_by N:1| model26

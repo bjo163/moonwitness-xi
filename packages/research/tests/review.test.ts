@@ -32,6 +32,7 @@ function input(overrides: Partial<AppendResearchReviewInput> = {}): AppendResear
     authenticatedRole: 'user',
     requesterId: 'mw:user:author-01',
     expectedSubjectRevision: 2,
+    researchReleaseDigest: 'a'.repeat(64),
     workflowInstanceId: 41,
     workflowEventSequence: 1,
     workflowRevision: 1,

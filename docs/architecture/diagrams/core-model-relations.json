@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "addons": ["auth", "base", "jobs", "notification"],
   "generatedFrom": "core addon manifests and model field metadata; no seed values included",
-  "sourceSha256": "fe083520cef4879d57208aab0e31a5ef4bb0073d4e9a8d809a773a5151ba65c0",
+  "sourceSha256": "49df194a0fadd7ae207c0da452c043fc28862434b937f4d0e81e77cc5d89354f",
   "models": [
     {
       "name": "auth.refresh_token",
@@ -119,6 +119,26 @@
     {
       "name": "integration.webhook_endpoint",
       "table": "integration_webhook_endpoints"
+    },
+    {
+      "name": "knowledge.research_active_release",
+      "table": "knowledge_research_active_releases"
+    },
+    {
+      "name": "knowledge.research_actor_identity",
+      "table": "knowledge_research_actor_identities"
+    },
+    {
+      "name": "knowledge.research_graph_record",
+      "table": "knowledge_research_graph_records"
+    },
+    {
+      "name": "knowledge.research_graph_release",
+      "table": "knowledge_research_graph_releases"
+    },
+    {
+      "name": "knowledge.research_review_event",
+      "table": "knowledge_research_review_events"
     },
     {
       "name": "knowledge.witness_correction",
@@ -452,6 +472,27 @@
       "from": "integration.webhook_endpoint",
       "field": "company",
       "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "knowledge.research_active_release",
+      "field": "release",
+      "to": "knowledge.research_graph_release",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "knowledge.research_actor_identity",
+      "field": "user",
+      "to": "base.user",
+      "cardinality": "1:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "knowledge.research_graph_record",
+      "field": "release",
+      "to": "knowledge.research_graph_release",
       "cardinality": "N:1",
       "kind": "belongsTo"
     },

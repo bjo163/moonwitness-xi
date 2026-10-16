@@ -2,10 +2,10 @@
 
 ## Status
 
-- Status: pilot evidence only; no canonical research-storage decision is accepted by this note.
+- Status: pilot evidence only. On 2026-10-16 the owner selected PostgreSQL for canonical research graph releases and operational review events. Hosted PostgreSQL, combined workflow transaction, and recovery compatibility gates remain open; this note does not mark the storage path production-ready.
 - Date: 2026-10-16 (Asia/Jakarta).
-- Scope: test-only compatibility exercise joining the existing local corpus snapshot/release path to the existing ORM workflow event path.
-- Data: one synthetic entity at content revisions 1 and 2. No external repository, network source, licensed corpus text, private data, production schema, addon, or API was used.
+- Scope: an original test-only compatibility exercise joining filesystem corpus snapshots to ORM workflow events, followed by a typed PostgreSQL addon pilot for immutable research graph releases.
+- Data: synthetic entities and graph records at content revisions 1 and 2. No external repository, network source, licensed corpus text, or private data was used.
 
 ## Pilot
 
@@ -29,12 +29,27 @@ Existing focused suites add broader evidence for immutable release manifests, ex
 
 The pilot shows the two existing mechanisms can be joined by stable release and content digests: the file-backed release path can reproduce an immutable graph snapshot, while the workflow event path can atomically retain a decision payload referencing that exact snapshot. They are complementary boundaries rather than interchangeable stores: the corpus release path supplies canonical snapshot retrieval/rebuild/rollback; workflow tables supply operational state transitions and append-only review-event history. A workflow JSON payload alone does not validate or resolve a canonical research record.
 
-Recommended candidate for a future owner decision: keep accepted graph releases and immutable source artifacts as local content-addressed files/snapshots; keep draft workflow state and transactional review events in the existing PostgreSQL-backed ORM workflow addon, with each event bound to an exact release/snapshot digest and subject revision. Derived indexes remain rebuildable outputs. This note is evidence for that candidate, not approval to implement a research persistence addon or public API. ADR 0004 remains unchanged and still requires explicit selection and compatibility review before production schema/API work.
+The original file-snapshot recommendation below is superseded by the owner's explicit choice to keep canonical graph releases and review workflow/events in PostgreSQL. Derived indexes remain rebuildable outputs. The previous filesystem exercise remains historical evidence only.
+
+## PostgreSQL selection follow-up
+
+The owner selected "all in PostgreSQL" on 2026-10-16. The first typed storage pilot is implemented in `@moonwitness/orm-knowledge` through the normal addon install path:
+
+- `knowledge_research_graph_releases` stores immutable manifest bytes and their SHA-256 identity.
+- `knowledge_research_graph_records` stores each immutable canonical JSON record and content digest.
+- `knowledge_research_active_releases` selects one active immutable release per corpus. Activation checks the expected current digest and can restore a prior intact release.
+- A `research-graph/v1` release must pass the ontology assertion/relation/evidence and graph checks before activation; active reads verify corpus identity and fail closed on invalid graph snapshots.
+- Release bytes are canonicalized deterministically, and reads verify member hashes, manifest membership, and release digest before returning records.
+- Test data is synthetic. It includes no new licensed text, witness data, or relationship between the approved Quran and Genesis examples.
+
+The local SQLite compatibility tests pass for deterministic serialization, exact replay, immutable rows, expected-head activation/rollback, and caller-transaction rollback. An isolated-schema PostgreSQL integration test has been added to the existing hosted integration suite, but could not run locally because `POSTGRES_TEST_URL` is unavailable. A hosted green run is still required to claim PostgreSQL compatibility.
+
+The transaction-aware K3 review adapter is now implemented locally in `@moonwitness/orm-knowledge`: it validates the active PostgreSQL graph release, subject/evidence bindings, authenticated reviewer context, and explicit actor identity mappings inside the locked workflow transaction, then persists the decision with the workflow event. It has focused SQLite behavioral tests. The PostgreSQL integration suite currently tests graph release create/read/activate/rollback and append-only guards, but not the combined review adapter; hosted PostgreSQL and restore/recovery verification remain open. No authenticated HTTP read/write API or production exposure is implemented. Approved Tanzil/Q7:46 source bytes remain pinned local repository assets resolved offline; the PostgreSQL selection concerns canonical structured research snapshots and operational review/workflow data, and does not copy corpus bytes into PostgreSQL. The addon remains a typed pilot, not evidence for deployment.
 
 ## Limitations and gates
 
-- The test only binds a synthetic event payload to a previously built release. It does not validate subject/evidence records under a locked application transition, prove evidence-to-assertion association, authenticate an API actor, resolve visibility, or select an authorized graph release. K3-005 and K3-006 remain in progress.
-- This uses SQLite, not PostgreSQL. Hosted exact-SHA PostgreSQL integration remains required for locking/trigger and restore acceptance; local `POSTGRES_TEST_URL` was unavailable in the prior task environment.
+- SQLite adapter tests validate subject/evidence records under a locked workflow transition, prove evidence-to-subject association, authenticate the reviewer against database role/company membership plus an explicit canonical identity mapping, resolve visibility, and select the verified active release. PostgreSQL execution of this combined transaction and recovery remain unverified; K3-005 and K3-006 remain in progress.
+- The original compatibility exercise used SQLite and filesystem releases, not PostgreSQL. The new addon has an isolated PostgreSQL integration test in the hosted suite, but that test has not run locally because `POSTGRES_TEST_URL` is unavailable.
 - File snapshot and recipe durability, filesystem permissions, backup/restore of file bytes alongside PostgreSQL, and multi-process deployment semantics are not certified. Application deployment remains out of scope under ADR 0001/0004.
-- Existing Q7:46 Tanzil and WEBP Genesis 1:1 approvals remain exact-source/sample scope only. This pilot imports neither and asserts no relationship between them. Rights/privacy policy ownership does not authorize other imports or private-data projection.
-- Before a production decision: review whether filesystem release storage is an acceptable canonical home for the intended local runtime; specify DB-to-snapshot backup/restore and release activation semantics; run PostgreSQL upgrade/transaction/append-only/restore coverage; and approve the authenticated K3 adapter contract and visibility rules.
+- Existing Q7:46 Tanzil and WEBP Genesis 1:1 approvals remain exact-source/sample scope only. The review fixture resolves only Q7:46 locally and asserts no relationship between it and Genesis. Rights/privacy policy ownership does not authorize other imports or private-data projection.
+- Before production acceptance: pass the hosted PostgreSQL integration test; bind the release lookup and validated review payload to the same locked workflow transaction; define and rehearse restore of releases, active pointers, and workflow history from one consistent database backup; and approve the authenticated K3 adapter contract and visibility rules.

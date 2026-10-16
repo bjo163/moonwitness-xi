@@ -46,6 +46,8 @@ export interface QuranPassage {
 export interface QuranPassageSnapshot {
   passage: QuranPassage;
   sourceManifestBytes: Buffer;
+  /** Source identity validated from the same canonical source-bytes manifest. */
+  sourceId: string;
 }
 
 export interface ImportQuranPassageRequest extends ReadQuranPassageRequest {
@@ -233,6 +235,7 @@ async function readQuranPassageSnapshotInternal(
       attribution: manifest.attribution.text,
     },
     sourceManifestBytes: manifestBytes,
+    sourceId: manifest.source_id,
   };
 }
 

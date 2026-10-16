@@ -19,6 +19,7 @@ export interface ResearchReviewEvent {
   schema_version: 1;
   subject_id: string;
   subject_revision: number;
+  research_release_digest: string;
   workflow_instance_id: number;
   workflow_event_sequence: number;
   workflow_revision: number;
@@ -38,6 +39,7 @@ export interface AppendResearchReviewInput {
   authenticatedRole: ResearchReviewActorRole;
   requesterId: string;
   expectedSubjectRevision: number;
+  researchReleaseDigest: string;
   workflowInstanceId: number;
   workflowEventSequence: number;
   workflowRevision: number;
@@ -99,6 +101,7 @@ function replayMatches(
     event.requester_id === input.requesterId &&
     event.reviewer_role === input.authenticatedRole &&
     event.subject_revision === input.expectedSubjectRevision &&
+    event.research_release_digest === input.researchReleaseDigest &&
     event.workflow_instance_id === input.workflowInstanceId &&
     event.workflow_event_sequence === input.workflowEventSequence &&
     event.workflow_revision === input.workflowRevision &&
@@ -147,6 +150,13 @@ export function appendResearchReviewEvent(
       '/expectedSubjectRevision',
       'subject_revision',
       'subject revision must be a positive integer'
+    );
+  }
+  if (!/^[a-f0-9]{64}$/u.test(input.researchReleaseDigest)) {
+    return invalid(
+      '/researchReleaseDigest',
+      'release_digest',
+      'review must reference an immutable research release'
     );
   }
   if (
@@ -249,6 +259,7 @@ export function appendResearchReviewEvent(
     schema_version: 1,
     subject_id: subject.id,
     subject_revision: subject.content_revision,
+    research_release_digest: input.researchReleaseDigest,
     workflow_instance_id: input.workflowInstanceId,
     workflow_event_sequence: input.workflowEventSequence,
     workflow_revision: input.workflowRevision,

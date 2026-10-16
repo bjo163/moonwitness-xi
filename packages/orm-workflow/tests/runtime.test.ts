@@ -299,6 +299,136 @@ describe('workflow addon', () => {
     ).rejects.toMatchObject({ code: 'INVALID_EVENT_PAYLOAD' });
   });
 
+  it('prepares event payloads from the locked transition and replays by stable request payload', async () => {
+    const database = await setup();
+    const { systemId, adminId, companyId, resourceId } = await actors(database);
+    const started = await startWorkflow(database, {
+      code: 'sample.request_approval',
+      companyId,
+      actorId: systemId,
+      role: 'system',
+      resourceModel: 'base.partner',
+      resourceId,
+      idempotencyKey: 'prepared-start-key-01',
+      now: new Date('2026-10-16T00:00:00.000Z'),
+    });
+    let prepareCalls = 0;
+    const input = {
+      instanceId: started.id,
+      companyId,
+      actorId: adminId,
+      role: 'superadmin' as const,
+      action: 'submit',
+      expectedRevision: 0,
+      idempotencyKey: 'prepared-action-key-01',
+      payload: { subject: 'synthetic-subject', revision: 3 },
+      now: new Date('2026-10-16T00:01:00.000Z'),
+      preparePayload: async (context: {
+        trx: Knex.Transaction;
+        instance: { id: number; started_by_id: number; revision: number; current_state: string };
+        action: string;
+        fromState: string;
+        toState: string;
+        sequence: number;
+        revision: number;
+        actorId: number;
+        role: string;
+        idempotencyKey: string;
+        eventTime: string;
+      }) => {
+        prepareCalls += 1;
+        expect(Object.isFrozen(context.instance)).toBe(true);
+        expect(context).toMatchObject({
+          instance: {
+            id: started.id,
+            started_by_id: systemId,
+            revision: 0,
+            current_state: 'draft',
+          },
+          action: 'submit',
+          fromState: 'draft',
+          toState: 'submitted',
+          sequence: 1,
+          revision: 1,
+          actorId: adminId,
+          role: 'superadmin',
+          idempotencyKey: input.idempotencyKey,
+          eventTime: '2026-10-16T00:01:00.000Z',
+        });
+        await expect(
+          context.trx('workflow_instances').where({ id: started.id }).first('revision')
+        ).resolves.toMatchObject({ revision: 0 });
+        return { requesterId: context.instance.started_by_id, subject: 'synthetic-subject' };
+      },
+    };
+
+    await transitionWorkflow(database, input);
+    const stored = await database('workflow_events')
+      .where({ idempotency_key: input.idempotencyKey })
+      .first('payload');
+    expect(JSON.parse(String(stored?.payload))).toEqual({
+      event: { requesterId: systemId, subject: 'synthetic-subject' },
+      request: { revision: 3, subject: 'synthetic-subject' },
+      workflowPreparedPayload: 1,
+    });
+    await expect(transitionWorkflow(database, input)).resolves.toMatchObject({
+      revision: 1,
+      currentState: 'submitted',
+    });
+    expect(prepareCalls).toBe(1);
+
+    await expect(
+      transitionWorkflow(database, {
+        ...input,
+        payload: { subject: 'different-subject', revision: 3 },
+      })
+    ).rejects.toMatchObject({ code: 'IDEMPOTENCY_CONFLICT' });
+    await expect(
+      transitionWorkflow(database, {
+        ...input,
+        preparePayload: undefined,
+      })
+    ).rejects.toMatchObject({ code: 'IDEMPOTENCY_CONFLICT' });
+    expect(prepareCalls).toBe(1);
+  });
+
+  it('rolls back state and event writes when the payload preparer fails', async () => {
+    const database = await setup();
+    const { systemId, adminId, companyId, resourceId } = await actors(database);
+    const started = await startWorkflow(database, {
+      code: 'sample.request_approval',
+      companyId,
+      actorId: systemId,
+      role: 'system',
+      resourceModel: 'base.partner',
+      resourceId,
+      idempotencyKey: 'prepared-failure-start-01',
+    });
+    await expect(
+      transitionWorkflow(database, {
+        instanceId: started.id,
+        companyId,
+        actorId: adminId,
+        role: 'superadmin',
+        action: 'submit',
+        expectedRevision: 0,
+        idempotencyKey: 'prepared-failure-action-01',
+        payload: { subject: 'synthetic-subject' },
+        preparePayload: async (context) => {
+          expect(context.instance.started_by_id).toBe(systemId);
+          throw new Error('injected payload preparation failure');
+        },
+      })
+    ).rejects.toThrow('injected payload preparation failure');
+
+    await expect(
+      database('workflow_instances').where({ id: started.id }).first('current_state', 'revision')
+    ).resolves.toMatchObject({ current_state: 'draft', revision: 0 });
+    await expect(
+      database('workflow_events').where({ idempotency_key: 'prepared-failure-action-01' })
+    ).resolves.toHaveLength(0);
+  });
+
   it('rejects workflow event updates and deletes through ORM and raw SQL', async () => {
     const database = await setup();
     const { systemId, companyId, resourceId } = await actors(database);

@@ -569,16 +569,31 @@ importers:
 
   packages/orm-knowledge:
     dependencies:
+      '@moonwitness/corpus':
+        specifier: workspace:*
+        version: link:../corpus
       '@moonwitness/orm':
         specifier: workspace:*
         version: link:../orm
       '@moonwitness/orm-base':
         specifier: workspace:*
         version: link:../orm-base
+      '@moonwitness/orm-workflow':
+        specifier: workspace:*
+        version: link:../orm-workflow
+      '@moonwitness/research':
+        specifier: workspace:*
+        version: link:../research
       objection:
         specifier: ^3.1.5
         version: 3.1.5(knex@3.3.0(better-sqlite3@13.0.3)(pg@8.23.1))
     devDependencies:
+      '@moonwitness/jobs':
+        specifier: workspace:*
+        version: link:../jobs
+      '@moonwitness/orm-notification':
+        specifier: workspace:*
+        version: link:../orm-notification
       '@vitest/coverage-v8':
         specifier: 5.0.3
         version: 5.0.3(vitest@5.0.3)
