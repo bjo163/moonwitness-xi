@@ -8,6 +8,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   collectLifecycleSnapshot,
   completedExactDevPullRequestTechnicalGate,
+  exactDevPullRequestTechnicalGate,
   flattenGitHubPages,
   isExactDevMainPullRequest,
   selectExactDevPullRequestCiRun,
@@ -62,53 +63,40 @@ async function ghJsonObject(args) {
   return JSON.parse(stdout);
 }
 
-export async function waitForCurrentDevPullRequestTechnicalGate({
+export async function readCurrentDevPullRequestTechnicalGate({
   repository,
   sourceSha,
   readDevHead,
   readWorkflowRuns,
   readPullRequest,
   readJobs,
-  sleep = delay,
-  now = Date.now,
-  onHeartbeat = () => {},
-  timeoutMs = 25 * 60 * 1000,
 }) {
-  const deadline = now() + timeoutMs;
-  let lastHeartbeat = 0;
-  while (now() < deadline) {
+  if ((await readDevHead()) !== sourceSha) return { status: 'stale' };
+  const pages = await readWorkflowRuns();
+  const run = selectExactDevPullRequestCiRun(pages, sourceSha);
+  if (!run) return { status: 'ready', checkRuns: [] };
+
+  const pullRequest = await readPullRequest(run.pull_request_number);
+  if (!isExactDevMainPullRequest(pullRequest, sourceSha, repository, run.pull_request_number)) {
     if ((await readDevHead()) !== sourceSha) return { status: 'stale' };
-    const pages = await readWorkflowRuns();
-    const run = selectExactDevPullRequestCiRun(pages, sourceSha);
-    if (run) {
-      const pullRequest = await readPullRequest(run.pull_request_number);
-      if (!isExactDevMainPullRequest(pullRequest, sourceSha, repository, run.pull_request_number)) {
-        if ((await readDevHead()) !== sourceSha) return { status: 'stale' };
-        throw new Error(
-          `The CI run for ${sourceSha} is not tied to a same-repository dev-to-main pull request.`
-        );
-      }
-    }
-    if (run?.status === 'completed') {
-      const jobPages = await readJobs(run.id);
-      return {
-        status: 'ready',
-        checkRuns: completedExactDevPullRequestTechnicalGate(run, jobPages),
-      };
-    }
-    const currentTime = now();
-    if (currentTime - lastHeartbeat >= 60_000) {
-      const runStatus = run ? `run ${run.id} is ${run.status}` : 'no exact-source PR run found yet';
-      onHeartbeat(
-        `Waiting for the exact dev-to-main PR technical gate at ${sourceSha}: ${runStatus}.`
-      );
-      lastHeartbeat = currentTime;
-    }
-    await sleep(15_000);
+    throw new Error(
+      `The CI run for ${sourceSha} is not tied to a same-repository dev-to-main pull request.`
+    );
   }
-  throw new Error(
-    `The exact dev-to-main PR ci-technical-gate did not complete within 25 minutes for ${sourceSha}; no lifecycle snapshot was written.`
-  );
+
+  const jobPages = await readJobs(run.id);
+  if (run.status === 'completed') {
+    return {
+      status: 'ready',
+      checkRuns: completedExactDevPullRequestTechnicalGate(run, jobPages),
+    };
+  }
+
+  // A pending or missing gate cannot verify or close an issue. Capture the
+  // current exact-SHA state and let the normal lifecycle rules keep it open;
+  // a later push or scheduled reconciliation can observe the terminal gate.
+  const gate = exactDevPullRequestTechnicalGate(run, jobPages);
+  return { status: 'ready', checkRuns: gate ? [gate] : [] };
 }
 
 export async function writeSnapshotIfDevHeadIsCurrent({ sourceSha, readDevHead, writeSnapshot }) {
@@ -183,7 +171,7 @@ async function main() {
     main: git(['rev-parse', 'refs/remotes/origin/main']),
   };
   const [gateResult, releasePages] = await Promise.all([
-    waitForCurrentDevPullRequestTechnicalGate({
+    readCurrentDevPullRequestTechnicalGate({
       repository,
       sourceSha: branchHeads.dev,
       readDevHead: async () =>
@@ -194,7 +182,6 @@ async function main() {
         ]),
       readPullRequest: (number) => ghJsonObject([`repos/${repository}/pulls/${number}`]),
       readJobs: (runId) => ghJson([`repos/${repository}/actions/runs/${runId}/jobs?per_page=100`]),
-      onHeartbeat: (message) => process.stdout.write(`${message}\n`),
     }),
     ghJson([`repos/${repository}/releases?per_page=100`]),
   ]);

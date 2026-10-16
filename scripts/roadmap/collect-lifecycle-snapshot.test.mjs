@@ -12,7 +12,7 @@ import {
 } from './collect-lifecycle-snapshot.mjs';
 import { projectLifecycleSnapshot } from './lifecycle-snapshot.mjs';
 import {
-  waitForCurrentDevPullRequestTechnicalGate,
+  readCurrentDevPullRequestTechnicalGate,
   withGitHubReadRetry,
   writeSnapshotIfDevHeadIsCurrent,
 } from './collect-lifecycle-snapshot-cli.mjs';
@@ -226,29 +226,66 @@ test('fails immediately when a completed PR CI run omits its technical gate', ()
   );
 });
 
-test('stops polling cleanly when dev advances while waiting for its exact PR gate', async () => {
-  let headReads = 0;
+test('returns an unverified snapshot immediately when no exact-source PR run exists', async () => {
   let workflowReads = 0;
-  const result = await waitForCurrentDevPullRequestTechnicalGate({
+  const result = await readCurrentDevPullRequestTechnicalGate({
     repository: 'bjo163/moonwitness-xi',
     sourceSha: devSha,
-    readDevHead: async () => (++headReads === 1 ? devSha : 'f'.repeat(40)),
+    readDevHead: async () => devSha,
     readWorkflowRuns: async () => {
       workflowReads += 1;
       return [{ workflow_runs: [] }];
     },
     readPullRequest: async () => assert.fail('no exact-source run should be selected'),
     readJobs: async () => assert.fail('no exact-source run should be selected'),
-    sleep: async () => {},
-    now: (() => {
-      let time = 0;
-      return () => (time += 1);
-    })(),
   });
 
-  assert.deepEqual(result, { status: 'stale' });
-  assert.equal(headReads, 2);
+  assert.deepEqual(result, { status: 'ready', checkRuns: [] });
   assert.equal(workflowReads, 1);
+});
+
+test('captures a pending exact-source gate without waiting or treating it as verified', async () => {
+  const run = {
+    id: 42,
+    event: 'pull_request',
+    head_branch: 'dev',
+    head_sha: devSha,
+    status: 'in_progress',
+    pull_requests: [
+      {
+        number: 24,
+        head: { ref: 'dev', sha: devSha, repo: { full_name: 'bjo163/moonwitness-xi' } },
+        base: { ref: 'main', sha: mainSha, repo: { full_name: 'bjo163/moonwitness-xi' } },
+      },
+    ],
+  };
+  const result = await readCurrentDevPullRequestTechnicalGate({
+    repository: 'bjo163/moonwitness-xi',
+    sourceSha: devSha,
+    readDevHead: async () => devSha,
+    readWorkflowRuns: async () => [{ workflow_runs: [run] }],
+    readPullRequest: async () => ({
+      number: 24,
+      head: { ref: 'dev', sha: devSha, repo: { full_name: 'bjo163/moonwitness-xi' } },
+      base: { ref: 'main', sha: mainSha, repo: { full_name: 'bjo163/moonwitness-xi' } },
+    }),
+    readJobs: async () => [
+      { jobs: [{ id: 25, name: 'ci-technical-gate', status: 'in_progress', conclusion: null }] },
+    ],
+  });
+
+  assert.deepEqual(result, {
+    status: 'ready',
+    checkRuns: [
+      {
+        id: 25,
+        name: 'ci-technical-gate',
+        head_sha: devSha,
+        status: 'in_progress',
+        conclusion: null,
+      },
+    ],
+  });
 });
 
 test('does not write a collected snapshot if dev advances after collection', async () => {
@@ -281,7 +318,7 @@ test('treats a PR head change during exact-run validation as a stale no-op', asy
       },
     ],
   };
-  const result = await waitForCurrentDevPullRequestTechnicalGate({
+  const result = await readCurrentDevPullRequestTechnicalGate({
     repository: 'bjo163/moonwitness-xi',
     sourceSha: devSha,
     readDevHead: async () => (++headReads === 1 ? devSha : 'f'.repeat(40)),
@@ -296,8 +333,6 @@ test('treats a PR head change during exact-run validation as a stale no-op', asy
       base: { ref: 'main', repo: { full_name: 'bjo163/moonwitness-xi' } },
     }),
     readJobs: async () => assert.fail('stale run must not read gate jobs'),
-    sleep: async () => assert.fail('stale run must stop without another poll'),
-    now: () => 0,
   });
 
   assert.deepEqual(result, { status: 'stale' });
