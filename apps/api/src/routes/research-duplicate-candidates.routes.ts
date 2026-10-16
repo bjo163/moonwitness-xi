@@ -170,7 +170,8 @@ export const researchDuplicateCandidateRoutes: FastifyPluginAsync<
           },
           401: { description: 'Bearer authentication is required.', ...errorSchema },
           403: {
-            description: 'The authenticated role cannot read duplicate candidates.',
+            description:
+              'The authenticated actor lacks an eligible role or active company context.',
             ...errorSchema,
           },
           503: {
@@ -184,7 +185,13 @@ export const researchDuplicateCandidateRoutes: FastifyPluginAsync<
       reply.header('Cache-Control', 'private, no-store');
       if (!request.auth)
         return reply.code(401).send({ success: false, error: 'Authentication required' });
-      if (request.auth.role !== 'system' && request.auth.role !== 'superadmin') {
+      const hasActiveCompanyContext =
+        Number.isInteger(request.auth.companyId) && (request.auth.companyId ?? 0) > 0;
+      const canReadAsActor =
+        request.auth.role === 'system' ||
+        ((request.auth.role === 'user' || request.auth.role === 'superadmin') &&
+          hasActiveCompanyContext);
+      if (!canReadAsActor) {
         return reply.code(403).send({ success: false, error: 'Research access denied' });
       }
 

@@ -49,7 +49,15 @@ function record(key: string, kind: 'assertion' | 'evidence', visibility: string,
 describe('research duplicate candidates API', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  async function createApp(activeRelease: StoredResearchGraphRelease | null, role?: string) {
+  async function createApp(
+    activeRelease: StoredResearchGraphRelease | null,
+    role?: string,
+    companyId?: number | null
+  ) {
+    const effectiveCompanyId =
+      companyId === null
+        ? undefined
+        : (companyId ?? (role === 'user' || role === 'superadmin' ? 12 : undefined));
     const app = Fastify();
     app.decorateRequest('auth', null);
     app.decorate('knex', {
@@ -57,7 +65,7 @@ describe('research duplicate candidates API', () => {
     } as never);
     app.addHook('onRequest', async (request) => {
       if (role === 'system' || role === 'superadmin' || role === 'user') {
-        request.auth = { userId: 1, role, groupPermissions: [] };
+        request.auth = { userId: 1, role, companyId: effectiveCompanyId, groupPermissions: [] };
       }
     });
     const readActiveRelease = vi.fn(async () => activeRelease);
@@ -65,7 +73,7 @@ describe('research duplicate candidates API', () => {
     return { app, readActiveRelease };
   }
 
-  it('requires authentication and restricts the route to system roles', async () => {
+  it('requires authentication and active company context for human research roles', async () => {
     const anonymous = await createApp(release());
     const anonymousResponse = await anonymous.app.inject({
       method: 'GET',
@@ -76,14 +84,32 @@ describe('research duplicate candidates API', () => {
     expect(anonymous.readActiveRelease).not.toHaveBeenCalled();
     await anonymous.app.close();
 
-    const ordinary = await createApp(release(), 'user');
-    const ordinaryResponse = await ordinary.app.inject({
+    const user = await createApp(release(), 'user', 12);
+    const userResponse = await user.app.inject({
       method: 'GET',
       url: '/api/research/duplicate-candidates',
     });
-    expect(ordinaryResponse.statusCode).toBe(403);
-    expect(ordinary.readActiveRelease).not.toHaveBeenCalled();
-    await ordinary.app.close();
+    expect(userResponse.statusCode).toBe(200);
+    expect(user.readActiveRelease).toHaveBeenCalledTimes(1);
+    await user.app.close();
+
+    const userWithoutCompany = await createApp(release(), 'user', null);
+    const userWithoutCompanyResponse = await userWithoutCompany.app.inject({
+      method: 'GET',
+      url: '/api/research/duplicate-candidates',
+    });
+    expect(userWithoutCompanyResponse.statusCode).toBe(403);
+    expect(userWithoutCompany.readActiveRelease).not.toHaveBeenCalled();
+    await userWithoutCompany.app.close();
+
+    const superadminWithoutCompany = await createApp(release(), 'superadmin', null);
+    const superadminWithoutCompanyResponse = await superadminWithoutCompany.app.inject({
+      method: 'GET',
+      url: '/api/research/duplicate-candidates',
+    });
+    expect(superadminWithoutCompanyResponse.statusCode).toBe(403);
+    expect(superadminWithoutCompany.readActiveRelease).not.toHaveBeenCalled();
+    await superadminWithoutCompany.app.close();
   });
 
   it('returns only deterministic unresolved candidates from the active INTERNAL snapshot', async () => {
