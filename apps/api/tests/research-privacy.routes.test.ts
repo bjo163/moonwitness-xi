@@ -17,6 +17,7 @@ describe('synthetic research privacy API', () => {
   let superadminId: number;
   let systemId: number;
   let companyId: number;
+  let unassignedCompanyId: number;
 
   beforeEach(async () => {
     db = knex({
@@ -37,6 +38,10 @@ describe('synthetic research privacy API', () => {
     superadminId = Number((await db('users').where({ login: 'superadmin' }).first('id'))?.id);
     systemId = Number((await db('users').where({ login: 'system' }).first('id'))?.id);
     companyId = Number((await db('companies').first('id'))?.id);
+    const unassignedCompany = await db('companies')
+      .insert({ name: 'Synthetic Unassigned Privacy Test Company', timezone: 'UTC' })
+      .returning('id');
+    unassignedCompanyId = Number(unassignedCompany[0]?.id);
     app = Fastify();
     app.decorateRequest('auth', null);
     app.decorate('db', db);
@@ -46,7 +51,8 @@ describe('synthetic research privacy API', () => {
         request.auth = {
           userId: request.headers['x-test-user'] === 'system' ? systemId : superadminId,
           role,
-          companyId,
+          companyId:
+            request.headers['x-test-company'] === 'unassigned' ? unassignedCompanyId : companyId,
           groupPermissions: [],
         };
       }
@@ -176,6 +182,44 @@ describe('synthetic research privacy API', () => {
     expect(forgedActor.statusCode).toBe(400);
     expect(malformedHash.statusCode).toBe(400);
     expect(await db('knowledge_privacy_revocations')).toHaveLength(0);
+  });
+
+  it('denies a valid but unassigned tenant for projection reads and revocation writes', async () => {
+    const subjectHash = sha256('cross-tenant-synthetic-subject');
+    const projectionJson = JSON.stringify({ excerpt: 'CROSS-TENANT-SYNTHETIC-CANARY' });
+    await db('knowledge_privacy_projections').insert({
+      company_id: companyId,
+      projection_key: 'cross-tenant-synthetic-search-001',
+      subject_ref_sha256: subjectHash,
+      projection_json: projectionJson,
+      projection_digest: sha256(projectionJson),
+      synthetic: true,
+      visibility: 'RESTRICTED',
+      state: 'active',
+    });
+
+    const headers = { 'x-test-role': 'superadmin', 'x-test-company': 'unassigned' };
+    const read = await app.inject({
+      method: 'GET',
+      url: '/api/research/privacy/projections',
+      headers,
+    });
+    const revoke = await app.inject({
+      method: 'POST',
+      url: '/api/research/privacy/revocations',
+      headers,
+      payload: body({ subject_ref_sha256: subjectHash }),
+    });
+
+    expect(read.statusCode).toBe(403);
+    expect(read.body).not.toContain('CROSS-TENANT-SYNTHETIC-CANARY');
+    expect(revoke.statusCode).toBe(403);
+    expect(await db('knowledge_privacy_revocations')).toHaveLength(0);
+    expect(
+      await db('knowledge_privacy_projections')
+        .where({ projection_key: 'cross-tenant-synthetic-search-001' })
+        .first('state')
+    ).toMatchObject({ state: 'active' });
   });
 
   it('records a hash-only withdrawal, clears one projection, and replays idempotently', async () => {
