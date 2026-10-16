@@ -273,7 +273,7 @@ Track approved through ADR 0004 on 2026-10-15. The existing 148 M-series tasks a
 - [ ] K6-005 Evidence-backed outcome verification.
 - [x] K7-001 Local AI runtime adapter contract with disabled default. Evidence: [K7-001](docs/roadmap/evidence/K7-001.md).
 - [ ] K7-002 Hardware survey and model artifact registry. Evidence: [K7-002](docs/roadmap/evidence/K7-002.md) (hardware and empty registry recorded; real artifact/license review remains open).
-- [ ] K7-003 Permission-scoped local retrieval and chunks. Evidence: [K7-003](docs/roadmap/evidence/K7-003.md) (Q7:46-only local projection implemented; production authorization/resolver integration remains open).
+- [x] K7-003 Permission-scoped local retrieval and chunks. Evidence: [K7-003](docs/roadmap/evidence/K7-003.md) (Q7:46-only authenticated retrieval with exact citation/span; SQLite and PostgreSQL tests deny restricted and `CHILD_SENSITIVE` records).
 - [ ] K7-004 Staging-only structured suggestion workflow.
 - [ ] K7-005 Prompt injection and high-risk action isolation.
 - [ ] K7-006 Local AI evaluation and model-outage certification.
