@@ -10,7 +10,7 @@ import { manifest as baseManifest } from '@moonwitness/orm-base';
 import { jobsManifest } from '@moonwitness/jobs';
 import { manifest as notificationManifest } from '@moonwitness/orm-notification';
 import { manifest as workflowManifest, startWorkflow } from '@moonwitness/orm-workflow';
-import { readQuranPassage } from '@moonwitness/corpus';
+import { readQuranPassage, readTextualWitnessPassageSnapshot } from '@moonwitness/corpus';
 import {
   activateResearchGraphRelease,
   createResearchGraphRelease,
@@ -389,6 +389,16 @@ postgresDescribe('knowledge addon PostgreSQL integration', () => {
       .insert({ user_id: userId, company_id: companyId, is_default: true })
       .onConflict(['user_id', 'company_id'])
       .ignore();
+    const sourcePassage = await readTextualWitnessPassageSnapshot({
+      rootDirectory: repoRoot,
+      expressionId: 'mw:expression:webp-protestant',
+      editionId: 'mw:edition:webp-protestant-2020-stable',
+      locator: 'Genesis 1:1',
+      use: 'read_analyze',
+    });
+    const selectedText = Array.from(sourcePassage.passage.text)[0];
+    if (selectedText === undefined) throw new Error('Approved source sample has no text');
+    const selectedTextSha256 = createHash('sha256').update(selectedText, 'utf8').digest('hex');
     const document = {
       format: 'moonwitness-concept-profiles/v1',
       profiles: [
@@ -405,6 +415,18 @@ postgresDescribe('knowledge addon PostgreSQL integration', () => {
               text: 'Synthetic candidate only.',
               status: 'candidate',
               evidence_ids: [],
+            },
+          ],
+          textual_observations: [
+            {
+              id: 'mw:text-observation:pg-webp-genesis-1-1',
+              source_id: sourcePassage.passage.sourceId,
+              edition_id: sourcePassage.passage.editionId,
+              locator: sourcePassage.passage.locator,
+              content_sha256: sourcePassage.passage.sha256,
+              range: { unit: 'unicode_scalar', start: 0, end: 1 },
+              selected_text_sha256: selectedTextSha256,
+              review_status: 'unreviewed',
             },
           ],
         },
