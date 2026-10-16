@@ -69,7 +69,17 @@ function matchesExpected(actual, expected) {
 }
 
 /** Reconcile immutable release assets, recovering ambiguous uploads by re-reading remote state. */
-export async function reconcileReleaseAssets({ tag, releaseId, isDraft, files, adapter }) {
+export async function reconcileReleaseAssets({
+  tag,
+  releaseId,
+  isDraft,
+  files,
+  adapter,
+  allowPublishedAdditions = false,
+}) {
+  if (typeof allowPublishedAdditions !== 'boolean') {
+    throw new Error('Invalid published release addition policy');
+  }
   validateReleaseAssets({ tag, releaseId, isDraft, files, adapter });
   const current = assetMap(await adapter.listAssets(releaseId));
 
@@ -79,7 +89,9 @@ export async function reconcileReleaseAssets({ tag, releaseId, isDraft, files, a
       throw new Error(`Existing release asset ${file.name} conflicts with the verified file`);
     }
     if (!existing && !isDraft) {
-      throw new Error(`Cannot add missing asset ${file.name} to a published release`);
+      if (!allowPublishedAdditions) {
+        throw new Error(`Cannot add missing asset ${file.name} to a published release`);
+      }
     }
   }
 

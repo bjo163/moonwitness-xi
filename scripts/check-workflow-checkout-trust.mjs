@@ -157,6 +157,7 @@ function namedWorkflowStep(source, expectedName) {
 
 export function inspectTrustedCheckoutPolicies({
   pages,
+  pagesAssetReconciler = '',
   visualReview,
   release,
   releasePrepare,
@@ -308,15 +309,26 @@ export function inspectTrustedCheckoutPolicies({
   }
 
   if (pages.includes('compose-site:')) {
-    if (!pages.includes('docs-site-$TAG.tar.gz'))
+    if (
+      !pages.includes('scripts/docs/reconcile-versioned-docs-asset.mjs') ||
+      !pages.includes(
+        'DOCS_ARCHIVE_PATH: versioned-docs/docs-site-${{ needs.build.outputs.selected_ref }}.tar.gz'
+      ) ||
+      !pages.includes('refs/tags/$TAG:refs/tags/$TAG') ||
+      !pages.includes('if [[ ! "$TAG" =~ ^v(0|[1-9][0-9]*)')
+    )
       findings.push(
-        'Versioned Pages snapshots must use stable-tagged immutable release asset names.'
+        'Versioned Pages snapshots must fetch only a validated stable tag before using the dedicated immutable asset reconciler.'
       );
     if (
-      !pages.includes('jq -r \'.digest // empty\' <<< "$asset"') ||
-      !pages.includes('jq -r \'.size\' <<< "$asset"')
+      !pagesAssetReconciler.includes('allowPublishedAdditions: true') ||
+      !pagesAssetReconciler.includes('resolveTagCommit(tag)') ||
+      !pagesAssetReconciler.includes('release.tag_name !== tag') ||
+      !pagesAssetReconciler.includes('STABLE_TAG')
     )
-      findings.push('Versioned Pages assets must be reconciled by digest and size before reuse.');
+      findings.push(
+        'Versioned Pages assets must verify a published stable tag and its exact source before reconciliation.'
+      );
     if (!pages.includes('name: Upload stable documentation archive'))
       findings.push('Stable docs archive must be available to the immutable release-asset job.');
     if (!pages.includes('versioned-site.mjs compose'))
@@ -684,8 +696,13 @@ async function main() {
     readFile(path.join(repositoryRoot, '.github/workflows/browser-matrix.yml'), 'utf8'),
     readFile(path.join(repositoryRoot, '.github/workflows/deep-regression.yml'), 'utf8'),
   ]);
+  const pagesAssetReconciler = await readFile(
+    path.join(repositoryRoot, 'scripts/docs/reconcile-versioned-docs-asset.mjs'),
+    'utf8'
+  );
   const findings = inspectTrustedCheckoutPolicies({
     pages,
+    pagesAssetReconciler,
     visualReview,
     release,
     releasePrepare,

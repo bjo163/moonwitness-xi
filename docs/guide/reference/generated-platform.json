@@ -374,7 +374,7 @@
       "test:e2e:diagnostics": "node --test scripts/e2e-preflight-report.test.mjs scripts/summarize-playwright-failures.test.mjs scripts/summarize-junit-failures.test.mjs scripts/ci-diagnostics.test.mjs scripts/ci/build-workspace-package.test.mjs scripts/ci/workspace-build-diagnostics.test.mjs scripts/docker-workspace-manifests.test.mjs scripts/package-manager.test.mjs scripts/ci-build-reuse.test.mjs",
       "test:e2e:visual": "pnpm --filter @moonwitness/board exec playwright test e2e/visual-audit.spec.ts --config playwright.visual.config.ts",
       "test:e2e:visual:matrix": "node scripts/run-visual-matrix.mjs",
-      "test:expected-ref": "node --test scripts/push-expected-ref.test.mjs",
+      "test:expected-ref": "node --test scripts/push-expected-ref.test.mjs scripts/sync-main-to-dev.test.mjs",
       "test:flaky-policy": "node --test scripts/flaky-policy.test.mjs scripts/playwright-flake-reporter.test.mjs",
       "test:integration": "node scripts/run-postgres-tests.mjs",
       "test:integration:built": "node scripts/run-postgres-tests.mjs --built",
@@ -384,7 +384,7 @@
       "test:platform-audit": "node --test scripts/platform-audit.test.mjs",
       "test:promotion-policy": "node --test scripts/git-range.test.mjs scripts/promotion-risk.test.mjs scripts/promotion-approval.test.mjs",
       "test:promotion-report": "node --test scripts/render-promotion-report.test.mjs",
-      "test:release-asset-reconcile": "node --test scripts/reconcile-release-assets.test.mjs",
+      "test:release-asset-reconcile": "node --test scripts/reconcile-release-assets.test.mjs scripts/docs/reconcile-versioned-docs-asset.test.mjs",
       "test:release-classification": "node --test scripts/release-classification.test.mjs",
       "test:release-dry-run": "node --test scripts/release-dry-run.test.mjs",
       "test:release-image-publish": "node --test scripts/publish-release-image.test.mjs",
@@ -3041,7 +3041,7 @@
     },
     {
       "name": "knowledge",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "depends": ["base"],
       "models": [
         {
@@ -3652,6 +3652,188 @@
           ]
         },
         {
+          "name": "knowledge.story_page_version",
+          "table": "knowledge_story_page_versions",
+          "fields": [
+            {
+              "name": "media_ref_json",
+              "kind": "text",
+              "column": "media_ref_json",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "original_text",
+              "kind": "text",
+              "column": "original_text",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "original_text_digest",
+              "kind": "string",
+              "column": "original_text_digest",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "page_id",
+              "kind": "string",
+              "column": "page_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "page_order",
+              "kind": "integer",
+              "column": "page_order",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "story_version",
+              "kind": "belongsTo",
+              "column": "story_version_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "knowledge.story_version"
+            }
+          ],
+          "uniqueConstraints": [
+            ["page_id", "story_version"],
+            ["page_order", "story_version"]
+          ]
+        },
+        {
+          "name": "knowledge.story_version",
+          "table": "knowledge_story_versions",
+          "fields": [
+            {
+              "name": "company",
+              "kind": "belongsTo",
+              "column": "company_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.company"
+            },
+            {
+              "name": "page_count",
+              "kind": "integer",
+              "column": "page_count",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "previous_story_digest",
+              "kind": "string",
+              "column": "previous_story_digest",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "recorded_by",
+              "kind": "belongsTo",
+              "column": "recorded_by_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.user"
+            },
+            {
+              "name": "story_digest",
+              "kind": "string",
+              "column": "story_digest",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "story_id",
+              "kind": "string",
+              "column": "story_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "story_json",
+              "kind": "text",
+              "column": "story_json",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "title",
+              "kind": "string",
+              "column": "title",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "version",
+              "kind": "integer",
+              "column": "version",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "visibility",
+              "kind": "enum",
+              "column": "visibility",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]",
+              "values": ["INTERNAL"]
+            }
+          ],
+          "uniqueConstraints": [["company", "story_id", "version"]]
+        },
+        {
           "name": "knowledge.textual_alignment_candidate_version",
           "table": "knowledge_textual_alignment_candidate_versions",
           "fields": [
@@ -4148,7 +4330,7 @@
         "knowledge.witness_testimony": 2,
         "knowledge.witness_correction": 2,
         "knowledge.witness_interpretation": 2,
-        "base.model_access": 12
+        "base.model_access": 14
       },
       "accessRules": [
         {
@@ -4210,6 +4392,22 @@
         {
           "group": "base.group_user",
           "model": "knowledge.research_review_event",
+          "read": false,
+          "create": false,
+          "write": false,
+          "unlink": false
+        },
+        {
+          "group": "base.group_user",
+          "model": "knowledge.story_page_version",
+          "read": false,
+          "create": false,
+          "write": false,
+          "unlink": false
+        },
+        {
+          "group": "base.group_user",
+          "model": "knowledge.story_version",
           "read": false,
           "create": false,
           "write": false,
@@ -5954,5 +6152,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "306b22ca27b0623c1be8876d56d443f4a4d361ffce408c4d317b6c1fa5b7ecd2"
+  "generatedFromSha256": "d734ae4f782dea2890f6b52bbbb877a93a69f21503d39c76e2dda7bbc50714fb"
 }

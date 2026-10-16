@@ -401,33 +401,17 @@ jobs:
           GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.build.outputs.selected_ref }}
           SOURCE_SHA: ${{ needs.build.outputs.source_sha }}
+          DOCS_ARCHIVE_PATH: versioned-docs/docs-site-${{ needs.build.outputs.selected_ref }}.tar.gz
         run: |
           set -euo pipefail
-          file="versioned-docs/docs-site-$TAG.tar.gz"
-          test -s "$file"
-          release="$(gh api "repos/$GH_REPO/releases/tags/$TAG")"
-          test "$(jq -r '.published_at != null and .draft == false and .prerelease == false' <<< "$release")" = true
-          release_id="$(jq -r '.id' <<< "$release")"
-          expected="sha256:$(sha256sum "$file" | awk '{print $1}')"
-          expected_size="$(wc -c < "$file" | tr -d ' ')"
-          assets="$(gh api --paginate "repos/$GH_REPO/releases/$release_id/assets?per_page=100")"
-          asset="$(jq -c --arg name "$(basename "$file")" '[.[] | select(.name == $name)] | first // empty' <<< "$assets")"
-          if [[ -n "$asset" ]]; then
-            test "$(jq -r '.digest // empty' <<< "$asset")" = "$expected"
-            test "$(jq -r '.size' <<< "$asset")" = "$expected_size"
-          else
-            if ! gh release upload "$TAG" "$file" --repo "$GH_REPO"; then
-              assets="$(gh api --paginate "repos/$GH_REPO/releases/$release_id/assets?per_page=100")"
-              asset="$(jq -c --arg name "$(basename "$file")" '[.[] | select(.name == $name)] | first // empty' <<< "$assets")"
-            else
-              assets="$(gh api --paginate "repos/$GH_REPO/releases/$release_id/assets?per_page=100")"
-              asset="$(jq -c --arg name "$(basename "$file")" '[.[] | select(.name == $name)] | first // empty' <<< "$assets")"
-            fi
-            test -n "$asset"
-            test "$(jq -r '.digest // empty' <<< "$asset")" = "$expected"
-            test "$(jq -r '.size' <<< "$asset")" = "$expected_size"
+          test -s "$DOCS_ARCHIVE_PATH"
+          if [[ ! "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Invalid stable documentation tag: $TAG" >&2
+            exit 1
           fi
-          echo "Stored immutable documentation archive for $TAG at source SHA $SOURCE_SHA ($expected)." >> "$GITHUB_STEP_SUMMARY"
+          git fetch --no-tags origin "refs/tags/$TAG:refs/tags/$TAG"
+          RELEASE_TAG="$TAG" SOURCE_SHA="$SOURCE_SHA" GH_REPOSITORY="$GH_REPO" \
+            node scripts/docs/reconcile-versioned-docs-asset.mjs "$DOCS_ARCHIVE_PATH" >> "$GITHUB_STEP_SUMMARY"
 
   compose-site:
     name: Compose versioned Pages site

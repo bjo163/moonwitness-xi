@@ -1,6 +1,6 @@
 # Generated model and addon reference
 
-Source fingerprint: `306b22ca27b0623c1be8876d56d443f4a4d361ffce408c4d317b6c1fa5b7ecd2`. Seed values and field defaults are intentionally omitted.
+Source fingerprint: `d734ae4f782dea2890f6b52bbbb877a93a69f21503d39c76e2dda7bbc50714fb`. Seed values and field defaults are intentionally omitted.
 
 ## Addon `auth`
 
@@ -287,9 +287,9 @@ Models: 4; declared views: 0; menu entries: 0; seed rows: 1.
 
 ## Addon `knowledge`
 
-Version: `1.5.0`; dependencies: `base`.
+Version: `1.6.0`; dependencies: `base`.
 
-Models: 12; declared views: 3; menu entries: 3; seed rows: 23.
+Models: 14; declared views: 3; menu entries: 3; seed rows: 25.
 
 | Model                                           | Table                                            | Field                         | Kind      | Required | Optional | Default    | Relation                           |
 | ----------------------------------------------- | ------------------------------------------------ | ----------------------------- | --------- | -------- | -------- | ---------- | ---------------------------------- |
@@ -346,6 +346,22 @@ Models: 12; declared views: 3; menu entries: 3; seed rows: 23.
 | `knowledge.research_review_event`               | `knowledge_research_review_events`               | `subject_revision`            | integer   | Yes      | No       | No         | —                                  |
 | `knowledge.research_review_event`               | `knowledge_research_review_events`               | `workflow_event_sequence`     | integer   | Yes      | No       | No         | —                                  |
 | `knowledge.research_review_event`               | `knowledge_research_review_events`               | `workflow_instance_id`        | integer   | Yes      | No       | No         | —                                  |
+| `knowledge.story_page_version`                  | `knowledge_story_page_versions`                  | `media_ref_json`              | text      | No       | Yes      | No         | —                                  |
+| `knowledge.story_page_version`                  | `knowledge_story_page_versions`                  | `original_text`               | text      | Yes      | No       | No         | —                                  |
+| `knowledge.story_page_version`                  | `knowledge_story_page_versions`                  | `original_text_digest`        | string    | Yes      | No       | No         | —                                  |
+| `knowledge.story_page_version`                  | `knowledge_story_page_versions`                  | `page_id`                     | string    | Yes      | No       | No         | —                                  |
+| `knowledge.story_page_version`                  | `knowledge_story_page_versions`                  | `page_order`                  | integer   | Yes      | No       | No         | —                                  |
+| `knowledge.story_page_version`                  | `knowledge_story_page_versions`                  | `story_version`               | belongsTo | Yes      | No       | No         | `knowledge.story_version`          |
+| `knowledge.story_version`                       | `knowledge_story_versions`                       | `company`                     | belongsTo | Yes      | No       | No         | `base.company`                     |
+| `knowledge.story_version`                       | `knowledge_story_versions`                       | `page_count`                  | integer   | Yes      | No       | No         | —                                  |
+| `knowledge.story_version`                       | `knowledge_story_versions`                       | `previous_story_digest`       | string    | No       | Yes      | No         | —                                  |
+| `knowledge.story_version`                       | `knowledge_story_versions`                       | `recorded_by`                 | belongsTo | Yes      | No       | No         | `base.user`                        |
+| `knowledge.story_version`                       | `knowledge_story_versions`                       | `story_digest`                | string    | Yes      | No       | No         | —                                  |
+| `knowledge.story_version`                       | `knowledge_story_versions`                       | `story_id`                    | string    | Yes      | No       | No         | —                                  |
+| `knowledge.story_version`                       | `knowledge_story_versions`                       | `story_json`                  | text      | Yes      | No       | No         | —                                  |
+| `knowledge.story_version`                       | `knowledge_story_versions`                       | `title`                       | string    | Yes      | No       | No         | —                                  |
+| `knowledge.story_version`                       | `knowledge_story_versions`                       | `version`                     | integer   | Yes      | No       | No         | —                                  |
+| `knowledge.story_version`                       | `knowledge_story_versions`                       | `visibility`                  | enum      | No       | Yes      | [redacted] | —                                  |
 | `knowledge.textual_alignment_candidate_version` | `knowledge_textual_alignment_candidate_versions` | `candidate_digest`            | string    | Yes      | No       | No         | —                                  |
 | `knowledge.textual_alignment_candidate_version` | `knowledge_textual_alignment_candidate_versions` | `candidate_id`                | string    | Yes      | No       | No         | —                                  |
 | `knowledge.textual_alignment_candidate_version` | `knowledge_textual_alignment_candidate_versions` | `candidate_json`              | text      | Yes      | No       | No         | —                                  |
@@ -398,7 +414,7 @@ Models: 12; declared views: 3; menu entries: 3; seed rows: 23.
 
 - Seed coverage: `base.access_group` has 2 declared seed row(s); seed values are not included.
 - Seed coverage: `base.group_membership` has 2 declared seed row(s); seed values are not included.
-- Seed coverage: `base.model_access` has 12 declared seed row(s); seed values are not included.
+- Seed coverage: `base.model_access` has 14 declared seed row(s); seed values are not included.
 - Seed coverage: `knowledge.privacy_projection` has 1 declared seed row(s); seed values are not included.
 - Seed coverage: `knowledge.witness_correction` has 2 declared seed row(s); seed values are not included.
 - Seed coverage: `knowledge.witness_interpretation` has 2 declared seed row(s); seed values are not included.
@@ -416,6 +432,8 @@ Models: 12; declared views: 3; menu entries: 3; seed rows: 23.
 | `base.group_user` | `knowledge.research_graph_record`               | No   | No     | No    | No     |
 | `base.group_user` | `knowledge.research_graph_release`              | No   | No     | No    | No     |
 | `base.group_user` | `knowledge.research_review_event`               | No   | No     | No    | No     |
+| `base.group_user` | `knowledge.story_page_version`                  | No   | No     | No    | No     |
+| `base.group_user` | `knowledge.story_version`                       | No   | No     | No    | No     |
 | `base.group_user` | `knowledge.textual_alignment_candidate_version` | No   | No     | No    | No     |
 | `base.group_user` | `knowledge.witness_correction`                  | No   | No     | No    | No     |
 | `base.group_user` | `knowledge.witness_interpretation`              | No   | No     | No    | No     |

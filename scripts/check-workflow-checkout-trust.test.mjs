@@ -8,6 +8,10 @@ import {
 } from './check-workflow-checkout-trust.mjs';
 
 const expressionStart = '$' + '{';
+const pagesAssetReconciler = await readFile(
+  new NodeURL('./docs/reconcile-versioned-docs-asset.mjs', import.meta.url),
+  'utf8'
+);
 const pages = `
       - uses: actions/checkout@0123456789012345678901234567890123456789 # v4
         with:
@@ -97,9 +101,10 @@ const promote = `
 const versionedPages = `${pages}
   - name: Upload stable documentation archive
   store-versioned-docs:
-    file="versioned-docs/docs-site-$TAG.tar.gz"
-    test "$(jq -r '.digest // empty' <<< "$asset")" = "$expected"
-    test "$(jq -r '.size' <<< "$asset")" = "$expected_size"
+    DOCS_ARCHIVE_PATH: versioned-docs/docs-site-${expressionStart}{ needs.build.outputs.selected_ref }}.tar.gz
+    if [[ ! "$TAG" =~ ^v(0|[1-9][0-9]*) ]]; then exit 1; fi
+    git fetch --no-tags origin "refs/tags/$TAG:refs/tags/$TAG"
+    node scripts/docs/reconcile-versioned-docs-asset.mjs
   compose-site:
     if: needs.compose-site.result == 'success'
     run: node scripts/docs/versioned-site.mjs compose
@@ -108,6 +113,7 @@ const versionedPages = `${pages}
 function policies(overrides = {}) {
   return inspectTrustedCheckoutPolicies({
     pages: versionedPages,
+    pagesAssetReconciler,
     visualReview,
     release,
     releasePrepare,
@@ -342,15 +348,36 @@ test('rejects promotion reports without exact SHA checks or preservation of the 
 });
 
 test('requires immutable versioned docs assets and successful five-release composition', () => {
-  const unsafePages = versionedPages
-    .replace('jq -r \'.digest // empty\' <<< "$asset"', 'true')
-    .replace(
-      'versioned-site.mjs plan --releases release-inventory.json --limit 5',
-      'versioned-site.mjs plan'
-    );
-  const findings = policies({ pages: unsafePages });
-  assert.ok(findings.some((finding) => finding.includes('digest and size')));
-  assert.ok(findings.some((finding) => finding.includes('five-stable-release snapshot retention')));
+  const unsafePages = versionedPages.replace(
+    'scripts/docs/reconcile-versioned-docs-asset.mjs',
+    'scripts/docs/other-helper.mjs'
+  );
+  const missingTagFetch = versionedPages.replace(
+    'git fetch --no-tags origin "refs/tags/$TAG:refs/tags/$TAG"',
+    ''
+  );
+  const unsafeReconciler = pagesAssetReconciler.replace('allowPublishedAdditions: true', '');
+  const unsafeRetention = versionedPages.replace(
+    'versioned-site.mjs plan --releases release-inventory.json --limit 5',
+    'versioned-site.mjs plan'
+  );
+  const findings = policies({ pages: unsafePages, pagesAssetReconciler: unsafeReconciler });
+  assert.ok(findings.some((finding) => finding.includes('dedicated immutable asset reconciler')));
+  assert.ok(
+    policies({ pages: missingTagFetch }).some((finding) =>
+      finding.includes('fetch only a validated')
+    )
+  );
+  assert.ok(
+    policies({ pagesAssetReconciler: unsafeReconciler }).some((finding) =>
+      finding.includes('exact source')
+    )
+  );
+  assert.ok(
+    policies({ pages: unsafeRetention }).some((finding) =>
+      finding.includes('five-stable-release snapshot retention')
+    )
+  );
 });
 
 test('rejects arbitrary workflow-dispatch checkout refs and persisted credentials', () => {
