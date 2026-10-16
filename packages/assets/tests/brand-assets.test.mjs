@@ -165,3 +165,18 @@ test('provenance covers original design assets and every externally sourced font
     assert.match(licenseText, /SIL OPEN FONT LICENSE Version 1\.1/u);
   }
 });
+
+test('Board, UI catalog, and docs portal consume the shared local font export', async () => {
+  const consumers = [
+    resolve(packageRoot, '../../apps/board/src/index.css'),
+    resolve(packageRoot, '../../apps/ui-catalog/src/styles.css'),
+    resolve(packageRoot, '../../apps/docs/src/styles.css'),
+  ];
+  for (const consumerPath of consumers) {
+    const stylesheet = await readFile(consumerPath, 'utf8');
+    assert.match(stylesheet, /@import ['"]@moonwitness\/assets\/fonts\.css['"]/u, consumerPath);
+  }
+
+  const boardHtml = await readFile(resolve(packageRoot, '../../apps/board/index.html'), 'utf8');
+  assert.doesNotMatch(boardHtml, /fonts\.googleapis\.com|fonts\.gstatic\.com/u);
+});

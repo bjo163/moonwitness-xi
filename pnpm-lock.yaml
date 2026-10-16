@@ -157,6 +157,9 @@ importers:
 
   apps/board:
     dependencies:
+      '@moonwitness/assets':
+        specifier: workspace:*
+        version: link:../../packages/assets
       '@moonwitness/client':
         specifier: workspace:*
         version: link:../../packages/client
@@ -282,6 +285,9 @@ importers:
 
   apps/ui-catalog:
     dependencies:
+      '@moonwitness/assets':
+        specifier: workspace:*
+        version: link:../../packages/assets
       '@moonwitness/ui':
         specifier: workspace:*
         version: link:../../packages/ui

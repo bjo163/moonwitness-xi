@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "apps/*/package.json and packages/*/package.json",
-  "sourceSha256": "d1a383bcf874f55b9c655087c0b289b20afb6ce33355f779b81f1b261919a9d2",
+  "sourceSha256": "c4d9fe75fcf5b23854a94769401b5803431c267d6cfee43b1d3413e529393a78",
   "packages": [
     {
       "name": "@moonwitness/api",
@@ -271,6 +271,12 @@
     },
     {
       "from": "@moonwitness/board",
+      "to": "@moonwitness/assets",
+      "kind": "runtime",
+      "manifest": "apps/board"
+    },
+    {
+      "from": "@moonwitness/board",
       "to": "@moonwitness/client",
       "kind": "runtime",
       "manifest": "apps/board"
@@ -502,6 +508,12 @@
       "to": "@moonwitness/knowledge",
       "kind": "runtime",
       "manifest": "packages/research"
+    },
+    {
+      "from": "@moonwitness/ui-catalog",
+      "to": "@moonwitness/assets",
+      "kind": "runtime",
+      "manifest": "apps/ui-catalog"
     },
     {
       "from": "@moonwitness/ui-catalog",
