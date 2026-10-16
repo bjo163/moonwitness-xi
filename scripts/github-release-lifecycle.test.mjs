@@ -148,6 +148,41 @@ test('reuses an already published release without attempting a second publicatio
   assert.equal(releases.get('v1.2.3')?.isDraft, false);
 });
 
+test('resumes the same draft after publish credentials expire and are restored', async () => {
+  const { adapter, calls, releases, assets } = fakeAdapter();
+  const publishRelease = adapter.publishRelease;
+  adapter.expirePublishCredentials = true;
+  adapter.publishRelease = async (...args) => {
+    if (adapter.expirePublishCredentials) throw new Error('HTTP 401: token expired');
+    return publishRelease(...args);
+  };
+
+  await assert.rejects(complete(adapter), /HTTP 401: token expired/u);
+
+  assert.equal(releases.get('v1.2.3')?.isDraft, true);
+  assert.equal(calls.creates, 1);
+  assert.deepEqual(
+    calls.uploads,
+    files.map((file) => file.name)
+  );
+  const acceptedAssets = new Map(assets);
+
+  adapter.expirePublishCredentials = false;
+  const result = await complete(adapter);
+
+  assert.equal(result.releaseAction, 'published');
+  assert.equal(result.recoveredPublish, false);
+  assert.equal(result.releaseId, 42);
+  assert.equal(calls.creates, 1);
+  assert.equal(calls.publishes, 1);
+  assert.deepEqual(
+    calls.uploads,
+    files.map((file) => file.name)
+  );
+  assert.deepEqual([...assets], [...acceptedAssets]);
+  assert.equal(releases.get('v1.2.3')?.isDraft, false);
+});
+
 test('rejects a tag already bound to a release with a different identity', async () => {
   const { adapter } = fakeAdapter();
   adapter.getReleaseByTag = async () => ({
