@@ -1856,7 +1856,9 @@
       "output": "Typed persona aliases and source-backed narrative roles",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
-      "priority": "p0"
+      "priority": "p0",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/K5-005.md"
     },
     {
       "id": "K5-006",

@@ -107,6 +107,12 @@ export {
   type TextualAlignmentSelector,
 } from './textual-alignment.js';
 export {
+  validateNarrativePersona,
+  type NarrativePersona,
+  type NarrativePersonaAlias,
+  type NarrativePersonaRole,
+} from './persona-canon.js';
+export {
   createPrivacyRevocationPlan,
   decidePrivacyRetention,
   decideSensitiveRecordAccess,

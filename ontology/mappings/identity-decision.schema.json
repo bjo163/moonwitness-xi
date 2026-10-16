@@ -77,7 +77,7 @@
     },
     "identity_id": {
       "type": "string",
-      "pattern": "^mw:(?:entity|agent|work|concept):[a-z0-9][a-z0-9._-]{0,179}$"
+      "pattern": "^mw:(?:persona|entity|agent|work|concept):[a-z0-9][a-z0-9._-]{0,179}$"
     },
     "alias_observation": {
       "type": "object",
