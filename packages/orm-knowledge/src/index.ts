@@ -18,7 +18,7 @@ export {
   readActiveResearchGraphRelease,
   readResearchGraphRelease,
 } from './research-release.js';
-export { transitionResearchReview } from './research-review.js';
+export { resolveConceptProfileEvidence, transitionResearchReview } from './research-review.js';
 export { readResearchReviewHistory, validateResearchRelease } from './research-review.js';
 export {
   provisionResearchActorIdentity,
@@ -31,6 +31,7 @@ export type {
 } from './research-actor-identity.js';
 export type {
   AuthenticatedResearchReviewer,
+  ResolveConceptProfileEvidenceInput,
   TransitionResearchReviewInput,
 } from './research-review.js';
 export type {

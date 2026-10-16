@@ -14,6 +14,7 @@ import {
   readActiveResearchGraphRelease,
   readResearchReviewHistory,
   ResearchGraphRecord,
+  resolveConceptProfileEvidence,
   transitionResearchReview,
 } from '../src/index.js';
 
@@ -258,7 +259,8 @@ afterEach(async () => db.destroy());
 
 async function startReviewWorkflow(
   resourceModel = ResearchGraphRecord.modelName,
-  resourceId = activeRecordId
+  resourceId = activeRecordId,
+  idempotencyKey = `research-review-start-${resourceId}-001`
 ) {
   return startWorkflow(db, {
     code: 'research.review',
@@ -267,7 +269,7 @@ async function startReviewWorkflow(
     role: 'system',
     resourceModel,
     resourceId,
-    idempotencyKey: `research-review-start-${resourceId}-001`,
+    idempotencyKey,
     now: new Date('2026-10-16T00:01:00.000Z'),
   });
 }
@@ -292,6 +294,108 @@ function reviewInput(
 }
 
 describe('transactional research review service', () => {
+  it('resolves accepted concept evidence against the current company review and source snapshot', async () => {
+    const started = await startReviewWorkflow();
+    await transitionResearchReview(db, reviewInput(started.id));
+
+    await expect(
+      resolveConceptProfileEvidence(db, evidenceId, {
+        authenticatedReader: { userId: superadminId, companyId, role: 'superadmin' },
+        corpusRootDirectory,
+      })
+    ).resolves.toMatchObject({
+      canonicalEvidence: { id: evidenceId, assertion_id: assertionId },
+      reviewStatus: 'accepted',
+      access: 'readable',
+    });
+  });
+
+  it('keeps canonical evidence unreviewed before a matching independent decision exists', async () => {
+    await expect(
+      resolveConceptProfileEvidence(db, evidenceId, {
+        authenticatedReader: { userId: superadminId, companyId, role: 'superadmin' },
+        corpusRootDirectory,
+      })
+    ).resolves.toMatchObject({ reviewStatus: 'unreviewed', access: 'readable' });
+  });
+
+  it('does not carry review acceptance forward to a different assertion revision', async () => {
+    const started = await startReviewWorkflow();
+    await transitionResearchReview(db, reviewInput(started.id));
+    const current = await db.transaction((trx) => readActiveResearchGraphRelease(trx, corpusKey));
+    expect(current).not.toBeNull();
+    const next = await db.transaction((trx) =>
+      createResearchGraphRelease(trx, {
+        corpusKey,
+        schemaVersion: 'research-graph/v1',
+        previousReleaseDigest: current!.releaseDigest,
+        records: current!.records.map((record) =>
+          record.key === assertionId
+            ? {
+                ...record,
+                content: {
+                  ...(record.content as Record<string, unknown>),
+                  content_revision: 2,
+                },
+              }
+            : record
+        ),
+      })
+    );
+    await db.transaction((trx) =>
+      activateResearchGraphRelease(trx, {
+        corpusKey,
+        releaseDigest: next.releaseDigest,
+        expectedCurrentReleaseDigest: current!.releaseDigest,
+        activatedAt: '2026-10-16T00:03:00.000Z',
+      })
+    );
+
+    await expect(
+      resolveConceptProfileEvidence(db, evidenceId, {
+        authenticatedReader: { userId: superadminId, companyId, role: 'superadmin' },
+        corpusRootDirectory,
+      })
+    ).resolves.toMatchObject({ reviewStatus: 'unreviewed', access: 'readable' });
+  });
+
+  it('fails closed on conflicting decisions in the authenticated company history', async () => {
+    const first = await startReviewWorkflow();
+    await transitionResearchReview(db, reviewInput(first.id));
+    const second = await startReviewWorkflow(
+      ResearchGraphRecord.modelName,
+      activeRecordId,
+      'research-review-start-conflict-001'
+    );
+    await transitionResearchReview(
+      db,
+      reviewInput(second.id, {
+        action: 'reject',
+        idempotencyKey: `research-review-reject-${second.id}-001`,
+      })
+    );
+
+    await expect(
+      resolveConceptProfileEvidence(db, evidenceId, {
+        authenticatedReader: { userId: superadminId, companyId, role: 'superadmin' },
+        corpusRootDirectory,
+      })
+    ).resolves.toMatchObject({ reviewStatus: 'conflicting', access: 'readable' });
+  });
+
+  it('rechecks active company membership when resolving concept evidence', async () => {
+    await db('company_memberships')
+      .where({ user_id: superadminId, company_id: companyId })
+      .update({ active: false });
+
+    await expect(
+      resolveConceptProfileEvidence(db, evidenceId, {
+        authenticatedReader: { userId: superadminId, companyId, role: 'superadmin' },
+        corpusRootDirectory,
+      })
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+  });
+
   it('rechecks active company membership inside the decision transaction', async () => {
     const started = await startReviewWorkflow();
     await db('company_memberships')

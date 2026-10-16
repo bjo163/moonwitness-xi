@@ -8,10 +8,12 @@ import {
   validateResearchGraph,
   validateResearchRelation,
   validateResearchReviewEvent,
+  summarizeResearchReviewHistory,
   type ResearchEvidenceReference,
   type ResearchGraphNode,
   type ResearchRelation,
   type ResearchReviewEvent,
+  type TrustedConceptEvidenceResolution,
   type ResearchReviewSubject,
   type ResearchVisibility,
   type ResolvablePassage,
@@ -60,6 +62,13 @@ export interface TransitionResearchReviewInput {
   /** Trusted local root for pinned corpus bytes; no network access is performed. */
   readonly corpusRootDirectory: string;
   readonly now?: Date;
+}
+
+export interface ResolveConceptProfileEvidenceInput {
+  /** Populated by server authentication/authorization middleware, never request fields. */
+  readonly authenticatedReader: AuthenticatedResearchReviewer;
+  /** Trusted local root for pinned corpus bytes; no network access is performed. */
+  readonly corpusRootDirectory: string;
 }
 
 function fail(code: ConstructorParameters<typeof WorkflowError>[0], message: string): never {
@@ -283,6 +292,228 @@ async function verifiedReviewHistory(trx: Knex.Transaction, subjectId: string) {
       fail('INVALID_EVENT_PAYLOAD', 'Stored research review history failed binding verification');
     }
     return verified;
+  });
+}
+
+/**
+ * Resolve one concept-profile evidence ID against the active canonical research
+ * snapshot. Authentication, tenant scope, visibility, local corpus provenance,
+ * and the active-company review consensus are rechecked in this transaction.
+ * The returned status is accepted only for a decision on this exact subject
+ * revision, release digest, and evidence ID. This function does not persist or
+ * publish concept profiles.
+ */
+export async function resolveConceptProfileEvidence(
+  db: Knex,
+  evidenceId: string,
+  input: ResolveConceptProfileEvidenceInput
+): Promise<TrustedConceptEvidenceResolution | null> {
+  const reader = input.authenticatedReader;
+  if (
+    !/^mw:evidence:[a-z0-9][a-z0-9._-]{0,179}$/u.test(evidenceId) ||
+    !Number.isSafeInteger(reader.userId) ||
+    reader.userId < 1 ||
+    !Number.isSafeInteger(reader.companyId) ||
+    reader.companyId < 1 ||
+    (reader.role !== 'user' && reader.role !== 'superadmin') ||
+    !input.corpusRootDirectory
+  ) {
+    fail('INVALID_EVENT_PAYLOAD', 'Concept evidence resolution context is invalid');
+  }
+
+  return db.transaction(async (trx) => {
+    const user = await trx('users')
+      .where({ id: reader.userId, role: reader.role, active: true })
+      .first('id');
+    const company = await trx('companies')
+      .where({ id: reader.companyId, active: true })
+      .first('id');
+    const membership = await trx('company_memberships')
+      .where({ user_id: reader.userId, company_id: reader.companyId, active: true })
+      .first('id');
+    if (!user || !company || !membership) {
+      fail('FORBIDDEN', 'Research evidence is unavailable in this company context');
+    }
+
+    const active = await trx('knowledge_research_active_releases')
+      .where({ corpus_key: corpusKey })
+      .forUpdate()
+      .first('release_id');
+    if (!active) return null;
+    const evidenceRow = await trx('knowledge_research_graph_records')
+      .where({ release_id: active.release_id, record_key: evidenceId })
+      .first('id');
+    if (!evidenceRow) return null;
+
+    const { release, records } = await verifiedActiveResearchRecords(trx, Number(evidenceRow.id));
+    const graph = validateResearchRelease(records);
+    const recordById = new Map(records.map((record) => [record.key, record]));
+    const evidenceRecord = recordById.get(evidenceId);
+    const reference = graph.evidence.get(evidenceId);
+    if (!evidenceRecord || !reference) return null;
+    const subjectRecord = recordById.get(reference.assertion_id);
+    const subject = graph.contentById.get(reference.assertion_id);
+    if (
+      !subjectRecord ||
+      !subject ||
+      subject.kind !== 'Assertion' ||
+      subject.id !== reference.assertion_id
+    ) {
+      return null;
+    }
+    const evidenceContent = assertObject(
+      evidenceRecord.content,
+      'Research evidence record is invalid'
+    );
+    const subjectVisibility = reviewVisibility(
+      subjectRecord,
+      assertObject(subject, 'Research assertion is invalid')
+    );
+    const evidenceVisibility = reviewVisibility(evidenceRecord, evidenceContent);
+    if (
+      visibilityOrder[subjectVisibility] > visibilityOrder.INTERNAL ||
+      visibilityOrder[evidenceVisibility] > visibilityOrder.INTERNAL
+    ) {
+      fail('FORBIDDEN', 'Research evidence is unavailable in this company context');
+    }
+
+    await resolveResearchEvidenceReference(reference, (editionId, locator) => {
+      if (reference.selector.edition_id !== editionId || reference.selector.locator !== locator) {
+        return Promise.resolve(null);
+      }
+      return resolveEvidence(reference, input.corpusRootDirectory);
+    }).catch(() =>
+      fail('INVALID_EVENT_PAYLOAD', 'Research evidence does not match its local source snapshot')
+    );
+
+    const rows = await trx('knowledge_research_review_events as review')
+      .join('workflow_instances as instance', 'instance.id', 'review.workflow_instance_id')
+      .leftJoin(
+        'knowledge_research_graph_releases as reviewed_release',
+        'reviewed_release.release_digest',
+        'review.research_release_digest'
+      )
+      .leftJoin('knowledge_research_graph_records as reviewed_subject_record', function () {
+        this.on('reviewed_subject_record.release_id', '=', 'reviewed_release.id').andOn(
+          'reviewed_subject_record.record_key',
+          '=',
+          'review.subject_id'
+        );
+      })
+      .leftJoin('workflow_events as workflow_event', function () {
+        this.on('workflow_event.instance_id', '=', 'review.workflow_instance_id').andOn(
+          'workflow_event.sequence',
+          '=',
+          'review.workflow_event_sequence'
+        );
+      })
+      .leftJoin('workflow_definitions as definition', 'definition.id', 'instance.definition_id')
+      .leftJoin('users as reviewer', 'reviewer.id', 'workflow_event.actor_id')
+      .leftJoin(
+        'knowledge_research_actor_identities as reviewer_identity',
+        'reviewer_identity.user_id',
+        'reviewer.id'
+      )
+      .leftJoin(
+        'knowledge_research_actor_identities as requester_identity',
+        'requester_identity.user_id',
+        'instance.started_by_id'
+      )
+      .where({
+        'review.subject_id': reference.assertion_id,
+        'instance.company_id': reader.companyId,
+      })
+      .select(
+        'review.workflow_instance_id',
+        'review.workflow_event_sequence',
+        'review.subject_id',
+        'review.subject_revision',
+        'review.research_release_digest',
+        'review.idempotency_key',
+        'review.event_json',
+        'review.event_digest',
+        'instance.resource_model as workflow_resource_model',
+        'instance.resource_id as workflow_resource_id',
+        'reviewed_subject_record.id as reviewed_subject_record_id',
+        'definition.code as workflow_definition_code',
+        'workflow_event.id as committed_workflow_event_id',
+        'workflow_event.revision as committed_workflow_revision',
+        'workflow_event.action as committed_workflow_action',
+        'workflow_event.to_state as committed_workflow_state',
+        'workflow_event.idempotency_key as committed_workflow_idempotency_key',
+        'workflow_event.actor_id as committed_workflow_actor_id',
+        'reviewer.id as committed_reviewer_user_id',
+        'reviewer.role as committed_reviewer_role',
+        'reviewer_identity.canonical_user_id as committed_reviewer_identity',
+        'requester_identity.canonical_user_id as committed_requester_identity'
+      );
+    const history = rows.map((row) => {
+      const eventJson = String(row.event_json);
+      if (createHash('sha256').update(eventJson, 'utf8').digest('hex') !== row.event_digest) {
+        fail(
+          'INVALID_EVENT_PAYLOAD',
+          'Stored research review history failed integrity verification'
+        );
+      }
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(eventJson) as unknown;
+      } catch {
+        fail('INVALID_EVENT_PAYLOAD', 'Stored research review history is malformed');
+      }
+      if (
+        canonicalResearchJson(parsed) !== eventJson ||
+        !validateResearchReviewEvent(parsed).valid
+      ) {
+        fail('INVALID_EVENT_PAYLOAD', 'Stored research review history failed schema verification');
+      }
+      const event = parsed as ResearchReviewEvent;
+      if (
+        !reviewRowMatchesEvent(row, event) ||
+        String(row.workflow_resource_model) !== graphRecordModel ||
+        row.reviewed_subject_record_id === null ||
+        Number(row.workflow_resource_id) !== Number(row.reviewed_subject_record_id) ||
+        row.workflow_definition_code !== 'research.review' ||
+        row.committed_workflow_event_id === null ||
+        event.workflow_revision !== Number(row.committed_workflow_revision) ||
+        event.idempotency_key !== row.committed_workflow_idempotency_key ||
+        String(row.committed_reviewer_identity ?? '') !== event.reviewer_id ||
+        String(row.committed_requester_identity ?? '') !== event.requester_id ||
+        String(row.committed_reviewer_role ?? '') !== event.reviewer_role ||
+        Number(row.committed_workflow_actor_id) !== Number(row.committed_reviewer_user_id) ||
+        (event.outcome === 'accepted'
+          ? row.committed_workflow_action !== 'approve' ||
+            row.committed_workflow_state !== 'approved'
+          : row.committed_workflow_action !== 'reject' ||
+            row.committed_workflow_state !== 'rejected')
+      ) {
+        fail('INVALID_EVENT_PAYLOAD', 'Stored review decision is not bound to its workflow event');
+      }
+      if (visibilityOrder[event.visibility] > visibilityOrder.INTERNAL) {
+        fail('FORBIDDEN', 'Research evidence is unavailable in this company context');
+      }
+      return event;
+    });
+    const consensus = summarizeResearchReviewHistory(
+      reference.assertion_id,
+      Number(subject.content_revision),
+      history
+    );
+    let reviewStatus = consensus.status;
+    if (consensus.status === 'accepted') {
+      const currentDecision = consensus.events.some(
+        (event) =>
+          event.outcome === 'accepted' &&
+          event.research_release_digest === release.releaseDigest &&
+          event.evidence_ids.includes(evidenceId)
+      );
+      if (!currentDecision) reviewStatus = 'unreviewed';
+    }
+    return {
+      canonicalEvidence: reference,
+      reviewStatus,
+      access: 'readable',
+    };
   });
 }
 
