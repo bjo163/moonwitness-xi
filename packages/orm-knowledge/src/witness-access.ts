@@ -29,6 +29,7 @@ interface WitnessTestimonyRow {
 
 interface WitnessCorrectionRow {
   active: boolean;
+  recorded_by_id: number;
   testimony_id: number;
   synthetic: boolean;
   sequence: number;
@@ -97,7 +98,29 @@ export class WitnessAccessError extends Error {
   }
 }
 
-async function verifyWitnessSteward(db: Knex, steward: AuthenticatedWitnessSteward): Promise<void> {
+export interface AppendSyntheticWitnessCorrectionInput {
+  readonly sequence: number;
+  readonly correctionText: string;
+  readonly reason: string;
+  readonly sourceLabel: string;
+  readonly sourceLocator: string;
+  readonly sourceDigest: string;
+  readonly assertedTimeText: string;
+  readonly assertedTimePrecision: WitnessTimePrecision;
+  readonly uncertaintyNote?: string | null;
+}
+
+export interface AppendedSyntheticWitnessCorrection {
+  readonly sequence: number;
+  readonly correctionText: string;
+  readonly idempotent: boolean;
+}
+
+async function verifyWitnessSteward(
+  db: Knex,
+  steward: AuthenticatedWitnessSteward,
+  lock = false
+): Promise<void> {
   if (
     steward.role !== 'superadmin' ||
     !Number.isSafeInteger(steward.userId) ||
@@ -108,26 +131,32 @@ async function verifyWitnessSteward(db: Knex, steward: AuthenticatedWitnessStewa
     throw new WitnessAccessError('FORBIDDEN');
   }
 
+  const userQuery = db('users').where({ id: steward.userId, role: 'superadmin', active: true });
+  const companyMembershipQuery = db('company_memberships as membership')
+    .join('companies as company', 'company.id', 'membership.company_id')
+    .where({
+      'membership.user_id': steward.userId,
+      'membership.company_id': steward.companyId,
+      'membership.active': true,
+      'company.active': true,
+    });
+  const witnessGroupMembershipQuery = db('group_memberships as membership')
+    .join('access_groups as access_group', 'access_group.id', 'membership.group_id')
+    .where({
+      'membership.user_id': steward.userId,
+      'membership.active': true,
+      'access_group.code': 'knowledge_witness_steward',
+      'access_group.active': true,
+    });
+  if (lock) {
+    userQuery.forUpdate();
+    companyMembershipQuery.forUpdate();
+    witnessGroupMembershipQuery.forUpdate();
+  }
   const [user, companyMembership, witnessGroupMembership] = await Promise.all([
-    db('users').where({ id: steward.userId, role: 'superadmin', active: true }).first('id'),
-    db('company_memberships as membership')
-      .join('companies as company', 'company.id', 'membership.company_id')
-      .where({
-        'membership.user_id': steward.userId,
-        'membership.company_id': steward.companyId,
-        'membership.active': true,
-        'company.active': true,
-      })
-      .first('membership.id'),
-    db('group_memberships as membership')
-      .join('access_groups as access_group', 'access_group.id', 'membership.group_id')
-      .where({
-        'membership.user_id': steward.userId,
-        'membership.active': true,
-        'access_group.code': 'knowledge_witness_steward',
-        'access_group.active': true,
-      })
-      .first('membership.id'),
+    userQuery.first('id'),
+    companyMembershipQuery.first('membership.id'),
+    witnessGroupMembershipQuery.first('membership.id'),
   ]);
 
   if (!user || !companyMembership || !witnessGroupMembership) {
@@ -237,4 +266,98 @@ export async function readOwnedSyntheticWitness(
       visibility: interpretation.visibility,
     })),
   };
+}
+
+/** Append an owned synthetic restricted correction after shape-checking its attribution metadata. */
+export async function appendOwnedSyntheticWitnessCorrection(
+  db: Knex,
+  steward: AuthenticatedWitnessSteward,
+  testimonyId: number,
+  input: AppendSyntheticWitnessCorrectionInput
+): Promise<AppendedSyntheticWitnessCorrection> {
+  if (
+    !Number.isSafeInteger(testimonyId) ||
+    testimonyId < 1 ||
+    !Number.isSafeInteger(input.sequence) ||
+    input.sequence < 1 ||
+    !input.correctionText.trim() ||
+    !input.reason.trim() ||
+    !input.sourceLabel.trim() ||
+    !input.sourceLocator.trim() ||
+    !/^[a-f0-9]{64}$/u.test(input.sourceDigest) ||
+    !input.assertedTimeText.trim() ||
+    (input.uncertaintyNote !== undefined &&
+      input.uncertaintyNote !== null &&
+      typeof input.uncertaintyNote !== 'string') ||
+    !['instant', 'day', 'month', 'year', 'unknown'].includes(input.assertedTimePrecision)
+  ) {
+    throw new TypeError('Invalid synthetic witness correction');
+  }
+
+  return db.transaction(async (trx) => {
+    await verifyWitnessSteward(trx, steward, true);
+    const testimony = await trx<WitnessTestimonyRow>('knowledge_witness_testimonies')
+      .where({
+        id: testimonyId,
+        active: true,
+        company_id: steward.companyId,
+        created_by_id: steward.userId,
+        synthetic: true,
+        visibility: 'RESTRICTED',
+      })
+      .forUpdate()
+      .first('id');
+    if (!testimony) throw new WitnessAccessError('NOT_FOUND');
+
+    const chain = await trx<WitnessCorrectionRow>('knowledge_witness_corrections')
+      .where({ testimony_id: testimony.id })
+      .orderBy('sequence', 'asc')
+      .forUpdate();
+    if (chain.some((row, index) => Number(row.sequence) !== index + 1)) {
+      throw new TypeError('Synthetic witness correction chain is inconsistent');
+    }
+
+    const existing = chain.find((row) => Number(row.sequence) === input.sequence);
+    const payload = {
+      testimony_id: testimony.id,
+      sequence: input.sequence,
+      correction_text: input.correctionText,
+      reason: input.reason,
+      source_label: input.sourceLabel,
+      source_locator: input.sourceLocator,
+      source_digest: input.sourceDigest,
+      asserted_time_text: input.assertedTimeText,
+      asserted_time_precision: input.assertedTimePrecision,
+      uncertainty_note: input.uncertaintyNote ?? null,
+      recorded_by_id: steward.userId,
+      synthetic: true,
+    };
+    if (existing) {
+      if (
+        existing.active &&
+        existing.synthetic &&
+        Number(existing.recorded_by_id) === steward.userId &&
+        existing.correction_text === payload.correction_text &&
+        existing.reason === payload.reason &&
+        existing.source_label === payload.source_label &&
+        existing.source_locator === payload.source_locator &&
+        existing.source_digest === payload.source_digest &&
+        existing.asserted_time_text === payload.asserted_time_text &&
+        existing.asserted_time_precision === payload.asserted_time_precision &&
+        existing.uncertainty_note === payload.uncertainty_note
+      ) {
+        return {
+          sequence: input.sequence,
+          correctionText: existing.correction_text,
+          idempotent: true,
+        };
+      }
+      throw new TypeError('Correction sequence already exists with a different payload');
+    }
+    if (input.sequence !== chain.length + 1) {
+      throw new TypeError('Correction sequence must be the next contiguous value');
+    }
+    await trx('knowledge_witness_corrections').insert(payload);
+    return { sequence: input.sequence, correctionText: input.correctionText, idempotent: false };
+  });
 }

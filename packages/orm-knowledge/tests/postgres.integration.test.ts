@@ -18,6 +18,7 @@ import {
   readActiveResearchGraphRelease,
   readConceptProfileVersion,
   readOwnedSyntheticWitness,
+  appendOwnedSyntheticWitnessCorrection,
   readResearchReviewHistory,
   readTextualAlignmentCandidateVersion,
   readStoryVersion,
@@ -133,6 +134,7 @@ postgresDescribe('knowledge addon PostgreSQL integration', () => {
     const testimony = await WitnessTestimony.query().findOne({
       external_key: 'synthetic-witness-001',
     });
+
     expect(testimony).toMatchObject({
       visibility: 'RESTRICTED',
       synthetic: true,
@@ -223,6 +225,75 @@ postgresDescribe('knowledge addon PostgreSQL integration', () => {
     expect(
       await WitnessCorrection.query().where({ testimony_id: testimony?.id, sequence: 2 })
     ).toHaveLength(1);
+  }, 30000);
+
+  it('serializes PostgreSQL correction appends and returns an exact retry idempotently', async () => {
+    await installAddons(db, [manifest, baseManifest]);
+    const actor = await db('users').where({ login: 'superadmin' }).first('id');
+    const testimony = await db('knowledge_witness_testimonies')
+      .where({ external_key: 'synthetic-witness-scoped-001' })
+      .first('id', 'company_id');
+    expect(actor && testimony).toBeTruthy();
+    const steward = {
+      userId: Number(actor?.id),
+      companyId: Number(testimony?.company_id),
+      role: 'superadmin',
+    } as const;
+    const input = {
+      sequence: 2,
+      correctionText: 'Synthetic PostgreSQL correction append.',
+      reason: 'Synthetic transaction test.',
+      sourceLabel: 'Synthetic test source',
+      sourceLocator: 'fixture://postgres/correction-002',
+      sourceDigest: 'f'.repeat(64),
+      assertedTimeText: '2026',
+      assertedTimePrecision: 'year' as const,
+    };
+    const results = await Promise.allSettled([
+      appendOwnedSyntheticWitnessCorrection(db, steward, Number(testimony?.id), input),
+      appendOwnedSyntheticWitnessCorrection(db, steward, Number(testimony?.id), input),
+    ]);
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(2);
+    expect(
+      await db('knowledge_witness_corrections').where({
+        testimony_id: testimony?.id,
+        sequence: 2,
+      })
+    ).toHaveLength(1);
+    const retry = await appendOwnedSyntheticWitnessCorrection(
+      db,
+      steward,
+      Number(testimony?.id),
+      input
+    );
+    expect(retry.idempotent).toBe(true);
+    const competingPayloads = await Promise.allSettled([
+      appendOwnedSyntheticWitnessCorrection(db, steward, Number(testimony?.id), {
+        ...input,
+        sequence: 3,
+        correctionText: 'Synthetic PostgreSQL competing correction A.',
+      }),
+      appendOwnedSyntheticWitnessCorrection(db, steward, Number(testimony?.id), {
+        ...input,
+        sequence: 3,
+        correctionText: 'Synthetic PostgreSQL competing correction B.',
+      }),
+    ]);
+    expect(competingPayloads.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    const rejectedCompetingPayloads = competingPayloads.filter(
+      (result): result is PromiseRejectedResult => result.status === 'rejected'
+    );
+    expect(rejectedCompetingPayloads).toHaveLength(1);
+    expect(rejectedCompetingPayloads[0]?.reason).toMatchObject({
+      message: 'Correction sequence already exists with a different payload',
+    });
+    const winningPayload = await db('knowledge_witness_corrections')
+      .where({ testimony_id: testimony?.id, sequence: 3 })
+      .first('correction_text');
+    expect([
+      'Synthetic PostgreSQL competing correction A.',
+      'Synthetic PostgreSQL competing correction B.',
+    ]).toContain(winningPayload?.correction_text);
   }, 30000);
 
   it('stores, activates, rolls back, and protects synthetic graph releases in PostgreSQL', async () => {

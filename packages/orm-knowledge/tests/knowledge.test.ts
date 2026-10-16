@@ -5,6 +5,7 @@ import { manifest as baseManifest, ModelAccess, User } from '@moonwitness/orm-ba
 import {
   isNextCorrectionSequence,
   isValidCorrectionProvenance,
+  appendOwnedSyntheticWitnessCorrection,
   manifest,
   WitnessCorrection,
   WitnessInterpretation,
@@ -256,5 +257,71 @@ describe('knowledge witness records addon', () => {
     expect(
       await WitnessCorrection.query().where({ testimony_id: original?.testimony_id, sequence: 2 })
     ).toHaveLength(1);
+  });
+
+  it('atomically appends only the next owner-scoped synthetic restricted correction and supports exact retries', async () => {
+    await installAddons(db, [baseManifest, manifest]);
+    const testimony = await WitnessTestimony.query().findOne({
+      external_key: 'synthetic-witness-scoped-001',
+    });
+    const actor = {
+      userId: Number(testimony?.created_by_id),
+      companyId: Number(testimony?.company_id),
+      role: 'superadmin',
+    } as const;
+    const input = {
+      sequence: 2,
+      correctionText: 'Synthetic correction: the lamp was near the north doorway.',
+      reason: 'Synthetic owner correction fixture.',
+      sourceLabel: 'Synthetic correction fixture',
+      sourceLocator: 'fixture://witness/scoped/001/correction/002',
+      sourceDigest: digest,
+      assertedTimeText: '2026',
+      assertedTimePrecision: 'year' as const,
+    };
+    const first = await appendOwnedSyntheticWitnessCorrection(
+      db,
+      actor,
+      Number(testimony?.id),
+      input
+    );
+    const retry = await appendOwnedSyntheticWitnessCorrection(
+      db,
+      actor,
+      Number(testimony?.id),
+      input
+    );
+    expect(first).toMatchObject({ sequence: 2, idempotent: false });
+    expect(retry).toMatchObject({ sequence: 2, idempotent: true });
+    expect(
+      await WitnessCorrection.query().where({ testimony_id: testimony?.id, sequence: 2 })
+    ).toHaveLength(1);
+    await expect(
+      appendOwnedSyntheticWitnessCorrection(db, actor, Number(testimony?.id), {
+        ...input,
+        correctionText: 'Conflicting retry payload.',
+      })
+    ).rejects.toThrow('different payload');
+    await expect(
+      appendOwnedSyntheticWitnessCorrection(db, actor, Number(testimony?.id), {
+        ...input,
+        sequence: 4,
+      })
+    ).rejects.toThrow('next contiguous');
+    await expect(
+      appendOwnedSyntheticWitnessCorrection(db, actor, Number(testimony?.id), {
+        ...input,
+        sequence: 3,
+        uncertaintyNote: 42 as never,
+      })
+    ).rejects.toThrow('Invalid synthetic witness correction');
+    await expect(
+      appendOwnedSyntheticWitnessCorrection(
+        db,
+        { ...actor, companyId: 999 },
+        Number(testimony?.id),
+        input
+      )
+    ).rejects.toThrow();
   });
 });

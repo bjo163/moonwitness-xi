@@ -75,8 +75,14 @@ export type {
 } from './research-release.js';
 export { isNextCorrectionSequence, isValidCorrectionProvenance } from './validation.js';
 export type { CorrectionProvenance } from './validation.js';
-export { readOwnedSyntheticWitness, WitnessAccessError } from './witness-access.js';
+export {
+  appendOwnedSyntheticWitnessCorrection,
+  readOwnedSyntheticWitness,
+  WitnessAccessError,
+} from './witness-access.js';
 export type {
+  AppendSyntheticWitnessCorrectionInput,
+  AppendedSyntheticWitnessCorrection,
   AuthenticatedWitnessSteward,
   ScopedSyntheticWitness,
   WitnessAccessErrorCode,
