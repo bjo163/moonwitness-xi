@@ -194,16 +194,10 @@ describe('provenance-linked relation explanations', () => {
   it('retains synthetic disputed status, both evidence directions, and alternative hypotheses', async () => {
     const support = quranEvidence();
     const counter = {
-      id: 'mw:evidence:genesis-counter',
+      id: 'mw:evidence:synthetic-q7-46-counter',
       assertion_id: 'mw:assertion:synthetic-contested-fixture',
       direction: 'counterevidence',
-      selector: {
-        source_id: genesisPassage.source_id,
-        expression_id: genesisPassage.expression_id,
-        edition_id: genesisPassage.edition_id,
-        locator: genesisPassage.locator,
-        content_sha256: genesisPassage.content_sha256,
-      },
+      selector: { ...support.selector },
     } satisfies ResearchEvidenceReference;
     const contested = unreviewedRelation({
       id: 'mw:relation:synthetic-disputed-fixture',
@@ -245,7 +239,7 @@ describe('provenance-linked relation explanations', () => {
         review_status: 'disputed',
         epistemic_status: 'disputed',
         supporting_evidence: [{ direction: 'supporting', locator: 'Q7:46' }],
-        counterevidence: [{ direction: 'counterevidence', locator: 'Genesis 1:1' }],
+        counterevidence: [{ direction: 'counterevidence', locator: 'Q7:46' }],
         alternatives: [
           { relation: { id: alternativeA.id } },
           { relation: { id: alternativeB.id, epistemic_status: 'insufficient_evidence' } },
@@ -326,16 +320,10 @@ describe('provenance-linked relation explanations', () => {
   it('produces stable evidence ordering for equivalent relation inputs', async () => {
     const evidenceA = quranEvidence();
     const evidenceB = {
-      id: 'mw:evidence:genesis-support',
+      id: 'mw:evidence:tanzil-q7-46-secondary',
       assertion_id: 'mw:assertion:synthetic-fixture',
       direction: 'supporting',
-      selector: {
-        source_id: genesisPassage.source_id,
-        expression_id: genesisPassage.expression_id,
-        edition_id: genesisPassage.edition_id,
-        locator: genesisPassage.locator,
-        content_sha256: genesisPassage.content_sha256,
-      },
+      selector: { ...evidenceA.selector },
     } satisfies ResearchEvidenceReference;
     const value = relation({ supporting_evidence_ids: [evidenceB.id, evidenceA.id] });
     const configured = options([evidenceB, evidenceA]);
@@ -348,8 +336,8 @@ describe('provenance-linked relation explanations', () => {
     expect(first).toEqual(second);
     if (first.status === 'explained') {
       expect(first.explanation.supporting_evidence.map(({ evidence }) => evidence.id)).toEqual([
-        'mw:evidence:genesis-support',
         'mw:evidence:tanzil-q7-46',
+        'mw:evidence:tanzil-q7-46-secondary',
       ]);
     }
   });
