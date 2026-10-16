@@ -5,6 +5,7 @@ export {
   ResearchGraphRecord,
   ResearchGraphRelease,
   ResearchReviewEvent,
+  ConceptProfileVersion,
   WitnessCorrection,
   WitnessInterpretation,
   WitnessTestimony,
@@ -19,6 +20,12 @@ export {
   readResearchGraphRelease,
 } from './research-release.js';
 export { resolveConceptProfileEvidence, transitionResearchReview } from './research-review.js';
+export { storeConceptProfiles, readConceptProfileVersion } from './concept-profile-store.js';
+export type {
+  ReadConceptProfileInput,
+  StoreConceptProfilesInput,
+  StoredConceptProfileVersion,
+} from './concept-profile-store.js';
 export { readResearchReviewHistory, validateResearchRelease } from './research-review.js';
 export {
   provisionResearchActorIdentity,

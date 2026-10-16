@@ -6,6 +6,7 @@ import {
   ResearchGraphRecord,
   ResearchGraphRelease,
   ResearchReviewEvent,
+  ConceptProfileVersion,
   WitnessCorrection,
   WitnessInterpretation,
   WitnessTestimony,
@@ -28,6 +29,7 @@ const installAppendOnlyGuards: NonNullable<Addon['setup']> = async (trx) => {
     'knowledge_research_graph_releases',
     'knowledge_research_graph_records',
     'knowledge_research_review_events',
+    'knowledge_concept_profile_versions',
     'knowledge_research_actor_identities',
     'knowledge_privacy_revocations',
   ] as const;
@@ -38,6 +40,9 @@ const installAppendOnlyGuards: NonNullable<Addon['setup']> = async (trx) => {
       CREATE OR REPLACE FUNCTION moonwitness_reject_knowledge_witness_mutation()
       RETURNS trigger AS $$
       BEGIN
+      IF TG_TABLE_NAME = 'knowledge_concept_profile_versions' THEN
+        RAISE EXCEPTION 'Knowledge concept profiles are append-only';
+      END IF;
       RAISE EXCEPTION 'Knowledge witness records are append-only';
       END;
       $$ LANGUAGE plpgsql
@@ -55,11 +60,15 @@ const installAppendOnlyGuards: NonNullable<Addon['setup']> = async (trx) => {
 
   if (client === 'better-sqlite3' || client === 'sqlite3') {
     for (const table of tables) {
+      const errorMessage =
+        table === 'knowledge_concept_profile_versions'
+          ? 'Knowledge concept profiles are append-only'
+          : 'Knowledge witness records are append-only';
       await trx.raw(
-        `CREATE TRIGGER IF NOT EXISTS ${table}_reject_update BEFORE UPDATE ON ${table} BEGIN SELECT RAISE(ABORT, 'Knowledge witness records are append-only'); END`
+        `CREATE TRIGGER IF NOT EXISTS ${table}_reject_update BEFORE UPDATE ON ${table} BEGIN SELECT RAISE(ABORT, '${errorMessage}'); END`
       );
       await trx.raw(
-        `CREATE TRIGGER IF NOT EXISTS ${table}_reject_delete BEFORE DELETE ON ${table} BEGIN SELECT RAISE(ABORT, 'Knowledge witness records are append-only'); END`
+        `CREATE TRIGGER IF NOT EXISTS ${table}_reject_delete BEFORE DELETE ON ${table} BEGIN SELECT RAISE(ABORT, '${errorMessage}'); END`
       );
     }
   }
@@ -67,7 +76,7 @@ const installAppendOnlyGuards: NonNullable<Addon['setup']> = async (trx) => {
 
 export const manifest = defineAddon({
   name: 'knowledge',
-  version: '1.4.0',
+  version: '1.5.0',
   depends: ['base'],
   models: [
     WitnessTestimony,
@@ -77,6 +86,7 @@ export const manifest = defineAddon({
     ResearchGraphRecord,
     ResearchActiveRelease,
     ResearchReviewEvent,
+    ConceptProfileVersion,
     ResearchActorIdentity,
     ResearchPrivacyRevocation,
     ResearchPrivacyProjection,

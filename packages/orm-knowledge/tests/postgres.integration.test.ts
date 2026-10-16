@@ -14,10 +14,12 @@ import {
   createResearchGraphRelease,
   manifest,
   readActiveResearchGraphRelease,
+  readConceptProfileVersion,
   readOwnedSyntheticWitness,
   readResearchReviewHistory,
   ResearchGraphRecord,
   transitionResearchReview,
+  storeConceptProfiles,
   WitnessCorrection,
   WitnessInterpretation,
   WitnessTestimony,
@@ -253,6 +255,104 @@ postgresDescribe('knowledge addon PostgreSQL integration', () => {
     await expect(
       db('knowledge_research_graph_records').where({ id: recordRow.id }).delete()
     ).rejects.toThrow('Knowledge witness records are append-only');
+  }, 30000);
+
+  it('serializes immutable company-scoped concept profile versions in PostgreSQL', async () => {
+    await installAddons(db, [baseManifest, manifest]);
+    const userId = Number((await db('users').where({ login: 'superadmin' }).first('id'))?.id);
+    const companyId = Number((await db('companies').first('id'))?.id);
+    if (!userId || !companyId) throw new Error('Required synthetic profile actor is missing');
+    await db('company_memberships')
+      .insert({ user_id: userId, company_id: companyId, is_default: true })
+      .onConflict(['user_id', 'company_id'])
+      .ignore();
+    const document = {
+      format: 'moonwitness-concept-profiles/v1',
+      profiles: [
+        {
+          id: 'mw:concept-profile:pg-synthetic-profile',
+          concept_id: 'mw:concept:pg-synthetic-concept',
+          tradition: 'Synthetic PostgreSQL test tradition',
+          interpretive_scope: 'Synthetic provisional scope only.',
+          epistemic_status: 'provisional',
+          uncertainty: { level: 'high', note: 'No interpretation is asserted.' },
+          interpretations: [
+            {
+              claim_type: 'human_interpretation',
+              text: 'Synthetic candidate only.',
+              status: 'candidate',
+              evidence_ids: [],
+            },
+          ],
+        },
+      ],
+    };
+    const actor = { userId, companyId, role: 'superadmin' as const };
+    const corpusRootDirectory = path.resolve(process.cwd(), '../..');
+    const parallel = await Promise.all([
+      storeConceptProfiles(db, { authenticatedActor: actor, corpusRootDirectory, document }),
+      storeConceptProfiles(db, { authenticatedActor: actor, corpusRootDirectory, document }),
+    ]);
+    expect(parallel.flat().map((entry) => entry.version)).toEqual([1, 1]);
+    expect(parallel.flat().filter((entry) => entry.idempotent)).toHaveLength(1);
+    const acceptedDocument = structuredClone(document);
+    acceptedDocument.profiles[0]!.interpretations[0] = {
+      claim_type: 'human_interpretation',
+      text: 'Synthetic claim that has no profile-level review binding.',
+      status: 'accepted',
+      evidence_ids: ['mw:evidence:pg-synthetic-placeholder'],
+    };
+    await expect(
+      storeConceptProfiles(db, {
+        authenticatedActor: actor,
+        corpusRootDirectory,
+        document: acceptedDocument,
+      })
+    ).rejects.toThrow('exact profile-digest review binding');
+    const duplicateDocument = {
+      format: 'moonwitness-concept-profiles/v1',
+      profiles: [
+        document.profiles[0],
+        { ...document.profiles[0], interpretive_scope: 'Divergent synthetic scope.' },
+      ],
+    };
+    await expect(
+      storeConceptProfiles(db, {
+        authenticatedActor: actor,
+        corpusRootDirectory,
+        document: duplicateDocument,
+      })
+    ).rejects.toThrow('duplicate profile IDs');
+    const missingEvidenceDocument = structuredClone(document);
+    missingEvidenceDocument.profiles[0]!.id = 'mw:concept-profile:pg-missing-evidence';
+    missingEvidenceDocument.profiles[0]!.interpretations[0]!.evidence_ids = [
+      'mw:evidence:pg-synthetic-missing-candidate',
+    ];
+    await expect(
+      storeConceptProfiles(db, {
+        authenticatedActor: actor,
+        corpusRootDirectory,
+        document: missingEvidenceDocument,
+      })
+    ).rejects.toThrow('Concept profile evidence is missing or unreadable');
+    const read = await readConceptProfileVersion(db, {
+      authenticatedReader: actor,
+      corpusRootDirectory,
+      profileId: 'mw:concept-profile:pg-synthetic-profile',
+    });
+    expect(read).toMatchObject({ version: 1, visibility: 'INTERNAL', document });
+    await expect(
+      readConceptProfileVersion(db, {
+        authenticatedReader: { ...actor, companyId: companyId + 1000 },
+        corpusRootDirectory,
+        profileId: 'mw:concept-profile:pg-synthetic-profile',
+      })
+    ).rejects.toThrow('unavailable in this company context');
+    await expect(
+      db('knowledge_concept_profile_versions')
+        .where({ profile_id: 'mw:concept-profile:pg-synthetic-profile' })
+        .delete()
+    ).rejects.toThrow('Knowledge concept profiles are append-only');
   }, 30000);
 
   it('commits and replays a review decision atomically with the PostgreSQL workflow event', async () => {

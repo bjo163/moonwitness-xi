@@ -145,6 +145,29 @@ export const ResearchReviewEvent = defineModel('knowledge.research_review_event'
   },
 });
 
+/** Immutable, tenant-scoped INTERNAL concept profile version. */
+export const ConceptProfileVersion = defineModel('knowledge.concept_profile_version', {
+  table: 'knowledge_concept_profile_versions',
+  order: 'company_id asc, profile_id asc, version asc',
+  unique: [['company', 'profile_id', 'version']],
+  fields: {
+    company: fields.belongsTo(Company, { required: true }),
+    profile_id: fields.string({
+      required: true,
+      pattern: '^mw:concept-profile:[a-z0-9][a-z0-9._-]{0,179}$',
+    }),
+    concept_id: fields.string({
+      required: true,
+      pattern: '^mw:concept:[a-z0-9][a-z0-9._-]{0,179}$',
+    }),
+    version: fields.integer({ required: true }),
+    visibility: fields.enum(['INTERNAL'], { required: true, default: 'INTERNAL' }),
+    profile_json: fields.text({ required: true, hidden: true }),
+    profile_digest: fields.string({ required: true, pattern: '^[a-f0-9]{64}$' }),
+    recorded_by: fields.belongsTo(User, { required: true }),
+  },
+});
+
 /** Explicit, stable ontology identities for database users; IDs are never inferred from SQL rows. */
 export const ResearchActorIdentity = defineModel('knowledge.research_actor_identity', {
   table: 'knowledge_research_actor_identities',
@@ -175,6 +198,7 @@ for (const model of [
   ResearchGraphRelease,
   ResearchGraphRecord,
   ResearchReviewEvent,
+  ConceptProfileVersion,
   ResearchActorIdentity,
 ]) {
   model.beforeUpdate = (_args: StaticHookArguments<InstanceType<typeof model>>): never =>
