@@ -484,6 +484,13 @@
     },
     {
       "from": "knowledge.research_actor_identity",
+      "field": "provisioned_by",
+      "to": "base.user",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "knowledge.research_actor_identity",
       "field": "user",
       "to": "base.user",
       "cardinality": "1:1",

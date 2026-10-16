@@ -1,6 +1,6 @@
 # Generated model and addon reference
 
-Source fingerprint: `ae28ef5a78d588e5e0b0b8267c1064d5262cd10a6701b965d2b3a21c486fc9ad`. Seed values and field defaults are intentionally omitted.
+Source fingerprint: `5e4ff1b558411fbd9b2bfc2f9b6474bab295b2e6a1053800d606c0aff760d865`. Seed values and field defaults are intentionally omitted.
 
 ## Addon `auth`
 
@@ -297,6 +297,9 @@ Models: 8; declared views: 3; menu entries: 3; seed rows: 11.
 | `knowledge.research_active_release` | `knowledge_research_active_releases`  | `corpus_key`              | string    | Yes      | No       | No         | —                                  |
 | `knowledge.research_active_release` | `knowledge_research_active_releases`  | `release`                 | belongsTo | Yes      | No       | No         | `knowledge.research_graph_release` |
 | `knowledge.research_actor_identity` | `knowledge_research_actor_identities` | `canonical_user_id`       | string    | Yes      | No       | No         | —                                  |
+| `knowledge.research_actor_identity` | `knowledge_research_actor_identities` | `provisioned_by`          | belongsTo | No       | Yes      | No         | `base.user`                        |
+| `knowledge.research_actor_identity` | `knowledge_research_actor_identities` | `reason`                  | text      | No       | Yes      | No         | —                                  |
+| `knowledge.research_actor_identity` | `knowledge_research_actor_identities` | `request_id`              | string    | No       | Yes      | No         | —                                  |
 | `knowledge.research_actor_identity` | `knowledge_research_actor_identities` | `user`                    | belongsTo | Yes      | No       | No         | `base.user`                        |
 | `knowledge.research_graph_record`   | `knowledge_research_graph_records`    | `content_digest`          | string    | Yes      | No       | No         | —                                  |
 | `knowledge.research_graph_record`   | `knowledge_research_graph_records`    | `content_json`            | text      | Yes      | No       | No         | —                                  |

@@ -17,6 +17,15 @@ export {
   readResearchGraphRelease,
 } from './research-release.js';
 export { transitionResearchReview } from './research-review.js';
+export {
+  provisionResearchActorIdentity,
+  ResearchActorIdentityProvisioningError,
+} from './research-actor-identity.js';
+export type {
+  AuthenticatedIdentityProvisioner,
+  ProvisionResearchActorIdentityInput,
+  ResearchActorIdentityProvisioningErrorCode,
+} from './research-actor-identity.js';
 export type {
   AuthenticatedResearchReviewer,
   TransitionResearchReviewInput,
@@ -24,6 +33,8 @@ export type {
 export type {
   CreateResearchGraphReleaseInput,
   ResearchGraphRecordInput,
+  StoredResearchGraphRecord,
+  StoredResearchGraphRelease,
 } from './research-release.js';
 export { isNextCorrectionSequence, isValidCorrectionProvenance } from './validation.js';
 export type { CorrectionProvenance } from './validation.js';

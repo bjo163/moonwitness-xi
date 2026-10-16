@@ -152,6 +152,10 @@ export const ResearchActorIdentity = defineModel('knowledge.research_actor_ident
       unique: true,
       pattern: '^mw:user:[a-z0-9][a-z0-9._-]{0,179}$',
     }),
+    /** Present for mappings provisioned through the governed service. */
+    request_id: fields.string({ unique: true }),
+    provisioned_by: fields.belongsTo(User),
+    reason: fields.text(),
   },
 });
 

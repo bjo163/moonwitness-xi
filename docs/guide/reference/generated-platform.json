@@ -3097,6 +3097,37 @@
               "hasDefault": false
             },
             {
+              "name": "provisioned_by",
+              "kind": "belongsTo",
+              "column": "provisioned_by_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false,
+              "relation": "base.user"
+            },
+            {
+              "name": "reason",
+              "kind": "text",
+              "column": "reason",
+              "declaredRequired": false,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
+              "name": "request_id",
+              "kind": "string",
+              "column": "request_id",
+              "declaredRequired": false,
+              "required": false,
+              "unique": true,
+              "optional": true,
+              "hasDefault": false
+            },
+            {
               "name": "user",
               "kind": "belongsTo",
               "column": "user_id",
@@ -5359,7 +5390,15 @@
     },
     {
       "method": "POST",
+      "path": "/api/research/actor-identities"
+    },
+    {
+      "method": "POST",
       "path": "/api/research/evidence/resolve"
+    },
+    {
+      "method": "GET",
+      "path": "/api/research/relations/:relationId/explanation"
     },
     {
       "method": "POST",
@@ -5450,5 +5489,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "ae28ef5a78d588e5e0b0b8267c1064d5262cd10a6701b965d2b3a21c486fc9ad"
+  "generatedFromSha256": "5e4ff1b558411fbd9b2bfc2f9b6474bab295b2e6a1053800d606c0aff760d865"
 }

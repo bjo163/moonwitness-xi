@@ -17,6 +17,8 @@ import { notificationRoutes } from './routes/notification.routes.js';
 import { workflowRoutes } from './routes/workflow.routes.js';
 import { corpusRoutes } from './routes/corpus.routes.js';
 import { evidenceRoutes } from './routes/evidence.routes.js';
+import { researchExplanationRoutes } from './routes/research-explanation.routes.js';
+import { researchActorIdentityRoutes } from './routes/research-actor-identity.routes.js';
 import { config, localAiConfig } from './config/env.js';
 import { LocalFileAttachmentStorage, type AttachmentStorage } from '@moonwitness/orm-storage';
 import { createDatabase } from './database/knex.js';
@@ -31,6 +33,7 @@ import { manifest as workflowAddon } from '@moonwitness/orm-workflow';
 import { manifest as organizationAddon } from '@moonwitness/orm-organization';
 import { manifest as integrationAddon } from '@moonwitness/orm-integration';
 import { manifest as requestAddon } from '@moonwitness/orm-request';
+import { manifest as knowledgeAddon } from '@moonwitness/orm-knowledge';
 
 import { createLogger, type LogLevel } from '@moonwitness/logger';
 import { isRecord } from '@moonwitness/types';
@@ -89,6 +92,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       notificationAddon,
       organizationAddon,
       workflowAddon,
+      knowledgeAddon,
     ]);
     await initializeSuperadminPassword(superadminPassword);
   } catch (error) {
@@ -245,6 +249,8 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   await app.register(workflowRoutes);
   await app.register(corpusRoutes);
   await app.register(evidenceRoutes);
+  await app.register(researchExplanationRoutes);
+  await app.register(researchActorIdentityRoutes);
 
   return app;
 }

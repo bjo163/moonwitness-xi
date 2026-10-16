@@ -47,6 +47,7 @@
     "@moonwitness/orm": "workspace:*",
     "@moonwitness/orm-base": "workspace:*",
     "@moonwitness/orm-integration": "workspace:*",
+    "@moonwitness/orm-knowledge": "workspace:*",
     "@moonwitness/types": "workspace:*",
     "cron-parser": "^5.4.0",
     "dotenv": "^18.0.5",
@@ -58,7 +59,6 @@
   },
   "devDependencies": {
     "@moonwitness/client": "workspace:*",
-    "@moonwitness/orm-knowledge": "workspace:*",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^26.6.4",
     "@types/pg": "^8.23.1",
