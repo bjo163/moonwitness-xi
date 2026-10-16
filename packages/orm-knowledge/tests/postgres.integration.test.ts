@@ -1,5 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import knex, { type Knex } from 'knex';
 import { Model } from 'objection';
@@ -18,8 +20,11 @@ import {
   readOwnedSyntheticWitness,
   readResearchReviewHistory,
   readTextualAlignmentCandidateVersion,
+  readStoryVersion,
+  type StoryMediaReference,
   ResearchGraphRecord,
   storeTextualAlignmentCandidates,
+  storeStoryVersion,
   transitionResearchReview,
   storeConceptProfiles,
   WitnessCorrection,
@@ -31,6 +36,51 @@ const connectionString = process.env.POSTGRES_TEST_URL;
 const postgresDescribe = connectionString ? describe : describe.skip;
 const pilotScopeId = 'mw:concept:postgres-synthetic-pilot';
 const pilotAssertionId = 'mw:assertion:postgres-synthetic-pilot';
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+const pgStoryMedia: StoryMediaReference = {
+  artifact_id: 'mw:artifact:webp-protestant-genesis-1-1',
+  sha256: 'ae5c2799fad97b0e65334aa39be6193d487419f0d31713caaac58a47f6b4d8b1',
+  media_type: 'text/plain; charset=utf-8',
+  rights_ref: 'docs/roadmap/evidence/K2-006.md#source-and-rights',
+};
+
+function artifactSha256(value: Uint8Array): string {
+  return createHash('sha256').update(value).digest('hex');
+}
+
+async function resolvePgStoryMedia(reference: StoryMediaReference) {
+  const manifest = JSON.parse(
+    await readFile(path.join(repoRoot, 'corpus/manifests/webp-protestant-genesis-1-1.json'), 'utf8')
+  ) as {
+    artifact: { media_type: string; sha256: string; byte_length: number };
+    rights: { state: string; allowed_uses: string[]; evidence_ref: string };
+  };
+  const identity = await readFile(
+    path.join(repoRoot, 'corpus/reference/webp-protestant-genesis-1-1.identity.json'),
+    'utf8'
+  );
+  const bytes = await readFile(
+    path.join(repoRoot, 'corpus/reference/sha256', reference.sha256.slice(0, 2), reference.sha256)
+  );
+  if (
+    !identity.includes(reference.artifact_id) ||
+    manifest.artifact.sha256 !== reference.sha256 ||
+    manifest.artifact.media_type !== reference.media_type ||
+    manifest.rights.evidence_ref !== reference.rights_ref ||
+    manifest.rights.state !== 'permitted' ||
+    !manifest.rights.allowed_uses.includes('store') ||
+    bytes.byteLength !== manifest.artifact.byte_length ||
+    artifactSha256(bytes) !== reference.sha256
+  ) {
+    return null;
+  }
+  return {
+    ...reference,
+    bytes_verified: true as const,
+    rights_state: 'permitted' as const,
+    allowed_uses: manifest.rights.allowed_uses,
+  };
+}
 
 function syntheticAssertionContent(revision: number, claim: string) {
   return {
@@ -463,6 +513,82 @@ postgresDescribe('knowledge addon PostgreSQL integration', () => {
         .where({ candidate_id: 'mw:textual-alignment-candidate:pg-synthetic-pair' })
         .delete()
     ).rejects.toThrow('Knowledge textual alignment candidates are append-only');
+  }, 30000);
+
+  it('persists exact two-page story versions atomically in PostgreSQL', async () => {
+    await installAddons(db, [baseManifest, manifest]);
+    const userId = Number((await db('users').where({ login: 'superadmin' }).first('id'))?.id);
+    const companyId = Number((await db('companies').first('id'))?.id);
+    if (!userId || !companyId) throw new Error('Required synthetic story actor is missing');
+    await db('company_memberships')
+      .insert({ user_id: userId, company_id: companyId, is_default: true })
+      .onConflict(['user_id', 'company_id'])
+      .ignore();
+    const actor = { userId, companyId, role: 'superadmin' as const };
+    const firstText = 'Synthetic PG page one.\r\nKeep exact spacing.  ';
+    const story = (version: number, text: string) => ({
+      schema_version: 1 as const,
+      story_id: 'mw:story:pg-synthetic-two-page',
+      version,
+      title: 'Synthetic PostgreSQL two-page story',
+      visibility: 'INTERNAL' as const,
+      pages: [
+        {
+          page_id: 'mw:story-page:pg-synthetic-two-page-001',
+          page_order: 1,
+          original_text: text,
+        },
+        {
+          page_id: 'mw:story-page:pg-synthetic-two-page-002',
+          page_order: 2,
+          original_text: 'Synthetic page two: Arabic علامة.',
+          ...(version === 1 ? { media: pgStoryMedia } : {}),
+        },
+      ],
+    });
+    const first = await storeStoryVersion(db, {
+      authenticatedActor: actor,
+      story: story(1, firstText),
+      resolveMedia: resolvePgStoryMedia,
+    });
+    const second = await storeStoryVersion(db, {
+      authenticatedActor: actor,
+      story: story(2, 'Synthetic PG page one, version two.'),
+    });
+    const read = await readStoryVersion(db, {
+      authenticatedReader: actor,
+      storyId: first.storyId,
+      version: 1,
+      resolveMedia: resolvePgStoryMedia,
+    });
+    expect(first).toMatchObject({ version: 1, visibility: 'INTERNAL' });
+    expect(second).toMatchObject({ version: 2, previousDigest: first.digest });
+    expect(read?.story.pages.map((page) => [page.page_order, page.original_text])).toEqual([
+      [1, firstText],
+      [2, 'Synthetic page two: Arabic علامة.'],
+    ]);
+    expect(read?.story.pages[1]?.media).toEqual(pgStoryMedia);
+    const versionTwo = await readStoryVersion(db, {
+      authenticatedReader: actor,
+      storyId: first.storyId,
+      version: 2,
+    });
+    expect(versionTwo?.story.pages[1]?.media).toBeUndefined();
+    expect(await db('knowledge_story_versions')).toHaveLength(2);
+    expect(await db('knowledge_story_page_versions')).toHaveLength(4);
+    const storedMedia = await db('knowledge_story_page_versions')
+      .where({
+        story_version_id: (await db('knowledge_story_versions').where({ version: 1 }).first('id'))
+          ?.id,
+      })
+      .whereNotNull('media_ref_json')
+      .first('media_ref_json');
+    expect(JSON.parse(String(storedMedia?.media_ref_json))).toEqual(pgStoryMedia);
+    await expect(
+      db('knowledge_story_versions').where({ story_id: first.storyId, version: 1 }).update({
+        visibility: 'PUBLIC',
+      })
+    ).rejects.toThrow('Knowledge story versions and pages are append-only');
   }, 30000);
 
   it('commits and replays a review decision atomically with the PostgreSQL workflow event', async () => {

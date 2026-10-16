@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@moonwitness/corpus": "workspace:*",
+    "@moonwitness/knowledge": "workspace:*",
     "@moonwitness/orm": "workspace:*",
     "@moonwitness/orm-base": "workspace:*",
     "@moonwitness/orm-workflow": "workspace:*",

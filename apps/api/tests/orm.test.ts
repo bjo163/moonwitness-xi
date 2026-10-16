@@ -250,6 +250,68 @@ describe('Enterprise BaseModel & Fastify Integration', () => {
     }
   });
 
+  it('keeps INTERNAL story pages out of generic REST and JSON-RPC', async () => {
+    const superadmin = await testDb('users').where({ login: 'superadmin' }).first('id');
+    const company = await testDb('companies').first('id');
+    if (!superadmin || !company) throw new Error('Synthetic story actor is required');
+    const storyId = `mw:story:api-canary-${randomUUID()}`;
+    const pageId = `mw:story-page:api-canary-${randomUUID()}`;
+    const canary = `SYNTHETIC-INTERNAL-STORY-CANARY-${randomUUID()}`;
+    const story = {
+      schema_version: 1,
+      story_id: storyId,
+      version: 1,
+      title: 'Synthetic API canary',
+      visibility: 'INTERNAL',
+      pages: [{ page_id: pageId, page_order: 1, original_text: canary }],
+    };
+    const storyJson = JSON.stringify(story);
+    await testDb('knowledge_story_versions').insert({
+      company_id: company.id,
+      story_id: storyId,
+      version: 1,
+      visibility: 'INTERNAL',
+      title: story.title,
+      story_json: storyJson,
+      story_digest: createHash('sha256').update(storyJson, 'utf8').digest('hex'),
+      page_count: 1,
+      recorded_by_id: superadmin.id,
+    });
+    const version = await testDb('knowledge_story_versions')
+      .where({ story_id: storyId })
+      .first('id');
+    if (!version) throw new Error('Synthetic story canary fixture is required');
+    await testDb('knowledge_story_page_versions').insert({
+      story_version_id: version.id,
+      page_id: pageId,
+      page_order: 1,
+      original_text: canary,
+      original_text_digest: createHash('sha256').update(canary, 'utf8').digest('hex'),
+    });
+
+    const rest = await send({ method: 'GET', url: '/api/knowledge.story_version' });
+    expect(rest.statusCode).toBe(403);
+    expect(rest.payload).not.toContain(canary);
+    expect(rest.payload).not.toContain(storyId);
+    const rpc = await send({
+      method: 'POST',
+      url: '/jsonrpc',
+      payload: {
+        jsonrpc: '2.0',
+        id: 'story-canary',
+        method: 'call',
+        params: {
+          service: 'object',
+          method: 'execute_kw',
+          args: ['knowledge.story_page_version', 'search_read', [[]], {}],
+        },
+      },
+    });
+    expect(rpc.statusCode).toBe(403);
+    expect(rpc.payload).not.toContain(canary);
+    expect(rpc.payload).not.toContain(storyId);
+  });
+
   it('does not expose password hashes in database error responses', async () => {
     const payload = { login: 'superadmin', partner_id: 2, password: 'test-error-password' };
     const response = await send({ method: 'POST', url: '/api/base.user', payload });

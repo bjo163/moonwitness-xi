@@ -581,6 +581,9 @@ importers:
       '@moonwitness/corpus':
         specifier: workspace:*
         version: link:../corpus
+      '@moonwitness/knowledge':
+        specifier: workspace:*
+        version: link:../knowledge
       '@moonwitness/orm':
         specifier: workspace:*
         version: link:../orm

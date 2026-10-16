@@ -1844,7 +1844,9 @@
       "output": "Versioned content story/page and 1 image/file per page optional render",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
-      "priority": "p0"
+      "priority": "p0",
+      "status": "in_progress",
+      "evidence": "docs/roadmap/evidence/K5-004.md"
     },
     {
       "id": "K5-005",

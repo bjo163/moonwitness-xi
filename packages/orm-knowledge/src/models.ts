@@ -190,6 +190,49 @@ export const TextualAlignmentCandidateVersion = defineModel(
   }
 );
 
+/** Immutable, tenant-scoped INTERNAL snapshot of a story and its ordered pages. */
+export const StoryVersion = defineModel('knowledge.story_version', {
+  table: 'knowledge_story_versions',
+  order: 'company_id asc, story_id asc, version asc',
+  unique: [['company', 'story_id', 'version']],
+  fields: {
+    company: fields.belongsTo(Company, { required: true }),
+    story_id: fields.string({
+      required: true,
+      pattern: '^mw:story:[a-z0-9][a-z0-9._-]{0,179}$',
+    }),
+    version: fields.integer({ required: true }),
+    visibility: fields.enum(['INTERNAL'], { required: true, default: 'INTERNAL' }),
+    title: fields.string({ required: true }),
+    story_json: fields.text({ required: true, hidden: true }),
+    story_digest: fields.string({ required: true, pattern: '^[a-f0-9]{64}$' }),
+    page_count: fields.integer({ required: true }),
+    previous_story_digest: fields.string({ pattern: '^[a-f0-9]{64}$' }),
+    recorded_by: fields.belongsTo(User, { required: true }),
+  },
+});
+
+/** Ordered page content and its optional single immutable artifact reference. */
+export const StoryPageVersion = defineModel('knowledge.story_page_version', {
+  table: 'knowledge_story_page_versions',
+  order: 'story_version_id asc, page_order asc',
+  unique: [
+    ['story_version', 'page_id'],
+    ['story_version', 'page_order'],
+  ],
+  fields: {
+    story_version: fields.belongsTo(StoryVersion, { required: true }),
+    page_id: fields.string({
+      required: true,
+      pattern: '^mw:story-page:[a-z0-9][a-z0-9._-]{0,179}$',
+    }),
+    page_order: fields.integer({ required: true }),
+    original_text: fields.text({ required: true, hidden: true }),
+    original_text_digest: fields.string({ required: true, pattern: '^[a-f0-9]{64}$' }),
+    media_ref_json: fields.text({ hidden: true }),
+  },
+});
+
 /** Explicit, stable ontology identities for database users; IDs are never inferred from SQL rows. */
 export const ResearchActorIdentity = defineModel('knowledge.research_actor_identity', {
   table: 'knowledge_research_actor_identities',
@@ -223,6 +266,8 @@ for (const model of [
   ConceptProfileVersion,
   TextualAlignmentCandidateVersion,
   ResearchActorIdentity,
+  StoryVersion,
+  StoryPageVersion,
 ]) {
   model.beforeUpdate = (_args: StaticHookArguments<InstanceType<typeof model>>): never =>
     rejectImmutableMutation();

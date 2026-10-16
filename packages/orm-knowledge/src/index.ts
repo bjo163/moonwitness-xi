@@ -7,10 +7,26 @@ export {
   ResearchReviewEvent,
   ConceptProfileVersion,
   TextualAlignmentCandidateVersion,
+  StoryVersion,
+  StoryPageVersion,
   WitnessCorrection,
   WitnessInterpretation,
   WitnessTestimony,
 } from './models.js';
+export {
+  validateStoryVersion,
+  storeStoryVersion,
+  readStoryVersion,
+} from './story-version-store.js';
+export type {
+  StoryVersionDocument,
+  StoryPageDocument,
+  StoryMediaReference,
+  VerifiedStoryMediaReference,
+  AuthenticatedStoryEditor,
+  StoredStoryVersion,
+  StoryVersionMediaResolver,
+} from './story-version-store.js';
 export {
   MAX_RESEARCH_RELEASE_CANONICAL_BYTES,
   MAX_RESEARCH_RELEASE_RECORDS,

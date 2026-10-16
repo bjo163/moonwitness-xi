@@ -147,6 +147,8 @@ describe('central access policy', () => {
       'knowledge.witness_testimony',
       'knowledge.witness_correction',
       'knowledge.witness_interpretation',
+      'knowledge.story_version',
+      'knowledge.story_page_version',
     ]) {
       const fullWitnessGrant = {
         model_name: model,

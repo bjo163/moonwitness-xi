@@ -8,6 +8,8 @@ import {
   ResearchReviewEvent,
   ConceptProfileVersion,
   TextualAlignmentCandidateVersion,
+  StoryVersion,
+  StoryPageVersion,
   WitnessCorrection,
   WitnessInterpretation,
   WitnessTestimony,
@@ -24,6 +26,8 @@ const syntheticPrivacyProjectionJson =
 
 const installAppendOnlyGuards: NonNullable<Addon['setup']> = async (trx) => {
   const tables = [
+    'knowledge_story_versions',
+    'knowledge_story_page_versions',
     'knowledge_witness_testimonies',
     'knowledge_witness_corrections',
     'knowledge_witness_interpretations',
@@ -48,6 +52,9 @@ const installAppendOnlyGuards: NonNullable<Addon['setup']> = async (trx) => {
       IF TG_TABLE_NAME = 'knowledge_textual_alignment_candidate_versions' THEN
         RAISE EXCEPTION 'Knowledge textual alignment candidates are append-only';
       END IF;
+      IF TG_TABLE_NAME IN ('knowledge_story_versions', 'knowledge_story_page_versions') THEN
+        RAISE EXCEPTION 'Knowledge story versions and pages are append-only';
+      END IF;
       RAISE EXCEPTION 'Knowledge witness records are append-only';
       END;
       $$ LANGUAGE plpgsql
@@ -70,7 +77,9 @@ const installAppendOnlyGuards: NonNullable<Addon['setup']> = async (trx) => {
           ? 'Knowledge concept profiles are append-only'
           : table === 'knowledge_textual_alignment_candidate_versions'
             ? 'Knowledge textual alignment candidates are append-only'
-            : 'Knowledge witness records are append-only';
+            : table === 'knowledge_story_versions' || table === 'knowledge_story_page_versions'
+              ? 'Knowledge story versions and pages are append-only'
+              : 'Knowledge witness records are append-only';
       await trx.raw(
         `CREATE TRIGGER IF NOT EXISTS ${table}_reject_update BEFORE UPDATE ON ${table} BEGIN SELECT RAISE(ABORT, '${errorMessage}'); END`
       );
@@ -83,7 +92,7 @@ const installAppendOnlyGuards: NonNullable<Addon['setup']> = async (trx) => {
 
 export const manifest = defineAddon({
   name: 'knowledge',
-  version: '1.5.0',
+  version: '1.6.0',
   depends: ['base'],
   models: [
     WitnessTestimony,
@@ -95,6 +104,8 @@ export const manifest = defineAddon({
     ResearchReviewEvent,
     ConceptProfileVersion,
     TextualAlignmentCandidateVersion,
+    StoryVersion,
+    StoryPageVersion,
     ResearchActorIdentity,
     ResearchPrivacyRevocation,
     ResearchPrivacyProjection,
@@ -236,6 +247,8 @@ export const manifest = defineAddon({
         ResearchReviewEvent,
         ConceptProfileVersion,
         TextualAlignmentCandidateVersion,
+        StoryVersion,
+        StoryPageVersion,
         ResearchActorIdentity,
         ResearchPrivacyRevocation,
         ResearchPrivacyProjection,

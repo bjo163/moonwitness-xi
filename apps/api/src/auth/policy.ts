@@ -11,6 +11,8 @@ const NON_GENERIC_MODELS = new Set([
   'knowledge.witness_testimony',
   'knowledge.witness_correction',
   'knowledge.witness_interpretation',
+  'knowledge.story_version',
+  'knowledge.story_page_version',
 ]);
 
 /** Only administrative roles may touch these; ordinary users use dedicated endpoints. */
