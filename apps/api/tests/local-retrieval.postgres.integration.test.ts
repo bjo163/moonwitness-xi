@@ -99,7 +99,9 @@ postgresDescribe('local retrieval PostgreSQL integration', () => {
 
   async function publishEvidence(input?: {
     assertionVisibility?: 'INTERNAL' | 'RESTRICTED';
+    assertionContentVisibility?: 'INTERNAL' | 'RESTRICTED' | 'CHILD_SENSITIVE';
     evidenceVisibility?: 'INTERNAL' | 'RESTRICTED';
+    evidenceContentVisibility?: 'INTERNAL' | 'RESTRICTED' | 'CHILD_SENSITIVE';
     sourceSha256?: string;
   }) {
     const snapshot = await readQuranPassageSnapshot({
@@ -109,7 +111,9 @@ postgresDescribe('local retrieval PostgreSQL integration', () => {
       use: 'read_analyze',
     });
     const assertionVisibility = input?.assertionVisibility ?? 'INTERNAL';
+    const assertionContentVisibility = input?.assertionContentVisibility ?? assertionVisibility;
     const evidenceVisibility = input?.evidenceVisibility ?? 'INTERNAL';
+    const evidenceContentVisibility = input?.evidenceContentVisibility ?? evidenceVisibility;
     const current = await db('knowledge_research_active_releases as active')
       .join('knowledge_research_graph_releases as release', 'release.id', 'active.release_id')
       .where({ 'active.corpus_key': 'research' })
@@ -155,7 +159,7 @@ postgresDescribe('local retrieval PostgreSQL integration', () => {
               created_at: '2026-10-17T00:00:00.000Z',
               updated_at: '2026-10-17T00:00:00.000Z',
               origin_ref: 'fixture://postgres-local-retrieval/assertion',
-              visibility: assertionVisibility,
+              visibility: assertionContentVisibility,
               content_revision: 1,
               claim: 'Synthetic PostgreSQL retrieval authorization fixture.',
               polarity: 'positive',
@@ -172,7 +176,7 @@ postgresDescribe('local retrieval PostgreSQL integration', () => {
             content: {
               id: evidenceId,
               kind: 'Evidence',
-              visibility: evidenceVisibility,
+              visibility: evidenceContentVisibility,
               assertion_id: assertionId,
               direction: 'supporting',
               selector: {
@@ -241,6 +245,17 @@ postgresDescribe('local retrieval PostgreSQL integration', () => {
     expect(response.body).toBe(genericUnavailable);
     expect(response.body).not.toContain('Synthetic');
     expect(response.body).not.toContain('Q7:46');
+  });
+
+  it('returns a generic denial for CHILD_SENSITIVE assertion and Evidence content', async () => {
+    for (const visibility of ['assertionContentVisibility', 'evidenceContentVisibility'] as const) {
+      await publishEvidence({ [visibility]: 'CHILD_SENSITIVE' });
+      const response = await requestChunk();
+      expect(response.statusCode).toBe(404);
+      expect(response.body).toBe(genericUnavailable);
+      expect(response.body).not.toContain('CHILD_SENSITIVE');
+      expect(response.body).not.toContain('Q7:46');
+    }
   });
 
   it('returns a generic denial for an active user in a foreign unassigned company', async () => {

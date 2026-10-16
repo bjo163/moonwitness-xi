@@ -114,7 +114,9 @@ describe('authenticated local Quran passage retrieval route', () => {
 
   async function publishEvidence(input?: {
     assertionVisibility?: 'INTERNAL' | 'RESTRICTED';
+    assertionContentVisibility?: 'INTERNAL' | 'RESTRICTED' | 'CHILD_SENSITIVE';
     evidenceVisibility?: 'INTERNAL' | 'RESTRICTED';
+    evidenceContentVisibility?: 'INTERNAL' | 'RESTRICTED' | 'CHILD_SENSITIVE';
     sourceSha256?: string;
   }) {
     const snapshot = await readQuranPassageSnapshot({
@@ -124,7 +126,9 @@ describe('authenticated local Quran passage retrieval route', () => {
       use: 'read_analyze',
     });
     const assertionVisibility = input?.assertionVisibility ?? 'INTERNAL';
+    const assertionContentVisibility = input?.assertionContentVisibility ?? assertionVisibility;
     const evidenceVisibility = input?.evidenceVisibility ?? 'INTERNAL';
+    const evidenceContentVisibility = input?.evidenceContentVisibility ?? evidenceVisibility;
     const current = await db('knowledge_research_active_releases as active')
       .join('knowledge_research_graph_releases as release', 'release.id', 'active.release_id')
       .where({ 'active.corpus_key': 'research' })
@@ -170,7 +174,7 @@ describe('authenticated local Quran passage retrieval route', () => {
               created_at: '2026-10-17T00:00:00.000Z',
               updated_at: '2026-10-17T00:00:00.000Z',
               origin_ref: 'fixture://local-retrieval/assertion',
-              visibility: assertionVisibility,
+              visibility: assertionContentVisibility,
               content_revision: 1,
               claim: 'Synthetic local retrieval authorization fixture.',
               polarity: 'positive',
@@ -187,7 +191,7 @@ describe('authenticated local Quran passage retrieval route', () => {
             content: {
               id: evidenceId,
               kind: 'Evidence',
-              visibility: evidenceVisibility,
+              visibility: evidenceContentVisibility,
               assertion_id: assertionId,
               direction: 'supporting',
               selector: {
@@ -322,6 +326,21 @@ describe('authenticated local Quran passage retrieval route', () => {
     });
     expect(response.statusCode).toBe(404);
     expect(response.body).toBe(anonymousError());
+  });
+
+  it('denies CHILD_SENSITIVE assertion and Evidence content with the same generic response', async () => {
+    for (const visibility of ['assertionContentVisibility', 'evidenceContentVisibility'] as const) {
+      await publishEvidence({ [visibility]: 'CHILD_SENSITIVE' });
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/research/retrieval/chunk',
+        headers: { 'x-test-role': 'superadmin' },
+        payload: { evidence_id: evidenceId },
+      });
+      expect(response.statusCode).toBe(404);
+      expect(response.body).toBe(anonymousError());
+      expect(response.body).not.toContain('CHILD_SENSITIVE');
+    }
   });
 
   it('denies a canonical evidence selector whose source digest mismatches the pinned passage', async () => {
