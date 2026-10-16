@@ -1,5 +1,5 @@
 import { defineAddon, ref, seed, type Addon } from '@moonwitness/orm';
-import { ModelAccess } from '@moonwitness/orm-base';
+import { AccessGroup, GroupMembership, ModelAccess } from '@moonwitness/orm-base';
 import {
   ResearchActiveRelease,
   ResearchActorIdentity,
@@ -10,9 +10,15 @@ import {
   WitnessInterpretation,
   WitnessTestimony,
 } from './models.js';
+import {
+  ResearchPrivacyProjection,
+  ResearchPrivacyRevocation,
+} from './privacy-revocation.model.js';
 import { views } from './views.js';
 
 const syntheticDigest = 'a'.repeat(64);
+const syntheticPrivacyProjectionJson =
+  '{"excerpt":"Synthetic privacy projection only; no witness data."}';
 
 const installAppendOnlyGuards: NonNullable<Addon['setup']> = async (trx) => {
   const tables = [
@@ -23,6 +29,7 @@ const installAppendOnlyGuards: NonNullable<Addon['setup']> = async (trx) => {
     'knowledge_research_graph_records',
     'knowledge_research_review_events',
     'knowledge_research_actor_identities',
+    'knowledge_privacy_revocations',
   ] as const;
   const client = String(trx.client.config.client);
 
@@ -60,7 +67,7 @@ const installAppendOnlyGuards: NonNullable<Addon['setup']> = async (trx) => {
 
 export const manifest = defineAddon({
   name: 'knowledge',
-  version: '1.1.0',
+  version: '1.2.0',
   depends: ['base'],
   models: [
     WitnessTestimony,
@@ -71,9 +78,29 @@ export const manifest = defineAddon({
     ResearchActiveRelease,
     ResearchReviewEvent,
     ResearchActorIdentity,
+    ResearchPrivacyRevocation,
+    ResearchPrivacyProjection,
   ],
   setup: installAppendOnlyGuards,
   data: [
+    seed(AccessGroup, 'knowledge.group_privacy_steward', {
+      code: 'knowledge_privacy_steward',
+      name: 'Knowledge Privacy Steward',
+      description: 'Explicitly grants access to synthetic privacy lifecycle controls.',
+    }),
+    seed(GroupMembership, 'knowledge.membership_privacy_steward_superadmin', {
+      user: ref('base.user_superadmin'),
+      group: ref('knowledge.group_privacy_steward'),
+    }),
+    seed(ResearchPrivacyProjection, 'knowledge.synthetic_privacy_projection_001', {
+      company: ref('base.company_default'),
+      projection_key: 'synthetic-search-001',
+      subject_ref_sha256: '357a432635adf14e8fcde203cfc900cb0ad8e43d9768a59a9052a4f52aca7623',
+      projection_json: syntheticPrivacyProjectionJson,
+      projection_digest: '3a71c3c81696759d8ccef0975ee7a5316ceeec035ed4d15dc959259b3082a011',
+      visibility: 'RESTRICTED',
+      state: 'active',
+    }),
     seed(WitnessTestimony, 'knowledge.synthetic_witness_001', {
       external_key: 'synthetic-witness-001',
       original_text: 'Synthetic example: the meeting began sometime in spring.',
@@ -138,6 +165,8 @@ export const manifest = defineAddon({
         ResearchActiveRelease,
         ResearchReviewEvent,
         ResearchActorIdentity,
+        ResearchPrivacyRevocation,
+        ResearchPrivacyProjection,
       ] as const
     ).map((model) =>
       seed(ModelAccess, `knowledge.access_user_${model.modelName.replaceAll('.', '_')}_read`, {

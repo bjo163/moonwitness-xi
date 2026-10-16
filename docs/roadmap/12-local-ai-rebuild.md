@@ -344,6 +344,7 @@ The source planning bundle is `MOONWITNESS_XI_LOCAL_AI_REBUILD_PLAN_2026-10-15/`
 - Depends on: `K5-001`.
 - File scope: `packages/research/`, `apps/api/`, `docs/governance/`.
 - Deliverable: Sensitive record access and delete/redact policy, audit semantics.
+- Current evidence: policy primitives plus one synthetic-only persisted revocation/search-projection slice; no authenticated API route or broad derivative invalidation yet. See [K5-002 evidence](evidence/K5-002.md).
 - Acceptance: Revoked content removed from derived index/public projection; restricted tests leak zero plaintext.
 - Verification target: `negative cross-tenant/public/search tests`. This is a target, not evidence that the command exists or has passed.
 

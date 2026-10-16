@@ -110,18 +110,25 @@ Retention is denied unless an owner-approved absolute expiry and decision
 reference are supplied; an expired policy denies use. Revocation plans contain
 hashed subject/decision/artifact references and instructions to block access
 and invalidate or rebuild derivatives. `excludeRevokedDerivedRecords` removes
-withdrawn subjects from a derived record list. These are pure local contracts,
-not persistence, API authorization, a deletion worker, or proof that every
-cache, index, export, replica, or public release has been cleared. The
-K5-002 task remains open until those adapters and negative API/search tests
-show end-to-end invalidation and no plaintext leakage.
+withdrawn subjects from a derived record list. A package-local persistence
+slice now records hash-only revocations in an append-only table and clears one
+synthetic, tenant-scoped search projection in the same transaction. It
+requires an active superadmin with company membership and the explicit
+`knowledge_privacy_steward` group; generic model access remains denied. The
+slice has no HTTP route and does not cover other derivative stores or prove
+that every cache, index, export, replica, or public release has been cleared.
+The K5-002 task remains open until authenticated routes and all applicable
+derivative adapters pass negative API/search tests with no plaintext leakage.
 
 ## Synthetic negative cases and approval gates
 
 Synthetic tests cover absent/withdrawn consent,
 inherited `RESTRICTED` or `CHILD_SENSITIVE` classification, cross-tenant reads,
 public projection self-approval, missing/expired retention, and revocation from
-a derived record list. Guessable attachment IDs and end-to-end
+a derived record list. SQLite and isolated PostgreSQL tests also cover the
+persisted synthetic projection slice, exact replay, idempotency conflict,
+tenant/steward denial, append-only behavior, digest validation, and atomic
+rollback. Guessable attachment IDs and end-to-end
 public/search/preview/log/prompt leak checks remain required. A passing
 synthetic test does not authorize real-data use.
 
