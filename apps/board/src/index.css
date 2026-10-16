@@ -2,6 +2,7 @@
 @import 'tw-animate-css';
 @import '@moonwitness/ui/styles/tokens.css';
 @import '@moonwitness/ui/components.css';
+@import '@moonwitness/assets/fonts.css';
 
 @custom-variant dark (&:where(.dark, .dark *));
 

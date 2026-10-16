@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
@@ -118,11 +119,14 @@ test('package exports only framework-independent static assets', async () => {
   const packageJson = JSON.parse(await readFile(resolve(packageRoot, 'package.json'), 'utf8'));
   assert.deepEqual(packageJson.dependencies ?? {}, {});
   assert.equal(packageJson.exports['./brand/*'], './brand/*');
+  assert.equal(packageJson.exports['./fonts/*'], './fonts/*');
+  assert.equal(packageJson.exports['./fonts.css'], './fonts.css');
   assert.equal(packageJson.exports['./icons/*'], './icons/*');
   assert.equal(packageJson.exports['./illustrations/*'], './illustrations/*');
   assert.equal(packageJson.exports['./manifest.json'], './manifest.json');
   assert.equal(packageJson.exports['./licenses.json'], './licenses.json');
   assert.ok(packageJson.files.includes('brand'));
+  assert.ok(packageJson.files.includes('fonts'));
   assert.ok(packageJson.files.includes('icons'));
   assert.ok(packageJson.files.includes('illustrations'));
   assert.ok(packageJson.files.includes('manifest.json'));
@@ -146,6 +150,18 @@ test('provenance covers original design assets and every externally sourced font
   for (const font of provenance.fonts) {
     assert.equal(font.license, 'SIL Open Font License 1.1');
     assert.match(font.source, /^https:\/\//u);
-    assert.match(font.usage, /not included/u);
+    assert.match(font.usage, /Bundled/u);
+    assert.ok(font.files.length >= 2);
+    for (const file of font.files) {
+      assert.match(file.path, /^fonts\/.+\.woff2$/u);
+      assert.match(file.source, /^https:\/\/fonts\.gstatic\.com\//u);
+      assert.match(file.sha256, /^[A-F0-9]{64}$/u);
+      const bytes = await readFile(resolve(packageRoot, file.path));
+      assert.equal(bytes.toString('hex', 0, 4), '774f4632', `${file.path} is WOFF2`);
+      assert.equal(createHash('sha256').update(bytes).digest('hex').toUpperCase(), file.sha256);
+    }
+    const licensePath = resolve(packageRoot, `fonts/OFL-${font.family.replaceAll(' ', '')}.txt`);
+    const licenseText = await readFile(licensePath, 'utf8');
+    assert.match(licenseText, /SIL OPEN FONT LICENSE Version 1\.1/u);
   }
 });
