@@ -20,6 +20,26 @@ export interface CreateLoggerOptions {
   }>;
 }
 
+function requestUrlPath(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  try {
+    return new URL(value, 'http://moonwitness.invalid').pathname || '/';
+  } catch {
+    return undefined;
+  }
+}
+
+function serializeRequest(value: object): Record<string, unknown> {
+  const request = value as Record<string, unknown>;
+  return {
+    method: typeof request.method === 'string' ? request.method : undefined,
+    url: requestUrlPath(request.url),
+    hostname: typeof request.hostname === 'string' ? request.hostname : undefined,
+    remoteAddress: typeof request.remoteAddress === 'string' ? request.remoteAddress : undefined,
+    remotePort: typeof request.remotePort === 'number' ? request.remotePort : undefined,
+  };
+}
+
 export function createLogger(options: CreateLoggerOptions = {}): Logger {
   const isTest = process.env.NODE_ENV === 'test';
   const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
@@ -88,6 +108,7 @@ export function createLogger(options: CreateLoggerOptions = {}): Logger {
     name,
     level,
     timestamp: pino.stdTimeFunctions.isoTime,
+    serializers: { req: serializeRequest },
     redact: {
       paths: [
         'req.headers.authorization',
