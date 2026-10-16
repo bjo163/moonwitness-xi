@@ -409,13 +409,15 @@ postgresDescribe('knowledge addon PostgreSQL integration', () => {
       .where({ workflow_instance_id: started.id, workflow_event_sequence: 1 })
       .first();
     expect(JSON.parse(String(workflowEvent?.payload))).toMatchObject({
-      subject_id: subjectId,
-      subject_revision: 1,
-      research_release_digest: release.releaseDigest,
-      workflow_instance_id: started.id,
-      reviewer_id: 'mw:user:pg-synthetic-reviewer',
-      requester_id: 'mw:user:pg-synthetic-requester',
-      visibility: 'INTERNAL',
+      event: {
+        subject_id: subjectId,
+        subject_revision: 1,
+        research_release_digest: release.releaseDigest,
+        workflow_instance_id: started.id,
+        reviewer_id: 'mw:user:pg-synthetic-reviewer',
+        requester_id: 'mw:user:pg-synthetic-requester',
+        visibility: 'INTERNAL',
+      },
     });
     expect(JSON.parse(String(reviewRow?.event_json))).toMatchObject({
       subject_id: subjectId,

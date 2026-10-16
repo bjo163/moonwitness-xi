@@ -58,6 +58,7 @@
   },
   "devDependencies": {
     "@moonwitness/client": "workspace:*",
+    "@moonwitness/orm-knowledge": "workspace:*",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^26.6.4",
     "@types/pg": "^8.23.1",

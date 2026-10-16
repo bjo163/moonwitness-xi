@@ -148,6 +148,28 @@ test('documentation builds are isolated and portal failures annotate sanitized J
       )
     );
   }
+  for (const [packageName, label] of [
+    ['@moonwitness/knowledge', 'core knowledge contracts'],
+    ['@moonwitness/corpus', 'corpus'],
+    ['@moonwitness/research', 'research'],
+  ]) {
+    assert.match(
+      pagesWorkflow,
+      new RegExp(
+        `name: Build documentation package ${label}\\s+run: pnpm --filter ${packageName} build`,
+        'u'
+      )
+    );
+  }
+  const coreKnowledgePosition = pagesWorkflow.indexOf(
+    'name: Build documentation package core knowledge contracts'
+  );
+  const corpusPosition = pagesWorkflow.indexOf('name: Build documentation package corpus');
+  const researchPosition = pagesWorkflow.indexOf('name: Build documentation package research');
+  const ormKnowledgePosition = pagesWorkflow.indexOf('name: Build documentation package knowledge');
+  assert.ok(coreKnowledgePosition < corpusPosition);
+  assert.ok(corpusPosition < researchPosition);
+  assert.ok(researchPosition < ormKnowledgePosition);
   const docsBuildPackages = documentedPackages.map(([packageName]) => packageName);
   const requestPackageIndex = docsBuildPackages.indexOf('@moonwitness/orm-request');
   const workflowPackageIndex = docsBuildPackages.indexOf('@moonwitness/orm-workflow');
@@ -157,8 +179,14 @@ test('documentation builds are isolated and portal failures annotate sanitized J
   assert.ok(storagePackageIndex < knowledgePackageIndex);
   for (const scriptName of ['docs:check', 'docs:generate']) {
     const script = rootPackage.scripts[scriptName];
+    const coreKnowledgePosition = script.indexOf('pnpm --filter @moonwitness/knowledge build');
+    const corpusPosition = script.indexOf('pnpm --filter @moonwitness/corpus build');
+    const researchPosition = script.indexOf('pnpm --filter @moonwitness/research build');
+    const ormKnowledgePosition = script.indexOf('pnpm --filter @moonwitness/orm-knowledge build');
     const workflowPosition = script.indexOf('pnpm --filter @moonwitness/orm-workflow build');
     const requestPosition = script.indexOf('pnpm --filter @moonwitness/orm-request build');
+    assert.ok(coreKnowledgePosition >= 0 && corpusPosition > coreKnowledgePosition);
+    assert.ok(researchPosition > corpusPosition && ormKnowledgePosition > researchPosition);
     assert.ok(workflowPosition >= 0 && requestPosition > workflowPosition);
   }
   assert.match(

@@ -127,6 +127,9 @@ importers:
       '@moonwitness/client':
         specifier: workspace:*
         version: link:../../packages/client
+      '@moonwitness/orm-knowledge':
+        specifier: workspace:*
+        version: link:../../packages/orm-knowledge
       '@types/better-sqlite3':
         specifier: ^9.6.0
         version: 9.6.0

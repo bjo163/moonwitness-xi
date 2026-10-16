@@ -239,6 +239,12 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
       - name: Build documentation package types
         run: node scripts/ci/build-workspace-package.mjs @moonwitness/types
+      - name: Build documentation package core knowledge contracts
+        run: pnpm --filter @moonwitness/knowledge build
+      - name: Build documentation package corpus
+        run: pnpm --filter @moonwitness/corpus build
+      - name: Build documentation package research
+        run: pnpm --filter @moonwitness/research build
       - name: Build documentation package ORM
         run: node scripts/ci/build-workspace-package.mjs @moonwitness/orm
       - name: Build documentation package base addon

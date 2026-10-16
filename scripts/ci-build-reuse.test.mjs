@@ -48,6 +48,25 @@ test('CI reuses the validated workspace build only inside its quality job', () =
 
   assert.match(rootManifest.scripts.typecheck, /pnpm build/u);
   assert.match(rootManifest.scripts['architecture:check'], /--filter @moonwitness\/orm build/u);
+  const architectureBuildOrder = [
+    '@moonwitness/knowledge',
+    '@moonwitness/corpus',
+    '@moonwitness/research',
+    '@moonwitness/orm-workflow',
+    '@moonwitness/orm-knowledge',
+  ];
+  for (const scriptName of ['architecture:generate', 'architecture:check']) {
+    const script = rootManifest.scripts[scriptName];
+    let previousIndex = -1;
+    for (const packageName of architectureBuildOrder) {
+      const currentIndex = script.indexOf(`pnpm --filter ${packageName} build`);
+      assert.ok(
+        currentIndex > previousIndex,
+        `${packageName} must build in dependency order for ${scriptName}`
+      );
+      previousIndex = currentIndex;
+    }
+  }
   assert.match(rootManifest.scripts['docs:check'], /--filter @moonwitness\/types build/u);
   assert.match(rootManifest.scripts['docs:examples:check'], /--filter @moonwitness\/orm build/u);
   assert.match(docsManifest.scripts['portal:build'], /@moonwitness\/ui-catalog build/u);
