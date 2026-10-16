@@ -434,7 +434,7 @@ The source planning bundle is `MOONWITNESS_XI_LOCAL_AI_REBUILD_PLAN_2026-10-15/`
 
 - Priority: P0; risk: normal.
 - Depends on: `K1-001`, `K0-005`.
-- File scope: `packages/local-ai/`, `apps/api/`.
+- File scope: `packages/local-ai/`, `packages/research/`, `packages/orm-knowledge/`, `apps/api/`.
 - Deliverable: `@moonwitness/local-ai` typed `AI_MODE=disabled|local` runtime with explicit loopback allowlist, injected into API without requiring a model.
 - Acceptance: API/worker startup and core workflow pass without model; no remote fallback.
 - Verification target: `offline smoke disabled/unavailable tests`. This is a target, not evidence that the command exists or has passed.

@@ -3652,6 +3652,99 @@
           ]
         },
         {
+          "name": "knowledge.research_suggestion_version",
+          "table": "knowledge_research_suggestion_versions",
+          "fields": [
+            {
+              "name": "company",
+              "kind": "belongsTo",
+              "column": "company_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.company"
+            },
+            {
+              "name": "recorded_by",
+              "kind": "belongsTo",
+              "column": "recorded_by_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false,
+              "relation": "base.user"
+            },
+            {
+              "name": "status",
+              "kind": "enum",
+              "column": "status",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]",
+              "values": ["unreviewed"]
+            },
+            {
+              "name": "suggestion_digest",
+              "kind": "string",
+              "column": "suggestion_digest",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "suggestion_id",
+              "kind": "string",
+              "column": "suggestion_id",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "suggestion_json",
+              "kind": "text",
+              "column": "suggestion_json",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "version",
+              "kind": "integer",
+              "column": "version",
+              "declaredRequired": true,
+              "required": true,
+              "unique": false,
+              "optional": false,
+              "hasDefault": false
+            },
+            {
+              "name": "visibility",
+              "kind": "enum",
+              "column": "visibility",
+              "declaredRequired": true,
+              "required": false,
+              "unique": false,
+              "optional": true,
+              "hasDefault": true,
+              "default": "[redacted]",
+              "values": ["INTERNAL"]
+            }
+          ],
+          "uniqueConstraints": [["company", "suggestion_id", "version"]]
+        },
+        {
           "name": "knowledge.story_page_version",
           "table": "knowledge_story_page_versions",
           "fields": [
@@ -6152,5 +6245,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "d734ae4f782dea2890f6b52bbbb877a93a69f21503d39c76e2dda7bbc50714fb"
+  "generatedFromSha256": "f22fae229249e3af8d5db0372add537e6bf52f8577594792e383e18ce3b6b6b9"
 }

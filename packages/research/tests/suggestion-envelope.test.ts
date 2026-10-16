@@ -76,6 +76,23 @@ describe('local AI suggestion envelope', () => {
     ).resolves.toEqual(envelope);
   });
 
+  it('validates and returns an isolated snapshot when the caller mutates during resolver awaits', async () => {
+    const { envelope, resolver } = fixture();
+    const mutatingResolver: TrustedSuggestionResolver = {
+      ...resolver,
+      async resolvePassage(selector) {
+        envelope.suggestions[0]!.text = 'Unsupported changed text';
+        envelope.suggestions[0]!.citations[0]!.selector.range.end = 3;
+        selector.range.end = 0;
+        return resolver.resolvePassage(selector);
+      },
+    };
+
+    const result = await validateResearchSuggestionEnvelopeWithResolver(envelope, mutatingResolver);
+    expect(result.suggestions[0]).toMatchObject({ text: '😀', kind: 'term' });
+    expect(envelope.suggestions[0]!.text).toBe('Unsupported changed text');
+  });
+
   it('rejects unknown fields, mutable status/visibility, malformed ids and free-form claim text', async () => {
     const { envelope, resolver } = fixture();
     expect(

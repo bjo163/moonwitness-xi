@@ -7,6 +7,7 @@ export {
   ResearchReviewEvent,
   ConceptProfileVersion,
   TextualAlignmentCandidateVersion,
+  ResearchSuggestionVersion,
   StoryVersion,
   StoryPageVersion,
   WitnessCorrection,
@@ -47,6 +48,15 @@ export {
   storeTextualAlignmentCandidates,
   readTextualAlignmentCandidateVersion,
 } from './textual-alignment-candidate-store.js';
+export {
+  readResearchSuggestionVersion,
+  storeResearchSuggestions,
+} from './research-suggestion-store.js';
+export type {
+  ReadResearchSuggestionInput,
+  StoreResearchSuggestionsInput,
+  StoredResearchSuggestionVersion,
+} from './research-suggestion-store.js';
 export type {
   StoreTextualAlignmentCandidatesInput,
   ReadTextualAlignmentCandidateInput,

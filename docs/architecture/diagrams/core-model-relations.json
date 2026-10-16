@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "addons": ["auth", "base", "jobs", "notification"],
   "generatedFrom": "core addon manifests and model field metadata; no seed values included",
-  "sourceSha256": "f47d6344a1d26c9df48db484807968f570395f4a7cfded8bee01929e0fc475fb",
+  "sourceSha256": "a28bca4210eac791ca4cf7fbdf4cfe8976a5b7f863b3a749422a94055ff7fcbc",
   "models": [
     {
       "name": "auth.refresh_token",
@@ -151,6 +151,10 @@
     {
       "name": "knowledge.research_review_event",
       "table": "knowledge_research_review_events"
+    },
+    {
+      "name": "knowledge.research_suggestion_version",
+      "table": "knowledge_research_suggestion_versions"
     },
     {
       "name": "knowledge.story_page_version",
@@ -559,6 +563,20 @@
       "from": "knowledge.research_graph_record",
       "field": "release",
       "to": "knowledge.research_graph_release",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "knowledge.research_suggestion_version",
+      "field": "company",
+      "to": "base.company",
+      "cardinality": "N:1",
+      "kind": "belongsTo"
+    },
+    {
+      "from": "knowledge.research_suggestion_version",
+      "field": "recorded_by",
+      "to": "base.user",
       "cardinality": "N:1",
       "kind": "belongsTo"
     },

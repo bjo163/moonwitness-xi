@@ -1,6 +1,6 @@
 # Generated model and addon reference
 
-Source fingerprint: `d734ae4f782dea2890f6b52bbbb877a93a69f21503d39c76e2dda7bbc50714fb`. Seed values and field defaults are intentionally omitted.
+Source fingerprint: `f22fae229249e3af8d5db0372add537e6bf52f8577594792e383e18ce3b6b6b9`. Seed values and field defaults are intentionally omitted.
 
 ## Addon `auth`
 
@@ -289,7 +289,7 @@ Models: 4; declared views: 0; menu entries: 0; seed rows: 1.
 
 Version: `1.6.0`; dependencies: `base`.
 
-Models: 14; declared views: 3; menu entries: 3; seed rows: 25.
+Models: 15; declared views: 3; menu entries: 3; seed rows: 25.
 
 | Model                                           | Table                                            | Field                         | Kind      | Required | Optional | Default    | Relation                           |
 | ----------------------------------------------- | ------------------------------------------------ | ----------------------------- | --------- | -------- | -------- | ---------- | ---------------------------------- |
@@ -346,6 +346,14 @@ Models: 14; declared views: 3; menu entries: 3; seed rows: 25.
 | `knowledge.research_review_event`               | `knowledge_research_review_events`               | `subject_revision`            | integer   | Yes      | No       | No         | —                                  |
 | `knowledge.research_review_event`               | `knowledge_research_review_events`               | `workflow_event_sequence`     | integer   | Yes      | No       | No         | —                                  |
 | `knowledge.research_review_event`               | `knowledge_research_review_events`               | `workflow_instance_id`        | integer   | Yes      | No       | No         | —                                  |
+| `knowledge.research_suggestion_version`         | `knowledge_research_suggestion_versions`         | `company`                     | belongsTo | Yes      | No       | No         | `base.company`                     |
+| `knowledge.research_suggestion_version`         | `knowledge_research_suggestion_versions`         | `recorded_by`                 | belongsTo | Yes      | No       | No         | `base.user`                        |
+| `knowledge.research_suggestion_version`         | `knowledge_research_suggestion_versions`         | `status`                      | enum      | No       | Yes      | [redacted] | —                                  |
+| `knowledge.research_suggestion_version`         | `knowledge_research_suggestion_versions`         | `suggestion_digest`           | string    | Yes      | No       | No         | —                                  |
+| `knowledge.research_suggestion_version`         | `knowledge_research_suggestion_versions`         | `suggestion_id`               | string    | Yes      | No       | No         | —                                  |
+| `knowledge.research_suggestion_version`         | `knowledge_research_suggestion_versions`         | `suggestion_json`             | text      | Yes      | No       | No         | —                                  |
+| `knowledge.research_suggestion_version`         | `knowledge_research_suggestion_versions`         | `version`                     | integer   | Yes      | No       | No         | —                                  |
+| `knowledge.research_suggestion_version`         | `knowledge_research_suggestion_versions`         | `visibility`                  | enum      | No       | Yes      | [redacted] | —                                  |
 | `knowledge.story_page_version`                  | `knowledge_story_page_versions`                  | `media_ref_json`              | text      | No       | Yes      | No         | —                                  |
 | `knowledge.story_page_version`                  | `knowledge_story_page_versions`                  | `original_text`               | text      | Yes      | No       | No         | —                                  |
 | `knowledge.story_page_version`                  | `knowledge_story_page_versions`                  | `original_text_digest`        | string    | Yes      | No       | No         | —                                  |

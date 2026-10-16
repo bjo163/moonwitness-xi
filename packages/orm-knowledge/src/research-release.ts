@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
+import { validateResearchRelease } from './research-release-validation.js';
 
 export interface ResearchGraphRecordInput {
   readonly key: string;
@@ -289,7 +290,6 @@ export async function activateResearchGraphRelease(
   if (snapshot.schemaVersion !== 'research-graph/v1') {
     throw new Error('Cannot activate an unsupported research graph schema');
   }
-  const { validateResearchRelease } = await import('./research-review.js');
   validateResearchRelease(snapshot.records);
   const active = await trx('knowledge_research_active_releases as active')
     .join('knowledge_research_graph_releases as release', 'release.id', 'active.release_id')
@@ -457,7 +457,6 @@ export async function readActiveResearchGraphRelease(
     return null;
   }
   try {
-    const { validateResearchRelease } = await import('./research-review.js');
     validateResearchRelease(release.records);
   } catch {
     return null;

@@ -190,6 +190,26 @@ export const TextualAlignmentCandidateVersion = defineModel(
   }
 );
 
+/** Immutable, tenant-scoped INTERNAL local-AI suggestion snapshot. */
+export const ResearchSuggestionVersion = defineModel('knowledge.research_suggestion_version', {
+  table: 'knowledge_research_suggestion_versions',
+  order: 'company_id asc, suggestion_id asc, version asc',
+  unique: [['company', 'suggestion_id', 'version']],
+  fields: {
+    company: fields.belongsTo(Company, { required: true }),
+    suggestion_id: fields.string({
+      required: true,
+      pattern: '^mw:suggestion:[a-z0-9][a-z0-9._-]{0,179}$',
+    }),
+    version: fields.integer({ required: true }),
+    visibility: fields.enum(['INTERNAL'], { required: true, default: 'INTERNAL' }),
+    status: fields.enum(['unreviewed'], { required: true, default: 'unreviewed' }),
+    suggestion_json: fields.text({ required: true, hidden: true }),
+    suggestion_digest: fields.string({ required: true, pattern: '^[a-f0-9]{64}$' }),
+    recorded_by: fields.belongsTo(User, { required: true }),
+  },
+});
+
 /** Immutable, tenant-scoped INTERNAL snapshot of a story and its ordered pages. */
 export const StoryVersion = defineModel('knowledge.story_version', {
   table: 'knowledge_story_versions',
@@ -265,6 +285,7 @@ for (const model of [
   ResearchReviewEvent,
   ConceptProfileVersion,
   TextualAlignmentCandidateVersion,
+  ResearchSuggestionVersion,
   ResearchActorIdentity,
   StoryVersion,
   StoryPageVersion,

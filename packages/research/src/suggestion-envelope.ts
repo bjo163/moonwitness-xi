@@ -121,7 +121,16 @@ export async function validateResearchSuggestionEnvelopeWithResolver(
   const shape = validateSchema(value);
   if (!shape.valid)
     throw new SuggestionEnvelopeError('invalid_envelope', 'Suggestion envelope is invalid');
-  const envelope = value as ResearchSuggestionEnvelope;
+  let snapshot: unknown;
+  try {
+    snapshot = JSON.parse(JSON.stringify(value)) as unknown;
+  } catch {
+    throw new SuggestionEnvelopeError('invalid_envelope', 'Suggestion envelope is not JSON data');
+  }
+  const snapshotShape = validateSchema(snapshot);
+  if (!snapshotShape.valid)
+    throw new SuggestionEnvelopeError('invalid_envelope', 'Suggestion envelope is invalid');
+  const envelope = snapshot as ResearchSuggestionEnvelope;
   const ids = new Set<string>();
 
   for (const suggestion of envelope.suggestions) {
@@ -131,8 +140,14 @@ export async function validateResearchSuggestionEnvelopeWithResolver(
     ids.add(suggestion.id);
     const excerpts: string[] = [];
     for (const citation of suggestion.citations) {
-      const selector = citation.selector;
-      const passage = await resolver.resolvePassage(selector);
+      const selector = {
+        ...citation.selector,
+        range: { ...citation.selector.range },
+      };
+      const passage = await resolver.resolvePassage({
+        ...selector,
+        range: { ...selector.range },
+      });
       if (!passage)
         throw new SuggestionEnvelopeError('passage_unavailable', 'Cited passage is unavailable');
       if (
