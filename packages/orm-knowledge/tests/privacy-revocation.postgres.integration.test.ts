@@ -240,4 +240,79 @@ postgresDescribe('synthetic privacy revocation PostgreSQL integration', () => {
       })
     ).toHaveLength(1);
   }, 30000);
+
+  it('denies reads and revocations when the PostgreSQL steward group membership is inactive', async () => {
+    const subjectRefSha256 = sha256(`synthetic-pg-inactive-steward-${randomUUID()}`);
+    const revocationCountBefore = await db('knowledge_privacy_revocations').count<
+      { count: string }[]
+    >('* as count');
+    await db('knowledge_privacy_projections').insert({
+      company_id: steward.companyId,
+      projection_key: `search-pg-inactive-steward-${randomUUID()}`,
+      subject_ref_sha256: subjectRefSha256,
+      projection_json: JSON.stringify({ excerpt: 'POSTGRES-INACTIVE-STEWARD-CANARY' }),
+      projection_digest: sha256(JSON.stringify({ excerpt: 'POSTGRES-INACTIVE-STEWARD-CANARY' })),
+      synthetic: true,
+      visibility: 'RESTRICTED',
+      state: 'active',
+    });
+    const membership = await db('group_memberships as membership')
+      .join('access_groups as access_group', 'access_group.id', 'membership.group_id')
+      .where({
+        'membership.user_id': steward.userId,
+        'access_group.code': 'knowledge_privacy_steward',
+      })
+      .select('membership.id', 'access_group.id as group_id')
+      .first();
+    expect(membership).toBeDefined();
+    await db('group_memberships').where({ id: membership!.id }).update({ active: false });
+
+    await expect(readActivePrivacyProjections(db, steward)).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await expect(
+      applyPrivacyRevocation(db, {
+        steward,
+        subjectRefSha256,
+        consentDecisionRefSha256: sha256(`synthetic-pg-inactive-consent-${randomUUID()}`),
+        idempotencyKey: `privacy-pg-inactive-${randomUUID()}`,
+      })
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    expect(
+      await db('knowledge_privacy_projections').where({
+        subject_ref_sha256: subjectRefSha256,
+        state: 'active',
+      })
+    ).toHaveLength(1);
+    const revocationCountAfter = await db('knowledge_privacy_revocations').count<
+      { count: string }[]
+    >('* as count');
+    expect(Number(revocationCountAfter[0]?.count)).toBe(Number(revocationCountBefore[0]?.count));
+
+    await db('group_memberships').where({ id: membership!.id }).update({ active: true });
+    await db('access_groups').where({ id: membership!.group_id }).update({ active: false });
+    await expect(readActivePrivacyProjections(db, steward)).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await expect(
+      applyPrivacyRevocation(db, {
+        steward,
+        subjectRefSha256,
+        consentDecisionRefSha256: sha256(`synthetic-pg-inactive-group-consent-${randomUUID()}`),
+        idempotencyKey: `privacy-pg-inactive-group-${randomUUID()}`,
+      })
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    const revocationCountAfterInactiveGroup = await db('knowledge_privacy_revocations').count<
+      { count: string }[]
+    >('* as count');
+    expect(Number(revocationCountAfterInactiveGroup[0]?.count)).toBe(
+      Number(revocationCountBefore[0]?.count)
+    );
+    expect(
+      await db('knowledge_privacy_projections').where({
+        subject_ref_sha256: subjectRefSha256,
+        state: 'active',
+      })
+    ).toHaveLength(1);
+  }, 30000);
 });

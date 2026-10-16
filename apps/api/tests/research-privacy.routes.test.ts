@@ -90,6 +90,69 @@ describe('synthetic research privacy API', () => {
     expect(await db('knowledge_privacy_revocations')).toHaveLength(0);
   });
 
+  it('denies projection reads and revocations after steward membership or group deactivation', async () => {
+    const subjectHash = sha256('inactive-steward-api-subject');
+    await db('knowledge_privacy_projections').insert({
+      company_id: companyId,
+      projection_key: 'inactive-steward-api-search-001',
+      subject_ref_sha256: subjectHash,
+      projection_json: JSON.stringify({ excerpt: 'INACTIVE-STEWARD-CANARY' }),
+      projection_digest: sha256(JSON.stringify({ excerpt: 'INACTIVE-STEWARD-CANARY' })),
+      synthetic: true,
+      visibility: 'RESTRICTED',
+      state: 'active',
+    });
+    const stewardMembership = await db('group_memberships as membership')
+      .join('access_groups as access_group', 'access_group.id', 'membership.group_id')
+      .where({
+        'membership.user_id': superadminId,
+        'access_group.code': 'knowledge_privacy_steward',
+      })
+      .select('membership.id', 'access_group.id as group_id')
+      .first();
+    expect(stewardMembership).toBeDefined();
+
+    const getProjections = () =>
+      app.inject({
+        method: 'GET',
+        url: '/api/research/privacy/projections',
+        headers: { 'x-test-role': 'superadmin' },
+      });
+    const revoke = () =>
+      app.inject({
+        method: 'POST',
+        url: '/api/research/privacy/revocations',
+        headers: { 'x-test-role': 'superadmin' },
+        payload: body({ subject_ref_sha256: subjectHash }),
+      });
+
+    await db('group_memberships').where({ id: stewardMembership!.id }).update({ active: false });
+    expect(
+      await db('group_memberships').where({ id: stewardMembership!.id }).first('active')
+    ).toMatchObject({ active: 0 });
+    const inactiveMembershipGet = await getProjections();
+    const inactiveMembershipPost = await revoke();
+    expect(inactiveMembershipGet.statusCode).toBe(403);
+    expect(inactiveMembershipPost.statusCode).toBe(403);
+    expect(inactiveMembershipGet.body).not.toContain('INACTIVE-STEWARD-CANARY');
+    expect(await db('knowledge_privacy_revocations')).toHaveLength(0);
+
+    await db('group_memberships').where({ id: stewardMembership!.id }).update({ active: true });
+    await db('access_groups').where({ id: stewardMembership!.group_id }).update({ active: false });
+    const inactiveGroupGet = await getProjections();
+    const inactiveGroupPost = await revoke();
+    expect(inactiveGroupGet.statusCode).toBe(403);
+    expect(inactiveGroupPost.statusCode).toBe(403);
+    expect(inactiveGroupGet.body).not.toContain('INACTIVE-STEWARD-CANARY');
+    expect(await db('knowledge_privacy_revocations')).toHaveLength(0);
+    expect(
+      await db('knowledge_privacy_projections').where({
+        subject_ref_sha256: subjectHash,
+        state: 'active',
+      })
+    ).toHaveLength(1);
+  });
+
   it('rejects raw references, forged actor/tenant fields, and malformed hashes', async () => {
     const rawReference = await app.inject({
       method: 'POST',

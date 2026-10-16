@@ -217,6 +217,41 @@ describe('persisted synthetic privacy revocation', () => {
     expect(await db('knowledge_privacy_revocations')).toHaveLength(0);
   });
 
+  it('denies the privacy operations after the steward membership or group is deactivated', async () => {
+    const input = revocationInput();
+    await addProjection(input.subjectRefSha256);
+    const membership = await db('group_memberships as membership')
+      .join('access_groups as access_group', 'access_group.id', 'membership.group_id')
+      .where({
+        'membership.user_id': steward.userId,
+        'access_group.code': 'knowledge_privacy_steward',
+      })
+      .select('membership.id', 'access_group.id as group_id')
+      .first();
+    expect(membership).toBeDefined();
+
+    await db('group_memberships').where({ id: membership!.id }).update({ active: false });
+    await expect(readActivePrivacyProjections(db, steward)).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await expect(applyPrivacyRevocation(db, input)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    expect(await db('knowledge_privacy_revocations')).toHaveLength(0);
+
+    await db('group_memberships').where({ id: membership!.id }).update({ active: true });
+    await db('access_groups').where({ id: membership!.group_id }).update({ active: false });
+    await expect(readActivePrivacyProjections(db, steward)).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await expect(applyPrivacyRevocation(db, input)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    expect(await db('knowledge_privacy_revocations')).toHaveLength(0);
+    expect(
+      await db('knowledge_privacy_projections').where({
+        subject_ref_sha256: input.subjectRefSha256,
+        state: 'active',
+      })
+    ).toHaveLength(1);
+  });
+
   it('keeps both privacy models unavailable through generic user model access', async () => {
     for (const modelName of ['knowledge.privacy_revocation', 'knowledge.privacy_projection']) {
       await expect(

@@ -96,6 +96,8 @@ async function verifySteward(trx: Knex.Transaction, steward: AuthenticatedPrivac
     .where({
       'membership.user_id': steward.userId,
       'access_group.code': 'knowledge_privacy_steward',
+      'membership.active': true,
+      'access_group.active': true,
     })
     .first('membership.id');
   if (!user || !company || !membership || !privacyGroupMembership) {
