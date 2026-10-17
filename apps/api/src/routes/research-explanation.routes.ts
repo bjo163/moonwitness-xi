@@ -9,6 +9,7 @@ import {
 } from '@moonwitness/research';
 import {
   readActiveResearchGraphRelease,
+  validateResearchRelease,
   type StoredResearchGraphRecord,
   type StoredResearchGraphRelease,
 } from '@moonwitness/orm-knowledge';
@@ -71,6 +72,10 @@ function graphFromRelease(release: StoredResearchGraphRelease) {
   if (release.corpusKey !== corpusKey || release.schemaVersion !== 'research-graph/v1') {
     throw new TypeError('Research release has an unsupported identity');
   }
+  // The default ORM reader verifies stored digests, but injected readers are also
+  // supported by this route. Validate the complete release here so that seam
+  // cannot bypass graph and evidence-reference semantics.
+  validateResearchRelease(release.records);
   const nodes: ResearchGraphNode[] = [];
   const relations: ResearchRelation[] = [];
   const evidenceReferences: ResearchEvidenceReference[] = [];

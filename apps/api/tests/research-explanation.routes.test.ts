@@ -38,17 +38,45 @@ describe('research relation explanation API', () => {
       previousReleaseDigest: null,
       records: [
         {
+          key: 'mw:source:tanzil-quran-text',
+          kind: 'source',
+          visibility: 'PUBLIC',
+          content: {
+            id: 'mw:source:tanzil-quran-text',
+            kind: 'Artifact',
+            visibility: 'PUBLIC_APPROVED',
+          },
+          contentDigest: '7'.repeat(64),
+        },
+        {
+          key: editionId,
+          kind: 'expression',
+          visibility: 'PUBLIC',
+          content: { id: editionId, kind: 'Edition', visibility: 'PUBLIC_APPROVED' },
+          contentDigest: '8'.repeat(64),
+        },
+        {
           key: 'mw:entity:api-left',
           kind: 'node',
           visibility: 'PUBLIC',
-          content: { id: 'mw:entity:api-left', kind: 'Entity', visibility: 'PUBLIC_APPROVED' },
+          content: {
+            id: 'mw:entity:api-left',
+            kind: 'Entity',
+            identity_class: 'Entity',
+            visibility: 'PUBLIC_APPROVED',
+          },
           contentDigest: '1'.repeat(64),
         },
         {
           key: 'mw:entity:api-right',
           kind: 'node',
           visibility: 'INTERNAL',
-          content: { id: 'mw:entity:api-right', kind: 'Entity', visibility: 'INTERNAL' },
+          content: {
+            id: 'mw:entity:api-right',
+            kind: 'Entity',
+            identity_class: 'Entity',
+            visibility: 'INTERNAL',
+          },
           contentDigest: '2'.repeat(64),
         },
         {
@@ -62,7 +90,23 @@ describe('research relation explanation API', () => {
           key: assertionId,
           kind: 'assertion',
           visibility: 'PUBLIC',
-          content: { id: assertionId, kind: 'Assertion', visibility: 'PUBLIC_APPROVED' },
+          content: {
+            id: assertionId,
+            kind: 'Assertion',
+            schema_version: 1,
+            lifecycle: 'candidate',
+            created_at: '2026-10-16T00:00:00.000Z',
+            updated_at: '2026-10-16T00:00:00.000Z',
+            origin_ref: 'fixture://research/api/001',
+            visibility: 'PUBLIC_APPROVED',
+            content_revision: 1,
+            claim: 'Synthetic explanation fixture.',
+            polarity: 'positive',
+            scope: { kind: 'research_context', reference_id: 'mw:concept:api-scope' },
+            context: { mode: 'analysis', reference_id: 'mw:concept:api-scope' },
+            epistemic_status: 'hypothesized',
+            review_status: 'pending',
+          },
           contentDigest: '4'.repeat(64),
         },
         {
@@ -207,8 +251,11 @@ describe('research relation explanation API', () => {
     }
   });
 
-  it('hides an INTERNAL relation when its selected evidence is confidential', async () => {
-    const release = await fixtureRelease({ evidenceVisibility: 'CONFIDENTIAL' });
+  it('hides a confidential relation and its confidential selected evidence', async () => {
+    const release = await fixtureRelease({
+      relationVisibility: 'CONFIDENTIAL',
+      evidenceVisibility: 'CONFIDENTIAL',
+    });
     const { app } = await createApp(release);
     try {
       const response = await app.inject({
@@ -226,6 +273,48 @@ describe('research relation explanation API', () => {
 
   it('fails closed when exact local evidence cannot be verified', async () => {
     const release = await fixtureRelease({ evidenceHash: '0'.repeat(64) });
+    const { app } = await createApp(release);
+    try {
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/research/relations/${relationId}/explanation`,
+        headers: { 'x-test-role': 'system' },
+      });
+      expect(response.statusCode).toBe(503);
+      expect(response.json().error).toBe('Research explanation is unavailable');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('fails closed when an injected release has a semantically invalid graph', async () => {
+    const release = await fixtureRelease();
+    const relation = release.records.find((record) => record.key === relationId)!;
+    relation.content = { ...relation.content, subject_id: 'mw:entity:missing-endpoint' };
+    const { app } = await createApp(release);
+    try {
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/research/relations/${relationId}/explanation`,
+        headers: { 'x-test-role': 'system' },
+      });
+      expect(response.statusCode).toBe(503);
+      expect(response.json().error).toBe('Research explanation is unavailable');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('fails closed when an evidence selector names a source outside the injected release', async () => {
+    const release = await fixtureRelease();
+    const evidence = release.records.find((record) => record.key === evidenceId)!;
+    evidence.content = {
+      ...evidence.content,
+      selector: {
+        ...(evidence.content.selector as Record<string, unknown>),
+        source_id: 'mw:source:missing-from-release',
+      },
+    };
     const { app } = await createApp(release);
     try {
       const response = await app.inject({
