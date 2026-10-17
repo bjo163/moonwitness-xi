@@ -17,6 +17,27 @@ type GraphSearchWireResponse = {
   data: { release_digest: string; results: GraphSearchWireResult[] };
 };
 
+type RelationExplanationWireResponse = {
+  success: boolean;
+  data: {
+    release_digest: string;
+    explanation: {
+      id: string;
+      predicate: string;
+      review_status: string;
+      epistemic_status: string;
+      supporting_evidence: Array<{
+        evidence: { id: string; assertion_id: string };
+        source_id: string;
+        edition_id: string;
+        locator: string;
+        citation: string;
+        excerpt: string;
+      }>;
+    };
+  };
+};
+
 type PassageWireResponse = {
   success: boolean;
   data: {
@@ -133,8 +154,33 @@ test('superadmin searches live PostgreSQL knowledge and opens its pinned passage
       (result) => result.id === relationId && result.kind === 'relation'
     )
   ).toBe(true);
+  const explanationResponse = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.pathname === `/api/research/relations/${encodeURIComponent(relationId)}/explanation` &&
+      response.request().method() === 'GET'
+    );
+  });
   await page.getByRole('button', { name: 'Explain relation' }).click();
+  const liveExplanation = await explanationResponse;
+  expect(liveExplanation.status(), await liveExplanation.text()).toBe(200);
+  const liveExplanationBody: RelationExplanationWireResponse = await liveExplanation.json();
+  expect(liveExplanationBody.success).toBe(true);
+  expect(liveExplanationBody.data.release_digest).toBe(relationSearchBody.data.release_digest);
+  expect(liveExplanationBody.data.explanation).toMatchObject({
+    id: relationId,
+    predicate: 'related_to',
+    review_status: 'pending',
+    epistemic_status: 'unreviewed',
+  });
+  expect(
+    liveExplanationBody.data.explanation.supporting_evidence.map((row) => row.evidence.id)
+  ).toContain('mw:evidence:e2e-live-knowledge');
   await expect(relationInput).toHaveValue(relationId);
   await expect(page.getByRole('heading', { name: 'Explain a relation' })).toBeVisible();
   await expect(page.getByText('related_to', { exact: true })).toBeVisible();
+  await expect(page.getByText('pending · unreviewed', { exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Supporting evidence' })).toContainText(
+    'mw:assertion:e2e-live-knowledge'
+  );
 });
