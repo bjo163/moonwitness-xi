@@ -156,11 +156,25 @@ export const evidenceRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Body: ResearchEvidenceReference }>(
     '/api/research/evidence/resolve',
     {
+      onRequest: async (request, reply) => {
+        reply.header('Cache-Control', 'private, no-store');
+        if (!request.auth) {
+          return reply.code(401).send({ success: false, error: 'Authentication required' });
+        }
+        const hasActiveCompanyContext =
+          Number.isInteger(request.auth.companyId) && (request.auth.companyId ?? 0) > 0;
+        if (
+          (request.auth.role !== 'user' && request.auth.role !== 'superadmin') ||
+          !hasActiveCompanyContext
+        ) {
+          return reply.code(403).send({ success: false, error: 'Research access denied' });
+        }
+      },
       schema: {
         tags: ['Research'],
         summary: 'Resolve an exact evidence selector against the local corpus',
         description:
-          'Validates canonical source, expression, edition, passage, content hash, optional Unicode-scalar range, and supporting/counterevidence direction. No source is fetched over the network.',
+          'Requires an authenticated user or superadmin with an active company context. Validates canonical source, expression, edition, passage, content hash, optional Unicode-scalar range, and supporting/counterevidence direction. No source is fetched over the network.',
         security: [{ bearerAuth: [] }],
         body: requestSchema,
         response: {

@@ -14,8 +14,22 @@ const quranSelector = {
 describe('research evidence API', () => {
   afterEach(() => vi.unstubAllEnvs());
 
-  function createEvidenceApp() {
+  function createEvidenceApp(
+    role?: 'user' | 'superadmin' | 'system',
+    companyId: number | null = 12
+  ) {
     const app = Fastify();
+    app.decorateRequest('auth', null);
+    app.addHook('onRequest', async (request) => {
+      if (role) {
+        request.auth = {
+          userId: 1,
+          role,
+          companyId: companyId ?? undefined,
+          groupPermissions: [],
+        };
+      }
+    });
     app.setErrorHandler((error, _request, reply) => {
       const statusCode = typeof error.statusCode === 'number' ? error.statusCode : 500;
       return reply.code(statusCode).send({ success: false, error: error.message });
@@ -30,7 +44,7 @@ describe('research evidence API', () => {
       locator: quranSelector.locator,
       use: 'quote_excerpt',
     });
-    const app = createEvidenceApp();
+    const app = createEvidenceApp('user');
     await app.register(evidenceRoutes);
 
     try {
@@ -62,7 +76,7 @@ describe('research evidence API', () => {
   });
 
   it('rejects content hash mismatches and dangling/noncanonical selectors', async () => {
-    const app = createEvidenceApp();
+    const app = createEvidenceApp('user');
     await app.register(evidenceRoutes);
 
     try {
@@ -97,6 +111,85 @@ describe('research evidence API', () => {
       expect(dangling.statusCode).toBe(400);
     } finally {
       await app.close();
+    }
+  });
+
+  it('rejects anonymous requests for both approved local samples without returning excerpts', async () => {
+    const app = createEvidenceApp();
+    await app.register(evidenceRoutes);
+
+    try {
+      const selectors = [
+        { ...quranSelector, content_sha256: 'a'.repeat(64) },
+        {
+          source_id: 'mw:source:ebible-webp-protestant',
+          expression_id: 'mw:expression:webp-protestant',
+          edition_id: 'mw:edition:webp-protestant-2020-stable',
+          locator: 'Genesis 1:1',
+          content_sha256: 'b'.repeat(64),
+        },
+      ];
+
+      for (const [index, selector] of selectors.entries()) {
+        const response = await app.inject({
+          method: 'POST',
+          url: '/api/research/evidence/resolve',
+          payload: {
+            id: `mw:evidence:anonymous-${index}`,
+            assertion_id: `mw:assertion:anonymous-${index}`,
+            direction: 'supporting',
+            selector,
+          },
+        });
+
+        expect(response.statusCode, response.body).toBe(401);
+        expect(response.headers['cache-control']).toBe('private, no-store');
+        expect(response.json()).toEqual({ success: false, error: 'Authentication required' });
+        expect(response.body).not.toContain('In the name');
+        expect(response.body).not.toContain('In the beginning');
+      }
+
+      const malformed = await app.inject({
+        method: 'POST',
+        url: '/api/research/evidence/resolve',
+        payload: {},
+      });
+      expect(malformed.statusCode).toBe(401);
+      expect(malformed.json()).toEqual({
+        success: false,
+        error: 'Authentication required',
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('requires a human role with an active company context', async () => {
+    for (const [role, companyId] of [
+      ['system', 12],
+      ['user', null],
+      ['superadmin', null],
+    ] as const) {
+      const app = createEvidenceApp(role, companyId);
+      await app.register(evidenceRoutes);
+
+      try {
+        const response = await app.inject({
+          method: 'POST',
+          url: '/api/research/evidence/resolve',
+          payload: {
+            id: `mw:evidence:denied-${role}`,
+            assertion_id: `mw:assertion:denied-${role}`,
+            direction: 'supporting',
+            selector: { ...quranSelector, content_sha256: 'a'.repeat(64) },
+          },
+        });
+
+        expect(response.statusCode, `${role} ${companyId}: ${response.body}`).toBe(403);
+        expect(response.json()).toEqual({ success: false, error: 'Research access denied' });
+      } finally {
+        await app.close();
+      }
     }
   });
 
