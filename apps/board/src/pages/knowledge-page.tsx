@@ -213,7 +213,7 @@ export function KnowledgePage() {
             value={graphSearchInput}
             onChange={(event) => setGraphSearchInput(event.target.value)}
             maxLength={120}
-            placeholder="Claim, assertion ID, source, or passage…"
+            placeholder="Claim, assertion, relation or endpoint ID, predicate, source, or passage…"
             className="min-w-0 flex-1 border-2 border-ink bg-paper px-3 py-2 text-ink outline-none focus-visible:ring-2 focus-visible:ring-lime-700"
           />
           <Button type="submit" disabled={graphSearchInput.trim().length < 2}>
@@ -229,6 +229,7 @@ export function KnowledgePage() {
         )}
         {graphSearchQuery.data && (
           <GraphSearchResults
+            query={graphSearchTerm}
             results={graphSearchQuery.data.results}
             truncated={graphSearchQuery.data.truncated}
             releaseDigest={graphSearchQuery.data.releaseDigest}
@@ -297,6 +298,7 @@ export function KnowledgePage() {
 }
 
 function GraphSearchResults({
+  query,
   results,
   truncated,
   releaseDigest,
@@ -304,6 +306,7 @@ function GraphSearchResults({
   onFindAssertion,
   onExplainRelation,
 }: {
+  query: string;
   results: ResearchGraphSearchResult[];
   truncated: boolean;
   releaseDigest: string;
@@ -316,13 +319,15 @@ function GraphSearchResults({
       <p className="break-all font-mono text-[11px] text-ink-faint">
         Active release SHA-256: {releaseDigest}
       </p>
-      {truncated && (
-        <p role="status" className="text-sm text-ink-faint">
-          Showing the first matches. Refine your query to find a specific record.
-        </p>
-      )}
+      <p role="status" className="text-sm text-ink-faint">
+        {results.length === 0
+          ? `No readable graph records matched “${query}”.`
+          : `Search for “${query}” found ${results.length} readable graph result${results.length === 1 ? '' : 's'}.${truncated ? ' Showing the first matches; refine your query to find a specific record.' : ''}`}
+      </p>
       {results.length === 0 ? (
-        <p className="text-sm text-ink-faint">No readable graph record matched.</p>
+        <p className="text-sm text-ink-faint">
+          Try another claim, relation ID, source, or passage.
+        </p>
       ) : (
         <ul aria-label="Research graph search results" className="grid gap-3">
           {results.map((result) => (

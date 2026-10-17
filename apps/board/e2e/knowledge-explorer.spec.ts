@@ -91,6 +91,8 @@ test('superadmin research access follows company context and source locators', a
     const query = new URL(route.request().url()).searchParams.get('q') ?? '';
     const unavailableAssertion = query === 'unavailable';
     const linkedEvidence = query === 'mw:assertion:e2e' || query === 'mw:assertion:unavailable';
+    const relationMatch = query === 'mw:relation:e2e';
+    const noMatches = query === 'no-match';
     const unavailableLocator = query === 'mw:assertion:unavailable';
     return route.fulfill({
       status: 200,
@@ -100,31 +102,42 @@ test('superadmin research access follows company context and source locators', a
         data: {
           release_digest: 'b'.repeat(64),
           truncated: false,
-          results: linkedEvidence
-            ? [
-                {
-                  id: unavailableLocator ? 'mw:evidence:unavailable' : 'mw:evidence:e2e',
-                  kind: 'evidence',
-                  title: unavailableLocator ? 'supporting · Q7:47' : 'supporting · Q7:46',
-                  summary: 'mw:source:tanzil-quran-text',
-                  assertion_id: unavailableLocator
-                    ? 'mw:assertion:unavailable'
-                    : 'mw:assertion:e2e',
-                  source_id: 'mw:source:tanzil-quran-text',
-                  edition_id: 'mw:edition:tanzil-quran-text-v1.1-uthmani-txt2',
-                  locator: unavailableLocator ? 'Q7:47' : 'Q7:46',
-                },
-              ]
-            : [
-                {
-                  id: unavailableAssertion ? 'mw:assertion:unavailable' : 'mw:assertion:e2e',
-                  kind: 'assertion',
-                  title: 'Synthetic graph-search assertion.',
-                  summary: unavailableAssertion
-                    ? 'missing-passage · pending'
-                    : 'positive · pending',
-                },
-              ],
+          results: noMatches
+            ? []
+            : relationMatch
+              ? [
+                  {
+                    id: 'mw:relation:e2e',
+                    kind: 'relation',
+                    title: 'describes · mw:assertion:e2e → mw:entity:e2e',
+                    summary: 'candidate · pending',
+                  },
+                ]
+              : linkedEvidence
+                ? [
+                    {
+                      id: unavailableLocator ? 'mw:evidence:unavailable' : 'mw:evidence:e2e',
+                      kind: 'evidence',
+                      title: unavailableLocator ? 'supporting · Q7:47' : 'supporting · Q7:46',
+                      summary: 'mw:source:tanzil-quran-text',
+                      assertion_id: unavailableLocator
+                        ? 'mw:assertion:unavailable'
+                        : 'mw:assertion:e2e',
+                      source_id: 'mw:source:tanzil-quran-text',
+                      edition_id: 'mw:edition:tanzil-quran-text-v1.1-uthmani-txt2',
+                      locator: unavailableLocator ? 'Q7:47' : 'Q7:46',
+                    },
+                  ]
+                : [
+                    {
+                      id: unavailableAssertion ? 'mw:assertion:unavailable' : 'mw:assertion:e2e',
+                      kind: 'assertion',
+                      title: 'Synthetic graph-search assertion.',
+                      summary: unavailableAssertion
+                        ? 'missing-passage · pending'
+                        : 'positive · pending',
+                    },
+                  ],
         },
       }),
     });
@@ -209,18 +222,27 @@ test('superadmin research access follows company context and source locators', a
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: 'Knowledge explorer' })).toBeVisible();
   await expect(page.getByText('A verified local passage excerpt.')).toBeVisible();
-  await page.getByLabel('Search assertions and evidence').fill('synthetic');
+  await page.getByLabel('Search graph records').fill('synthetic');
   await page.getByRole('button', { name: 'Search graph' }).click();
   await expect(page.getByText('Synthetic graph-search assertion.')).toBeVisible();
+  await expect(page.getByRole('status')).toContainText(
+    'Search for “synthetic” found 1 readable graph result.'
+  );
   await expect(page.getByText(`Active release SHA-256: ${'b'.repeat(64)}`)).toBeVisible();
   await page.getByRole('button', { name: 'Find linked evidence' }).click();
   await expect(page.getByText('supporting · Q7:46')).toBeVisible();
   await page.getByRole('button', { name: 'Open pinned passage Q7:46' }).click();
   await expect(page.getByRole('heading', { name: 'Q7:46' })).toBeVisible();
+  const graphSearch = page.getByLabel('Search graph records');
+  await graphSearch.fill('mw:relation:e2e');
+  await page.getByRole('button', { name: 'Search graph' }).click();
+  await expect(page.getByText('describes · mw:assertion:e2e → mw:entity:e2e')).toBeVisible();
+  await expect(page.getByRole('status')).toContainText(
+    'Search for “mw:relation:e2e” found 1 readable graph result.'
+  );
+  await page.getByRole('button', { name: 'Explain relation' }).click();
   const relationInput = page.getByLabel('Research relation ID');
-  await relationInput.focus();
-  await relationInput.pressSequentially('mw:relation:e2e');
-  await relationInput.press('Enter');
+  await expect(relationInput).toHaveValue('mw:relation:e2e');
   await expect(page.getByText('describes', { exact: true })).toBeVisible();
   await expect(
     page.getByText(
@@ -235,7 +257,7 @@ test('superadmin research access follows company context and source locators', a
   await expect(page.getByText('possibly_describes', { exact: true })).toBeVisible();
   await expect(page.getByText('mw:entity:alternative', { exact: true })).toBeVisible();
 
-  await page.getByLabel('Search assertions and evidence').fill('unavailable');
+  await page.getByLabel('Search graph records').fill('unavailable');
   await page.getByRole('button', { name: 'Search graph' }).click();
   await page.getByRole('button', { name: 'Find linked evidence' }).click();
   await expect(page.getByText('supporting · Q7:47')).toBeVisible();
@@ -254,6 +276,12 @@ test('superadmin research access follows company context and source locators', a
   await page.getByRole('menuitem', { name: 'MoonWitness' }).click();
   await expect(page.getByRole('link', { name: 'Knowledge explorer' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Knowledge explorer' })).toBeVisible();
+  await page.getByLabel('Search graph records').fill('no-match');
+  await page.getByRole('button', { name: 'Search graph' }).click();
+  await expect(page.getByRole('status')).toHaveText(
+    'No readable graph records matched “no-match”.'
+  );
+  await expect(page.getByText('Try another claim, relation ID, source, or passage.')).toBeVisible();
 
   await page.setViewportSize({ width: 1440, height: 1000 });
   await expectNoA11yViolations(page, 'knowledge/desktop/light');
