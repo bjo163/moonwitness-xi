@@ -5,6 +5,7 @@ import type { CorpusPassage, SourceCitation } from '@moonwitness/client';
 import { useAuth } from '@/hooks/use-auth-context';
 import { client } from '@/lib/client';
 import { scopedQueryKey } from '@/lib/query-scope';
+import { canReadResearch } from '@/lib/research-access';
 import { cn } from '@/lib/utils';
 import { Button } from '@moonwitness/ui/components/button';
 import { Skeleton } from '@moonwitness/ui/components/skeleton';
@@ -62,16 +63,12 @@ export function KnowledgePage() {
   const [relationInput, setRelationInput] = useState('');
   const [relationId, setRelationId] = useState('');
   const activeCompanyId = client.getCompanyId();
-  const canReadResearch =
-    user?.role === 'system' ||
-    ((user?.role === 'superadmin' || user?.role === 'user') &&
-      Number.isSafeInteger(activeCompanyId) &&
-      (activeCompanyId ?? 0) > 0);
+  const hasResearchAccess = canReadResearch(user?.role, activeCompanyId);
 
   const citationQuery = useQuery({
     queryKey: scopedQueryKey(['knowledge-source', sourceId]),
     queryFn: () => client.getSourceCitation(sourceId),
-    enabled: canReadResearch,
+    enabled: hasResearchAccess,
   });
   const citation = citationQuery.data;
   let locator: string | undefined;
@@ -88,12 +85,12 @@ export function KnowledgePage() {
       if (!citation || !locator) throw new Error('The selected source has no available passage.');
       return client.getCorpusPassage(citation.editionId, locator);
     },
-    enabled: canReadResearch && Boolean(citation && locator),
+    enabled: hasResearchAccess && Boolean(citation && locator),
   });
   const explanationQuery = useQuery({
     queryKey: scopedQueryKey(['knowledge-relation', relationId]),
     queryFn: () => client.getResearchRelationExplanation(relationId),
-    enabled: canReadResearch && relationId.length > 0,
+    enabled: hasResearchAccess && relationId.length > 0,
   });
 
   const submitRelation = (event: FormEvent<HTMLFormElement>) => {
@@ -106,7 +103,7 @@ export function KnowledgePage() {
     setRequestedLocator(selectedLocator);
   };
 
-  if (!canReadResearch) {
+  if (!hasResearchAccess) {
     return (
       <section className="ink-panel mx-auto max-w-2xl bg-card p-6 sm:p-10" role="alert">
         <h1 className="font-display text-2xl uppercase">Knowledge explorer unavailable</h1>

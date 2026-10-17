@@ -24,6 +24,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { client } from '@/lib/client';
 import { scopedQueryKey } from '@/lib/query-scope';
+import { canReadResearch } from '@/lib/research-access';
 import { useAuth } from '@/hooks/use-auth-context';
 import { useModels } from '@/hooks/use-model';
 import { useTheme } from '@/hooks/use-theme';
@@ -149,7 +150,6 @@ export function AppShell() {
   const { user, logout } = useAuth();
   const { theme, toggle } = useTheme();
   const { data: models, isLoading } = useModels();
-  const canReadResearch = user?.role === 'system' || user?.role === 'superadmin';
   const [paletteOpen, setPaletteOpen] = useState(false);
   const commandPaletteTriggerRef = useRef<HTMLButtonElement>(null);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -158,6 +158,7 @@ export function AppShell() {
   const [activeCompanyId, setActiveCompanyId] = useState<number | undefined>(() =>
     client.getCompanyId()
   );
+  const researchAccess = canReadResearch(user?.role, activeCompanyId);
   const [developmentMode, setDevelopmentMode] = useState(readDevelopmentMode);
 
   const toggleDevelopmentMode = useCallback(() => {
@@ -324,7 +325,7 @@ export function AppShell() {
         <ModelNavigation
           groups={visibleGroups}
           isLoading={isLoading}
-          canReadResearch={canReadResearch}
+          canReadResearch={researchAccess}
         />
         <div className="border-t-2 border-dashed border-ink/20 p-3">
           <button
@@ -371,7 +372,7 @@ export function AppShell() {
               <ModelNavigation
                 groups={visibleGroups}
                 isLoading={isLoading}
-                canReadResearch={canReadResearch}
+                canReadResearch={researchAccess}
                 onNavigate={() => setMobileNavOpen(false)}
               />
               <div className="border-t-2 border-dashed border-ink/20 p-3">

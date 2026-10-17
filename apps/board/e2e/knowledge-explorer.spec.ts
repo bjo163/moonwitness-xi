@@ -40,6 +40,15 @@ test('system roles can browse verified source and graph explanations read-only',
   page,
 }) => {
   await signIn(page, 'superadmin', E2E_SUPERADMIN_PASSWORD);
+  const companySwitcher = page.getByRole('button', {
+    name: 'Switch company. Current scope: Global Scope',
+  });
+  await expect(companySwitcher).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Knowledge explorer' })).toHaveCount(0);
+  await companySwitcher.click();
+  await page.getByRole('menuitem', { name: 'MoonWitness' }).click();
+  await expect(page.getByRole('link', { name: 'Knowledge explorer' })).toBeVisible();
+
   await page.route('**/api/corpus/sources/**', (route) =>
     route.fulfill({
       status: 200,
