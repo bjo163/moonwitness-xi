@@ -4,12 +4,14 @@ import os from 'node:os';
 import path from 'node:path';
 import Fastify, { LogController } from 'fastify';
 import { afterEach, describe, expect, it } from 'vitest';
+import { AuthError, ConflictError, type AuthService } from '@moonwitness/auth';
 import { createLogger } from '@moonwitness/logger';
 import { installAddons } from '@moonwitness/orm';
 import { manifest as baseManifest } from '@moonwitness/orm-base';
 import { manifest as knowledgeManifest } from '@moonwitness/orm-knowledge';
 import knex from 'knex';
 import { installPrivacySafeNotFoundHandler } from '../src/not-found.js';
+import { authRoutes } from '../src/routes/auth.routes.js';
 import { researchPrivacyRoutes } from '../src/routes/research-privacy.routes.js';
 
 describe('request logging privacy', () => {
@@ -85,6 +87,89 @@ describe('request logging privacy', () => {
       expect(logContents).not.toContain('private-cookie-canary');
       expect(logContents).not.toContain('private-body-canary');
       expect(logContents).not.toContain('private-host-canary');
+    } finally {
+      await app.close();
+      app.log.flush();
+    }
+  });
+
+  it('does not write authentication identifiers or credentials when registration and login fail', async () => {
+    temporaryDirectory = await mkdtemp(path.join(os.tmpdir(), 'moonwitness-auth-log-privacy-'));
+    const logger = createLogger({
+      name: 'auth-log-privacy-test',
+      level: 'info',
+      logDir: temporaryDirectory,
+      logFileName: 'api.log',
+      enableConsole: false,
+      enableFile: true,
+      prettyPrint: false,
+    });
+    const app = Fastify({
+      loggerInstance: logger,
+      logController: new LogController({ disableRequestLogging: true }),
+    });
+    const authService: AuthService = {
+      async register() {
+        throw new ConflictError();
+      },
+      async login() {
+        throw new AuthError();
+      },
+      fingerprintRefreshToken(token) {
+        return token;
+      },
+      async refresh() {
+        throw new AuthError();
+      },
+      async logout() {},
+      async revokeAllForUser() {},
+      async revokeAllSessions() {
+        return 0;
+      },
+      async changePassword() {},
+    };
+    app.addHook('onResponse', async (request, reply) => {
+      request.log.info(
+        { req: request, res: { statusCode: reply.statusCode } },
+        'request completed'
+      );
+    });
+    await app.register(authRoutes, { authService, accessTtlSeconds: 900, loginRateMax: 5 });
+
+    try {
+      const registration = await app.inject({
+        method: 'POST',
+        url: '/auth/register',
+        payload: {
+          login: 'synthetic-registration-login-canary',
+          password: 'synthetic-registration-password-canary',
+          email: 'synthetic-registration-email-canary@example.test',
+        },
+      });
+      const login = await app.inject({
+        method: 'POST',
+        url: '/auth/login',
+        payload: {
+          login: 'synthetic-login-identifier-canary',
+          password: 'synthetic-login-password-canary',
+        },
+      });
+      expect(registration.statusCode).toBe(409);
+      expect(login.statusCode).toBe(401);
+
+      app.log.flush();
+      const logContents = await readFile(path.join(temporaryDirectory, 'api.log'), 'utf8');
+      expect(logContents).toContain('registration conflict');
+      expect(logContents).toContain('login failed');
+      for (const canary of [
+        'synthetic-registration-login-canary',
+        'synthetic-registration-password-canary',
+        'synthetic-registration-email-canary@example.test',
+        'synthetic-login-identifier-canary',
+        'synthetic-login-password-canary',
+      ]) {
+        expect(logContents).not.toContain(canary);
+      }
     } finally {
       await app.close();
       app.log.flush();
