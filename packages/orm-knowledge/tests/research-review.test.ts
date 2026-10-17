@@ -15,6 +15,7 @@ import {
   readResearchReviewHistory,
   ResearchGraphRecord,
   resolveConceptProfileEvidence,
+  storeConceptProfiles,
   transitionResearchReview,
 } from '../src/index.js';
 
@@ -308,6 +309,51 @@ describe('transactional research review service', () => {
       reviewStatus: 'accepted',
       access: 'readable',
     });
+  });
+
+  it('does not let an accepted Assertion review approve a concept profile interpretation', async () => {
+    const started = await startReviewWorkflow();
+    await transitionResearchReview(db, reviewInput(started.id));
+    await expect(
+      resolveConceptProfileEvidence(db, evidenceId, {
+        authenticatedReader: { userId: superadminId, companyId, role: 'superadmin' },
+        corpusRootDirectory,
+      })
+    ).resolves.toMatchObject({
+      canonicalEvidence: { id: evidenceId, assertion_id: assertionId },
+      reviewStatus: 'accepted',
+      access: 'readable',
+    });
+
+    const acceptedProfile = {
+      format: 'moonwitness-concept-profiles/v1',
+      profiles: [
+        {
+          id: 'mw:concept-profile:accepted-with-assertion-review-only',
+          concept_id: 'mw:concept:synthetic-review-scope',
+          tradition: 'Synthetic test tradition',
+          interpretive_scope: 'Synthetic profile review binding boundary.',
+          epistemic_status: 'provisional',
+          uncertainty: { level: 'high', note: 'Synthetic fixture only.' },
+          interpretations: [
+            {
+              claim_type: 'human_interpretation',
+              text: 'Synthetic accepted interpretation.',
+              status: 'accepted',
+              evidence_ids: [evidenceId],
+            },
+          ],
+        },
+      ],
+    };
+    await expect(
+      storeConceptProfiles(db, {
+        authenticatedActor: { userId: superadminId, companyId, role: 'superadmin' },
+        corpusRootDirectory,
+        document: acceptedProfile,
+      })
+    ).rejects.toThrow(/exact profile-digest review binding/u);
+    expect(await db('knowledge_concept_profile_versions')).toHaveLength(0);
   });
 
   it('keeps canonical evidence unreviewed before a matching independent decision exists', async () => {
