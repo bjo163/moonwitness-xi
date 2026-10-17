@@ -180,7 +180,7 @@ describe('research relation explanation API', () => {
             },
             async first() {
               if (table === 'companies')
-                return membershipState === 'inactive' ? undefined : { id: 12 };
+                return membershipState === 'company-inactive' ? undefined : { id: 12 };
               if (table === 'company_memberships') {
                 return membershipState === 'active' &&
                   filters.user_id === 1 &&
@@ -223,7 +223,7 @@ describe('research relation explanation API', () => {
 
   it('requires authentication and denies human readers without an active company membership', async () => {
     const release = await fixtureRelease();
-    const { app } = await createApp(release);
+    const { app, readActiveRelease } = await createApp(release);
     try {
       const anonymous = await app.inject({
         method: 'GET',
@@ -250,6 +250,19 @@ describe('research relation explanation API', () => {
       });
       expect(inactive.statusCode).toBe(403);
       expect(inactive.json().error).toBe('Research explanation access denied');
+      const inactiveUserMembership = await app.inject({
+        method: 'GET',
+        url: `/api/research/relations/${relationId}/explanation`,
+        headers: { 'x-test-role': 'user', 'x-test-membership': 'inactive' },
+      });
+      expect(inactiveUserMembership.statusCode).toBe(403);
+      const inactiveCompany = await app.inject({
+        method: 'GET',
+        url: `/api/research/relations/${relationId}/explanation`,
+        headers: { 'x-test-role': 'user', 'x-test-membership': 'company-inactive' },
+      });
+      expect(inactiveCompany.statusCode).toBe(403);
+      expect(readActiveRelease).toHaveBeenCalledTimes(1);
     } finally {
       await app.close();
     }
