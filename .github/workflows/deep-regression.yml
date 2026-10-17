@@ -73,7 +73,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     concurrency:
-      group: repository-write-coordinator
+      group: maintenance-incident-deep-regression
       cancel-in-progress: false
     permissions:
       contents: read
@@ -101,7 +101,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     concurrency:
-      group: repository-write-coordinator
+      group: maintenance-incident-deep-regression
       cancel-in-progress: false
     permissions:
       contents: read

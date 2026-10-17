@@ -8,6 +8,10 @@ import {
 } from './check-workflow-checkout-trust.mjs';
 
 const expressionStart = '$' + '{';
+const pagesAssetReconciler = await readFile(
+  new NodeURL('./docs/reconcile-versioned-docs-asset.mjs', import.meta.url),
+  'utf8'
+);
 const pages = `
       - uses: actions/checkout@0123456789012345678901234567890123456789 # v4
         with:
@@ -97,9 +101,10 @@ const promote = `
 const versionedPages = `${pages}
   - name: Upload stable documentation archive
   store-versioned-docs:
-    file="versioned-docs/docs-site-$TAG.tar.gz"
-    test "$(jq -r '.digest // empty' <<< "$asset")" = "$expected"
-    test "$(jq -r '.size' <<< "$asset")" = "$expected_size"
+    DOCS_ARCHIVE_PATH: versioned-docs/docs-site-${expressionStart}{ needs.build.outputs.selected_ref }}.tar.gz
+    if [[ ! "$TAG" =~ ^v(0|[1-9][0-9]*) ]]; then exit 1; fi
+    git fetch --no-tags origin "refs/tags/$TAG:refs/tags/$TAG"
+    node scripts/docs/reconcile-versioned-docs-asset.mjs
   compose-site:
     if: needs.compose-site.result == 'success'
     run: node scripts/docs/versioned-site.mjs compose
@@ -108,6 +113,7 @@ const versionedPages = `${pages}
 function policies(overrides = {}) {
   return inspectTrustedCheckoutPolicies({
     pages: versionedPages,
+    pagesAssetReconciler,
     visualReview,
     release,
     releasePrepare,
@@ -122,7 +128,7 @@ test('accepts immutable event-SHA checkout and trusted dispatch restrictions', (
   assert.deepEqual(policies(), []);
 });
 
-test('all repository-writing workflow jobs share the non-cancelling write coordinator', async () => {
+test('all repository-writing workflow jobs use their non-cancelling resource lock', async () => {
   const workflowDirectory = new NodeURL('../.github/workflows/', import.meta.url);
   const files = (await readdir(workflowDirectory))
     .filter((file) => file.endsWith('.yml') || file.endsWith('.yaml'))
@@ -140,8 +146,8 @@ test('all repository-writing workflow jobs share the non-cancelling write coordi
     source:
       name === 'dependency-candidate.yml'
         ? source.replace(
-            '      group: repository-write-coordinator\n      cancel-in-progress: false\n',
-            '      group: dependency-candidate-publish\n      cancel-in-progress: true\n'
+            '      group: dev-branch-updates\n      cancel-in-progress: false\n',
+            '      group: dev-branch-updates\n      cancel-in-progress: true\n'
           )
         : source,
   }));
@@ -178,6 +184,57 @@ jobs:
   );
 });
 
+test('write workflows use separate resource locks while keeping conflicting writes together', async () => {
+  const cases = [
+    ['promote.yml', 'promotion-pr-metadata'],
+    ['refresh-promotion-report.yml', 'promotion-pr-metadata'],
+    ['sync-main-to-dev.yml', 'dev-branch-updates'],
+    ['release-prepare.yml', 'dev-branch-updates'],
+    ['roadmap-issue-plan.yml', 'roadmap-issue-sync'],
+    ['release.yml', 'release-asset-updates'],
+    ['pages.yml', 'release-asset-updates'],
+    ['pages.yml', 'pages-site-deployment'],
+    ['pages.yml', 'maintenance-incident-documentation'],
+    ['browser-matrix.yml', 'maintenance-incident-browser-regression'],
+    ['deep-regression.yml', 'maintenance-incident-deep-regression'],
+    ['platform-audit.yml', 'maintenance-incident-platform-audit'],
+  ];
+  const sources = await Promise.all(
+    cases.map(async ([name, group]) => ({
+      name,
+      group,
+      source: await readFile(new NodeURL(`../.github/workflows/${name}`, import.meta.url), 'utf8'),
+    }))
+  );
+  for (const { name, group, source } of sources) {
+    assert.match(source, new RegExp(`group: ${group}\\n\\s+cancel-in-progress: false`, 'u'), name);
+  }
+  assert.equal(
+    sources.find(({ name, group }) => name === 'release.yml' && group === 'release-asset-updates')
+      ?.group,
+    sources.find(({ name, group }) => name === 'pages.yml' && group === 'release-asset-updates')
+      ?.group,
+    'release publishing and versioned documentation uploads share an asset lock'
+  );
+
+  const unsafePages = sources.map(({ name, source }) => ({
+    name,
+    source:
+      name === 'pages.yml'
+        ? source.replace(
+            '      group: pages-site-deployment\n      cancel-in-progress: false',
+            '      group: uncoordinated-pages-deployment\n      cancel-in-progress: false'
+          )
+        : source,
+  }));
+  assert.ok(
+    inspectRepositoryWriteCoordination(unsafePages).some((finding) =>
+      finding.includes('pages.yml job "deploy"')
+    ),
+    'the policy rejects a deployment moved out of its shared Pages resource lock'
+  );
+});
+
 test('promotion report refresh is trusted, dev-scoped, and read-only outside the PR body', async () => {
   const promotionReportRefresh = await readFile(
     new NodeURL('../.github/workflows/refresh-promotion-report.yml', import.meta.url),
@@ -207,7 +264,10 @@ test('issue intake policy rejects write scopes, unpinned checkout, and user text
     readFile(new NodeURL('./roadmap/run-issue-intake.mjs', import.meta.url), 'utf8'),
   ]);
   const unsafeWorkflow = issueIntake
-    .replace('      contents: read', '      contents: read\n      issues: write')
+    .replace(
+      '      contents: read',
+      '      contents: read\n      actions: write\n      issues: write'
+    )
     .replace('permission-metadata: read', 'permission-issues: write')
     .replace('ref: ${{ github.sha }}', 'ref: ${{ github.event.comment.body }}');
   const unsafeRunner = issueIntakeRunner.replace(
@@ -219,6 +279,43 @@ test('issue intake policy rejects write scopes, unpinned checkout, and user text
   assert.ok(findings.some((finding) => finding.includes('least-privilege GitHub App token')));
   assert.ok(findings.some((finding) => finding.includes('immutable event-SHA checkout')));
   assert.ok(findings.some((finding) => finding.includes('omit user text')));
+  const missingReadPermission = policies({
+    issueIntake: issueIntake.replace('      actions: read\n', ''),
+    issueIntakeRunner,
+  });
+  assert.ok(
+    missingReadPermission.some((finding) =>
+      finding.includes('comment-bound run names and Actions read permission')
+    )
+  );
+});
+
+test('roadmap issue resume dispatch is bounded and Actions write stays apply-scoped', async () => {
+  const issueSync = await readFile(
+    new NodeURL('../.github/workflows/roadmap-issue-plan.yml', import.meta.url),
+    'utf8'
+  );
+  assert.deepEqual(policies({ issueSync }), []);
+
+  const unsafePlanPermission = issueSync.replace(
+    '      actions: read\n      contents: read',
+    '      actions: write\n      contents: read'
+  );
+  assert.ok(
+    policies({ issueSync: unsafePlanPermission }).some((finding) =>
+      finding.includes('planning must keep Actions permission read-only')
+    )
+  );
+
+  const missingResume = issueSync.replace(
+    'LATEST_DEV_SHA="$latest_dev_sha" node scripts/roadmap/resume-stale-issue-sync.mjs',
+    'echo stale'
+  );
+  assert.ok(
+    policies({ issueSync: missingResume }).some((finding) =>
+      finding.includes('bounded dev workflow-dispatch resume')
+    )
+  );
 });
 
 test('scheduled regression incidents are main-only, isolated, and narrowly scoped', async () => {
@@ -251,15 +348,36 @@ test('rejects promotion reports without exact SHA checks or preservation of the 
 });
 
 test('requires immutable versioned docs assets and successful five-release composition', () => {
-  const unsafePages = versionedPages
-    .replace('jq -r \'.digest // empty\' <<< "$asset"', 'true')
-    .replace(
-      'versioned-site.mjs plan --releases release-inventory.json --limit 5',
-      'versioned-site.mjs plan'
-    );
-  const findings = policies({ pages: unsafePages });
-  assert.ok(findings.some((finding) => finding.includes('digest and size')));
-  assert.ok(findings.some((finding) => finding.includes('five-stable-release snapshot retention')));
+  const unsafePages = versionedPages.replace(
+    'scripts/docs/reconcile-versioned-docs-asset.mjs',
+    'scripts/docs/other-helper.mjs'
+  );
+  const missingTagFetch = versionedPages.replace(
+    'git fetch --no-tags origin "refs/tags/$TAG:refs/tags/$TAG"',
+    ''
+  );
+  const unsafeReconciler = pagesAssetReconciler.replace('allowPublishedAdditions: true', '');
+  const unsafeRetention = versionedPages.replace(
+    'versioned-site.mjs plan --releases release-inventory.json --limit 5',
+    'versioned-site.mjs plan'
+  );
+  const findings = policies({ pages: unsafePages, pagesAssetReconciler: unsafeReconciler });
+  assert.ok(findings.some((finding) => finding.includes('dedicated immutable asset reconciler')));
+  assert.ok(
+    policies({ pages: missingTagFetch }).some((finding) =>
+      finding.includes('fetch only a validated')
+    )
+  );
+  assert.ok(
+    policies({ pagesAssetReconciler: unsafeReconciler }).some((finding) =>
+      finding.includes('exact source')
+    )
+  );
+  assert.ok(
+    policies({ pages: unsafeRetention }).some((finding) =>
+      finding.includes('five-stable-release snapshot retention')
+    )
+  );
 });
 
 test('rejects arbitrary workflow-dispatch checkout refs and persisted credentials', () => {

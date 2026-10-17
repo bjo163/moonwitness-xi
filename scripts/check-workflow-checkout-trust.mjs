@@ -14,6 +14,27 @@ const repositoryWriteScopes = new Set([
   'pull-requests',
 ]);
 
+const requiredWriteConcurrencyGroups = new Map([
+  ['promote.yml:*', 'promotion-pr-metadata'],
+  ['refresh-promotion-report.yml:*', 'promotion-pr-metadata'],
+  ['sync-main-to-dev.yml:*', 'dev-branch-updates'],
+  ['release-prepare.yml:prepare', 'dev-branch-updates'],
+  ['dependency-candidate.yml:publish', 'dev-branch-updates'],
+  ['roadmap-issue-plan.yml:apply', 'roadmap-issue-sync'],
+  ['release.yml:publish', 'release-asset-updates'],
+  ['pages.yml:store-versioned-docs', 'release-asset-updates'],
+  ['pages.yml:compose-site', 'pages-site-compose'],
+  ['pages.yml:deploy', 'pages-site-deployment'],
+  ['pages.yml:report-failure', 'maintenance-incident-documentation'],
+  ['pages.yml:resolve-failure', 'maintenance-incident-documentation'],
+  ['browser-matrix.yml:report-failure', 'maintenance-incident-browser-regression'],
+  ['browser-matrix.yml:resolve-failure', 'maintenance-incident-browser-regression'],
+  ['deep-regression.yml:report-failure', 'maintenance-incident-deep-regression'],
+  ['deep-regression.yml:resolve-failure', 'maintenance-incident-deep-regression'],
+  ['platform-audit.yml:report-failure', 'maintenance-incident-platform-audit'],
+  ['platform-audit.yml:resolve-failure', 'maintenance-incident-platform-audit'],
+]);
+
 function workflowJobBlocks(source) {
   const jobsIndex = source.search(/^jobs:\s*$/mu);
   if (jobsIndex < 0) return [];
@@ -36,10 +57,16 @@ export function inspectRepositoryWriteCoordination(workflows) {
       .map((match) => match.groups.scope)
       .filter((scope) => repositoryWriteScopes.has(scope));
     const workflowGrantsWriteAll = /^permissions:\s*write-all\s*$/mu.test(workflowHeader);
+    const workflowConcurrency = /^concurrency:\s*\r?\n(?<block>(?:\s+[^\r\n]*\r?\n?)+)/mu.exec(
+      workflowHeader
+    )?.groups?.block;
+    const workflowGroup = /^\s+group:\s*(?<group>[^\s]+)\s*$/mu.exec(workflowConcurrency ?? '')
+      ?.groups?.group;
+    const workflowCancelInProgress = /^\s+cancel-in-progress:\s*(?<value>\S+)\s*$/mu.exec(
+      workflowConcurrency ?? ''
+    )?.groups?.value;
     const workflowCoordinatesWrites =
-      /^concurrency:\s*\r?\n\s+group:\s*repository-write-coordinator\s*\r?\n\s+cancel-in-progress:\s*false\s*$/mu.test(
-        workflowHeader
-      );
+      Boolean(workflowGroup) && workflowCancelInProgress === 'false';
 
     for (const job of workflowJobBlocks(source)) {
       const hasJobPermissions = /^(?: ){4}permissions:(?:\s+write-all)?\s*$/mu.test(job.source);
@@ -61,13 +88,32 @@ export function inspectRepositoryWriteCoordination(workflows) {
       )
         continue;
 
-      const jobCoordinatesWrites =
-        /^(?: ){4}concurrency:\s*\r?\n\s{6}group:\s*repository-write-coordinator\s*\r?\n\s{6}cancel-in-progress:\s*false\s*$/mu.test(
-          job.source
-        );
+      const jobConcurrency =
+        /^(?: ){4}concurrency:\s*\r?\n(?<block>(?:\s{6}[^\r\n]*\r?\n?)+)/mu.exec(job.source)?.groups
+          ?.block;
+      const jobGroup = /^\s{6}group:\s*(?<group>[^\s]+)\s*$/mu.exec(jobConcurrency ?? '')?.groups
+        ?.group;
+      const jobCancelInProgress = /^\s{6}cancel-in-progress:\s*(?<value>\S+)\s*$/mu.exec(
+        jobConcurrency ?? ''
+      )?.groups?.value;
+      const jobCoordinatesWrites = Boolean(jobGroup) && jobCancelInProgress === 'false';
       if (!workflowCoordinatesWrites && !jobCoordinatesWrites) {
         findings.push(
-          `${name} job "${job.name}" can write repository state but does not use the shared non-cancelling write coordinator.`
+          `${name} job "${job.name}" can write repository state but has no non-cancelling concurrency group.`
+        );
+        continue;
+      }
+      const expectedGroup =
+        requiredWriteConcurrencyGroups.get(`${name}:${job.name}`) ??
+        requiredWriteConcurrencyGroups.get(`${name}:*`);
+      const actualGroup = jobCoordinatesWrites ? jobGroup : workflowGroup;
+      if (!expectedGroup) {
+        findings.push(
+          `${name} job "${job.name}" is missing an explicit resource-specific concurrency policy.`
+        );
+      } else if (actualGroup !== expectedGroup) {
+        findings.push(
+          `${name} job "${job.name}" must use the resource concurrency group "${expectedGroup}".`
         );
       }
     }
@@ -111,6 +157,7 @@ function namedWorkflowStep(source, expectedName) {
 
 export function inspectTrustedCheckoutPolicies({
   pages,
+  pagesAssetReconciler = '',
   visualReview,
   release,
   releasePrepare,
@@ -120,6 +167,7 @@ export function inspectTrustedCheckoutPolicies({
   promotionReportRefresh,
   issueIntake,
   issueIntakeRunner,
+  issueSync,
   browserMatrix,
   deepRegression,
 }) {
@@ -261,15 +309,26 @@ export function inspectTrustedCheckoutPolicies({
   }
 
   if (pages.includes('compose-site:')) {
-    if (!pages.includes('docs-site-$TAG.tar.gz'))
+    if (
+      !pages.includes('scripts/docs/reconcile-versioned-docs-asset.mjs') ||
+      !pages.includes(
+        'DOCS_ARCHIVE_PATH: versioned-docs/docs-site-${{ needs.build.outputs.selected_ref }}.tar.gz'
+      ) ||
+      !pages.includes('refs/tags/$TAG:refs/tags/$TAG') ||
+      !pages.includes('if [[ ! "$TAG" =~ ^v(0|[1-9][0-9]*)')
+    )
       findings.push(
-        'Versioned Pages snapshots must use stable-tagged immutable release asset names.'
+        'Versioned Pages snapshots must fetch only a validated stable tag before using the dedicated immutable asset reconciler.'
       );
     if (
-      !pages.includes('jq -r \'.digest // empty\' <<< "$asset"') ||
-      !pages.includes('jq -r \'.size\' <<< "$asset"')
+      !pagesAssetReconciler.includes('allowPublishedAdditions: true') ||
+      !pagesAssetReconciler.includes('resolveTagCommit(tag)') ||
+      !pagesAssetReconciler.includes('release.tag_name !== tag') ||
+      !pagesAssetReconciler.includes('STABLE_TAG')
     )
-      findings.push('Versioned Pages assets must be reconciled by digest and size before reuse.');
+      findings.push(
+        'Versioned Pages assets must verify a published stable tag and its exact source before reconciliation.'
+      );
     if (!pages.includes('name: Upload stable documentation archive'))
       findings.push('Stable docs archive must be available to the immutable release-asset job.');
     if (!pages.includes('versioned-site.mjs compose'))
@@ -449,6 +508,15 @@ export function inspectTrustedCheckoutPolicies({
       findings.push('Issue intake must process only newly created issue comments.');
     if (!issueIntake.includes('permissions:\n  contents: read'))
       findings.push('Issue intake must grant the workflow token contents: read only.');
+    const intakeProposalJob = workflowJobBlocks(issueIntake).find((job) => job.name === 'proposal');
+    if (
+      !issueIntake.includes('run-name: Roadmap intake comment ${{ github.event.comment.id }}') ||
+      !intakeProposalJob?.source.includes('      actions: read') ||
+      !intakeProposalJob.source.includes('      contents: read')
+    )
+      findings.push(
+        'Issue intake deduplication must use comment-bound run names and Actions read permission only.'
+      );
     if (/^\s+(?:issues|contents|pull-requests|checks|actions):\s+write\s*$/mu.test(issueIntake))
       findings.push('Issue intake must not grant write permissions to workflow tokens.');
     const intakeCheckouts = checkoutSteps(issueIntake);
@@ -464,17 +532,33 @@ export function inspectTrustedCheckoutPolicies({
       issueIntake,
       'Require the least-privilege GitHub App permission verifier'
     );
+    const dedupe = namedWorkflowStep(issueIntake, 'Skip previously reported issue comment');
     const mintToken = namedWorkflowStep(issueIntake, 'Mint repository-scoped metadata-read token');
     const runIntake = namedWorkflowStep(
       issueIntake,
       'Verify actor and report a read-only proposal'
     );
+    const reportDuplicate = namedWorkflowStep(issueIntake, 'Report already processed comment');
     if (
       !requireToken?.includes('ROADMAP_INTAKE_APP_CLIENT_ID') ||
       !requireToken.includes('ROADMAP_INTAKE_APP_PRIVATE_KEY') ||
       !requireToken.includes('exit 2')
     )
       findings.push('Issue intake must fail clearly when its GitHub App credentials are missing.');
+    if (
+      !dedupe?.includes('issue-intake-dedupe.mjs') ||
+      !dedupe.includes('GITHUB_COMMENT_ID') ||
+      !dedupe.includes('GITHUB_COMMENT_CREATED_AT') ||
+      !dedupe.includes('GITHUB_RUN_ID') ||
+      !dedupe.includes('github.token') ||
+      !requireToken?.includes("steps.dedupe.outputs.skip != 'true'") ||
+      !mintToken?.includes("steps.dedupe.outputs.skip != 'true'") ||
+      !runIntake?.includes("steps.dedupe.outputs.skip != 'true'") ||
+      !reportDuplicate?.includes("steps.dedupe.outputs.skip == 'true'")
+    )
+      findings.push(
+        'Issue intake must check durable successful-run history before minting its verifier token.'
+      );
     if (
       !mintToken?.includes('actions/create-github-app-token@') ||
       !mintToken.includes('permission-metadata: read') ||
@@ -494,9 +578,11 @@ export function inspectTrustedCheckoutPolicies({
       );
     if (
       requireToken &&
+      dedupe &&
       mintToken &&
       runIntake &&
-      (issueIntake.indexOf(requireToken) > issueIntake.indexOf(mintToken) ||
+      (issueIntake.indexOf(dedupe) > issueIntake.indexOf(requireToken) ||
+        issueIntake.indexOf(requireToken) > issueIntake.indexOf(mintToken) ||
         issueIntake.indexOf(mintToken) > issueIntake.indexOf(runIntake))
     )
       findings.push(
@@ -514,6 +600,29 @@ export function inspectTrustedCheckoutPolicies({
       );
   }
 
+  if (issueSync) {
+    const issueSyncJobs = workflowJobBlocks(issueSync);
+    const planJob = issueSyncJobs.find((job) => job.name === 'plan');
+    const applyJob = issueSyncJobs.find((job) => job.name === 'apply');
+    const resumeCalls = issueSync.match(
+      /node scripts\/roadmap\/resume-stale-issue-sync\.mjs/gu
+    )?.length;
+    if (
+      !planJob?.source.includes('      actions: read') ||
+      /actions:\s+write/u.test(planJob.source)
+    )
+      findings.push('Roadmap issue planning must keep Actions permission read-only.');
+    if (
+      !applyJob?.source.includes('      actions: write') ||
+      !applyJob.source.includes('STALE_SYNC_RETRY_COUNT:') ||
+      !issueSync.includes('stale_sync_retry_count:') ||
+      resumeCalls !== 3
+    )
+      findings.push(
+        'Stale roadmap issue applies must use a bounded dev workflow-dispatch resume from all three stale guards.'
+      );
+  }
+
   for (const [name, source, dependency, category] of [
     ['browser-matrix.yml', browserMatrix, 'browsers', 'browser-regression'],
     ['deep-regression.yml', deepRegression, 'postgres-recovery', 'deep-regression'],
@@ -524,11 +633,11 @@ export function inspectTrustedCheckoutPolicies({
     if (!source.includes(expectedFailure) || !source.includes(expectedRecovery))
       findings.push(`${name} incident reporting and recovery must be limited to main runs.`);
     if (
-      (source.match(/group: repository-write-coordinator/gu) ?? []).length !== 2 ||
+      (source.match(/group: maintenance-incident-/gu) ?? []).length !== 2 ||
       (source.match(/issues: write/gu) ?? []).length !== 2
     )
       findings.push(
-        `${name} incident writes must use the shared coordinator and issues-only write scope.`
+        `${name} incident writes must use a category-specific coordinator and issues-only write scope.`
       );
     const checkouts = checkoutSteps(source);
     if (
@@ -569,6 +678,7 @@ async function main() {
     promotionReportRefresh,
     issueIntake,
     issueIntakeRunner,
+    issueSync,
     browserMatrix,
     deepRegression,
   ] = await Promise.all([
@@ -582,11 +692,17 @@ async function main() {
     readFile(path.join(repositoryRoot, '.github/workflows/refresh-promotion-report.yml'), 'utf8'),
     readFile(path.join(repositoryRoot, '.github/workflows/roadmap-issue-intake.yml'), 'utf8'),
     readFile(path.join(repositoryRoot, 'scripts/roadmap/run-issue-intake.mjs'), 'utf8'),
+    readFile(path.join(repositoryRoot, '.github/workflows/roadmap-issue-plan.yml'), 'utf8'),
     readFile(path.join(repositoryRoot, '.github/workflows/browser-matrix.yml'), 'utf8'),
     readFile(path.join(repositoryRoot, '.github/workflows/deep-regression.yml'), 'utf8'),
   ]);
+  const pagesAssetReconciler = await readFile(
+    path.join(repositoryRoot, 'scripts/docs/reconcile-versioned-docs-asset.mjs'),
+    'utf8'
+  );
   const findings = inspectTrustedCheckoutPolicies({
     pages,
+    pagesAssetReconciler,
     visualReview,
     release,
     releasePrepare,
@@ -596,6 +712,7 @@ async function main() {
     promotionReportRefresh,
     issueIntake,
     issueIntakeRunner,
+    issueSync,
     browserMatrix,
     deepRegression,
   });

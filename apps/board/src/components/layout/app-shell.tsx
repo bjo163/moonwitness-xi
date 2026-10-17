@@ -15,6 +15,7 @@ import {
   LogOut,
   Menu,
   Moon,
+  Network,
   Search,
   Sun,
   User,
@@ -23,6 +24,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { client } from '@/lib/client';
 import { scopedQueryKey } from '@/lib/query-scope';
+import { canReadResearch } from '@/lib/research-access';
 import { useAuth } from '@/hooks/use-auth-context';
 import { useModels } from '@/hooks/use-model';
 import { useTheme } from '@/hooks/use-theme';
@@ -101,15 +103,26 @@ function NavItem({
 function ModelNavigation({
   groups,
   isLoading,
+  canReadResearch,
   onNavigate,
 }: {
   groups: Array<[string, ModelInfo[]]>;
   isLoading: boolean;
+  canReadResearch: boolean;
   onNavigate?: () => void;
 }) {
   return (
     <nav aria-label="Models" className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
       <NavItem to="/" label="Dashboard" icon={DashboardIcon} tilt={-1.5} onNavigate={onNavigate} />
+      {canReadResearch && (
+        <NavItem
+          to="/knowledge"
+          label="Knowledge explorer"
+          icon={Network}
+          tilt={-1.2}
+          onNavigate={onNavigate}
+        />
+      )}
       {isLoading &&
         Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-8 bg-ink/10" />)}
       {groups.map(([group, items]) => (
@@ -145,6 +158,7 @@ export function AppShell() {
   const [activeCompanyId, setActiveCompanyId] = useState<number | undefined>(() =>
     client.getCompanyId()
   );
+  const researchAccess = canReadResearch(user?.role, client.getCompanyId());
   const [developmentMode, setDevelopmentMode] = useState(readDevelopmentMode);
 
   const toggleDevelopmentMode = useCallback(() => {
@@ -308,7 +322,11 @@ export function AppShell() {
         <div className="relative border-b-2 border-dashed border-ink/20 px-5 py-5">
           <Logo />
         </div>
-        <ModelNavigation groups={visibleGroups} isLoading={isLoading} />
+        <ModelNavigation
+          groups={visibleGroups}
+          isLoading={isLoading}
+          canReadResearch={researchAccess}
+        />
         <div className="border-t-2 border-dashed border-ink/20 p-3">
           <button
             type="button"
@@ -354,6 +372,7 @@ export function AppShell() {
               <ModelNavigation
                 groups={visibleGroups}
                 isLoading={isLoading}
+                canReadResearch={researchAccess}
                 onNavigate={() => setMobileNavOpen(false)}
               />
               <div className="border-t-2 border-dashed border-ink/20 p-3">
@@ -520,7 +539,7 @@ export function AppShell() {
           </div>
         </header>
 
-        <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-10">
+        <main className="min-w-0 flex-1 px-4 py-6 pb-24 sm:px-6 sm:py-8 sm:pb-8 lg:px-10">
           <Outlet key={activeCompanyId ?? 'default-company'} />
         </main>
       </div>

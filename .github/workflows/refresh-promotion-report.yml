@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: repository-write-coordinator
+  group: promotion-pr-metadata
   cancel-in-progress: false
 
 jobs:

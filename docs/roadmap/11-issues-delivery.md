@@ -163,7 +163,7 @@ Sintaks yang dikenali (bukan berarti dieksekusi):
 /mw reopen -- Bukti perlu diperiksa ulang.
 ```
 
-Workflow ini baru ada di source `dev`; aktivasi hosted menunggu konfigurasi GitHub App, promosi ke `main`, dan bukti run. Comment ID memberi kunci redelivery deterministik, tetapi Actions concurrency hanya menghindari overlap dan bukan durable deduplication store. Tidak ada issue event yang dapat menulis source atau mengubah issue.
+Workflow ini baru ada di source `dev`; aktivasi hosted menunggu konfigurasi GitHub App, promosi ke `main`, retention Actions minimal tujuh hari yang dikonfirmasi admin, dan bukti run. Untuk redelivery, run name mengikat ID komentar dan step read-only memakai Actions run history sebagai ledger: hanya run sukses untuk komentar identik yang dilewati. Query `actions:read` dibatasi ke tujuh hari setelah pembuatan komentar, mengikuti pagination, dan fail-closed bila inventory berubah/tidak lengkap atau melampaui batas API. Event lebih lama dari tujuh hari ditolak agar tidak diproses tanpa bukti dedup yang memadai. Ini tidak menjanjikan exactly-once di luar jendela run history tersebut. Tidak ada issue event yang dapat menulis source atau mengubah issue.
 
 Simpan bukti aktual di `docs/roadmap/evidence/M11.08.md`. Jangan menandai aktivasi selesai hanya karena YAML/script sudah ditulis. Saat task selesai, ikuti commit/push protocol; source status dan GitHub issue harus menyebut kondisi yang sama.
 

@@ -156,12 +156,36 @@ const suites = [
     typecheck: true,
     coverage: ['src/validation.ts'],
   },
+  {
+    name: 'orm-knowledge',
+    packageName: '@moonwitness/orm-knowledge',
+    typecheck: true,
+  },
+  {
+    name: 'knowledge',
+    packageName: '@moonwitness/knowledge',
+    typecheck: true,
+    typecheckConfig: 'tsconfig.test.json',
+  },
+  {
+    name: 'corpus',
+    packageName: '@moonwitness/corpus',
+    typecheck: true,
+    typecheckConfig: 'tsconfig.test.json',
+  },
 ];
 
 for (const suite of suites) {
   if (suite.typecheck) {
     run(
-      ['--filter', suite.packageName, 'exec', 'tsc', '-p', 'tsconfig.check.json'],
+      [
+        '--filter',
+        suite.packageName,
+        'exec',
+        'tsc',
+        '-p',
+        suite.typecheckConfig ?? 'tsconfig.check.json',
+      ],
       `${suite.name} typecheck`
     );
   }
@@ -193,5 +217,6 @@ for (const suite of suites) {
   run(args, `${suite.name} tests`);
 }
 
+run(['run', 'test:knowledge-cli:built'], 'Knowledge offline validator CLI');
 run(['exec', 'node', 'scripts/check-coverage.mjs'], 'Critical branch coverage');
 process.stdout.write(`JUnit reports written to ${path.relative(root, reportDirectory)}\n`);

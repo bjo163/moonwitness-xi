@@ -75,7 +75,10 @@ test('workflow CLI commands write valid source-bound Markdown and JSON reports',
     assert.match(markdown, /Source SHA: `[a-f0-9]{40}`/u);
     assert.equal(json.schemaVersion, 1);
     assert.match(json.sourceSha, /^[a-f0-9]{40}$/u);
-    assert.equal(json.totals.taskCount, 148);
+    const roadmap = JSON.parse(
+      await readFile(new URL('../../docs/roadmap/tasks.json', import.meta.url), 'utf8')
+    );
+    assert.equal(json.totals.taskCount, roadmap.tasks.length);
     assert.equal(typeof json.sourceDirty, 'boolean');
     assert.ok(
       markdown.includes(`Source tree: ${json.sourceDirty ? 'dirty' : 'clean'}`),

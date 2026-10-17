@@ -9,8 +9,8 @@ export const COMPATIBILITY_REVIEW_GATES = [
   'pnpm format:check',
   'pnpm typecheck',
   'pnpm test:unit:built',
-  'pnpm test:integration',
-  'pnpm test:e2e',
+  'pnpm test:integration:built',
+  'pnpm test:e2e:built',
   'pnpm test:ui-catalog',
   'pnpm test:ui-budget',
   'pnpm test:architecture',
@@ -274,12 +274,17 @@ function gitSourceSha() {
   return execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
 }
 
-function main(args) {
+export function resolvePlanOutputPath(args) {
   const outputIndex = args.indexOf('--output');
-  const outputPath = outputIndex >= 0 ? args[outputIndex + 1] : 'dependency-update-plan.json';
+  const outputPath = outputIndex >= 0 ? args[outputIndex + 1] : undefined;
   if (outputIndex >= 0 && (!outputPath || outputPath.startsWith('--'))) {
     throw new Error('--output requires a path.');
   }
+  return outputPath;
+}
+
+function main(args) {
+  const outputPath = resolvePlanOutputPath(args);
   const sourceIndex = args.indexOf('--source-sha');
   const sourceSha = sourceIndex >= 0 ? args[sourceIndex + 1] : gitSourceSha();
   if (!sourceSha || sourceSha.startsWith('--')) throw new Error('--source-sha requires a value.');
@@ -295,8 +300,10 @@ function main(args) {
   }
 
   const plan = buildDependencyPlan(loadOutdatedJson(), sourceSha, new Date().toISOString());
-  const serialized = `${JSON.stringify(plan, null, 2)}\n`;
-  writeFileSync(resolve(outputPath), serialized, { encoding: 'utf8', flag: 'wx' });
+  if (outputPath) {
+    const serialized = `${JSON.stringify(plan, null, 2)}\n`;
+    writeFileSync(resolve(outputPath), serialized, { encoding: 'utf8', flag: 'wx' });
+  }
   process.stdout.write(renderSummary(plan));
   const summaryPath = process.env.GITHUB_STEP_SUMMARY;
   if (summaryPath) writeFileSync(summaryPath, renderSummary(plan), { encoding: 'utf8', flag: 'a' });

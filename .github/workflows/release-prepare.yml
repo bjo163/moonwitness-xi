@@ -23,7 +23,7 @@ jobs:
     permissions:
       contents: write
     concurrency:
-      group: repository-write-coordinator
+      group: dev-branch-updates
       cancel-in-progress: false
     steps:
       - name: Validate requested source SHA

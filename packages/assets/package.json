@@ -6,6 +6,7 @@
   "license": "ISC",
   "files": [
     "brand",
+    "fonts",
     "icons",
     "illustrations",
     "manifest.json",
@@ -14,6 +15,8 @@
   ],
   "exports": {
     "./brand/*": "./brand/*",
+    "./fonts/*": "./fonts/*",
+    "./fonts.css": "./fonts.css",
     "./icons/*": "./icons/*",
     "./illustrations/*": "./illustrations/*",
     "./manifest.json": "./manifest.json",

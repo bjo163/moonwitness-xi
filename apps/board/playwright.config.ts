@@ -14,6 +14,7 @@ const databaseUrl =
 const ci = env.CI === 'true';
 const browserMatrix = env.MW_E2E_BROWSER_MATRIX === 'true';
 const buildScript = resolve(repositoryRoot, 'scripts/build-api-workspace.mjs');
+const buildApiBeforeE2E = env.MW_E2E_USE_BUILT_API !== 'true';
 const flakyPolicyPath = resolve(repositoryRoot, 'docs/testing/flaky-tests.json');
 const flakyPolicyValue: unknown = JSON.parse(readFileSync(flakyPolicyPath, 'utf8'));
 if (
@@ -29,13 +30,17 @@ if (!Number.isInteger(maxRetries) || maxRetries < 0 || maxRetries > 1) {
   throw new Error('Playwright CI retries must be an integer between 0 and 1.');
 }
 const flakeReporter = resolve(repositoryRoot, 'scripts/playwright-flake-reporter.mjs');
+const apiCommand = buildApiBeforeE2E
+  ? `pnpm exec node "${buildScript}" && pnpm --filter @moonwitness/api dev`
+  : 'node apps/api/dist/server.js';
 
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
   forbidOnly: ci,
   retries: ci ? maxRetries : 0,
-  workers: ci ? 1 : undefined,
+  // Board E2E specs share seeded PostgreSQL state; CPU-count parallelism causes API contention.
+  workers: 1,
   reporter: [
     ['list'],
     ['junit', { outputFile: '../../test-results/junit/board-e2e.xml' }],
@@ -64,7 +69,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: `pnpm exec node "${buildScript}" && pnpm --filter @moonwitness/api dev`,
+      command: apiCommand,
       cwd: repositoryRoot,
       url: `http://127.0.0.1:${apiPort}/readyz`,
       timeout: 120_000,

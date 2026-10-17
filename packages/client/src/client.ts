@@ -9,10 +9,14 @@ import {
 import { ModelRepository, type HttpClient, type RequestOptions } from './repository.js';
 import type {
   AuthTokens,
+  CorpusPassage,
   LoginParams,
   ModelInfo,
   MoonWitnessClientOptions,
   RegisterParams,
+  ResearchGraphSearchResult,
+  ResearchRelationExplanation,
+  SourceCitation,
   TokenStorage,
   UserProfile,
 } from './types.js';
@@ -262,6 +266,102 @@ export class MoonWitnessClient implements HttpClient {
     const res = await this.request<{ data: UserProfile }>('/auth/me');
     if (this.tokens) await this.saveTokens({ ...this.tokens, user: res.data });
     return res.data;
+  }
+
+  /** Look up citation metadata for a locally published, rights-cleared source. */
+  async getSourceCitation(sourceId: string): Promise<SourceCitation> {
+    const res = await this.request<{ success: true; data: SourceCitation }>(
+      `/api/corpus/sources/${encodeURIComponent(sourceId)}`
+    );
+    return res.data;
+  }
+
+  /** Read one exact locally published passage; the API does not fetch external sources. */
+  async getCorpusPassage(editionId: string, locator: string): Promise<CorpusPassage> {
+    const res = await this.request<{ success: true; data: CorpusPassage }>(
+      `/api/corpus/passages/${encodeURIComponent(editionId)}/${encodeURIComponent(locator)}`
+    );
+    return res.data;
+  }
+
+  /** Explain one relation from the verified active research release. */
+  async getResearchRelationExplanation(relationId: string): Promise<{
+    releaseDigest: string;
+    explanation: ResearchRelationExplanation;
+  }> {
+    const res = await this.request<{
+      success: true;
+      data: { release_digest: string; explanation: ResearchRelationExplanation };
+    }>(`/api/research/relations/${encodeURIComponent(relationId)}/explanation`);
+    return { releaseDigest: res.data.release_digest, explanation: res.data.explanation };
+  }
+
+  /** Search only readable assertion, evidence, and relation summaries in the active release. */
+  async searchResearchGraph(
+    query: string,
+    limit = 20
+  ): Promise<{
+    releaseDigest: string;
+    results: ResearchGraphSearchResult[];
+    truncated: boolean;
+  }> {
+    const params = new URLSearchParams({ q: query, limit: String(limit) });
+    const res = await this.request<{
+      success: true;
+      data: {
+        release_digest: string;
+        truncated: boolean;
+        results: Array<
+          | { id: string; kind: 'assertion'; title: string; summary: string }
+          | { id: string; kind: 'relation'; title: string; summary: string }
+          | ({
+              id: string;
+              kind: 'evidence';
+              title: string;
+              summary: string;
+              assertion_id: string;
+            } & (
+              | {
+                  source_id: 'mw:source:tanzil-quran-text';
+                  edition_id: 'mw:edition:tanzil-quran-text-v1.1-uthmani-txt2';
+                  locator: 'Q7:46';
+                }
+              | {
+                  source_id: 'mw:source:ebible-webp-protestant';
+                  edition_id: 'mw:edition:webp-protestant-2020-stable';
+                  locator: 'Genesis 1:1';
+                }
+            ))
+        >;
+      };
+    }>(`/api/research/graph/search?${params.toString()}`);
+    return {
+      releaseDigest: res.data.release_digest,
+      truncated: res.data.truncated,
+      results: res.data.results.map((result): ResearchGraphSearchResult => {
+        if (result.kind === 'assertion' || result.kind === 'relation') return result;
+        const common = {
+          id: result.id,
+          kind: result.kind,
+          title: result.title,
+          summary: result.summary,
+          assertionId: result.assertion_id,
+        } as const;
+        return result.source_id === 'mw:source:tanzil-quran-text'
+          ? {
+              ...common,
+              sourceId: result.source_id,
+              editionId: result.edition_id,
+              locator: result.locator,
+            }
+          : {
+              ...common,
+              sourceId: result.source_id,
+              editionId: result.edition_id,
+              locator: result.locator,
+            };
+      }),
+    };
   }
 
   /** Odoo-style JSON-RPC call; exposes search_read, search, create, write and unlink. */

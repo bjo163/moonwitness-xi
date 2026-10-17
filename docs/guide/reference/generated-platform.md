@@ -1,6 +1,6 @@
 # Generated platform reference
 
-Source fingerprint: `02d350aef379d0bbec1da0bc5438849bf7a4933bf49225ed94c758dbba4b7630`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
+Source fingerprint: `da0d7e4f74a71963b0c4f73143900138066412e779b78caf56ba301dac7ef1e0`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
 
 ## Workspace packages and apps
 
@@ -13,17 +13,22 @@ Source fingerprint: `02d350aef379d0bbec1da0bc5438849bf7a4933bf49225ed94c758dbba4
 | `@moonwitness/assets`           | Package | 1.0.0-rc.1 | —                                                                                                                                                                                    |
 | `@moonwitness/auth`             | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/client`           | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/corpus`           | Package | 1.0.0-rc.1 | `build`, `test`, `typecheck`                                                                                                                                                         |
 | `@moonwitness/eslint-config`    | Package | 1.0.0-rc.1 | —                                                                                                                                                                                    |
 | `@moonwitness/jobs`             | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/knowledge`        | Package | 1.0.0-rc.1 | `build`, `test`, `typecheck`                                                                                                                                                         |
+| `@moonwitness/local-ai`         | Package | 1.0.0-rc.1 | `build`, `test`, `typecheck`                                                                                                                                                         |
 | `@moonwitness/logger`           | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/orm`              | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/orm-base`         | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/orm-integration`  | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/orm-knowledge`    | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/orm-notification` | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/orm-organization` | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/orm-request`      | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/orm-storage`      | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/orm-workflow`     | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
+| `@moonwitness/research`         | Package | 1.0.0-rc.1 | `build`, `test`, `typecheck`                                                                                                                                                         |
 | `@moonwitness/types`            | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/ui`               | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
 
@@ -32,6 +37,7 @@ Source fingerprint: `02d350aef379d0bbec1da0bc5438849bf7a4933bf49225ed94c758dbba4
 | Name                         | Value category | Present in `.env.example` | Sensitive value redacted |
 | ---------------------------- | -------------- | ------------------------- | ------------------------ |
 | `ACCESS_TOKEN_TTL_SECONDS`   | secret         | Yes                       | Yes                      |
+| `AI_MODE`                    | string         | Yes                       | No                       |
 | `API_HOST`                   | string         | Yes                       | No                       |
 | `API_PORT`                   | integer        | Yes                       | No                       |
 | `ATTACHMENT_STORAGE_DIR`     | string         | Yes                       | No                       |
@@ -46,12 +52,15 @@ Source fingerprint: `02d350aef379d0bbec1da0bc5438849bf7a4933bf49225ed94c758dbba4
 | `JOBS_SCHEDULER_HEALTH_PORT` | integer        | Yes                       | No                       |
 | `JOBS_WORKER_HEALTH_PORT`    | integer        | Yes                       | No                       |
 | `JWT_SECRET`                 | secret         | Yes                       | Yes                      |
+| `LOCAL_AI_ENDPOINT`          | string         | Yes                       | No                       |
+| `LOCAL_AI_TIMEOUT_MS`        | integer        | Yes                       | No                       |
 | `LOG_DIR`                    | string         | Yes                       | No                       |
 | `LOG_FILE_NAME`              | string         | Yes                       | No                       |
 | `LOG_LEVEL`                  | string         | Yes                       | No                       |
 | `LOG_PRETTY`                 | boolean        | Yes                       | No                       |
 | `LOG_TO_FILE`                | boolean        | Yes                       | No                       |
 | `METRICS_TOKEN`              | secret         | Yes                       | Yes                      |
+| `MOONWITNESS_CORPUS_ROOT`    | string         | No                        | No                       |
 | `NODE_ENV`                   | string         | Yes                       | No                       |
 | `OUTBOX_HANDLERS_MODULE`     | string         | Yes                       | No                       |
 | `OUTBOX_WORKER_HEALTH_PORT`  | integer        | Yes                       | No                       |
@@ -93,6 +102,7 @@ Value categories are inferred from variable names and example syntax; requiredne
 - `pnpm dependency:candidate`
 - `pnpm dependency:plan`
 - `pnpm dev`
+- `pnpm dev:api`
 - `pnpm dev:board`
 - `pnpm docs:build`
 - `pnpm docs:build:built`
@@ -122,6 +132,7 @@ Value categories are inferred from variable names and example syntax; requiredne
 - `pnpm release:classify`
 - `pnpm release:dry-run`
 - `pnpm release:plan`
+- `pnpm release:preflight:built`
 - `pnpm release:prepare`
 - `pnpm release:verify-attestations`
 - `pnpm reset:superadmin-password`
@@ -148,6 +159,7 @@ Value categories are inferred from variable names and example syntax; requiredne
 - `pnpm test:docs-portal`
 - `pnpm test:docs-publication`
 - `pnpm test:e2e`
+- `pnpm test:e2e:built`
 - `pnpm test:e2e:diagnostics`
 - `pnpm test:e2e:visual`
 - `pnpm test:e2e:visual:matrix`
@@ -155,6 +167,7 @@ Value categories are inferred from variable names and example syntax; requiredne
 - `pnpm test:flaky-policy`
 - `pnpm test:integration`
 - `pnpm test:integration:built`
+- `pnpm test:knowledge-cli:built`
 - `pnpm test:maintenance-incidents`
 - `pnpm test:package-manager`
 - `pnpm test:platform-audit`

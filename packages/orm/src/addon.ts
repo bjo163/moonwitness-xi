@@ -66,6 +66,8 @@ export interface Addon {
   readonly data?: readonly SeedRecord[];
   readonly views?: readonly ViewDefinition[];
   readonly menus?: readonly AddonMenu[];
+  /** Idempotent database setup run transactionally after addon tables are synchronized. */
+  readonly setup?: (transaction: Knex.Transaction) => Promise<void>;
   /** Programmatic, transactional data/schema backfills keyed by the exact prior addon version. */
   readonly upgrade?: Readonly<Record<string, (transaction: Knex.Transaction) => Promise<void>>>;
 }
@@ -412,6 +414,7 @@ export async function installAddons(db: Knex, addons: readonly Addon[]): Promise
         await addon.upgrade?.[installed.version]?.(trx);
       }
     }
+    for (const addon of ordered) await addon.setup?.(trx);
     await installData(trx, data);
     for (const addon of ordered) {
       await trx<InstalledAddon>('_orm_addons')

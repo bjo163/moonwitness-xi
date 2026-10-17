@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@moonwitness/assets": "workspace:*",
     "@moonwitness/types": "workspace:*",
     "@moonwitness/ui": "workspace:*",
     "@moonwitness/client": "workspace:*",

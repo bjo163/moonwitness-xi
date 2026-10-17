@@ -40,6 +40,28 @@ test('plan defaults to create and repeated identical remote state becomes no-op'
   assert.equal(plan([issue]).operations[0].operation, 'noop');
 });
 
+test('projects K-series IDs into the same issue marker and idempotent planner contract', () => {
+  const kTask = {
+    ...task,
+    id: 'K0-001',
+    title: 'K foundation',
+    milestone: 'K0',
+    dependsOn: [],
+    detailFile: 'docs/roadmap/12-local-ai-rebuild.md',
+  };
+  const first = plan([], [kTask]);
+  assert.match(first.operations[0].body, /moonwitness-task: 123456789:K0-001/u);
+  const issue = {
+    number: 51,
+    title: first.operations[0].title,
+    body: first.operations[0].body,
+    state: 'open',
+    labels: first.operations[0].labels.map((name) => ({ name })),
+    milestone: { number: 100, title: 'K0' },
+  };
+  assert.equal(plan([issue], [kTask]).operations[0].operation, 'noop');
+});
+
 test('task selection requires exact unique IDs and limits explicit writes to five tasks', () => {
   const tasks = Array.from({ length: 6 }, (_, index) => ({
     ...task,
@@ -57,6 +79,14 @@ test('task selection requires exact unique IDs and limits explicit writes to fiv
   assert.throws(
     () => selectTasksForSync(tasks, 'M11.01,M11.02,M11.03,M11.04,M11.05,M11.06', true),
     /limited to 5 tasks/u
+  );
+});
+
+test('selects a K-series task by its exact stable ID', () => {
+  const kTask = { ...task, id: 'K0-001', milestone: 'K0' };
+  assert.deepEqual(
+    selectTasksForSync([kTask], 'K0-001', true).map(({ id }) => id),
+    ['K0-001']
   );
 });
 
@@ -113,12 +143,19 @@ test('issue sync workflow bounds changed-task and backlog writes to an exact dev
   assert.match(applyJob, /Issue sync apply is limited to five task IDs/u);
   assert.match(applyJob, /issues: write/u);
   assert.match(applyJob, /checks: read/u);
-  assert.match(applyJob, /group: repository-write-coordinator/u);
+  assert.match(applyJob, /group: roadmap-issue-sync/u);
   assert.match(applyJob, /needs: \[plan\]/u);
   assert.match(applyJob, /persist-credentials: false/u);
   assert.match(applyJob, /fetch-depth: 0/u);
   assert.match(applyJob, /refs\/remotes\/origin\/dev/u);
   assert.match(applyJob, /collect-lifecycle-snapshot-cli\.mjs/u);
+  assert.match(applyJob, /if \[\[ ! -s "\$snapshot_file" \]\]/u);
+  assert.equal(
+    (applyJob.match(/resume-stale-issue-sync\.mjs/gu) ?? []).length,
+    3,
+    'each stale guard resumes the selected task batch on current dev'
+  );
+  assert.match(applyJob, /git fetch origin dev --no-recurse-submodules/u);
   assert.match(applyJob, /--lifecycle-snapshot/u);
 });
 
@@ -235,6 +272,43 @@ test('apply refuses stale plans and performs serial writes only for explicit ope
     applyIssuePlan({ plan: stalePlan, client, tasks: [task], repositoryId, sourceSha }),
     /changed after planning/u
   );
+});
+
+test('apply rechecks dev immediately before an issue write after metadata preparation', async () => {
+  let devHead = sourceSha;
+  let sourceChecks = 0;
+  let issueWrites = 0;
+  const client = {
+    listAll: async () => [],
+    assertWritable: () => {},
+    ensureMetadata: async () => {
+      devHead = 'f'.repeat(40);
+      return new Map();
+    },
+    create: async () => {
+      issueWrites += 1;
+    },
+    update: async () => {
+      issueWrites += 1;
+    },
+  };
+
+  await assert.rejects(
+    applyIssuePlan({
+      plan: plan(),
+      client,
+      tasks: [task],
+      repositoryId,
+      sourceSha,
+      assertSourceCurrent: async () => {
+        sourceChecks += 1;
+        if (devHead !== sourceSha) throw new Error('dev advanced; refusing stale issue writes');
+      },
+    }),
+    /refusing stale issue writes/u
+  );
+  assert.equal(sourceChecks, 2);
+  assert.equal(issueWrites, 0);
 });
 
 test('apply stops before metadata or issue writes when permission is revoked after planning', async () => {
@@ -702,6 +776,34 @@ test('public read-only planning needs no token and writes fail closed without on
   );
   await assert.rejects(client.ensureMetadata([task]), /GITHUB_TOKEN is required/u);
   assert.equal(calls.length, 4);
+});
+
+test('GitHub adapter revalidates the source before every mutating API request', async () => {
+  let current = true;
+  const calls = [];
+  const client = createGitHubIssuesClient({
+    token: 'test-token',
+    owner: 'owner',
+    repo: 'repo',
+    assertSourceCurrent: async () => {
+      if (!current) throw new Error('dev advanced; refusing stale issue writes');
+    },
+    fetchImpl: async (url, init = {}) => {
+      calls.push({ url: String(url), method: init.method ?? 'GET' });
+      return { ok: true, status: 200, json: async () => ({ number: 1 }) };
+    },
+  });
+
+  await client.create({ title: 'fresh', body: 'first write' });
+  current = false;
+  await assert.rejects(
+    client.update({ issueNumber: 1, title: 'stale', body: 'second write' }),
+    /refusing stale issue writes/u
+  );
+  assert.deepEqual(
+    calls.map(({ method }) => method),
+    ['POST']
+  );
 });
 
 test('GitHub adapter closes an issue only when a lifecycle operation explicitly requests it', async () => {

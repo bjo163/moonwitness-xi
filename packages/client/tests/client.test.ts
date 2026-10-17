@@ -134,6 +134,92 @@ describe('MoonWitnessClient', () => {
     expect(result.hasMore).toBe(true);
   });
 
+  it('provides typed local source citation and passage lookup methods', async () => {
+    const seen: string[] = [];
+    const { client } = makeClient((url) => {
+      seen.push(url.pathname);
+      if (url.pathname === '/api/corpus/sources/mw%3Asource%3Atanzil-quran-text') {
+        return json({
+          success: true,
+          data: {
+            sourceId: 'mw:source:tanzil-quran-text',
+            editionId: 'mw:edition:tanzil-quran-text-v1.1-uthmani-txt2',
+            locale: 'ar',
+            publication: 'source_bytes',
+            citation: 'Tanzil CC BY 3.0',
+            references: ['https://tanzil.net/'],
+            availablePassages: ['Q7:46'],
+          },
+        });
+      }
+      if (url.pathname === '/api/corpus/sources/mw%3Asource%3Aebible-webp-protestant') {
+        return json({
+          success: true,
+          data: {
+            sourceId: 'mw:source:ebible-webp-protestant',
+            expressionId: 'mw:expression:webp-protestant',
+            editionId: 'mw:edition:webp-protestant-2020-stable',
+            locale: 'en-US',
+            publication: 'source_bytes',
+            citation: 'WEBP Genesis 1:1; eBible.org, public domain',
+            references: ['https://ebible.org/engwebp/GEN01.htm'],
+            availablePassages: ['Genesis 1:1'],
+          },
+        });
+      }
+      if (url.pathname.endsWith('/Genesis%201%3A1')) {
+        return json({
+          success: true,
+          data: {
+            sourceId: 'mw:source:ebible-webp-protestant',
+            expressionId: 'mw:expression:webp-protestant',
+            editionId: 'mw:edition:webp-protestant-2020-stable',
+            locator: 'Genesis 1:1',
+            text: 'In the beginning ...',
+            sha256: 'b'.repeat(64),
+            citation: 'WEBP Genesis 1:1; eBible.org, public domain',
+          },
+        });
+      }
+      return json({
+        success: true,
+        data: {
+          sourceId: 'mw:source:tanzil-quran-text',
+          editionId: 'mw:edition:tanzil-quran-text-v1.1-uthmani-txt2',
+          locator: 'Q7:46',
+          text: 'local verse text',
+          sha256: 'a'.repeat(64),
+          citation: 'Tanzil CC BY 3.0',
+        },
+      });
+    });
+
+    const source = await client.getSourceCitation('mw:source:tanzil-quran-text');
+    const passage = await client.getCorpusPassage(source.editionId, 'Q7:46');
+    expect(source.availablePassages).toEqual(['Q7:46']);
+    expect(passage).toMatchObject({ locator: 'Q7:46', text: 'local verse text' });
+    expect(seen).toEqual([
+      '/api/corpus/sources/mw%3Asource%3Atanzil-quran-text',
+      '/api/corpus/passages/mw%3Aedition%3Atanzil-quran-text-v1.1-uthmani-txt2/Q7%3A46',
+    ]);
+
+    const webp = await client.getSourceCitation('mw:source:ebible-webp-protestant');
+    expect(webp).toMatchObject({
+      sourceId: 'mw:source:ebible-webp-protestant',
+      expressionId: 'mw:expression:webp-protestant',
+      editionId: 'mw:edition:webp-protestant-2020-stable',
+      availablePassages: ['Genesis 1:1'],
+    });
+    expect(webp.expressionId).not.toBe(webp.editionId);
+    const webpPassage = await client.getCorpusPassage(webp.editionId, 'Genesis 1:1');
+    expect(webpPassage).toMatchObject({
+      sourceId: webp.sourceId,
+      expressionId: webp.expressionId,
+      editionId: webp.editionId,
+      locator: 'Genesis 1:1',
+    });
+  });
+
   it('shares one refresh across concurrent 401s and retries each request', async () => {
     let refreshes = 0;
     const { client } = makeClient((url, init) => {

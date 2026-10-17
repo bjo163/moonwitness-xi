@@ -90,6 +90,7 @@ test('development mode reveals technical navigation without changing API access'
   await page.getByRole('button', { name: 'Enter the board' }).click();
   await expect(page).toHaveURL(/\/$/u);
   await expect(page.getByRole('button', { name: 'Development Mode: On' }).first()).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Knowledge explorer' })).toHaveCount(0);
 
   const ordinarySession = await page.evaluate(
     () =>
@@ -113,6 +114,9 @@ test('development mode reveals technical navigation without changing API access'
   await expect(
     page.getByRole('navigation', { name: 'Models' }).getByRole('link', { name: 'Users' })
   ).toHaveCount(0);
+
+  await page.goto('/knowledge');
+  await expect(page.getByRole('alert')).toContainText('cannot access research records');
 
   const forbiddenModelResponse = page.waitForResponse((response) =>
     response.url().includes('/api/base.user/views')

@@ -4,10 +4,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import {
+  automationSuitesForPlan,
   ciProjectsForAffectedPackages,
   expandWorkspaceDependencies,
   hasFullScopeChange,
   readWorkspaceProjects,
+  requiresQualityLane,
 } from './select-affected.mjs';
 
 test('shared automation configuration and the master roadmap select full validation', () => {
@@ -146,6 +148,24 @@ test('automation and unrelated lanes are omitted when no workspace package is af
 test('roadmap documentation changes retain roadmap policy and lifecycle CI coverage', () => {
   deepEqual(ciProjectsForAffectedPackages([], ['docs/roadmap/ACTIVE-PLAN.md']), ['automation']);
   deepEqual(ciProjectsForAffectedPackages([], ['docs/guides/quickstart.md']), []);
+});
+
+test('roadmap-only scope runs one automation suite while full scope keeps every suite', () => {
+  deepEqual(automationSuitesForPlan(['automation'], 'affected'), ['roadmap']);
+  deepEqual(automationSuitesForPlan(['automation'], 'full'), [
+    'workflow',
+    'release',
+    'roadmap',
+    'platform',
+  ]);
+  deepEqual(automationSuitesForPlan([], 'affected'), []);
+});
+
+test('roadmap-only edits do not promote the full quality lane, while mixed docs still do', () => {
+  equal(requiresQualityLane(['docs/roadmap/ACTIVE-PLAN.md']), false);
+  equal(requiresQualityLane(['docs/roadmap/ACTIVE-PLAN.md', 'docs/guides/quickstart.md']), true);
+  equal(requiresQualityLane(['README.md']), true);
+  equal(requiresQualityLane(['docs/roadmap/ACTIVE-PLAN.md'], true), true);
 });
 
 test('catalog-only changes select UI quality and browser acceptance without unrelated database jobs', () => {

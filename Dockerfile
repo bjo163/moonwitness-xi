@@ -14,16 +14,21 @@ COPY apps/ui-catalog/package.json ./apps/ui-catalog/package.json
 COPY packages/assets/package.json ./packages/assets/package.json
 COPY packages/auth/package.json ./packages/auth/package.json
 COPY packages/client/package.json ./packages/client/package.json
+COPY packages/corpus/package.json ./packages/corpus/package.json
 COPY packages/eslint-config/package.json ./packages/eslint-config/package.json
 COPY packages/jobs/package.json ./packages/jobs/package.json
+COPY packages/knowledge/package.json ./packages/knowledge/package.json
+COPY packages/local-ai/package.json ./packages/local-ai/package.json
 COPY packages/logger/package.json ./packages/logger/package.json
 COPY packages/orm-base/package.json ./packages/orm-base/package.json
 COPY packages/orm-integration/package.json ./packages/orm-integration/package.json
+COPY packages/orm-knowledge/package.json ./packages/orm-knowledge/package.json
 COPY packages/orm-notification/package.json ./packages/orm-notification/package.json
 COPY packages/orm-organization/package.json ./packages/orm-organization/package.json
 COPY packages/orm/package.json ./packages/orm/package.json
 COPY packages/orm-request/package.json ./packages/orm-request/package.json
 COPY packages/orm-storage/package.json ./packages/orm-storage/package.json
+COPY packages/research/package.json ./packages/research/package.json
 COPY packages/types/package.json ./packages/types/package.json
 COPY packages/ui/package.json ./packages/ui/package.json
 COPY packages/orm-workflow/package.json ./packages/orm-workflow/package.json
@@ -33,7 +38,8 @@ COPY . .
 RUN pnpm build
 
 FROM build AS api-deploy
-RUN pnpm --filter @moonwitness/api deploy --prod --legacy /deploy/api
+RUN pnpm --filter @moonwitness/api deploy --prod --legacy /deploy/api \
+    && node scripts/prepare-api-runtime-assets.mjs /deploy/api
 
 FROM node:22-bookworm-slim AS runtime
 ENV NODE_ENV=production \
@@ -46,6 +52,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=api-deploy --chown=node:node /deploy/api ./
+COPY --from=build --chown=node:node /workspace/corpus ./corpus
+ENV MOONWITNESS_CORPUS_ROOT=/app/corpus
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \

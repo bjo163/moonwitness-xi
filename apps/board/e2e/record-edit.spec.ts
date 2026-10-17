@@ -202,13 +202,58 @@ test('record forms validate, edit relations, scope state by country, archive, re
   });
   expect(deniedDelete.status()).toBe(403);
 
-  await page.goto(`/m/base.partner_address/${addressId}`);
+  await page.goto(`/m/base.partner/${partnerId}`);
+  let addressRow = page.getByRole('row').filter({ hasText: `Primary ${suffix}` });
+  await expect(addressRow).toBeVisible();
+  await addressRow.getByTitle('Open record in full view').click();
+  await expect(page).toHaveURL(new RegExp(`/m/base\\.partner_address/${addressId}$`, 'u'));
+  await page.getByLabel('Label').fill(`Primary Updated ${suffix}`);
+  await page.getByRole('button', { name: 'Save Record' }).click();
+  await expect(page.getByText('Record saved successfully!')).toBeVisible();
+  const updatedAddressResponse = await page.request.get(`/api/base.partner_address/${addressId}`, {
+    headers: authorization,
+  });
+  expect(updatedAddressResponse.status()).toBe(200);
+  expect(((await updatedAddressResponse.json()) as { data: { label: string } }).data.label).toBe(
+    `Primary Updated ${suffix}`
+  );
+
+  await page.goto(`/m/base.partner/${partnerId}`);
+  addressRow = page.getByRole('row').filter({ hasText: `Primary Updated ${suffix}` });
+  await expect(addressRow).toBeVisible();
+  page.once('dialog', (dialog) => void dialog.accept());
+  await addressRow.getByTitle('Archive item').click();
+  await expect(addressRow).toHaveCount(0);
+  const archivedThroughRelation = await page.request.get(`/api/base.partner_address/${addressId}`, {
+    headers: authorization,
+  });
+  expect(archivedThroughRelation.status()).toBe(200);
+  expect(
+    ((await archivedThroughRelation.json()) as { data: { active: boolean } }).data.active
+  ).toBe(false);
+
+  const standaloneAddressResponse = await page.request.post('/api/base.partner_address', {
+    headers: authorization,
+    data: {
+      partner_id: partnerId,
+      label: `Standalone ${suffix}`,
+      street: '2 Example Street',
+      city: 'Jakarta',
+    },
+  });
+  expect(standaloneAddressResponse.status()).toBe(201);
+  const standaloneAddress = (await standaloneAddressResponse.json()) as { data: CreatedRecord };
+
+  await page.goto(`/m/base.partner_address/${standaloneAddress.data.id}`);
   page.once('dialog', (dialog) => void dialog.accept());
   await page.getByRole('button', { name: 'Archive', exact: true }).click();
   await expect(page).toHaveURL(/\/m\/base\.partner_address$/u);
-  const archivedAddress = await page.request.get(`/api/base.partner_address/${addressId}`, {
-    headers: authorization,
-  });
+  const archivedAddress = await page.request.get(
+    `/api/base.partner_address/${standaloneAddress.data.id}`,
+    {
+      headers: authorization,
+    }
+  );
   expect(archivedAddress.status()).toBe(200);
   expect(((await archivedAddress.json()) as { data: { active: boolean } }).data.active).toBe(false);
 

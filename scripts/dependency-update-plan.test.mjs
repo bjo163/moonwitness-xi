@@ -4,6 +4,7 @@ import {
   COMPATIBILITY_REVIEW_GATES,
   buildDependencyPlan,
   classifyCompatibility,
+  resolvePlanOutputPath,
   renderSummary,
   selectUpdateCandidate,
 } from './dependency-update-plan.mjs';
@@ -13,12 +14,23 @@ test('full dependency candidate gates reuse the workspace build without dropping
   assert.ok(COMPATIBILITY_REVIEW_GATES.includes('pnpm test:unit:built'));
   assert.ok(COMPATIBILITY_REVIEW_GATES.includes('pnpm architecture:check:built'));
   assert.ok(COMPATIBILITY_REVIEW_GATES.includes('pnpm docs:check:built'));
-  assert.ok(COMPATIBILITY_REVIEW_GATES.includes('pnpm test:integration'));
-  assert.ok(COMPATIBILITY_REVIEW_GATES.includes('pnpm test:e2e'));
+  assert.ok(COMPATIBILITY_REVIEW_GATES.includes('pnpm test:integration:built'));
+  assert.ok(COMPATIBILITY_REVIEW_GATES.includes('pnpm test:e2e:built'));
   assert.ok(COMPATIBILITY_REVIEW_GATES.includes('pnpm test:docs-portal'));
   assert.ok(!COMPATIBILITY_REVIEW_GATES.includes('pnpm test:unit'));
+  assert.ok(!COMPATIBILITY_REVIEW_GATES.includes('pnpm test:integration'));
+  assert.ok(!COMPATIBILITY_REVIEW_GATES.includes('pnpm test:e2e'));
   assert.ok(!COMPATIBILITY_REVIEW_GATES.includes('pnpm architecture:check'));
   assert.ok(!COMPATIBILITY_REVIEW_GATES.includes('pnpm docs:check'));
+});
+
+test('read-only planning writes JSON only when an output path is explicitly requested', () => {
+  assert.equal(resolvePlanOutputPath([]), undefined);
+  assert.equal(
+    resolvePlanOutputPath(['--source-sha', 'abc', '--output', 'report.json']),
+    'report.json'
+  );
+  assert.throws(() => resolvePlanOutputPath(['--output']), /requires a path/);
 });
 
 test('classifies patch, minor, major, same, and unknown versions without guessing', () => {
@@ -83,7 +95,7 @@ test('groups exact outdated runtime, development, and action candidates determin
   assert.ok(
     plan.groups.runtime[0].majorImpact.requiredTasks.some((task) => task.includes('migration'))
   );
-  assert.ok(plan.groups.runtime[0].majorImpact.requiredGates.includes('pnpm test:e2e'));
+  assert.ok(plan.groups.runtime[0].majorImpact.requiredGates.includes('pnpm test:e2e:built'));
   assert.match(renderSummary(plan), /Major compatibility review: zeta/);
   assert.match(renderSummary(plan), /candidate executor refuses major updates/);
   assert.equal(plan.sourceSha, 'abc123');

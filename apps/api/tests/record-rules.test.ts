@@ -143,6 +143,27 @@ describe('central access policy', () => {
     };
     expect(canAccess('user', 'auth.refresh_token', 'read')).toBe(false);
     expect(canAccess('user', 'base.user', 'read')).toBe(false);
+    for (const model of [
+      'knowledge.witness_testimony',
+      'knowledge.witness_correction',
+      'knowledge.witness_interpretation',
+      'knowledge.story_version',
+      'knowledge.story_page_version',
+    ]) {
+      const fullWitnessGrant = {
+        model_name: model,
+        read: true,
+        create: true,
+        write: true,
+        unlink: true,
+      };
+      for (const operation of ['read', 'create', 'write', 'unlink', 'action'] as const) {
+        expect(canAccess('user', model, operation)).toBe(false);
+        expect(canAccess('user', model, operation, [fullWitnessGrant])).toBe(false);
+        expect(canAccess('superadmin', model, operation)).toBe(false);
+        expect(canAccess('system', model, operation)).toBe(false);
+      }
+    }
     expect(canAccess('user', 'base.partner', 'read')).toBe(true);
     expect(canAccess('user', 'base.partner', 'action', [grant])).toBe(false);
     expect(canAccess('user', 'base.partner', 'create', [grant])).toBe(true);
@@ -150,6 +171,34 @@ describe('central access policy', () => {
     expect(canAccess('system', 'auth.refresh_token', 'read')).toBe(false);
     expect(canAccess('system', 'base.partner', 'unlink')).toBe(true);
     expect(canAccess('superadmin', 'base.audit_log', 'write')).toBe(false);
+  });
+
+  it('keeps privacy and witness records out of generic access for every role and operation', () => {
+    const roles = ['user', 'superadmin', 'system'];
+    const operations = ['read', 'create', 'write', 'unlink', 'action'] as const;
+    const grants = [
+      {
+        model_name: 'knowledge.privacy_projection',
+        read: true,
+        create: true,
+        write: true,
+        unlink: true,
+      },
+    ];
+
+    for (const model of [
+      'knowledge.privacy_revocation',
+      'knowledge.privacy_projection',
+      'knowledge.witness_testimony',
+      'knowledge.witness_correction',
+      'knowledge.witness_interpretation',
+    ]) {
+      for (const role of roles) {
+        for (const operation of operations) {
+          expect(canAccess(role, model, operation, grants)).toBe(false);
+        }
+      }
+    }
   });
 
   it('protects system users and maps HTTP and RPC operations with default deny', () => {

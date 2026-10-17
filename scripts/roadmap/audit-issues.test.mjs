@@ -46,7 +46,7 @@ function issue(number, taskId, options = {}) {
 
 function audit(issues, options = {}) {
   return auditRoadmapIssues({
-    tasks,
+    tasks: options.tasks ?? tasks,
     issues,
     milestones: options.milestones ?? [
       { title: 'M1', number: 1, state: 'open' },
@@ -73,6 +73,40 @@ test('audits missing, duplicate and orphan task identities without exposing issu
     { taskId: 'M9.99', issueNumbers: [12], recommendedAction: 'needs-triage' },
   ]);
   assert.equal(JSON.stringify(report).includes('Private user text'), false);
+});
+
+test('audits K-series issue markers using the same task ownership contract', () => {
+  const kTask = {
+    id: 'K0-001',
+    milestone: 'K0',
+    detailFile: 'docs/roadmap/12-local-ai-rebuild.md',
+    evidence: 'docs/roadmap/evidence/K0-001.md',
+    labels: ['local-ai-rebuild'],
+    priority: 'p0',
+  };
+  const report = audit(
+    [
+      issue(40, 'K0-001', {
+        milestone: 'K0',
+        card: `${repositoryUrl}/blob/${sourceSha}/${kTask.detailFile}`,
+        evidence: `${repositoryUrl}/blob/${sourceSha}/${kTask.evidence}`,
+        labels: ['roadmap', 'milestone:k0', 'priority:p0', 'local-ai-rebuild'],
+      }),
+    ],
+    {
+      tasks: [kTask],
+      milestones: [{ title: 'K0', number: 100, state: 'open' }],
+      labels: [
+        { name: 'roadmap' },
+        { name: 'milestone:k0' },
+        { name: 'priority:p0' },
+        { name: 'local-ai-rebuild' },
+      ],
+    }
+  );
+  assert.deepEqual(report.missing, []);
+  assert.deepEqual(report.orphans, []);
+  assert.deepEqual(report.duplicates, []);
 });
 
 test('finds stale source, milestone, managed labels and invalid generated links', () => {

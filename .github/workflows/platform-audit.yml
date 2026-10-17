@@ -75,7 +75,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     concurrency:
-      group: repository-write-coordinator
+      group: maintenance-incident-platform-audit
       cancel-in-progress: false
     permissions:
       issues: write
@@ -108,7 +108,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     concurrency:
-      group: repository-write-coordinator
+      group: maintenance-incident-platform-audit
       cancel-in-progress: false
     permissions:
       issues: write

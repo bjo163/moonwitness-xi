@@ -60,9 +60,15 @@ importers:
       '@moonwitness/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@moonwitness/corpus':
+        specifier: workspace:*
+        version: link:../../packages/corpus
       '@moonwitness/jobs':
         specifier: workspace:*
         version: link:../../packages/jobs
+      '@moonwitness/local-ai':
+        specifier: workspace:*
+        version: link:../../packages/local-ai
       '@moonwitness/logger':
         specifier: workspace:*
         version: link:../../packages/logger
@@ -75,6 +81,9 @@ importers:
       '@moonwitness/orm-integration':
         specifier: workspace:*
         version: link:../../packages/orm-integration
+      '@moonwitness/orm-knowledge':
+        specifier: workspace:*
+        version: link:../../packages/orm-knowledge
       '@moonwitness/orm-notification':
         specifier: workspace:*
         version: link:../../packages/orm-notification
@@ -90,6 +99,9 @@ importers:
       '@moonwitness/orm-workflow':
         specifier: workspace:*
         version: link:../../packages/orm-workflow
+      '@moonwitness/research':
+        specifier: workspace:*
+        version: link:../../packages/research
       '@moonwitness/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -145,6 +157,9 @@ importers:
 
   apps/board:
     dependencies:
+      '@moonwitness/assets':
+        specifier: workspace:*
+        version: link:../../packages/assets
       '@moonwitness/client':
         specifier: workspace:*
         version: link:../../packages/client
@@ -270,6 +285,9 @@ importers:
 
   apps/ui-catalog:
     dependencies:
+      '@moonwitness/assets':
+        specifier: workspace:*
+        version: link:../../packages/assets
       '@moonwitness/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -362,6 +380,22 @@ importers:
         specifier: ^5.0.3
         version: 5.0.3(@types/node@26.6.4)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
+  packages/corpus:
+    dependencies:
+      '@moonwitness/knowledge':
+        specifier: workspace:*
+        version: link:../knowledge
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.4
+        version: 26.6.4
+      typescript:
+        specifier: ~5.7.3
+        version: 5.7.3
+      vitest:
+        specifier: ^5.0.3
+        version: 5.0.3(@types/node@26.6.4)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+
   packages/eslint-config:
     dependencies:
       '@eslint/js':
@@ -401,6 +435,37 @@ importers:
       knex:
         specifier: ^3.3.0
         version: 3.3.0(better-sqlite3@13.0.3)(pg@8.23.1)
+      typescript:
+        specifier: ~5.7.3
+        version: 5.7.3
+      vitest:
+        specifier: ^5.0.3
+        version: 5.0.3(@types/node@26.6.4)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+
+  packages/knowledge:
+    dependencies:
+      ajv:
+        specifier: ^8.20.0
+        version: 8.20.0
+      ajv-formats:
+        specifier: ^3.0.1
+        version: 3.0.1(ajv@8.20.0)
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.4
+        version: 26.6.4
+      typescript:
+        specifier: ~5.7.3
+        version: 5.7.3
+      vitest:
+        specifier: ^5.0.3
+        version: 5.0.3(@types/node@26.6.4)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+
+  packages/local-ai:
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.4
+        version: 26.6.4
       typescript:
         specifier: ~5.7.3
         version: 5.7.3
@@ -504,6 +569,55 @@ importers:
       objection:
         specifier: ^3.1.5
         version: 3.1.5(knex@3.3.0(better-sqlite3@13.0.3)(pg@8.23.1))
+      typescript:
+        specifier: ~5.7.3
+        version: 5.7.3
+      vitest:
+        specifier: 5.0.3
+        version: 5.0.3(@types/node@26.6.4)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+
+  packages/orm-knowledge:
+    dependencies:
+      '@moonwitness/corpus':
+        specifier: workspace:*
+        version: link:../corpus
+      '@moonwitness/knowledge':
+        specifier: workspace:*
+        version: link:../knowledge
+      '@moonwitness/orm':
+        specifier: workspace:*
+        version: link:../orm
+      '@moonwitness/orm-base':
+        specifier: workspace:*
+        version: link:../orm-base
+      '@moonwitness/orm-workflow':
+        specifier: workspace:*
+        version: link:../orm-workflow
+      '@moonwitness/research':
+        specifier: workspace:*
+        version: link:../research
+      objection:
+        specifier: ^3.1.5
+        version: 3.1.5(knex@3.3.0(better-sqlite3@13.0.3)(pg@8.23.1))
+    devDependencies:
+      '@moonwitness/jobs':
+        specifier: workspace:*
+        version: link:../jobs
+      '@moonwitness/orm-notification':
+        specifier: workspace:*
+        version: link:../orm-notification
+      '@vitest/coverage-v8':
+        specifier: 5.0.3
+        version: 5.0.3(vitest@5.0.3)
+      better-sqlite3:
+        specifier: ^13.0.3
+        version: 13.0.3
+      knex:
+        specifier: ^3.3.0
+        version: 3.3.0(better-sqlite3@13.0.3)(pg@8.23.1)
+      pg:
+        specifier: ^8.23.1
+        version: 8.23.1
       typescript:
         specifier: ~5.7.3
         version: 5.7.3
@@ -662,6 +776,22 @@ importers:
       objection:
         specifier: ^3.1.5
         version: 3.1.5(knex@3.3.0(better-sqlite3@13.0.3)(pg@8.23.1))
+      typescript:
+        specifier: ~5.7.3
+        version: 5.7.3
+      vitest:
+        specifier: 5.0.3
+        version: 5.0.3(@types/node@26.6.4)(@vitest/coverage-v8@5.0.3)(vite@8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+
+  packages/research:
+    dependencies:
+      '@moonwitness/knowledge':
+        specifier: workspace:*
+        version: link:../knowledge
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.4
+        version: 26.6.4
       typescript:
         specifier: ~5.7.3
         version: 5.7.3
