@@ -23,6 +23,7 @@ import { researchDuplicateCandidateRoutes } from './routes/research-duplicate-ca
 import { researchReviewRoutes } from './routes/research-review.routes.js';
 import { researchPrivacyRoutes } from './routes/research-privacy.routes.js';
 import { researchWitnessRoutes } from './routes/research-witness.routes.js';
+import { conceptProfileRoutes } from './routes/concept-profile.routes.js';
 import { localRetrievalRoutes } from './routes/local-retrieval.routes.js';
 import { localAiSuggestionRoutes } from './routes/local-ai-suggestion.routes.js';
 import { ensureResearchReviewWorkflow } from './research-review-workflow.js';
@@ -271,6 +272,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   await app.register(researchReviewRoutes);
   await app.register(researchPrivacyRoutes);
   await app.register(researchWitnessRoutes);
+  await app.register(conceptProfileRoutes);
   await app.register(localRetrievalRoutes);
   await app.register(localAiSuggestionRoutes);
 
