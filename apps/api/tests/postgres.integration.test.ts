@@ -1361,6 +1361,31 @@ postgresDescribe('PostgreSQL addon upgrade integration', () => {
       },
     });
 
+    const anonymousGraphSearch = await app.inject({
+      method: 'GET',
+      url: `/api/research/graph/search?q=${encodeURIComponent(researchAssertionId)}`,
+    });
+    expect(anonymousGraphSearch.statusCode).toBe(401);
+    const postgresGraphSearch = await app.inject({
+      method: 'GET',
+      url: `/api/research/graph/search?q=${encodeURIComponent(researchAssertionId)}`,
+      headers: authorization,
+    });
+    expect(postgresGraphSearch.statusCode, postgresGraphSearch.payload).toBe(200);
+    expect(postgresGraphSearch.headers['cache-control']).toBe('private, no-store');
+    expect(postgresGraphSearch.json()).toMatchObject({
+      success: true,
+      data: {
+        release_digest: researchRelease.releaseDigest,
+        truncated: false,
+        results: [
+          { id: researchAssertionId, kind: 'assertion' },
+          { id: researchEvidenceId, kind: 'evidence', assertion_id: researchAssertionId },
+        ],
+      },
+    });
+    expect(postgresGraphSearch.payload).not.toContain(restrictedAssertionId);
+
     const anonymousCandidates = await app.inject({
       method: 'GET',
       url: '/api/research/duplicate-candidates',

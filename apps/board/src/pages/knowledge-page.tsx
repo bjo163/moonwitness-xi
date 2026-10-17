@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BookOpen, GitBranch, Search } from 'lucide-react';
-import type { CorpusPassage, SourceCitation } from '@moonwitness/client';
+import type { CorpusPassage, ResearchGraphSearchResult, SourceCitation } from '@moonwitness/client';
 import { useAuth } from '@/hooks/use-auth-context';
 import { client } from '@/lib/client';
 import { scopedQueryKey } from '@/lib/query-scope';
@@ -60,6 +60,8 @@ export function KnowledgePage() {
   const { user } = useAuth();
   const [sourceId, setSourceId] = useState<SourceId>(sources[0].id);
   const [requestedLocator, setRequestedLocator] = useState<string | null>(null);
+  const [graphSearchInput, setGraphSearchInput] = useState('');
+  const [graphSearchTerm, setGraphSearchTerm] = useState('');
   const [relationInput, setRelationInput] = useState('');
   const [relationId, setRelationId] = useState('');
   const activeCompanyId = client.getCompanyId();
@@ -92,10 +94,20 @@ export function KnowledgePage() {
     queryFn: () => client.getResearchRelationExplanation(relationId),
     enabled: hasResearchAccess && relationId.length > 0,
   });
+  const graphSearchQuery = useQuery({
+    queryKey: scopedQueryKey(['knowledge-graph-search', graphSearchTerm]),
+    queryFn: () => client.searchResearchGraph(graphSearchTerm),
+    enabled: hasResearchAccess && graphSearchTerm.length >= 2,
+  });
 
   const submitRelation = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setRelationId(relationInput.trim());
+  };
+
+  const submitGraphSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setGraphSearchTerm(graphSearchInput.trim());
   };
 
   const selectSourcePassage = (id: SourceId, selectedLocator: string) => {
@@ -175,6 +187,56 @@ export function KnowledgePage() {
         )}
       </section>
 
+      <section aria-labelledby="graph-search-heading" className="space-y-4">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-[0.18em] text-ink-faint">
+            Active internal release
+          </p>
+          <h2 id="graph-search-heading" className="mt-1 font-display text-2xl uppercase">
+            Find assertions and evidence
+          </h2>
+          <p className="mt-2 max-w-3xl text-sm text-ink-soft">
+            Search readable records by claim, record ID, source, or passage. Restricted records and
+            evidence whose assertion is hidden are omitted.
+          </p>
+        </div>
+        <form className="flex flex-col gap-3 sm:flex-row" onSubmit={submitGraphSearch}>
+          <label className="sr-only" htmlFor="research-graph-query">
+            Search assertions and evidence
+          </label>
+          <input
+            id="research-graph-query"
+            value={graphSearchInput}
+            onChange={(event) => setGraphSearchInput(event.target.value)}
+            maxLength={120}
+            placeholder="Claim, assertion ID, source, or passage…"
+            className="min-w-0 flex-1 border-2 border-ink bg-paper px-3 py-2 text-ink outline-none focus-visible:ring-2 focus-visible:ring-lime-700"
+          />
+          <Button type="submit" disabled={graphSearchInput.trim().length < 2}>
+            <Search aria-hidden="true" className="size-4" />
+            Search graph
+          </Button>
+        </form>
+        {graphSearchQuery.isLoading && <Skeleton className="h-36 w-full bg-ink/10" />}
+        {graphSearchQuery.isError && (
+          <p className="text-sm text-destructive" role="alert">
+            Graph search is unavailable: {errorMessage(graphSearchQuery.error)}
+          </p>
+        )}
+        {graphSearchQuery.data && (
+          <GraphSearchResults
+            results={graphSearchQuery.data.results}
+            truncated={graphSearchQuery.data.truncated}
+            releaseDigest={graphSearchQuery.data.releaseDigest}
+            onOpenPassage={selectSourcePassage}
+            onFindAssertion={(id) => {
+              setGraphSearchInput(id);
+              setGraphSearchTerm(id);
+            }}
+          />
+        )}
+      </section>
+
       <section aria-labelledby="relation-heading" className="space-y-4">
         <div className="flex items-start gap-3">
           <GitBranch aria-hidden="true" className="mt-1 size-5 text-lime-700 dark:text-lime" />
@@ -222,6 +284,70 @@ export function KnowledgePage() {
           />
         )}
       </section>
+    </div>
+  );
+}
+
+function GraphSearchResults({
+  results,
+  truncated,
+  releaseDigest,
+  onOpenPassage,
+  onFindAssertion,
+}: {
+  results: ResearchGraphSearchResult[];
+  truncated: boolean;
+  releaseDigest: string;
+  onOpenPassage: (id: SourceId, locator: string) => void;
+  onFindAssertion: (id: string) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <p className="break-all font-mono text-[11px] text-ink-faint">
+        Active release SHA-256: {releaseDigest}
+      </p>
+      {truncated && (
+        <p role="status" className="text-sm text-ink-faint">
+          Showing the first matches. Refine your query to find a specific record.
+        </p>
+      )}
+      {results.length === 0 ? (
+        <p className="text-sm text-ink-faint">No readable assertion or evidence matched.</p>
+      ) : (
+        <ul aria-label="Research graph search results" className="grid gap-3">
+          {results.map((result) => (
+            <li key={`${result.kind}:${result.id}`}>
+              <article className="ink-panel min-w-0 space-y-2 bg-card p-4">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="font-mono text-[11px] uppercase tracking-[0.15em] text-ink-faint">
+                    {result.kind}
+                  </span>
+                  <span className="break-all font-mono text-xs text-ink-faint">{result.id}</span>
+                </div>
+                <p className="break-words font-medium text-ink">{result.title}</p>
+                <p className="break-words text-sm text-ink-soft">{result.summary}</p>
+                {result.kind === 'evidence' ? (
+                  <button
+                    type="button"
+                    className="text-left text-sm font-medium underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime-700"
+                    onClick={() => onOpenPassage(result.sourceId, result.locator)}
+                  >
+                    Open pinned passage {result.locator}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="text-left text-sm font-medium underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime-700"
+                    onClick={() => onFindAssertion(result.id)}
+                  >
+                    Find linked evidence
+                  </button>
+                )}
+              </article>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

@@ -1,7 +1,10 @@
-import type { FastifyPluginAsync } from 'fastify';
+import type { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import {
   explainResearchRelation,
+  validateResearchAssertion,
+  validateResearchEvidenceReference,
   type ResearchEvidenceReference,
+  type ResearchAssertion,
   type ResearchGraphInput,
   type ResearchGraphNode,
   type ResearchRelation,
@@ -15,6 +18,7 @@ import {
 } from '@moonwitness/orm-knowledge';
 import { readQuranPassage, readTextualWitnessPassage } from '@moonwitness/corpus';
 import type { Knex } from 'knex';
+import type { AuthContext } from '../plugins/auth.plugin.js';
 import { resolveCorpusDataRoot } from './corpus.routes.js';
 
 const corpusKey = 'research';
@@ -66,6 +70,150 @@ function storedVisibility(record: StoredResearchGraphRecord, content: Record<str
   // Storage PUBLIC is only an INTERNAL floor. It never means approved publication.
   const floor: ResearchVisibility = record.visibility === 'RESTRICTED' ? 'RESTRICTED' : 'INTERNAL';
   return visibilityRank[embedded] >= visibilityRank[floor] ? embedded : floor;
+}
+
+type AuthorizedReleaseResult =
+  | { status: 'denied' }
+  | { status: 'unavailable' }
+  | { status: 'found'; release: StoredResearchGraphRelease };
+
+async function readAuthorizedRelease(
+  fastify: FastifyInstance,
+  auth: AuthContext,
+  readRelease: (trx: Knex.Transaction, key: string) => Promise<StoredResearchGraphRelease | null>
+): Promise<AuthorizedReleaseResult> {
+  const result = await fastify.knex.transaction(async (trx) => {
+    if (auth.role !== 'system') {
+      const company = await trx('companies')
+        .where({ id: auth.companyId, active: true })
+        .forUpdate()
+        .first('id');
+      const membership = await trx('company_memberships')
+        .where({ user_id: auth.userId, company_id: auth.companyId, active: true })
+        .forUpdate()
+        .first('id');
+      if (!company || !membership) return { denied: true as const };
+    }
+    return { denied: false as const, release: await readRelease(trx, corpusKey) };
+  });
+  if (result.denied) return { status: 'denied' };
+  if (!result.release) return { status: 'unavailable' };
+  return { status: 'found', release: result.release };
+}
+
+function isResearchReader(auth: AuthContext): boolean {
+  return auth.role === 'system' || auth.role === 'superadmin' || auth.role === 'user';
+}
+
+type ResearchSearchResult =
+  | { id: string; kind: 'assertion'; title: string; summary: string }
+  | ({
+      id: string;
+      kind: 'evidence';
+      title: string;
+      summary: string;
+      assertion_id: string;
+    } & (
+      | {
+          source_id: 'mw:source:tanzil-quran-text';
+          edition_id: 'mw:edition:tanzil-quran-text-v1.1-uthmani-txt2';
+          locator: 'Q7:46';
+        }
+      | {
+          source_id: 'mw:source:ebible-webp-protestant';
+          edition_id: 'mw:edition:webp-protestant-2020-stable';
+          locator: 'Genesis 1:1';
+        }
+    ));
+
+function searchResearchRelease(
+  release: StoredResearchGraphRelease,
+  query: string,
+  limit: number
+): { results: ResearchSearchResult[]; truncated: boolean } {
+  const normalizedQuery = query.trim().toLocaleLowerCase('en-US');
+  const visibleAssertions = new Map<string, ResearchAssertion>();
+
+  for (const record of release.records) {
+    if (record.kind !== 'assertion') continue;
+    const content = object(record.content);
+    if (!content || content.kind !== 'Assertion' || content.id !== record.key) continue;
+    if (
+      storedVisibility(record, content) !== 'INTERNAL' ||
+      !validateResearchAssertion(content).valid
+    )
+      continue;
+    visibleAssertions.set(record.key, content as unknown as ResearchAssertion);
+  }
+
+  const results: ResearchSearchResult[] = [];
+  for (const record of release.records) {
+    if (record.kind === 'assertion') {
+      const assertion = visibleAssertions.get(record.key);
+      if (!assertion) continue;
+      const id = record.key;
+      if (
+        !id.toLocaleLowerCase('en-US').includes(normalizedQuery) &&
+        !assertion.claim.toLocaleLowerCase('en-US').includes(normalizedQuery)
+      )
+        continue;
+      results.push({
+        id,
+        kind: 'assertion',
+        title: assertion.claim.slice(0, 240),
+        summary: `${assertion.polarity} · ${assertion.review_status}`,
+      });
+      continue;
+    }
+    if (record.kind !== 'evidence') continue;
+    const content = object(record.content);
+    if (!content || content.kind !== 'Evidence' || content.id !== record.key) continue;
+    if (storedVisibility(record, content) !== 'INTERNAL') continue;
+    if (typeof content.assertion_id !== 'string' || !visibleAssertions.has(content.assertion_id))
+      continue;
+    const candidate = {
+      id: content.id,
+      assertion_id: content.assertion_id,
+      direction: content.direction,
+      selector: content.selector,
+    };
+    if (!validateResearchEvidenceReference(candidate).valid) continue;
+    const evidence = candidate as ResearchEvidenceReference;
+    const selector = evidence.selector;
+    const searchable = [
+      record.key,
+      evidence.assertion_id,
+      selector.source_id,
+      selector.edition_id,
+      selector.locator,
+    ]
+      .join(' ')
+      .toLocaleLowerCase('en-US');
+    if (!searchable.includes(normalizedQuery)) continue;
+    const result = {
+      id: record.key,
+      kind: 'evidence' as const,
+      title: `${evidence.direction} · ${selector.locator}`,
+      summary: selector.source_id,
+      assertion_id: evidence.assertion_id,
+    };
+    if (selector.source_id === 'mw:source:tanzil-quran-text') {
+      results.push({
+        ...result,
+        source_id: selector.source_id,
+        edition_id: selector.edition_id,
+        locator: selector.locator,
+      });
+    } else {
+      results.push({
+        ...result,
+        source_id: selector.source_id,
+        edition_id: selector.edition_id,
+        locator: selector.locator,
+      });
+    }
+  }
+  return { results: results.slice(0, limit), truncated: results.length > limit };
 }
 
 function graphFromRelease(release: StoredResearchGraphRelease) {
@@ -170,6 +318,50 @@ const errorSchema = {
   additionalProperties: false,
   required: ['success', 'error'],
   properties: { success: { const: false }, error: { type: 'string' } },
+} as const;
+
+const researchSearchSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['success', 'data'],
+  properties: {
+    success: { const: true },
+    data: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['release_digest', 'results', 'truncated'],
+      properties: {
+        release_digest: { type: 'string', pattern: '^[a-f0-9]{64}$' },
+        results: {
+          type: 'array',
+          maxItems: 25,
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['id', 'kind', 'title', 'summary'],
+            properties: {
+              id: { type: 'string' },
+              kind: { enum: ['assertion', 'evidence'] },
+              title: { type: 'string', maxLength: 240 },
+              summary: { type: 'string', maxLength: 255 },
+              assertion_id: { type: 'string' },
+              source_id: {
+                enum: ['mw:source:tanzil-quran-text', 'mw:source:ebible-webp-protestant'],
+              },
+              edition_id: {
+                enum: [
+                  'mw:edition:tanzil-quran-text-v1.1-uthmani-txt2',
+                  'mw:edition:webp-protestant-2020-stable',
+                ],
+              },
+              locator: { enum: ['Q7:46', 'Genesis 1:1'] },
+            },
+          },
+        },
+        truncated: { type: 'boolean' },
+      },
+    },
+  },
 } as const;
 
 const relationSummarySchema = {
@@ -306,6 +498,85 @@ export const researchExplanationRoutes: FastifyPluginAsync<
   const readRelease = options.readActiveRelease ?? readActiveResearchGraphRelease;
   const passageLookup = options.lookupPassage ?? localPassage;
 
+  fastify.get<{ Querystring: { q: string; limit?: number } }>(
+    '/api/research/graph/search',
+    {
+      schema: {
+        tags: ['Research'],
+        summary: 'Search readable assertions and evidence in the verified active release',
+        description:
+          'Searches only INTERNAL assertions and evidence attached to a readable assertion. Human readers require active company membership; trusted system readers may read internally. Restricted and child-sensitive records are never returned.',
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['q'],
+          properties: {
+            q: { type: 'string', minLength: 2, maxLength: 120 },
+            limit: { type: 'integer', minimum: 1, maximum: 25, default: 20 },
+          },
+        },
+        response: {
+          200: {
+            description: 'Matching readable graph records from the active release.',
+            ...researchSearchSchema,
+          },
+          400: { description: 'Search query is too short.', ...errorSchema },
+          401: { description: 'Bearer authentication is required.', ...errorSchema },
+          403: {
+            description: 'The authenticated reader is unsupported or lacks active membership.',
+            ...errorSchema,
+          },
+          503: { description: 'The active release could not be verified.', ...errorSchema },
+        },
+      },
+    },
+    async (request, reply) => {
+      reply.header('Cache-Control', 'private, no-store');
+      if (!request.auth)
+        return reply.code(401).send({ success: false, error: 'Authentication required' });
+      const auth = request.auth;
+      if (!isResearchReader(auth)) {
+        return reply.code(403).send({ success: false, error: 'Research search access denied' });
+      }
+      if (
+        auth.role !== 'system' &&
+        (!Number.isSafeInteger(auth.userId) ||
+          auth.userId < 1 ||
+          !Number.isSafeInteger(auth.companyId) ||
+          !auth.companyId ||
+          auth.companyId < 1)
+      ) {
+        return reply.code(403).send({ success: false, error: 'Research search access denied' });
+      }
+      if (request.query.q.trim().length < 2) {
+        return reply.code(400).send({ success: false, error: 'Search query is too short' });
+      }
+      try {
+        const activeRelease = await readAuthorizedRelease(fastify, auth, readRelease);
+        if (activeRelease.status === 'denied') {
+          return reply.code(403).send({ success: false, error: 'Research search access denied' });
+        }
+        if (activeRelease.status === 'unavailable') {
+          return reply.code(503).send({ success: false, error: 'Research graph is unavailable' });
+        }
+        validateResearchRelease(activeRelease.release.records);
+        const result = searchResearchRelease(
+          activeRelease.release,
+          request.query.q,
+          request.query.limit ?? 20
+        );
+        return reply.send({
+          success: true,
+          data: { release_digest: activeRelease.release.releaseDigest, ...result },
+        });
+      } catch (error) {
+        request.log.error({ err: error }, 'Verified research graph search failed');
+        return reply.code(503).send({ success: false, error: 'Research graph is unavailable' });
+      }
+    }
+  );
+
   fastify.get<{ Params: { relationId: string } }>(
     '/api/research/relations/:relationId/explanation',
     {
@@ -344,7 +615,7 @@ export const researchExplanationRoutes: FastifyPluginAsync<
       if (!request.auth)
         return reply.code(401).send({ success: false, error: 'Authentication required' });
       const auth = request.auth;
-      if (auth.role !== 'system' && auth.role !== 'superadmin' && auth.role !== 'user') {
+      if (!isResearchReader(auth)) {
         return reply
           .code(403)
           .send({ success: false, error: 'Research explanation access denied' });
@@ -363,32 +634,19 @@ export const researchExplanationRoutes: FastifyPluginAsync<
       }
 
       try {
-        const release = await fastify.knex.transaction(async (trx) => {
-          if (auth.role !== 'system') {
-            const company = await trx('companies')
-              .where({ id: auth.companyId, active: true })
-              .forUpdate()
-              .first('id');
-            const membership = await trx('company_memberships')
-              .where({ user_id: auth.userId, company_id: auth.companyId, active: true })
-              .forUpdate()
-              .first('id');
-            if (!company || !membership) return { denied: true as const };
-          }
-          return { denied: false as const, release: await readRelease(trx, corpusKey) };
-        });
-        if (release.denied) {
+        const activeRelease = await readAuthorizedRelease(fastify, auth, readRelease);
+        if (activeRelease.status === 'denied') {
           return reply
             .code(403)
             .send({ success: false, error: 'Research explanation access denied' });
         }
-        if (!release.release) {
+        if (activeRelease.status === 'unavailable') {
           return reply
             .code(503)
             .send({ success: false, error: 'Research explanation is unavailable' });
         }
-        const activeRelease = release.release;
-        const snapshot = graphFromRelease(activeRelease);
+        const release = activeRelease.release;
+        const snapshot = graphFromRelease(release);
         const result = await explainResearchRelation(snapshot.graph, request.params.relationId, {
           evidenceReferences: snapshot.evidenceReferences,
           evidenceVisibility: snapshot.evidenceVisibility,
@@ -406,7 +664,7 @@ export const researchExplanationRoutes: FastifyPluginAsync<
         return reply.send({
           success: true,
           data: {
-            release_digest: activeRelease.releaseDigest,
+            release_digest: release.releaseDigest,
             explanation: result.explanation,
           },
         });

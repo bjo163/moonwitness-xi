@@ -84,6 +84,42 @@ test('system roles can browse verified source and graph explanations read-only',
       }),
     })
   );
+  await page.route('**/api/research/graph/search**', (route) => {
+    const query = new URL(route.request().url()).searchParams.get('q') ?? '';
+    const linkedEvidence = query === 'mw:assertion:e2e';
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: {
+          release_digest: 'b'.repeat(64),
+          truncated: false,
+          results: linkedEvidence
+            ? [
+                {
+                  id: 'mw:evidence:e2e',
+                  kind: 'evidence',
+                  title: 'supporting · Q7:46',
+                  summary: 'mw:source:tanzil-quran-text',
+                  assertion_id: 'mw:assertion:e2e',
+                  source_id: 'mw:source:tanzil-quran-text',
+                  edition_id: 'mw:edition:tanzil-quran-text-v1.1-uthmani-txt2',
+                  locator: 'Q7:46',
+                },
+              ]
+            : [
+                {
+                  id: 'mw:assertion:e2e',
+                  kind: 'assertion',
+                  title: 'Synthetic graph-search assertion.',
+                  summary: 'positive · pending',
+                },
+              ],
+        },
+      }),
+    });
+  });
   await page.route('**/api/research/relations/**/explanation', (route) => {
     const requestedRelationId = decodeURIComponent(
       new URL(route.request().url()).pathname.split('/').at(-2) ?? ''
@@ -164,6 +200,14 @@ test('system roles can browse verified source and graph explanations read-only',
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: 'Knowledge explorer' })).toBeVisible();
   await expect(page.getByText('A verified local passage excerpt.')).toBeVisible();
+  await page.getByLabel('Search assertions and evidence').fill('synthetic');
+  await page.getByRole('button', { name: 'Search graph' }).click();
+  await expect(page.getByText('Synthetic graph-search assertion.')).toBeVisible();
+  await expect(page.getByText(`Active release SHA-256: ${'b'.repeat(64)}`)).toBeVisible();
+  await page.getByRole('button', { name: 'Find linked evidence' }).click();
+  await expect(page.getByText('supporting · Q7:46')).toBeVisible();
+  await page.getByRole('button', { name: 'Open pinned passage Q7:46' }).click();
+  await expect(page.getByRole('heading', { name: 'Q7:46' })).toBeVisible();
   const relationInput = page.getByLabel('Research relation ID');
   await relationInput.focus();
   await relationInput.pressSequentially('mw:relation:e2e');

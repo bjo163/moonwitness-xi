@@ -19,6 +19,7 @@ describe('research relation explanation API', () => {
     overrides: {
       relationVisibility?: string;
       evidenceVisibility?: string;
+      assertionVisibility?: string;
       evidenceHash?: string;
     } = {}
   ) {
@@ -98,7 +99,7 @@ describe('research relation explanation API', () => {
             created_at: '2026-10-16T00:00:00.000Z',
             updated_at: '2026-10-16T00:00:00.000Z',
             origin_ref: 'fixture://research/api/001',
-            visibility: 'PUBLIC_APPROVED',
+            visibility: overrides.assertionVisibility ?? 'PUBLIC_APPROVED',
             content_revision: 1,
             claim: 'Synthetic explanation fixture.',
             polarity: 'positive',
@@ -284,6 +285,100 @@ describe('research relation explanation API', () => {
     }
   });
 
+  it('searches readable assertions and linked evidence without exposing source text', async () => {
+    const release = await fixtureRelease();
+    const { app } = await createApp(release);
+    try {
+      const anonymousSearch = await app.inject({
+        method: 'GET',
+        url: '/api/research/graph/search?q=Synthetic+explanation',
+      });
+      expect(anonymousSearch.statusCode).toBe(401);
+      const missingCompany = await app.inject({
+        method: 'GET',
+        url: '/api/research/graph/search?q=Synthetic+explanation',
+        headers: { 'x-test-role': 'user', 'x-test-company': 'missing' },
+      });
+      expect(missingCompany.statusCode).toBe(403);
+      const assertionSearch = await app.inject({
+        method: 'GET',
+        url: '/api/research/graph/search?q=Synthetic+explanation',
+        headers: { 'x-test-role': 'user' },
+      });
+      expect(assertionSearch.statusCode).toBe(200);
+      expect(assertionSearch.headers['cache-control']).toBe('private, no-store');
+      expect(assertionSearch.json()).toMatchObject({
+        success: true,
+        data: {
+          release_digest: releaseDigest,
+          results: [
+            { id: assertionId, kind: 'assertion', title: 'Synthetic explanation fixture.' },
+          ],
+        },
+      });
+
+      const evidenceSearch = await app.inject({
+        method: 'GET',
+        url: '/api/research/graph/search?q=Q7%3A46',
+        headers: { 'x-test-role': 'user' },
+      });
+      expect(evidenceSearch.statusCode).toBe(200);
+      expect(evidenceSearch.json().data.results).toEqual([
+        {
+          id: evidenceId,
+          kind: 'evidence',
+          title: 'supporting · Q7:46',
+          summary: 'mw:source:tanzil-quran-text',
+          assertion_id: assertionId,
+          source_id: 'mw:source:tanzil-quran-text',
+          edition_id: editionId,
+          locator: 'Q7:46',
+        },
+      ]);
+      expect(evidenceSearch.body).not.toContain('A verified local passage excerpt');
+
+      const limitedSearch = await app.inject({
+        method: 'GET',
+        url: '/api/research/graph/search?q=api-fixture&limit=1',
+        headers: { 'x-test-role': 'user' },
+      });
+      expect(limitedSearch.statusCode).toBe(200);
+      expect(limitedSearch.json()).toMatchObject({
+        data: { results: expect.any(Array), truncated: true },
+      });
+      expect(limitedSearch.json().data.results).toHaveLength(1);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('fails closed for hidden assertions, their evidence, and whitespace-only searches', async () => {
+    const release = await fixtureRelease({ assertionVisibility: 'CHILD_SENSITIVE' });
+    const evidence = release.records.find((record) => record.key === evidenceId)!;
+    evidence.content = { ...evidence.content, visibility: 'INTERNAL' };
+    const { app } = await createApp(release);
+    try {
+      const hidden = await app.inject({
+        method: 'GET',
+        url: `/api/research/graph/search?q=${encodeURIComponent(assertionId)}`,
+        headers: { 'x-test-role': 'system' },
+      });
+      expect(hidden.statusCode).toBe(200);
+      expect(hidden.json().data.results).toEqual([]);
+      expect(hidden.body).not.toContain(assertionId);
+      expect(hidden.body).not.toContain(evidenceId);
+
+      const whitespace = await app.inject({
+        method: 'GET',
+        url: '/api/research/graph/search?q=%20%20',
+        headers: { 'x-test-role': 'system' },
+      });
+      expect(whitespace.statusCode).toBe(400);
+    } finally {
+      await app.close();
+    }
+  });
+
   it('allows a trusted system reader without a company membership', async () => {
     const release = await fixtureRelease();
     const { app } = await createApp(release);
@@ -415,6 +510,10 @@ describe('research relation explanation API', () => {
       )['/api/research/relations/{relationId}/explanation']!.get;
       expect(operation.security).toEqual([{ bearerAuth: [] }]);
       expect(Object.keys(operation.responses).sort()).toEqual(['200', '401', '403', '404', '503']);
+      const searchOperation = (
+        app.swagger().paths as Record<string, { get: { security: unknown } }>
+      )['/api/research/graph/search']!.get;
+      expect(searchOperation.security).toEqual([{ bearerAuth: [] }]);
     } finally {
       await app.close();
     }

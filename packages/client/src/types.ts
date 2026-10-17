@@ -274,3 +274,24 @@ export interface ResearchRelationExplanation extends ResearchRelationSummary {
     counterevidence: ResearchExplanationEvidence[];
   }>;
 }
+
+export type ResearchGraphSearchResult =
+  | { id: string; kind: 'assertion'; title: string; summary: string }
+  | ({
+      id: string;
+      kind: 'evidence';
+      title: string;
+      summary: string;
+      assertionId: string;
+    } & (
+      | {
+          sourceId: 'mw:source:tanzil-quran-text';
+          editionId: 'mw:edition:tanzil-quran-text-v1.1-uthmani-txt2';
+          locator: 'Q7:46';
+        }
+      | {
+          sourceId: 'mw:source:ebible-webp-protestant';
+          editionId: 'mw:edition:webp-protestant-2020-stable';
+          locator: 'Genesis 1:1';
+        }
+    ));

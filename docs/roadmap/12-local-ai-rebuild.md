@@ -491,9 +491,9 @@ The source planning bundle is `MOONWITNESS_XI_LOCAL_AI_REBUILD_PLAN_2026-10-15/`
 
 - Priority: P0; risk: normal.
 - Depends on: `K3-006`, `K2-007`.
-- File scope: `apps/board/`.
+- File scope: `apps/api/`, `packages/client/`, and the existing `apps/board/` explorer.
 - Deliverable: Source/edition/assertion/evidence/graph navigation with roles.
-- Acceptance: No new Board implementation; keyboard/mobile; restricted records invisible.
+- Acceptance: Reuse the authenticated Board shell; allow keyboard/mobile navigation; search the verified active PostgreSQL release by bounded query and return only `INTERNAL` assertions plus evidence whose parent assertion is readable. Hidden records must not be distinguishable from missing search results. Evidence navigation preserves its exact approved source/edition/locator, and search never returns source passage text or adds write controls.
 - Verification target: `Board Playwright role/access tests`. This is a target, not evidence that the command exists or has passed.
 
 ## K8-002 — Witness/editorial workbench and poster pages
