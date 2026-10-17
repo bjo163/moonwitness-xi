@@ -3,6 +3,7 @@ import {
   explainResearchRelation,
   validateResearchAssertion,
   validateResearchEvidenceReference,
+  validateResearchRelation,
   type ResearchEvidenceReference,
   type ResearchAssertion,
   type ResearchGraphInput,
@@ -107,6 +108,7 @@ function isResearchReader(auth: AuthContext): boolean {
 
 type ResearchSearchResult =
   | { id: string; kind: 'assertion'; title: string; summary: string }
+  | { id: string; kind: 'relation'; title: string; summary: string }
   | ({
       id: string;
       kind: 'evidence';
@@ -133,7 +135,6 @@ function searchResearchRelease(
 ): { results: ResearchSearchResult[]; truncated: boolean } {
   const normalizedQuery = query.trim().toLocaleLowerCase('en-US');
   const visibleAssertions = new Map<string, ResearchAssertion>();
-
   for (const record of release.records) {
     if (record.kind !== 'assertion') continue;
     const content = object(record.content);
@@ -144,6 +145,68 @@ function searchResearchRelease(
     )
       continue;
     visibleAssertions.set(record.key, content as unknown as ResearchAssertion);
+  }
+
+  const visibleNodes = new Set<string>();
+  const visibleSources = new Set<string>();
+  const visibleEditions = new Set<string>();
+  const visibleExpressions = new Set<string>();
+  const visibleEvidence = new Set<string>();
+  const evidenceRecords: Array<{ key: string; content: Record<string, unknown> }> = [];
+  for (const record of release.records) {
+    if (record.kind === 'relation') continue;
+    const content = object(record.content);
+    if (
+      !content ||
+      content.id !== record.key ||
+      storedVisibility(record, content) !== 'INTERNAL' ||
+      typeof content.kind !== 'string'
+    ) {
+      continue;
+    }
+    if (record.kind === 'source' && content.kind === 'Artifact') visibleSources.add(record.key);
+    if (record.kind === 'expression' && content.kind === 'Edition') visibleEditions.add(record.key);
+    if (record.kind === 'expression' && content.kind === 'Expression')
+      visibleExpressions.add(record.key);
+    if (record.kind === 'assertion') {
+      if (visibleAssertions.has(record.key)) visibleNodes.add(record.key);
+      continue;
+    }
+    if (record.kind === 'evidence') {
+      if (content.kind === 'Evidence') evidenceRecords.push({ key: record.key, content });
+      continue;
+    }
+    visibleNodes.add(record.key);
+  }
+
+  for (const { key, content } of evidenceRecords) {
+    const reference = {
+      id: content.id,
+      assertion_id: content.assertion_id,
+      direction: content.direction,
+      selector: content.selector,
+    };
+    if (
+      typeof content.assertion_id !== 'string' ||
+      !visibleAssertions.has(content.assertion_id) ||
+      !validateResearchEvidenceReference(reference).valid
+    ) {
+      continue;
+    }
+    const selector = object(content.selector);
+    if (
+      !selector ||
+      typeof selector.source_id !== 'string' ||
+      typeof selector.edition_id !== 'string' ||
+      !visibleSources.has(selector.source_id) ||
+      !visibleEditions.has(selector.edition_id) ||
+      (typeof selector.expression_id === 'string' &&
+        !visibleExpressions.has(selector.expression_id))
+    ) {
+      continue;
+    }
+    visibleNodes.add(key);
+    visibleEvidence.add(key);
   }
 
   const results: ResearchSearchResult[] = [];
@@ -165,12 +228,44 @@ function searchResearchRelease(
       });
       continue;
     }
+    if (record.kind === 'relation') {
+      const content = object(record.content);
+      if (
+        !content ||
+        content.kind !== 'ResearchRelation' ||
+        content.id !== record.key ||
+        storedVisibility(record, content) !== 'INTERNAL' ||
+        !validateResearchRelation(content).valid
+      ) {
+        continue;
+      }
+      const relation = content as unknown as ResearchRelation;
+      if (
+        !visibleNodes.has(relation.subject_id) ||
+        !visibleNodes.has(relation.object_id) ||
+        !visibleNodes.has(relation.scope.reference_id) ||
+        ![...relation.supporting_evidence_ids, ...relation.counterevidence_ids].every(
+          (evidenceId) => visibleEvidence.has(evidenceId)
+        )
+      ) {
+        continue;
+      }
+      const searchable = [record.key, relation.predicate, relation.subject_id, relation.object_id]
+        .join(' ')
+        .toLocaleLowerCase('en-US');
+      if (!searchable.includes(normalizedQuery)) continue;
+      results.push({
+        id: relation.id,
+        kind: 'relation',
+        title: `${relation.predicate} · ${relation.subject_id} → ${relation.object_id}`,
+        summary: `${relation.epistemic_status} · ${relation.review_status}`,
+      });
+      continue;
+    }
     if (record.kind !== 'evidence') continue;
     const content = object(record.content);
     if (!content || content.kind !== 'Evidence' || content.id !== record.key) continue;
-    if (storedVisibility(record, content) !== 'INTERNAL') continue;
-    if (typeof content.assertion_id !== 'string' || !visibleAssertions.has(content.assertion_id))
-      continue;
+    if (!visibleEvidence.has(record.key)) continue;
     const candidate = {
       id: content.id,
       assertion_id: content.assertion_id,
@@ -341,7 +436,7 @@ const researchSearchSchema = {
             required: ['id', 'kind', 'title', 'summary'],
             properties: {
               id: { type: 'string' },
-              kind: { enum: ['assertion', 'evidence'] },
+              kind: { enum: ['assertion', 'evidence', 'relation'] },
               title: { type: 'string', maxLength: 240 },
               summary: { type: 'string', maxLength: 255 },
               assertion_id: { type: 'string' },
@@ -503,9 +598,10 @@ export const researchExplanationRoutes: FastifyPluginAsync<
     {
       schema: {
         tags: ['Research'],
-        summary: 'Search readable assertions and evidence in the verified active release',
+        summary:
+          'Search readable assertions, evidence, and relations in the verified active release',
         description:
-          'Searches only INTERNAL assertions and evidence attached to a readable assertion. Human readers require active company membership; trusted system readers may read internally. Restricted and child-sensitive records are never returned.',
+          'Searches only INTERNAL assertions, evidence whose parent and source identities are readable, and relations whose endpoints and linked evidence are readable. Human readers require active company membership; trusted system readers may read internally. Restricted and child-sensitive records are never returned.',
         security: [{ bearerAuth: [] }],
         querystring: {
           type: 'object',

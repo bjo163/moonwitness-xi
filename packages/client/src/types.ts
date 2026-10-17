@@ -277,6 +277,7 @@ export interface ResearchRelationExplanation extends ResearchRelationSummary {
 
 export type ResearchGraphSearchResult =
   | { id: string; kind: 'assertion'; title: string; summary: string }
+  | { id: string; kind: 'relation'; title: string; summary: string }
   | ({
       id: string;
       kind: 'evidence';

@@ -3,7 +3,7 @@ import { E2E_SUPERADMIN_PASSWORD } from './constants.js';
 
 type GraphSearchWireResult = {
   id: string;
-  kind: 'assertion' | 'evidence';
+  kind: 'assertion' | 'evidence' | 'relation';
   title: string;
   summary: string;
   assertion_id?: string;
@@ -65,7 +65,7 @@ test('superadmin searches live PostgreSQL knowledge and opens its pinned passage
   await expect(page.getByText(livePassageBody.data.text, { exact: true })).toBeVisible();
 
   const claim = 'Synthetic local PostgreSQL Board E2E assertion.';
-  const searchInput = page.getByLabel('Search assertions and evidence');
+  const searchInput = page.getByLabel('Search graph records');
   await searchInput.fill(claim);
   const assertionResponse = page.waitForResponse((response) => {
     const url = new URL(response.url());
@@ -114,4 +114,27 @@ test('superadmin searches live PostgreSQL knowledge and opens its pinned passage
   await page.getByRole('button', { name: 'Open pinned passage Q7:46' }).click();
   await expect(page.getByText(livePassageBody.data.text, { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Q7:46' })).toBeVisible();
+
+  const relationId = 'mw:relation:e2e-live-knowledge';
+  const relationInput = page.getByLabel('Research relation ID');
+  await page.getByLabel('Search graph records').fill(relationId);
+  const relationSearchResponse = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.pathname === '/api/research/graph/search' && url.searchParams.get('q') === relationId
+    );
+  });
+  await page.getByRole('button', { name: 'Search graph' }).click();
+  const relationSearch = await relationSearchResponse;
+  expect(relationSearch.status()).toBe(200);
+  const relationSearchBody: GraphSearchWireResponse = await relationSearch.json();
+  expect(
+    relationSearchBody.data.results.some(
+      (result) => result.id === relationId && result.kind === 'relation'
+    )
+  ).toBe(true);
+  await page.getByRole('button', { name: 'Explain relation' }).click();
+  await expect(relationInput).toHaveValue(relationId);
+  await expect(page.getByRole('heading', { name: 'Explain a relation' })).toBeVisible();
+  await expect(page.getByText('related_to', { exact: true })).toBeVisible();
 });

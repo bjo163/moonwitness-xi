@@ -197,16 +197,16 @@ export function KnowledgePage() {
             Active internal release
           </p>
           <h2 id="graph-search-heading" className="mt-1 font-display text-2xl uppercase">
-            Find assertions and evidence
+            Find graph records
           </h2>
           <p className="mt-2 max-w-3xl text-sm text-ink-soft">
-            Search readable records by claim, record ID, source, or passage. Restricted records and
-            evidence whose assertion is hidden are omitted.
+            Search readable assertions, evidence, and relations by text or ID. Restricted records,
+            evidence whose assertion is hidden, and relations with hidden endpoints are omitted.
           </p>
         </div>
         <form className="flex flex-col gap-3 sm:flex-row" onSubmit={submitGraphSearch}>
           <label className="sr-only" htmlFor="research-graph-query">
-            Search assertions and evidence
+            Search graph records
           </label>
           <input
             id="research-graph-query"
@@ -236,6 +236,10 @@ export function KnowledgePage() {
             onFindAssertion={(id) => {
               setGraphSearchInput(id);
               setGraphSearchTerm(id);
+            }}
+            onExplainRelation={(id) => {
+              setRelationInput(id);
+              setRelationId(id);
             }}
           />
         )}
@@ -298,12 +302,14 @@ function GraphSearchResults({
   releaseDigest,
   onOpenPassage,
   onFindAssertion,
+  onExplainRelation,
 }: {
   results: ResearchGraphSearchResult[];
   truncated: boolean;
   releaseDigest: string;
   onOpenPassage: (id: SourceId, locator: string) => void;
   onFindAssertion: (id: string) => void;
+  onExplainRelation: (id: string) => void;
 }) {
   return (
     <div className="space-y-3">
@@ -316,7 +322,7 @@ function GraphSearchResults({
         </p>
       )}
       {results.length === 0 ? (
-        <p className="text-sm text-ink-faint">No readable assertion or evidence matched.</p>
+        <p className="text-sm text-ink-faint">No readable graph record matched.</p>
       ) : (
         <ul aria-label="Research graph search results" className="grid gap-3">
           {results.map((result) => (
@@ -337,6 +343,14 @@ function GraphSearchResults({
                     onClick={() => onOpenPassage(result.sourceId, result.locator)}
                   >
                     Open pinned passage {result.locator}
+                  </button>
+                ) : result.kind === 'relation' ? (
+                  <button
+                    type="button"
+                    className="text-left text-sm font-medium underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime-700"
+                    onClick={() => onExplainRelation(result.id)}
+                  >
+                    Explain relation
                   </button>
                 ) : (
                   <button

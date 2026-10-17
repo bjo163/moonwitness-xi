@@ -296,7 +296,7 @@ export class MoonWitnessClient implements HttpClient {
     return { releaseDigest: res.data.release_digest, explanation: res.data.explanation };
   }
 
-  /** Search only readable assertion/evidence summaries in the active internal release. */
+  /** Search only readable assertion, evidence, and relation summaries in the active release. */
   async searchResearchGraph(
     query: string,
     limit = 20
@@ -313,6 +313,7 @@ export class MoonWitnessClient implements HttpClient {
         truncated: boolean;
         results: Array<
           | { id: string; kind: 'assertion'; title: string; summary: string }
+          | { id: string; kind: 'relation'; title: string; summary: string }
           | ({
               id: string;
               kind: 'evidence';
@@ -338,7 +339,7 @@ export class MoonWitnessClient implements HttpClient {
       releaseDigest: res.data.release_digest,
       truncated: res.data.truncated,
       results: res.data.results.map((result): ResearchGraphSearchResult => {
-        if (result.kind === 'assertion') return result;
+        if (result.kind === 'assertion' || result.kind === 'relation') return result;
         const common = {
           id: result.id,
           kind: result.kind,

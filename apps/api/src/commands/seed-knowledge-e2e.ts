@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { isIP } from 'node:net';
+import { isDeepStrictEqual } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { readQuranPassage } from '@moonwitness/corpus';
 import { manifest as authManifest } from '@moonwitness/auth';
@@ -24,6 +25,9 @@ const editionId = 'mw:edition:tanzil-quran-text-v1.1-uthmani-txt2';
 const scopeId = 'mw:concept:e2e-live-knowledge-scope';
 const assertionId = 'mw:assertion:e2e-live-knowledge';
 const evidenceId = 'mw:evidence:e2e-live-knowledge';
+const relationId = 'mw:relation:e2e-live-knowledge';
+const subjectId = 'mw:entity:e2e-live-knowledge-subject';
+const objectId = 'mw:entity:e2e-live-knowledge-object';
 const claim = 'Synthetic local PostgreSQL Board E2E assertion.';
 const locator = 'Q7:46';
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
@@ -92,6 +96,17 @@ function fixtureRecords(contentSha256: string): ResearchGraphRecordInput[] {
         visibility: 'INTERNAL',
       },
     },
+    ...([subjectId, objectId] as const).map((id) => ({
+      key: id,
+      kind: 'node' as const,
+      visibility: 'INTERNAL' as const,
+      content: {
+        id,
+        kind: 'Entity' as const,
+        identity_class: 'Entity' as const,
+        visibility: 'INTERNAL' as const,
+      },
+    })),
     {
       key: assertionId,
       kind: 'assertion',
@@ -132,7 +147,36 @@ function fixtureRecords(contentSha256: string): ResearchGraphRecordInput[] {
         },
       },
     },
+    relationFixtureRecord(),
   ];
+}
+
+function relationFixtureRecord(): ResearchGraphRecordInput {
+  return {
+    key: relationId,
+    kind: 'relation',
+    visibility: 'INTERNAL',
+    content: {
+      id: relationId,
+      kind: 'ResearchRelation',
+      schema_version: 1,
+      lifecycle: 'candidate',
+      created_at: '2026-10-18T00:00:00.000Z',
+      updated_at: '2026-10-18T00:00:00.000Z',
+      origin_ref: 'fixture://board-e2e/knowledge-search/relation-001',
+      content_revision: 1,
+      visibility: 'INTERNAL',
+      predicate: 'related_to',
+      subject_id: subjectId,
+      object_id: objectId,
+      scope: { kind: 'research_context', reference_id: scopeId },
+      supporting_evidence_ids: [evidenceId],
+      counterevidence_ids: [],
+      alternative_relation_ids: [],
+      epistemic_status: 'unreviewed',
+      review_status: 'pending',
+    },
+  };
 }
 
 async function seed(): Promise<{ status: 'seeded' | 'already-present'; releaseDigest: string }> {
@@ -161,59 +205,20 @@ async function seed(): Promise<{ status: 'seeded' | 'already-present'; releaseDi
       const existingAssertion = active?.records.find((record) => record.key === assertionId);
       if (existingAssertion) {
         if (!active) throw new Error('The active research release is unavailable.');
-        const existingScope = active.records.find((record) => record.key === scopeId);
-        const existingEvidence = active.records.find((record) => record.key === evidenceId);
         const existingSource = active.records.find((record) => record.key === sourceId);
         const existingEdition = active.records.find((record) => record.key === editionId);
-        const assertionContent = existingAssertion.content;
-        const evidenceContent = existingEvidence?.content;
-        const scopeContent = existingScope?.content;
-        const assertionScope = isRecord(assertionContent) ? assertionContent.scope : undefined;
-        const assertionContext = isRecord(assertionContent) ? assertionContent.context : undefined;
-        const selector = isRecord(evidenceContent) ? evidenceContent.selector : undefined;
+        const recordsByKey = new Map(active.records.map((record) => [record.key, record]));
+        const fixtureMatches = fixtureRecords(passage.sha256).every((expected) => {
+          const actual = recordsByKey.get(expected.key);
+          return (
+            actual !== undefined &&
+            actual.kind === expected.kind &&
+            actual.visibility === expected.visibility &&
+            isDeepStrictEqual(actual.content, expected.content)
+          );
+        });
         if (
-          existingAssertion.kind !== 'assertion' ||
-          existingAssertion.visibility !== 'INTERNAL' ||
-          !isRecord(assertionContent) ||
-          assertionContent.id !== assertionId ||
-          assertionContent.kind !== 'Assertion' ||
-          assertionContent.schema_version !== 1 ||
-          assertionContent.lifecycle !== 'candidate' ||
-          assertionContent.visibility !== 'INTERNAL' ||
-          assertionContent.claim !== claim ||
-          assertionContent.polarity !== 'positive' ||
-          !isRecord(assertionContext) ||
-          assertionContext.mode !== 'analysis' ||
-          assertionContext.reference_id !== scopeId ||
-          assertionContent.epistemic_status !== 'hypothesized' ||
-          assertionContent.review_status !== 'pending' ||
-          assertionContent.content_revision !== 1 ||
-          assertionContent.origin_ref !== 'fixture://board-e2e/knowledge-search/001' ||
-          !isRecord(assertionScope) ||
-          assertionScope.kind !== 'research_context' ||
-          assertionScope.reference_id !== scopeId ||
-          !existingScope ||
-          existingScope.kind !== 'node' ||
-          existingScope.visibility !== 'INTERNAL' ||
-          !isRecord(scopeContent) ||
-          scopeContent.id !== scopeId ||
-          scopeContent.kind !== 'Concept' ||
-          scopeContent.identity_class !== 'ConceptIdentity' ||
-          scopeContent.visibility !== 'INTERNAL' ||
-          !existingEvidence ||
-          existingEvidence.kind !== 'evidence' ||
-          existingEvidence.visibility !== 'INTERNAL' ||
-          !isRecord(evidenceContent) ||
-          evidenceContent.id !== evidenceId ||
-          evidenceContent.kind !== 'Evidence' ||
-          evidenceContent.visibility !== 'INTERNAL' ||
-          evidenceContent.assertion_id !== assertionId ||
-          evidenceContent.direction !== 'supporting' ||
-          !isRecord(selector) ||
-          selector.source_id !== sourceId ||
-          selector.edition_id !== editionId ||
-          selector.locator !== locator ||
-          selector.content_sha256 !== passage.sha256 ||
+          !fixtureMatches ||
           !matchesPublicMetadataRecord(existingSource, sourceId, 'source', 'Artifact') ||
           !matchesPublicMetadataRecord(existingEdition, editionId, 'expression', 'Edition')
         ) {
@@ -222,7 +227,14 @@ async function seed(): Promise<{ status: 'seeded' | 'already-present'; releaseDi
         return { status: 'already-present', releaseDigest: active.releaseDigest };
       }
 
-      const reservedIds = new Set([scopeId, assertionId, evidenceId]);
+      const reservedIds = new Set([
+        scopeId,
+        assertionId,
+        evidenceId,
+        relationId,
+        subjectId,
+        objectId,
+      ]);
       if (active?.records.some((record) => reservedIds.has(record.key))) {
         throw new Error('A partial knowledge E2E fixture already exists in the active release.');
       }

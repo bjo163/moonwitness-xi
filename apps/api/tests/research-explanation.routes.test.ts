@@ -338,6 +338,21 @@ describe('research relation explanation API', () => {
       ]);
       expect(evidenceSearch.body).not.toContain('A verified local passage excerpt');
 
+      const relationSearch = await app.inject({
+        method: 'GET',
+        url: `/api/research/graph/search?q=${encodeURIComponent(relationId)}`,
+        headers: { 'x-test-role': 'user' },
+      });
+      expect(relationSearch.statusCode).toBe(200);
+      expect(relationSearch.json().data.results).toEqual([
+        {
+          id: relationId,
+          kind: 'relation',
+          title: 'related_to · mw:entity:api-left → mw:entity:api-right',
+          summary: 'unreviewed · pending',
+        },
+      ]);
+
       const limitedSearch = await app.inject({
         method: 'GET',
         url: '/api/research/graph/search?q=api-fixture&limit=1',
@@ -383,12 +398,195 @@ describe('research relation explanation API', () => {
       expect(hidden.body).not.toContain(assertionId);
       expect(hidden.body).not.toContain(evidenceId);
 
+      const relation = await app.inject({
+        method: 'GET',
+        url: `/api/research/graph/search?q=${encodeURIComponent(relationId)}`,
+        headers: { 'x-test-role': 'system' },
+      });
+      expect(relation.statusCode).toBe(200);
+      expect(relation.json().data.results).toEqual([]);
+      expect(relation.body).not.toContain(relationId);
+
       const whitespace = await app.inject({
         method: 'GET',
         url: '/api/research/graph/search?q=%20%20',
         headers: { 'x-test-role': 'system' },
       });
       expect(whitespace.statusCode).toBe(400);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('does not expose a relation when either endpoint is hidden', async () => {
+    const release = await fixtureRelease();
+    const hiddenNode = release.records.find((record) => record.key === 'mw:entity:api-right')!;
+    hiddenNode.visibility = 'RESTRICTED';
+    const { app } = await createApp(release);
+    try {
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/research/graph/search?q=${encodeURIComponent(relationId)}`,
+        headers: { 'x-test-role': 'system' },
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data.results).toEqual([]);
+      expect(response.body).not.toContain(relationId);
+      expect(response.body).not.toContain('mw:entity:api-right');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('does not expose evidence or relations backed by a hidden source or edition', async () => {
+    for (const hiddenKey of ['mw:source:tanzil-quran-text', editionId]) {
+      const release = await fixtureRelease();
+      const hiddenRecord = release.records.find((record) => record.key === hiddenKey)!;
+      hiddenRecord.content = { ...hiddenRecord.content, visibility: 'CHILD_SENSITIVE' };
+      const { app } = await createApp(release);
+      try {
+        for (const query of [evidenceId, relationId]) {
+          const response = await app.inject({
+            method: 'GET',
+            url: `/api/research/graph/search?q=${encodeURIComponent(query)}`,
+            headers: { 'x-test-role': 'system' },
+          });
+          expect(response.statusCode).toBe(200);
+          expect(response.json().data.results).toEqual([]);
+          expect(response.body).not.toContain(evidenceId);
+          expect(response.body).not.toContain(relationId);
+        }
+      } finally {
+        await app.close();
+      }
+    }
+  });
+
+  it('requires selector identities to resolve to their matching record categories', async () => {
+    const cases = [
+      { id: 'mw:source:tanzil-quran-text', contentKind: 'Entity' },
+      { id: editionId, contentKind: 'Entity' },
+      { id: 'mw:expression:webp-protestant', contentKind: 'Entity' },
+    ];
+    for (const identity of cases) {
+      const release = await fixtureRelease();
+      const evidence = release.records.find((record) => record.key === evidenceId)!;
+      const selector = { ...(evidence.content as { selector: Record<string, unknown> }).selector };
+      if (identity.id === 'mw:expression:webp-protestant') {
+        release.records = release.records.filter(
+          (record) => record.key !== 'mw:source:tanzil-quran-text' && record.key !== editionId
+        );
+        release.records.push(
+          {
+            key: 'mw:source:ebible-webp-protestant',
+            kind: 'source',
+            visibility: 'PUBLIC',
+            content: {
+              id: 'mw:source:ebible-webp-protestant',
+              kind: 'Artifact',
+              visibility: 'PUBLIC_APPROVED',
+            },
+            contentDigest: 'a'.repeat(64),
+          },
+          {
+            key: 'mw:edition:webp-protestant-2020-stable',
+            kind: 'expression',
+            visibility: 'PUBLIC',
+            content: {
+              id: 'mw:edition:webp-protestant-2020-stable',
+              kind: 'Edition',
+              visibility: 'PUBLIC_APPROVED',
+            },
+            contentDigest: 'b'.repeat(64),
+          }
+        );
+        Object.assign(selector, {
+          source_id: 'mw:source:ebible-webp-protestant',
+          expression_id: identity.id,
+          edition_id: 'mw:edition:webp-protestant-2020-stable',
+          locator: 'Genesis 1:1',
+          content_sha256: 'c'.repeat(64),
+        });
+        evidence.content = { ...evidence.content, selector };
+      }
+      release.records = release.records.filter((record) => record.key !== identity.id);
+      release.records.push({
+        key: identity.id,
+        kind: 'node',
+        visibility: 'PUBLIC',
+        content: {
+          id: identity.id,
+          kind: identity.contentKind,
+          identity_class: 'Entity',
+          visibility: 'PUBLIC_APPROVED',
+        },
+        contentDigest: '9'.repeat(64),
+      });
+      const { app } = await createApp(release);
+      try {
+        for (const query of [evidenceId, relationId]) {
+          const response = await app.inject({
+            method: 'GET',
+            url: `/api/research/graph/search?q=${encodeURIComponent(query)}`,
+            headers: { 'x-test-role': 'system' },
+          });
+          expect([200, 503]).toContain(response.statusCode);
+          if (response.statusCode === 200) {
+            expect(response.json().data.results).toEqual([]);
+          } else {
+            expect(response.body).not.toContain(evidenceId);
+            expect(response.body).not.toContain(relationId);
+          }
+        }
+      } finally {
+        await app.close();
+      }
+    }
+  });
+
+  it('does not expose a relation when its referenced evidence has a hidden parent assertion', async () => {
+    const release = await fixtureRelease({ assertionVisibility: 'CHILD_SENSITIVE' });
+    const { app } = await createApp(release);
+    try {
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/research/graph/search?q=${encodeURIComponent(relationId)}`,
+        headers: { 'x-test-role': 'system' },
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data.results).toEqual([]);
+      expect(response.body).not.toContain(relationId);
+      expect(response.body).not.toContain(evidenceId);
+      expect(response.body).not.toContain(assertionId);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('omits evidence and its relation when the pinned source is hidden', async () => {
+    const release = await fixtureRelease();
+    const source = release.records.find((record) => record.key === 'mw:source:tanzil-quran-text')!;
+    source.visibility = 'RESTRICTED';
+    const { app } = await createApp(release);
+    try {
+      const [evidence, relation] = await Promise.all([
+        app.inject({
+          method: 'GET',
+          url: '/api/research/graph/search?q=Q7%3A46',
+          headers: { 'x-test-role': 'system' },
+        }),
+        app.inject({
+          method: 'GET',
+          url: `/api/research/graph/search?q=${encodeURIComponent(relationId)}`,
+          headers: { 'x-test-role': 'system' },
+        }),
+      ]);
+      expect(evidence.statusCode).toBe(200);
+      expect(evidence.json().data.results).toEqual([]);
+      expect(evidence.body).not.toContain('mw:source:tanzil-quran-text');
+      expect(relation.statusCode).toBe(200);
+      expect(relation.json().data.results).toEqual([]);
+      expect(relation.body).not.toContain(relationId);
     } finally {
       await app.close();
     }
