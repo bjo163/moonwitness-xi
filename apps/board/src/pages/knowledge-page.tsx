@@ -108,8 +108,8 @@ export function KnowledgePage() {
       <section className="ink-panel mx-auto max-w-2xl bg-card p-6 sm:p-10" role="alert">
         <h1 className="font-display text-2xl uppercase">Knowledge explorer unavailable</h1>
         <p className="mt-3 text-ink-soft">
-          Research access requires an authenticated system reader or a human account with a company
-          context. The API also verifies active company membership.
+          Your current role cannot access research records without an active company context. The
+          API also verifies active company membership.
         </p>
       </section>
     );
