@@ -1,10 +1,16 @@
+import { createHash } from 'node:crypto';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import Fastify, { LogController } from 'fastify';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createLogger } from '@moonwitness/logger';
+import { installAddons } from '@moonwitness/orm';
+import { manifest as baseManifest } from '@moonwitness/orm-base';
+import { manifest as knowledgeManifest } from '@moonwitness/orm-knowledge';
+import knex from 'knex';
 import { installPrivacySafeNotFoundHandler } from '../src/not-found.js';
+import { researchPrivacyRoutes } from '../src/routes/research-privacy.routes.js';
 
 describe('request logging privacy', () => {
   let temporaryDirectory: string | undefined;
@@ -82,6 +88,141 @@ describe('request logging privacy', () => {
     } finally {
       await app.close();
       app.log.flush();
+    }
+  });
+
+  it('keeps the actual synthetic privacy revocation route hash-only in logs and responses', async () => {
+    temporaryDirectory = await mkdtemp(path.join(os.tmpdir(), 'moonwitness-privacy-route-logs-'));
+    const logger = createLogger({
+      name: 'privacy-route-log-privacy-test',
+      level: 'info',
+      logDir: temporaryDirectory,
+      logFileName: 'api.log',
+      enableConsole: false,
+      enableFile: true,
+      prettyPrint: false,
+    });
+    const db = knex({
+      client: 'better-sqlite3',
+      connection: { filename: ':memory:' },
+      useNullAsDefault: true,
+    });
+    let app: ReturnType<typeof Fastify> | undefined;
+    try {
+      await installAddons(db, [baseManifest, knowledgeManifest]);
+      const userId = Number((await db('users').where({ login: 'superadmin' }).first('id'))?.id);
+      const companyId = Number((await db('companies').first('id'))?.id);
+      const rawSubject = 'synthetic-log-subject-private-canary';
+      const rawConsent = 'synthetic-log-consent-private-canary';
+      const excerpt = 'SYNTHETIC-PRIVACY-LOG-EXCERPT-CANARY';
+      const subjectHash = createHash('sha256').update(rawSubject, 'utf8').digest('hex');
+      const consentHash = createHash('sha256').update(rawConsent, 'utf8').digest('hex');
+      const projectionKey = 'synthetic-privacy-log-projection-001';
+      const projectionJson = JSON.stringify({ excerpt });
+      await db('knowledge_privacy_projections').insert({
+        company_id: companyId,
+        projection_key: projectionKey,
+        subject_ref_sha256: subjectHash,
+        projection_json: projectionJson,
+        projection_digest: createHash('sha256').update(projectionJson, 'utf8').digest('hex'),
+        synthetic: true,
+        visibility: 'RESTRICTED',
+        state: 'active',
+      });
+
+      app = Fastify({
+        loggerInstance: logger,
+        logController: new LogController({ disableRequestLogging: true }),
+      });
+      app.decorateRequest('auth', null);
+      app.decorate('db', db);
+      app.addHook('onRequest', async (request) => {
+        request.auth = { userId, companyId, role: 'superadmin', groupPermissions: [] };
+      });
+      app.addHook('onResponse', async (request, reply) => {
+        request.log.info(
+          { req: request, res: { statusCode: reply.statusCode } },
+          'request completed'
+        );
+      });
+      installPrivacySafeNotFoundHandler(app);
+      await app.register(researchPrivacyRoutes);
+
+      const revoked = await app.inject({
+        method: 'POST',
+        url: '/api/research/privacy/revocations?term=privacy-search-canary&access_token=query-token-canary',
+        headers: {
+          authorization: 'Bearer private-header-token-canary',
+          cookie: 'session=private-cookie-canary',
+          host: 'private-host-canary',
+        },
+        payload: {
+          subject_ref_sha256: subjectHash,
+          consent_decision_ref_sha256: consentHash,
+          idempotency_key: 'synthetic-privacy-log-revoke-0001',
+        },
+      });
+      expect(revoked.statusCode).toBe(201);
+      expect(revoked.headers['cache-control']).toBe('private, no-store');
+      expect(revoked.body).not.toContain(rawSubject);
+      expect(revoked.body).not.toContain(rawConsent);
+      expect(revoked.body).not.toContain(subjectHash);
+      expect(revoked.body).not.toContain(consentHash);
+
+      const rejected = await app.inject({
+        method: 'POST',
+        url: '/api/research/privacy/revocations?term=malformed-query-canary',
+        headers: { authorization: 'Bearer private-header-token-canary' },
+        payload: {
+          subject_ref_sha256: subjectHash,
+          consent_decision_ref_sha256: consentHash,
+          idempotency_key: 'synthetic-privacy-log-revoke-0002',
+          raw_subject: 'synthetic-malformed-body-canary',
+        },
+      });
+      expect(rejected.statusCode).toBe(400);
+      expect(rejected.headers['cache-control']).toBe('private, no-store');
+      expect(rejected.body).not.toContain('synthetic-malformed-body-canary');
+      expect(await db('knowledge_privacy_revocations')).toHaveLength(1);
+
+      const projections = await app.inject({
+        method: 'GET',
+        url: '/api/research/privacy/projections?term=projection-query-canary',
+        headers: { authorization: 'Bearer private-header-token-canary' },
+      });
+      expect(projections.statusCode).toBe(200);
+      expect(projections.headers['cache-control']).toBe('private, no-store');
+      expect(projections.body).not.toContain(excerpt);
+      expect(projections.body).not.toContain(projectionKey);
+
+      app.log.flush();
+      const logContents = await readFile(path.join(temporaryDirectory, 'api.log'), 'utf8');
+      expect(logContents).toContain('/api/research/privacy/revocations');
+      expect(logContents).toContain('/api/research/privacy/projections');
+      for (const canary of [
+        rawSubject,
+        rawConsent,
+        excerpt,
+        subjectHash,
+        consentHash,
+        projectionKey,
+        'privacy-search-canary',
+        'query-token-canary',
+        'malformed-query-canary',
+        'projection-query-canary',
+        'private-header-token-canary',
+        'private-cookie-canary',
+        'private-host-canary',
+        'synthetic-malformed-body-canary',
+      ]) {
+        expect(logContents).not.toContain(canary);
+      }
+    } finally {
+      if (app) {
+        await app.close();
+        app.log.flush();
+      }
+      await db.destroy();
     }
   });
 });
