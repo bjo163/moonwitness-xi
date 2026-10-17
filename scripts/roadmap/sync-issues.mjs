@@ -615,18 +615,27 @@ export async function applyIssuePlan({
   lifecycleSnapshotGeneratedAt,
   assertSourceCurrent,
 }) {
-  const freshIssues = await client.listAll();
-  const fresh = planIssueSync({
-    tasks,
-    issues: freshIssues,
-    repositoryId,
-    sourceSha,
-    repositoryUrl,
-    cardDetailsByTask,
-    lifecycleByTask,
-  });
-  if (fresh.inputHash !== plan.inputHash)
-    throw new Error('Remote issues changed after planning; refresh the plan before applying.');
+  if (plan.repositoryId !== repositoryId || plan.sourceSha !== sourceSha)
+    throw new Error('Issue plan repository or source SHA does not match the requested apply.');
+  const replan = (issues) =>
+    planIssueSync({
+      tasks,
+      issues,
+      repositoryId,
+      sourceSha,
+      repositoryUrl,
+      cardDetailsByTask,
+      lifecycleByTask,
+    });
+  let fresh = replan(await client.listAll());
+  if (fresh.inputHash !== plan.inputHash) {
+    const confirmed = replan(await client.listAll());
+    if (confirmed.inputHash !== fresh.inputHash)
+      throw new Error(
+        'Remote issues kept changing during one bounded refresh; no issue write attempted.'
+      );
+    fresh = confirmed;
+  }
   const conflict = fresh.operations.find((operation) => operation.operation === 'conflict');
   if (conflict) throw new Error(`Cannot apply ${conflict.taskId}: ${conflict.reason}`);
   const hasWrites = fresh.operations.some(

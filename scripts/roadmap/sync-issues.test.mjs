@@ -260,18 +260,80 @@ test('repository identity is scoped and malformed generated boundaries conflict'
   assert.equal(plan([duplicateEnd]).operations[0].operation, 'conflict');
 });
 
-test('apply refuses stale plans and performs serial writes only for explicit operations', async () => {
+test('apply refreshes a stale remote plan once when the new issue snapshot is stable', async () => {
   const stalePlan = plan();
-  const changed = { number: 4, title: 'unrelated', body: 'human', state: 'open' };
-  const client = {
-    listAll: async () => [changed],
-    create: async () => assert.fail('must not create stale plan'),
-    update: async () => assert.fail('must not update stale plan'),
+  const desired = stalePlan.operations[0];
+  const concurrentlyCreated = {
+    number: 4,
+    title: desired.title,
+    body: desired.body,
+    state: 'open',
+    labels: desired.labels.map((name) => ({ name })),
+    milestone: { number: 11, title: 'M11' },
   };
+  let reads = 0;
+  let writes = 0;
+  const client = {
+    listAll: async () => {
+      reads += 1;
+      return [concurrentlyCreated];
+    },
+    assertWritable: () => {
+      writes += 1;
+    },
+    ensureMetadata: async () => {
+      writes += 1;
+      return new Map();
+    },
+    create: async () => {
+      writes += 1;
+      assert.fail('stable refreshed plan must not create a duplicate issue');
+    },
+    update: async () => {
+      writes += 1;
+      assert.fail('stable refreshed plan is already current');
+    },
+  };
+
+  const result = await applyIssuePlan({
+    plan: stalePlan,
+    client,
+    tasks: [task],
+    repositoryId,
+    sourceSha,
+  });
+
+  assert.deepEqual(result, []);
+  assert.equal(reads, 2);
+  assert.equal(writes, 0);
+});
+
+test('apply refuses remote inventory that keeps changing during its bounded refresh', async () => {
+  const stalePlan = plan();
+  let reads = 0;
+  let writes = 0;
+  const client = {
+    listAll: async () => {
+      reads += 1;
+      return [{ number: reads, title: 'unrelated', body: 'human', state: 'open' }];
+    },
+    assertWritable: () => {
+      writes += 1;
+    },
+    create: async () => {
+      writes += 1;
+    },
+    update: async () => {
+      writes += 1;
+    },
+  };
+
   await assert.rejects(
     applyIssuePlan({ plan: stalePlan, client, tasks: [task], repositoryId, sourceSha }),
-    /changed after planning/u
+    /kept changing during one bounded refresh/u
   );
+  assert.equal(reads, 2);
+  assert.equal(writes, 0);
 });
 
 test('apply rechecks dev immediately before an issue write after metadata preparation', async () => {
