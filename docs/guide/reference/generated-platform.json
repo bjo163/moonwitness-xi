@@ -6162,6 +6162,14 @@
     },
     {
       "method": "GET",
+      "path": "/api/research/stories/:storyId"
+    },
+    {
+      "method": "POST",
+      "path": "/api/research/stories/:storyId"
+    },
+    {
+      "method": "GET",
       "path": "/api/research/suggestions/:suggestionId"
     },
     {
@@ -6261,5 +6269,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "da0d7e4f74a71963b0c4f73143900138066412e779b78caf56ba301dac7ef1e0"
+  "generatedFromSha256": "643557138d8d951e59cf3c8f27630f600e708080fc5c63f19fa34a9ddd2555c2"
 }

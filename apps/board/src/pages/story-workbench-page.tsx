@@ -1,7 +1,11 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, BookOpenCheck, Save } from 'lucide-react';
-import type { StoryPageDocument, StoryVersionDocument } from '@moonwitness/client';
+import {
+  NotFoundError,
+  type StoryPageDocument,
+  type StoryVersionDocument,
+} from '@moonwitness/client';
 import { useAuth } from '@/hooks/use-auth-context';
 import { client } from '@/lib/client';
 import { Button } from '@moonwitness/ui/components/button';
@@ -33,6 +37,7 @@ export function StoryWorkbenchPage() {
     retry: false,
   });
   const current = storyQuery.data;
+  const storyIsMissing = storyQuery.error instanceof NotFoundError;
 
   if (user?.role !== 'user' && user?.role !== 'superadmin') {
     return (
@@ -152,9 +157,21 @@ export function StoryWorkbenchPage() {
         </div>
         {storyQuery.isLoading && <p role="status">Loading latest revision…</p>}
         {storyQuery.isError && (
-          <p role="status" className="text-sm text-ink-soft">
-            No saved sample is available yet. Saving creates its first revision.
-          </p>
+          <div role="status" className="flex flex-wrap items-center gap-3 text-sm text-ink-soft">
+            <p>
+              {storyIsMissing
+                ? 'No saved sample is available in this company yet. Saving creates its first revision.'
+                : 'Could not confirm the saved story state. Your draft is kept; retry before saving.'}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void storyQuery.refetch()}
+              disabled={storyQuery.isFetching}
+            >
+              {storyQuery.isFetching ? 'Retrying…' : 'Retry loading story'}
+            </Button>
+          </div>
         )}
         <div className="flex flex-wrap items-end gap-3">
           <label className="min-w-48 flex-1 font-mono text-xs uppercase tracking-wider text-ink-faint">
@@ -228,7 +245,7 @@ export function StoryWorkbenchPage() {
           <Button
             type="button"
             onClick={() => void saveRevision()}
-            disabled={saving || storyQuery.isLoading}
+            disabled={saving || storyQuery.isLoading || (storyQuery.isError && !storyIsMissing)}
           >
             <Save aria-hidden="true" className="mr-2 size-4" />
             {saving ? 'Saving…' : `Save revision ${nextVersion}`}
