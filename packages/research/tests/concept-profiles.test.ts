@@ -156,10 +156,20 @@ describe('scoped concept profiles', () => {
     );
   });
 
-  it('accepts only evidence resolved to matching canonical metadata with accepted review and read access', async () => {
+  it('keeps accepted interpretations pending even when K3 Assertion evidence is accepted', async () => {
     await expect(
       validateConceptProfileWithEvidence(acceptedProfileDocument(), async () => resolution())
-    ).resolves.toEqual({ valid: true, issues: [] });
+    ).resolves.toEqual({
+      valid: false,
+      issues: [
+        {
+          path: '/profiles/0/interpretations/0/status',
+          code: 'profile_review_pending',
+          message:
+            'accepted profile interpretations require a separate decision bound to the exact profile digest',
+        },
+      ],
+    });
   });
 
   it('fails closed for missing and mismatched canonical evidence', async () => {

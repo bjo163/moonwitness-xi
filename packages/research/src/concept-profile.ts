@@ -60,9 +60,10 @@ export function validateConceptProfile(value: unknown): KnowledgeValidationResul
 
 /**
  * Validate a profile document and verify evidence for every accepted
- * interpretation. Resolver exceptions and incomplete/contradictory review or
- * access states fail closed. Review-event subjects are intentionally not used:
- * this contract requires review consensus bound directly to canonical evidence.
+ * interpretation. This cannot approve the profile interpretation itself:
+ * without a separate decision bound to the exact profile digest, accepted
+ * interpretations remain pending even when their Assertion evidence is accepted.
+ * Resolver exceptions and incomplete/contradictory review or access states fail closed.
  */
 export async function validateConceptProfileWithEvidence(
   value: unknown,
@@ -115,6 +116,17 @@ export async function validateConceptProfileWithEvidence(
             evidenceId,
             path: `/profiles/${profileIndex}/interpretations/${interpretationIndex}/evidence_ids/${evidenceIndex}`,
           }))
+        : []
+    )
+  );
+  const pendingProfileReviews = document.profiles.flatMap((profile, profileIndex) =>
+    profile.interpretations.flatMap((interpretation, interpretationIndex) =>
+      interpretation.status === 'accepted'
+        ? [
+            {
+              path: `/profiles/${profileIndex}/interpretations/${interpretationIndex}/status`,
+            },
+          ]
         : []
     )
   );
@@ -231,6 +243,14 @@ export async function validateConceptProfileWithEvidence(
       ],
     };
   }
+  issues.push(
+    ...pendingProfileReviews.map(({ path }) => ({
+      path,
+      code: 'profile_review_pending',
+      message:
+        'accepted profile interpretations require a separate decision bound to the exact profile digest',
+    }))
+  );
   return issues.length ? { valid: false, issues } : { valid: true, issues: [] };
 }
 
