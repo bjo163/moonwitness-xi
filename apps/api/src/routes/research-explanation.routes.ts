@@ -313,7 +313,7 @@ export const researchExplanationRoutes: FastifyPluginAsync<
         tags: ['Research'],
         summary: 'Explain a relation from the verified active graph release',
         description:
-          'Returns supporting evidence, counterevidence and alternatives bound to one immutable active PostgreSQL release. Evidence is resolved from pinned local corpus data with no network fetch. The server requires system or superadmin and only permits INTERNAL visibility; restricted and child-sensitive records remain hidden.',
+          'Returns supporting evidence, counterevidence and alternatives bound to one immutable active PostgreSQL release. Evidence is resolved from pinned local corpus data with no network fetch. Human readers require an active company and membership; trusted system readers may read internally. Only INTERNAL visibility is permitted; restricted and child-sensitive records remain hidden.',
         security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
@@ -325,7 +325,7 @@ export const researchExplanationRoutes: FastifyPluginAsync<
           200: { description: 'Explanation and exact source release digest.', ...successSchema },
           401: { description: 'Bearer authentication is required.', ...errorSchema },
           403: {
-            description: 'The authenticated role cannot read research explanations.',
+            description: 'The authenticated reader is unsupported or lacks active membership.',
             ...errorSchema,
           },
           404: {
@@ -343,20 +343,52 @@ export const researchExplanationRoutes: FastifyPluginAsync<
       reply.header('Cache-Control', 'private, no-store');
       if (!request.auth)
         return reply.code(401).send({ success: false, error: 'Authentication required' });
-      if (request.auth.role !== 'system' && request.auth.role !== 'superadmin') {
+      const auth = request.auth;
+      if (auth.role !== 'system' && auth.role !== 'superadmin' && auth.role !== 'user') {
+        return reply
+          .code(403)
+          .send({ success: false, error: 'Research explanation access denied' });
+      }
+      if (
+        auth.role !== 'system' &&
+        (!Number.isSafeInteger(auth.userId) ||
+          auth.userId < 1 ||
+          !Number.isSafeInteger(auth.companyId) ||
+          !auth.companyId ||
+          auth.companyId < 1)
+      ) {
         return reply
           .code(403)
           .send({ success: false, error: 'Research explanation access denied' });
       }
 
       try {
-        const release = await fastify.knex.transaction((trx) => readRelease(trx, corpusKey));
-        if (!release) {
+        const release = await fastify.knex.transaction(async (trx) => {
+          if (auth.role !== 'system') {
+            const company = await trx('companies')
+              .where({ id: auth.companyId, active: true })
+              .forUpdate()
+              .first('id');
+            const membership = await trx('company_memberships')
+              .where({ user_id: auth.userId, company_id: auth.companyId, active: true })
+              .forUpdate()
+              .first('id');
+            if (!company || !membership) return { denied: true as const };
+          }
+          return { denied: false as const, release: await readRelease(trx, corpusKey) };
+        });
+        if (release.denied) {
+          return reply
+            .code(403)
+            .send({ success: false, error: 'Research explanation access denied' });
+        }
+        if (!release.release) {
           return reply
             .code(503)
             .send({ success: false, error: 'Research explanation is unavailable' });
         }
-        const snapshot = graphFromRelease(release);
+        const activeRelease = release.release;
+        const snapshot = graphFromRelease(activeRelease);
         const result = await explainResearchRelation(snapshot.graph, request.params.relationId, {
           evidenceReferences: snapshot.evidenceReferences,
           evidenceVisibility: snapshot.evidenceVisibility,
@@ -374,7 +406,7 @@ export const researchExplanationRoutes: FastifyPluginAsync<
         return reply.send({
           success: true,
           data: {
-            release_digest: release.releaseDigest,
+            release_digest: activeRelease.releaseDigest,
             explanation: result.explanation,
           },
         });

@@ -164,13 +164,49 @@ describe('research relation explanation API', () => {
   ) {
     const app = Fastify();
     app.decorateRequest('auth', null);
+    let membershipState = 'active';
     app.decorate('knex', {
-      transaction: async (callback: (trx: object) => Promise<unknown>) => callback({}),
+      transaction: async (callback: (trx: object) => Promise<unknown>) => {
+        const trx = ((table: string) => {
+          let filters: Record<string, unknown> = {};
+          const query = {
+            where(value: Record<string, unknown>) {
+              filters = value;
+              return query;
+            },
+            forUpdate() {
+              return query;
+            },
+            async first() {
+              if (table === 'companies')
+                return membershipState === 'inactive' ? undefined : { id: 12 };
+              if (table === 'company_memberships') {
+                return membershipState === 'active' &&
+                  filters.user_id === 1 &&
+                  filters.company_id === 12
+                  ? { id: 1 }
+                  : undefined;
+              }
+              return undefined;
+            },
+          };
+          return query;
+        }) as object;
+        return callback(trx);
+      },
     } as never);
     app.addHook('onRequest', async (request) => {
       const role = request.headers['x-test-role'];
+      membershipState = String(request.headers['x-test-membership'] ?? 'active');
       if (role === 'system' || role === 'superadmin' || role === 'user') {
-        request.auth = { userId: 1, role, groupPermissions: [] };
+        request.auth = {
+          userId: 1,
+          role,
+          ...(request.headers['x-test-company'] === 'missing' || role === 'system'
+            ? {}
+            : { companyId: 12 }),
+          groupPermissions: [],
+        };
       }
     });
     const readActiveRelease = vi.fn(async (_trx, key: string) => {
@@ -184,7 +220,7 @@ describe('research relation explanation API', () => {
     return { app, readActiveRelease };
   }
 
-  it('requires authentication and denies ordinary users', async () => {
+  it('requires authentication and denies human readers without an active company membership', async () => {
     const release = await fixtureRelease();
     const { app } = await createApp(release);
     try {
@@ -199,7 +235,20 @@ describe('research relation explanation API', () => {
         url: `/api/research/relations/${relationId}/explanation`,
         headers: { 'x-test-role': 'user' },
       });
-      expect(ordinary.statusCode).toBe(403);
+      expect(ordinary.statusCode).toBe(200);
+      const noCompany = await app.inject({
+        method: 'GET',
+        url: `/api/research/relations/${relationId}/explanation`,
+        headers: { 'x-test-role': 'user', 'x-test-company': 'missing' },
+      });
+      expect(noCompany.statusCode).toBe(403);
+      const inactive = await app.inject({
+        method: 'GET',
+        url: `/api/research/relations/${relationId}/explanation`,
+        headers: { 'x-test-role': 'superadmin', 'x-test-membership': 'inactive' },
+      });
+      expect(inactive.statusCode).toBe(403);
+      expect(inactive.json().error).toBe('Research explanation access denied');
     } finally {
       await app.close();
     }
@@ -230,6 +279,21 @@ describe('research relation explanation API', () => {
           },
         },
       });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('allows a trusted system reader without a company membership', async () => {
+    const release = await fixtureRelease();
+    const { app } = await createApp(release);
+    try {
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/research/relations/${relationId}/explanation`,
+        headers: { 'x-test-role': 'system' },
+      });
+      expect(response.statusCode).toBe(200);
     } finally {
       await app.close();
     }
