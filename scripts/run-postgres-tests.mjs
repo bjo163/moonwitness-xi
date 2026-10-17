@@ -55,6 +55,7 @@ for (const args of [
     'tests/postgres.integration.test.ts',
     'tests/postgres.performance.integration.test.ts',
     'tests/local-retrieval.postgres.integration.test.ts',
+    'tests/local-ai-suggestion.postgres.integration.test.ts',
     '--no-file-parallelism',
     '--reporter=default',
     '--reporter=junit',
