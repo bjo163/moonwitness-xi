@@ -353,7 +353,7 @@ export function StoryWorkbenchPage() {
         </div>
         <article
           aria-label={`Private preview of page ${selectedPage.page_order}`}
-          className="mx-auto flex min-h-[28rem] w-full max-w-[40rem] flex-col border-4 border-ink bg-paper p-6 text-ink shadow-[8px_8px_0_var(--color-ink)] sm:min-h-[40rem] sm:p-10"
+          className="mx-auto flex aspect-[3/4] min-h-[28rem] w-full max-w-[32rem] scroll-mt-16 flex-col border-4 border-ink bg-paper p-6 text-ink shadow-[8px_8px_0_var(--color-ink)] sm:p-10"
         >
           <header className="flex items-start justify-between gap-4 border-b-2 border-ink/25 pb-4">
             <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-ink-faint">
