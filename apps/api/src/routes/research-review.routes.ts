@@ -145,7 +145,7 @@ export const researchReviewRoutes: FastifyPluginAsync = async (fastify) => {
           if (
             !subject ||
             !['Assertion', 'ResearchRelation'].includes(String(subject.kind)) ||
-            (subject.visibility !== 'INTERNAL' && subject.visibility !== 'PUBLIC_APPROVED')
+            subject.visibility !== 'INTERNAL'
           ) {
             throw new WorkflowError('FORBIDDEN', 'Research subject is unavailable');
           }
