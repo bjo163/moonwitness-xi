@@ -498,7 +498,7 @@ export const researchExplanationRoutes: FastifyPluginAsync<
   const readRelease = options.readActiveRelease ?? readActiveResearchGraphRelease;
   const passageLookup = options.lookupPassage ?? localPassage;
 
-  fastify.get<{ Querystring: { q: string; limit?: number } }>(
+  fastify.get<{ Querystring: { q: string; limit?: string } }>(
     '/api/research/graph/search',
     {
       schema: {
@@ -513,7 +513,10 @@ export const researchExplanationRoutes: FastifyPluginAsync<
           required: ['q'],
           properties: {
             q: { type: 'string', minLength: 2, maxLength: 120 },
-            limit: { type: 'integer', minimum: 1, maximum: 25, default: 20 },
+            limit: {
+              type: 'string',
+              description: 'Optional decimal integer from 1 to 25; defaults to 20.',
+            },
           },
         },
         response: {
@@ -552,6 +555,13 @@ export const researchExplanationRoutes: FastifyPluginAsync<
       if (request.query.q.trim().length < 2) {
         return reply.code(400).send({ success: false, error: 'Search query is too short' });
       }
+      const rawLimit = request.query.limit;
+      const limit = rawLimit === undefined ? 20 : /^\d+$/.test(rawLimit) ? Number(rawLimit) : NaN;
+      if (!Number.isSafeInteger(limit) || limit < 1 || limit > 25) {
+        return reply
+          .code(400)
+          .send({ success: false, error: 'Search limit must be an integer from 1 to 25' });
+      }
       try {
         const activeRelease = await readAuthorizedRelease(fastify, auth, readRelease);
         if (activeRelease.status === 'denied') {
@@ -561,11 +571,7 @@ export const researchExplanationRoutes: FastifyPluginAsync<
           return reply.code(503).send({ success: false, error: 'Research graph is unavailable' });
         }
         validateResearchRelease(activeRelease.release.records);
-        const result = searchResearchRelease(
-          activeRelease.release,
-          request.query.q,
-          request.query.limit ?? 20
-        );
+        const result = searchResearchRelease(activeRelease.release, request.query.q, limit);
         return reply.send({
           success: true,
           data: { release_digest: activeRelease.release.releaseDigest, ...result },

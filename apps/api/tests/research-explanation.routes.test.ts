@@ -163,7 +163,7 @@ describe('research relation explanation API', () => {
     release: StoredResearchGraphRelease,
     lookupPassage?: () => Promise<null>
   ) {
-    const app = Fastify();
+    const app = Fastify({ ajv: { customOptions: { coerceTypes: false } } });
     app.decorateRequest('auth', null);
     let membershipState = 'active';
     app.decorate('knex', {
@@ -316,6 +316,7 @@ describe('research relation explanation API', () => {
           ],
         },
       });
+      expect(assertionSearch.json().data.truncated).toBe(false);
 
       const evidenceSearch = await app.inject({
         method: 'GET',
@@ -347,6 +348,20 @@ describe('research relation explanation API', () => {
         data: { results: expect.any(Array), truncated: true },
       });
       expect(limitedSearch.json().data.results).toHaveLength(1);
+
+      const oversizedSearch = await app.inject({
+        method: 'GET',
+        url: '/api/research/graph/search?q=api-fixture&limit=26',
+        headers: { 'x-test-role': 'user' },
+      });
+      expect(oversizedSearch.statusCode).toBe(400);
+
+      const nonIntegerSearch = await app.inject({
+        method: 'GET',
+        url: '/api/research/graph/search?q=api-fixture&limit=1.5',
+        headers: { 'x-test-role': 'user' },
+      });
+      expect(nonIntegerSearch.statusCode).toBe(400);
     } finally {
       await app.close();
     }
