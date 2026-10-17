@@ -23,6 +23,10 @@ const sources = [
 
 type SourceId = (typeof sources)[number]['id'];
 
+function isPinnedSourceId(value: string): value is SourceId {
+  return sources.some((source) => source.id === value);
+}
+
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'The request could not be completed.';
 }
@@ -453,27 +457,29 @@ function EvidenceList({
         <p className="text-sm text-ink-faint">No linked evidence.</p>
       ) : (
         <ul className="space-y-2">
-          {rows.map((row) => (
-            <li key={row.evidence.id} className={cn('border-l-4 border-ink/20 bg-paper p-3')}>
-              <p className="text-sm leading-relaxed">{row.excerpt}</p>
-              <p className="mt-2 break-words text-xs text-ink-soft">
-                {row.citation} · {row.locator}
-              </p>
-              <p className="mt-1 break-all font-mono text-[10px] text-ink-faint">
-                {row.source_id} · {row.evidence.assertion_id}
-              </p>
-              {(row.source_id === 'mw:source:tanzil-quran-text' ||
-                row.source_id === 'mw:source:ebible-webp-protestant') && (
-                <button
-                  type="button"
-                  className="mt-2 text-left text-xs font-medium underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime-700"
-                  onClick={() => onSelectSource(row.source_id as SourceId, row.locator)}
-                >
-                  Open pinned source passage {row.locator}
-                </button>
-              )}
-            </li>
-          ))}
+          {rows.map((row) => {
+            const sourceId = row.source_id;
+            return (
+              <li key={row.evidence.id} className={cn('border-l-4 border-ink/20 bg-paper p-3')}>
+                <p className="text-sm leading-relaxed">{row.excerpt}</p>
+                <p className="mt-2 break-words text-xs text-ink-soft">
+                  {row.citation} · {row.locator}
+                </p>
+                <p className="mt-1 break-all font-mono text-[10px] text-ink-faint">
+                  {sourceId} · {row.evidence.assertion_id}
+                </p>
+                {isPinnedSourceId(sourceId) && (
+                  <button
+                    type="button"
+                    className="mt-2 text-left text-xs font-medium underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime-700"
+                    onClick={() => onSelectSource(sourceId, row.locator)}
+                  >
+                    Open pinned source passage {row.locator}
+                  </button>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>

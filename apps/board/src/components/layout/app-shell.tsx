@@ -158,7 +158,7 @@ export function AppShell() {
   const [activeCompanyId, setActiveCompanyId] = useState<number | undefined>(() =>
     client.getCompanyId()
   );
-  const researchAccess = canReadResearch(user?.role, activeCompanyId);
+  const researchAccess = canReadResearch(user?.role, client.getCompanyId());
   const [developmentMode, setDevelopmentMode] = useState(readDevelopmentMode);
 
   const toggleDevelopmentMode = useCallback(() => {

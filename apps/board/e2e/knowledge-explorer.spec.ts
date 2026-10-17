@@ -36,9 +36,8 @@ async function signIn(page: Page, login: string, password: string) {
   await expect(page).toHaveURL(/\/$/u);
 }
 
-test('system roles can browse verified source and graph explanations read-only', async ({
-  page,
-}) => {
+test('superadmin research access follows company context and source locators', async ({ page }) => {
+  let unavailablePassageRequested = false;
   await signIn(page, 'superadmin', E2E_SUPERADMIN_PASSWORD);
   const companySwitcher = page.getByRole('button', {
     name: 'Switch company. Current scope: Global Scope',
@@ -67,8 +66,12 @@ test('system roles can browse verified source and graph explanations read-only',
       }),
     })
   );
-  await page.route('**/api/corpus/passages/**', (route) =>
-    route.fulfill({
+  await page.route('**/api/corpus/passages/**', (route) => {
+    const locator = decodeURIComponent(
+      new URL(route.request().url()).pathname.split('/').at(-1) ?? ''
+    );
+    if (locator === 'Q7:47') unavailablePassageRequested = true;
+    return route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
@@ -82,11 +85,13 @@ test('system roles can browse verified source and graph explanations read-only',
           citation: 'Tanzil Quran Text, CC BY 3.0.',
         },
       }),
-    })
-  );
+    });
+  });
   await page.route('**/api/research/graph/search**', (route) => {
     const query = new URL(route.request().url()).searchParams.get('q') ?? '';
-    const linkedEvidence = query === 'mw:assertion:e2e';
+    const unavailableAssertion = query === 'unavailable';
+    const linkedEvidence = query === 'mw:assertion:e2e' || query === 'mw:assertion:unavailable';
+    const unavailableLocator = query === 'mw:assertion:unavailable';
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -98,22 +103,26 @@ test('system roles can browse verified source and graph explanations read-only',
           results: linkedEvidence
             ? [
                 {
-                  id: 'mw:evidence:e2e',
+                  id: unavailableLocator ? 'mw:evidence:unavailable' : 'mw:evidence:e2e',
                   kind: 'evidence',
-                  title: 'supporting · Q7:46',
+                  title: unavailableLocator ? 'supporting · Q7:47' : 'supporting · Q7:46',
                   summary: 'mw:source:tanzil-quran-text',
-                  assertion_id: 'mw:assertion:e2e',
+                  assertion_id: unavailableLocator
+                    ? 'mw:assertion:unavailable'
+                    : 'mw:assertion:e2e',
                   source_id: 'mw:source:tanzil-quran-text',
                   edition_id: 'mw:edition:tanzil-quran-text-v1.1-uthmani-txt2',
-                  locator: 'Q7:46',
+                  locator: unavailableLocator ? 'Q7:47' : 'Q7:46',
                 },
               ]
             : [
                 {
-                  id: 'mw:assertion:e2e',
+                  id: unavailableAssertion ? 'mw:assertion:unavailable' : 'mw:assertion:e2e',
                   kind: 'assertion',
                   title: 'Synthetic graph-search assertion.',
-                  summary: 'positive · pending',
+                  summary: unavailableAssertion
+                    ? 'missing-passage · pending'
+                    : 'positive · pending',
                 },
               ],
         },
@@ -225,6 +234,26 @@ test('system roles can browse verified source and graph explanations read-only',
   await expect(page.getByLabel('Research relation ID')).toHaveValue('mw:relation:alternative');
   await expect(page.getByText('possibly_describes', { exact: true })).toBeVisible();
   await expect(page.getByText('mw:entity:alternative', { exact: true })).toBeVisible();
+
+  await page.getByLabel('Search assertions and evidence').fill('unavailable');
+  await page.getByRole('button', { name: 'Search graph' }).click();
+  await page.getByRole('button', { name: 'Find linked evidence' }).click();
+  await expect(page.getByText('supporting · Q7:47')).toBeVisible();
+  await page.getByRole('button', { name: 'Open pinned passage Q7:47' }).click();
+  await expect(
+    page.getByText('The selected evidence passage is not available in this pinned source edition.')
+  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Q7:46' })).toHaveCount(0);
+  expect(unavailablePassageRequested).toBe(false);
+
+  await page.getByRole('button', { name: 'Switch company. Current scope: MoonWitness' }).click();
+  await page.getByRole('menuitem', { name: 'Global (All Companies)' }).click();
+  await expect(page.getByRole('link', { name: 'Knowledge explorer' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Knowledge explorer unavailable' })).toBeVisible();
+  await page.getByRole('button', { name: 'Switch company. Current scope: Global Scope' }).click();
+  await page.getByRole('menuitem', { name: 'MoonWitness' }).click();
+  await expect(page.getByRole('link', { name: 'Knowledge explorer' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Knowledge explorer' })).toBeVisible();
 
   await page.setViewportSize({ width: 1440, height: 1000 });
   await expectNoA11yViolations(page, 'knowledge/desktop/light');
