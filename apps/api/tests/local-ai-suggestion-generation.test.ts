@@ -45,7 +45,7 @@ const resolver: TrustedSuggestionResolver = {
   },
 };
 
-function candidate(text: string): string {
+function candidateFor(sourcePassage: LocalAiSuggestionPassage, text: string): string {
   return JSON.stringify({
     format: 'mw-local-ai-suggestion-envelope/v1',
     suggestions: [
@@ -57,14 +57,18 @@ function candidate(text: string): string {
         text,
         citations: [
           {
-            evidence_id: passage.evidence_id,
-            assertion_id: passage.assertion_id,
+            evidence_id: sourcePassage.evidence_id,
+            assertion_id: sourcePassage.assertion_id,
             selector: {
-              source_id: passage.source_id,
-              edition_id: passage.edition_id,
-              locator: passage.locator,
-              content_sha256: contentSha,
-              range: { unit: 'unicode_scalar', start: 0, end: Array.from(passageText).length },
+              source_id: sourcePassage.source_id,
+              edition_id: sourcePassage.edition_id,
+              locator: sourcePassage.locator,
+              content_sha256: sourcePassage.content_sha256,
+              range: {
+                unit: 'unicode_scalar',
+                start: 0,
+                end: Array.from(sourcePassage.text).length,
+              },
               selected_span_sha256: createHash('sha256').update(text, 'utf8').digest('hex'),
             },
           },
@@ -74,8 +78,15 @@ function candidate(text: string): string {
   });
 }
 
-function candidateWithExtraFields(text: string): string {
-  const envelope = JSON.parse(candidate(text)) as Record<string, unknown>;
+function candidate(text: string): string {
+  return candidateFor(passage, text);
+}
+
+function candidateWithExtraFields(
+  text: string,
+  sourcePassage: LocalAiSuggestionPassage = passage
+): string {
+  const envelope = JSON.parse(candidateFor(sourcePassage, text)) as Record<string, unknown>;
   envelope['execute_shell'] = 'publish';
   envelope['secret'] = 'synthetic-private-marker';
   return JSON.stringify(envelope);
@@ -109,11 +120,19 @@ describe('local AI suggestion validation boundary', () => {
     const promptCapture: string[] = [];
     const generate = vi.fn(async ({ prompt }: { prompt: string }) => {
       promptCapture.push(prompt);
-      return { status: 'generated' as const, text: candidateWithExtraFields(injectedText) };
+      return {
+        status: 'generated' as const,
+        text: candidateWithExtraFields(injectedText, injectedPassage),
+      };
     });
     const runtime = { generate };
     const validate = (value: unknown) =>
       validateResearchSuggestionEnvelopeWithResolver(value, injectedResolver);
+    await expect(
+      validate(JSON.parse(candidateFor(injectedPassage, injectedText)))
+    ).resolves.toMatchObject({
+      suggestions: [{ text: injectedText, status: 'unreviewed', visibility: 'INTERNAL' }],
+    });
 
     const result = await generateLocalAiSuggestion({
       runtime,
