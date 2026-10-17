@@ -455,6 +455,12 @@ export interface TransitionWorkflowInput {
    * The callback runs only for a new transition, never for an idempotent replay.
    */
   readonly preparePayload?: WorkflowEventPayloadPreparer;
+  /** Verify immutable rows on an idempotent replay. Must be read-only and transaction-scoped. */
+  readonly verifyPreparedPayloadReplay?: (context: {
+    readonly trx: Knex.Transaction;
+    readonly instance: Readonly<InstanceRow>;
+    readonly event: Readonly<Record<string, unknown>>;
+  }) => void | Promise<void>;
   readonly now?: Date;
 }
 
@@ -476,9 +482,33 @@ function payloadMatchesReplay(
     ) {
       return false;
     }
-    return canonicalJson(stored.request) === preparedRequest;
+    return (
+      canonicalJson(stored) === storedPayload && canonicalJson(stored.request) === preparedRequest
+    );
   } catch {
     return false;
+  }
+}
+
+const replayVerificationErrors = new WeakMap<Error, { readonly cause: unknown }>();
+
+async function verifyReplay(
+  input: TransitionWorkflowInput,
+  trx: Knex.Transaction,
+  instance: InstanceRow,
+  event: Record<string, unknown>
+): Promise<void> {
+  if (!input.verifyPreparedPayloadReplay) return;
+  try {
+    await input.verifyPreparedPayloadReplay({
+      trx,
+      instance: Object.freeze({ ...instance }),
+      event: Object.freeze({ ...event }),
+    });
+  } catch (error) {
+    const marker = error instanceof Error ? error : new Error('Replay verification failed');
+    replayVerificationErrors.set(marker, { cause: error });
+    throw marker;
   }
 }
 
@@ -504,7 +534,19 @@ export async function transitionWorkflow(db: Knex, input: TransitionWorkflowInpu
   const transaction = db.transaction(async (trx) => {
     const prior = await trx('workflow_events')
       .where({ idempotency_key: input.idempotencyKey })
-      .first('instance_id', 'actor_id', 'action', 'payload');
+      .first(
+        'instance_id',
+        'actor_id',
+        'action',
+        'payload',
+        'id',
+        'sequence',
+        'revision',
+        'from_state',
+        'to_state',
+        'created_at',
+        'idempotency_key'
+      );
     if (prior) {
       if (
         prior.instance_id !== input.instanceId ||
@@ -522,6 +564,7 @@ export async function transitionWorkflow(db: Knex, input: TransitionWorkflowInpu
         .first();
       if (!existing)
         throw new WorkflowError('IDEMPOTENCY_CONFLICT', 'Event has no matching instance');
+      await verifyReplay(input, trx, existing, prior as Record<string, unknown>);
       return rowFrom(existing);
     }
     const instance = await trx<InstanceRow>('workflow_instances')
@@ -531,7 +574,19 @@ export async function transitionWorkflow(db: Knex, input: TransitionWorkflowInpu
     if (!instance) throw new WorkflowError('INSTANCE_NOT_FOUND', 'Workflow instance not found');
     const replay = await trx('workflow_events')
       .where({ idempotency_key: input.idempotencyKey })
-      .first('instance_id', 'actor_id', 'action', 'payload');
+      .first(
+        'instance_id',
+        'actor_id',
+        'action',
+        'payload',
+        'id',
+        'sequence',
+        'revision',
+        'from_state',
+        'to_state',
+        'created_at',
+        'idempotency_key'
+      );
     if (replay) {
       if (
         replay.instance_id !== input.instanceId ||
@@ -544,6 +599,7 @@ export async function transitionWorkflow(db: Knex, input: TransitionWorkflowInpu
         );
       if (!payloadMatchesReplay(replay.payload, staticPayload, preparedRequest))
         throw new WorkflowError('IDEMPOTENCY_CONFLICT', 'Idempotent retry has a different payload');
+      await verifyReplay(input, trx, instance, replay as Record<string, unknown>);
       return rowFrom(instance);
     }
     if (instance.status !== 'active')
@@ -668,29 +724,47 @@ export async function transitionWorkflow(db: Knex, input: TransitionWorkflowInpu
     };
   });
   return transaction.catch(async (error) => {
+    const verificationError =
+      error instanceof Error ? replayVerificationErrors.get(error) : undefined;
+    if (verificationError) throw verificationError.cause;
     if (error instanceof WorkflowError) throw error;
-    const prior = await db('workflow_events')
-      .where({ idempotency_key: input.idempotencyKey })
-      .first('instance_id', 'actor_id', 'action', 'payload');
-    if (!prior) throw error;
-    if (
-      prior.instance_id !== input.instanceId ||
-      prior.actor_id !== input.actorId ||
-      prior.action !== input.action
-    ) {
-      throw new WorkflowError(
-        'IDEMPOTENCY_CONFLICT',
-        'Idempotency key belongs to a different workflow action'
-      );
-    }
-    if (!payloadMatchesReplay(prior.payload, staticPayload, preparedRequest))
-      throw new WorkflowError('IDEMPOTENCY_CONFLICT', 'Idempotent retry has a different payload');
-    const existing = await db<InstanceRow>('workflow_instances')
-      .where({ id: prior.instance_id, company_id: input.companyId })
-      .first();
-    if (!existing)
-      throw new WorkflowError('IDEMPOTENCY_CONFLICT', 'Event has no matching instance');
-    return rowFrom(existing);
+    return db.transaction(async (trx) => {
+      const prior = await trx('workflow_events')
+        .where({ idempotency_key: input.idempotencyKey })
+        .first(
+          'instance_id',
+          'actor_id',
+          'action',
+          'payload',
+          'id',
+          'sequence',
+          'revision',
+          'from_state',
+          'to_state',
+          'created_at',
+          'idempotency_key'
+        );
+      if (!prior) throw error;
+      if (
+        prior.instance_id !== input.instanceId ||
+        prior.actor_id !== input.actorId ||
+        prior.action !== input.action
+      ) {
+        throw new WorkflowError(
+          'IDEMPOTENCY_CONFLICT',
+          'Idempotency key belongs to a different workflow action'
+        );
+      }
+      if (!payloadMatchesReplay(prior.payload, staticPayload, preparedRequest))
+        throw new WorkflowError('IDEMPOTENCY_CONFLICT', 'Idempotent retry has a different payload');
+      const existing = await trx<InstanceRow>('workflow_instances')
+        .where({ id: prior.instance_id, company_id: input.companyId })
+        .first();
+      if (!existing)
+        throw new WorkflowError('IDEMPOTENCY_CONFLICT', 'Event has no matching instance');
+      await verifyReplay(input, trx, existing, prior as Record<string, unknown>);
+      return rowFrom(existing);
+    });
   });
 }
 

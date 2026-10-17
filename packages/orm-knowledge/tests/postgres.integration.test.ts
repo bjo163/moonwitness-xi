@@ -20,6 +20,7 @@ import {
   readOwnedSyntheticWitness,
   appendOwnedSyntheticWitnessCorrection,
   readResearchReviewHistory,
+  resolveConceptProfileEvidence,
   readTextualAlignmentCandidateVersion,
   readStoryVersion,
   type StoryMediaReference,
@@ -909,15 +910,6 @@ postgresDescribe('knowledge addon PostgreSQL integration', () => {
       await db('workflow_events').where({ instance_id: started.id, sequence: 1 })
     ).toHaveLength(1);
 
-    await expect(
-      db('knowledge_research_review_events')
-        .where({ workflow_instance_id: started.id })
-        .update({ event_json: '{}' })
-    ).rejects.toThrow('Knowledge witness records are append-only');
-    await expect(
-      db('knowledge_research_review_events').where({ workflow_instance_id: started.id }).delete()
-    ).rejects.toThrow('Knowledge witness records are append-only');
-
     const failed = await start('pg-review-start-rollback-01');
     await db.raw(`
       CREATE OR REPLACE FUNCTION mw_test_fail_research_review_insert()
@@ -948,5 +940,50 @@ postgresDescribe('knowledge addon PostgreSQL integration', () => {
     expect(
       await db('knowledge_research_review_events').where({ workflow_instance_id: failed.id })
     ).toHaveLength(0);
+    await db.raw(
+      'DROP TRIGGER IF EXISTS mw_test_fail_research_review_insert ON knowledge_research_review_events'
+    );
+
+    const tampered = await start('pg-review-start-tampered-01');
+    await review(tampered.id, 'pg-review-action-tampered-01');
+    const tamperedPayload = await db('workflow_events')
+      .where({ instance_id: tampered.id, sequence: 1 })
+      .first('payload');
+    const envelope = JSON.parse(String(tamperedPayload?.payload)) as Record<string, unknown>;
+    await db.raw('DROP TRIGGER IF EXISTS workflow_events_append_only ON workflow_events');
+    await db('workflow_events')
+      .where({ instance_id: tampered.id, sequence: 1 })
+      .update({
+        payload: JSON.stringify({
+          ...envelope,
+          event: { ...(envelope.event as object), outcome: 'rejected' },
+        }),
+      });
+    await expect(review(tampered.id, 'pg-review-action-tampered-01')).rejects.toMatchObject({
+      code: 'INVALID_EVENT_PAYLOAD',
+    });
+    await expect(readResearchReviewHistory(db, { subjectId, companyId })).rejects.toMatchObject({
+      code: 'INVALID_EVENT_PAYLOAD',
+    });
+    await expect(
+      resolveConceptProfileEvidence(db, evidenceId, {
+        authenticatedReader: { userId: reviewerId, companyId, role: 'superadmin' },
+        corpusRootDirectory,
+      })
+    ).rejects.toMatchObject({ code: 'INVALID_EVENT_PAYLOAD' });
+    await db.raw(`
+      CREATE TRIGGER workflow_events_append_only
+      BEFORE UPDATE OR DELETE ON workflow_events
+      FOR EACH ROW EXECUTE FUNCTION moonwitness_reject_workflow_event_mutation()
+    `);
+
+    await expect(
+      db('knowledge_research_review_events')
+        .where({ workflow_instance_id: started.id })
+        .update({ event_json: '{}' })
+    ).rejects.toThrow('Knowledge witness records are append-only');
+    await expect(
+      db('knowledge_research_review_events').where({ workflow_instance_id: started.id }).delete()
+    ).rejects.toThrow('Knowledge witness records are append-only');
   }, 30000);
 });

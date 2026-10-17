@@ -63,6 +63,313 @@ export interface ResolveConceptProfileEvidenceInput {
   readonly corpusRootDirectory: string;
 }
 
+const reviewEnvelopeKeys = ['event', 'request', 'workflowPreparedPayload'] as const;
+
+async function verifyWorkflowReviewReplay(
+  trx: Knex.Transaction,
+  instance: Readonly<{
+    id: number;
+    definition_id: number;
+    company_id: number;
+    resource_model: string;
+    resource_id: number;
+    started_by_id: number;
+    current_state?: string;
+    status?: string;
+    revision?: number;
+  }>,
+  workflowEvent: Readonly<Record<string, unknown>>
+): Promise<void> {
+  const reject = () =>
+    fail('INVALID_EVENT_PAYLOAD', 'Stored research review workflow failed integrity verification');
+  let envelope: unknown;
+  const payloadText = String(workflowEvent.payload ?? '');
+  if (
+    workflowEvent.action === 'timeout' &&
+    workflowEvent.to_state === 'timed_out' &&
+    workflowEvent.payload == null
+  ) {
+    const timeoutProjection = await trx('knowledge_research_review_events')
+      .where({ workflow_instance_id: instance.id, workflow_event_sequence: workflowEvent.sequence })
+      .first('event_id');
+    const timeoutDefinition = await trx('workflow_definitions')
+      .where({ id: instance.definition_id })
+      .first('code');
+    if (
+      timeoutProjection ||
+      timeoutDefinition?.code !== 'research.review' ||
+      instance.resource_model !== graphRecordModel ||
+      Number(workflowEvent.instance_id) !== instance.id ||
+      workflowEvent.actor_id != null ||
+      instance.status !== 'timed_out' ||
+      instance.current_state !== 'timed_out' ||
+      Number(instance.revision) !== Number(workflowEvent.revision) ||
+      Number(workflowEvent.sequence) !== Number(workflowEvent.revision) ||
+      workflowEvent.to_state !== 'timed_out'
+    )
+      return reject();
+    return;
+  }
+  try {
+    envelope = JSON.parse(payloadText) as unknown;
+  } catch {
+    return reject();
+  }
+  if (
+    !envelope ||
+    typeof envelope !== 'object' ||
+    Array.isArray(envelope) ||
+    canonicalResearchJson(envelope) !== payloadText
+  )
+    return reject();
+  const value = envelope as Record<string, unknown>;
+  if (
+    Object.keys(value).sort().join('|') !== [...reviewEnvelopeKeys].sort().join('|') ||
+    value.workflowPreparedPayload !== 1
+  )
+    return reject();
+
+  const row = await trx('knowledge_research_review_events as review')
+    .where({
+      'review.workflow_instance_id': instance.id,
+      'review.workflow_event_sequence': workflowEvent.sequence,
+    })
+    .first('review.*');
+  const definition = await trx('workflow_definitions')
+    .where({ id: instance.definition_id })
+    .first('code');
+  if (
+    definition?.code !== 'research.review' ||
+    instance.resource_model !== graphRecordModel ||
+    Number(workflowEvent.instance_id) !== instance.id
+  )
+    return reject();
+  const terminal =
+    (workflowEvent.action === 'approve' && workflowEvent.to_state === 'approved') ||
+    (workflowEvent.action === 'reject' && workflowEvent.to_state === 'rejected');
+  if (!terminal) {
+    if (
+      value.event !== null ||
+      row ||
+      !['approve', 'reject'].includes(String(workflowEvent.action)) ||
+      workflowEvent.to_state !== workflowEvent.from_state ||
+      Number(workflowEvent.sequence) < 1 ||
+      Number(workflowEvent.sequence) !== Number(workflowEvent.revision) ||
+      !value.request ||
+      typeof value.request !== 'object' ||
+      Array.isArray(value.request)
+    )
+      return reject();
+    const request = value.request as Record<string, unknown>;
+    const evidenceIds = request.evidenceIds;
+    if (
+      Object.keys(request).sort().join('|') !== 'evidenceIds|expectedSubjectRevision|subjectId' ||
+      !canonicalId(request.subjectId) ||
+      !Number.isSafeInteger(request.expectedSubjectRevision) ||
+      Number(request.expectedSubjectRevision) < 1 ||
+      !Array.isArray(evidenceIds) ||
+      evidenceIds.length === 0 ||
+      evidenceIds.some(
+        (id) => typeof id !== 'string' || !/^mw:evidence:[a-z0-9][a-z0-9._-]{0,179}$/u.test(id)
+      ) ||
+      new Set(evidenceIds).size !== evidenceIds.length ||
+      evidenceIds.some((id, index) => id !== [...evidenceIds].sort()[index])
+    )
+      return reject();
+    const config = JSON.parse(
+      String(
+        (await trx('workflow_instances').where({ id: instance.id }).first('definition_snapshot'))
+          ?.definition_snapshot
+      )
+    ) as { transitions?: Array<Record<string, unknown>> };
+    const transition = config.transitions?.find(
+      (item) => item.action === workflowEvent.action && item.from === workflowEvent.from_state
+    );
+    if (
+      !transition ||
+      !Array.isArray(transition.roles) ||
+      !Number.isSafeInteger(transition.requiredApprovals) ||
+      Number(transition.requiredApprovals) < 2
+    )
+      return reject();
+    const record = await trx('knowledge_research_graph_records')
+      .where({ id: instance.resource_id, record_key: request.subjectId })
+      .first('release_id');
+    if (!record) return reject();
+    const releaseDigest = await trx('knowledge_research_graph_releases')
+      .where({ id: record.release_id })
+      .first('release_digest');
+    const release = releaseDigest
+      ? await readResearchGraphRelease(trx, String(releaseDigest.release_digest))
+      : null;
+    if (
+      !release ||
+      release.corpusKey !== corpusKey ||
+      release.schemaVersion !== 'research-graph/v1'
+    )
+      return reject();
+    const graph = validateResearchRelease(release.records);
+    const subject = graph.contentById.get(String(request.subjectId));
+    if (!subject || Number(subject.content_revision) !== Number(request.expectedSubjectRevision))
+      return reject();
+    const reviewSubject = subject as unknown as ResearchReviewSubject;
+    for (const evidenceId of evidenceIds as string[]) {
+      const ref = graph.evidence.get(evidenceId);
+      if (
+        !ref ||
+        (reviewSubject.kind === 'Assertion'
+          ? ref.assertion_id !== reviewSubject.id
+          : ![
+              ...reviewSubject.supporting_evidence_ids,
+              ...reviewSubject.counterevidence_ids,
+            ].includes(evidenceId))
+      )
+        return reject();
+    }
+    const reviewer = await trx('users')
+      .where({ id: workflowEvent.actor_id, active: true })
+      .first('id', 'role');
+    const membership = await trx('company_memberships')
+      .where({ user_id: workflowEvent.actor_id, company_id: instance.company_id, active: true })
+      .first('id');
+    const company = await trx('companies')
+      .where({ id: instance.company_id, active: true })
+      .first('id');
+    const identities = await trx('knowledge_research_actor_identities')
+      .whereIn('user_id', [Number(workflowEvent.actor_id), instance.started_by_id])
+      .select('user_id', 'canonical_user_id');
+    const actorMap = new Map(
+      identities.map((item) => [Number(item.user_id), String(item.canonical_user_id)])
+    );
+    if (
+      !reviewer ||
+      !membership ||
+      !company ||
+      !transition.roles.includes(reviewer.role) ||
+      (transition.requireDifferentActor === true &&
+        Number(workflowEvent.actor_id) === instance.started_by_id) ||
+      !userCanonicalIdPattern.test(actorMap.get(Number(workflowEvent.actor_id)) ?? '') ||
+      !userCanonicalIdPattern.test(actorMap.get(instance.started_by_id) ?? '')
+    )
+      return reject();
+    return;
+  }
+  if (
+    !row ||
+    typeof value.request !== 'object' ||
+    value.request === null ||
+    Array.isArray(value.request) ||
+    typeof value.event !== 'object' ||
+    value.event === null ||
+    Array.isArray(value.event)
+  )
+    return reject();
+  const eventJson = String(row.event_json);
+  const digest = createHash('sha256').update(eventJson, 'utf8').digest('hex');
+  let projected: unknown;
+  try {
+    projected = JSON.parse(eventJson) as unknown;
+  } catch {
+    return reject();
+  }
+  if (
+    digest !== row.event_digest ||
+    canonicalResearchJson(projected) !== eventJson ||
+    canonicalResearchJson(value.event) !== eventJson ||
+    !validateResearchReviewEvent(projected).valid
+  )
+    return reject();
+  const reviewEvent = projected as ResearchReviewEvent;
+  const request = value.request as Record<string, unknown>;
+  const expectedRequest = {
+    subjectId: reviewEvent.subject_id,
+    expectedSubjectRevision: reviewEvent.subject_revision,
+    evidenceIds: [...reviewEvent.evidence_ids].sort(),
+  };
+  const reviewer = await trx('users').where({ id: workflowEvent.actor_id }).first('id', 'role');
+  const identities = await trx('knowledge_research_actor_identities')
+    .whereIn('user_id', [Number(workflowEvent.actor_id), instance.started_by_id])
+    .select('user_id', 'canonical_user_id');
+  const identityMap = new Map(
+    identities.map((item) => [Number(item.user_id), String(item.canonical_user_id)])
+  );
+  const subjectRecord = await trx('knowledge_research_graph_releases as release')
+    .join('knowledge_research_graph_records as record', 'record.release_id', 'release.id')
+    .where({
+      'release.release_digest': row.research_release_digest,
+      'record.record_key': row.subject_id,
+    })
+    .first('record.id');
+  const failedChecks = [
+    canonicalResearchJson(request) !== canonicalResearchJson(expectedRequest),
+    !reviewRowMatchesEvent(row, reviewEvent),
+    Number(row.workflow_event_sequence) !== Number(workflowEvent.sequence),
+    Number(reviewEvent.workflow_instance_id) !== Number(instance.id),
+    Number(reviewEvent.workflow_revision) !== Number(workflowEvent.revision),
+    reviewEvent.idempotency_key !== workflowEvent.idempotency_key,
+    reviewEvent.outcome === 'accepted'
+      ? workflowEvent.action !== 'approve' || workflowEvent.to_state !== 'approved'
+      : workflowEvent.action !== 'reject' || workflowEvent.to_state !== 'rejected',
+    !reviewer || reviewer.role !== reviewEvent.reviewer_role,
+    identityMap.get(Number(workflowEvent.actor_id)) !== reviewEvent.reviewer_id,
+    identityMap.get(instance.started_by_id) !== reviewEvent.requester_id,
+    instance.resource_id !== Number(subjectRecord?.id),
+    visibilityOrder[reviewEvent.visibility] > visibilityOrder.INTERNAL,
+  ];
+  if (failedChecks.some(Boolean)) return reject();
+}
+
+async function verifyCompanyReviewWorkflowLog(
+  trx: Knex.Transaction,
+  companyId: number,
+  subjectId: string
+): Promise<void> {
+  const resourceRows = await trx('knowledge_research_graph_records')
+    .where({ record_key: subjectId })
+    .select('id');
+  const resourceIds = resourceRows.map((row) => Number(row.id));
+  if (resourceIds.length === 0) return;
+  const rows = await trx('workflow_events as event')
+    .join('workflow_instances as instance', 'instance.id', 'event.instance_id')
+    .join('workflow_definitions as definition', 'definition.id', 'instance.definition_id')
+    .where({
+      'instance.company_id': companyId,
+      'instance.resource_model': graphRecordModel,
+      'definition.code': 'research.review',
+    })
+    .whereIn('instance.resource_id', resourceIds)
+    .where('event.sequence', '>', 0)
+    .select(
+      'event.*',
+      'instance.id as bound_instance_id',
+      'instance.definition_id',
+      'instance.company_id',
+      'instance.resource_model',
+      'instance.resource_id',
+      'instance.started_by_id',
+      'instance.current_state',
+      'instance.status',
+      'instance.revision as instance_revision'
+    );
+  for (const row of rows) {
+    await verifyWorkflowReviewReplay(
+      trx,
+      {
+        id: Number(row.bound_instance_id),
+        definition_id: Number(row.definition_id),
+        company_id: Number(row.company_id),
+        resource_model: String(row.resource_model),
+        resource_id: Number(row.resource_id),
+        started_by_id: Number(row.started_by_id),
+        current_state: String(row.current_state),
+        status: String(row.status),
+        revision: Number(row.instance_revision),
+      },
+      row as Record<string, unknown>
+    );
+  }
+}
+
 function fail(code: ConstructorParameters<typeof WorkflowError>[0], message: string): never {
   throw new WorkflowError(code, message);
 }
@@ -184,11 +491,14 @@ async function verifiedActorIds(
   return { reviewer, requester };
 }
 
-async function verifiedReviewHistory(trx: Knex.Transaction, subjectId: string) {
-  const rows = await trx('knowledge_research_review_events')
-    .where({ subject_id: subjectId })
+async function verifiedReviewHistory(trx: Knex.Transaction, subjectId: string, companyId: number) {
+  await verifyCompanyReviewWorkflowLog(trx, companyId, subjectId);
+  const rows = await trx('knowledge_research_review_events as review')
+    .join('workflow_instances as instance', 'instance.id', 'review.workflow_instance_id')
+    .where({ 'review.subject_id': subjectId, 'instance.company_id': companyId })
     .orderBy('workflow_instance_id', 'asc')
-    .orderBy('workflow_event_sequence', 'asc');
+    .orderBy('workflow_event_sequence', 'asc')
+    .select('review.*');
   return rows.map((row) => {
     const eventJson = String(row.event_json);
     const actualDigest = createHash('sha256').update(eventJson, 'utf8').digest('hex');
@@ -277,6 +587,7 @@ export async function resolveConceptProfileEvidence(
     const evidenceRecord = recordById.get(evidenceId);
     const reference = graph.evidence.get(evidenceId);
     if (!evidenceRecord || !reference) return null;
+    await verifyCompanyReviewWorkflowLog(trx, reader.companyId, reference.assertion_id);
     const subjectRecord = recordById.get(reference.assertion_id);
     const subject = graph.contentById.get(reference.assertion_id);
     if (
@@ -589,7 +900,11 @@ export async function transitionResearchReview(db: Knex, input: TransitionResear
         ...subject,
         visibility: currentVisibility,
       } as ResearchReviewSubject;
-      const history = await verifiedReviewHistory(context.trx, subject.id);
+      const history = await verifiedReviewHistory(
+        context.trx,
+        subject.id,
+        context.instance.company_id
+      );
       const result = appendResearchReviewEvent(authorizedSubject, history, {
         authenticatedActorId: reviewerCanonicalId,
         authenticatedRole: reviewer.role,
@@ -621,6 +936,9 @@ export async function transitionResearchReview(db: Knex, input: TransitionResear
       }
       await persistResearchReview(context.trx, result.event);
       return JSON.parse(canonicalResearchJson(result.event)) as WorkflowEventPayload;
+    },
+    verifyPreparedPayloadReplay: async ({ trx, instance, event }) => {
+      await verifyWorkflowReviewReplay(trx, instance, event);
     },
   };
   return transitionWorkflow(db, transition);
@@ -677,6 +995,7 @@ export async function readResearchReviewHistory(
     ) {
       fail('FORBIDDEN', 'Research review history is unavailable');
     }
+    await verifyCompanyReviewWorkflowLog(trx, input.companyId, input.subjectId);
 
     const historyQuery = trx('knowledge_research_review_events as review')
       .join('workflow_instances as instance', 'instance.id', 'review.workflow_instance_id')

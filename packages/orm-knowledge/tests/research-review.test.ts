@@ -6,7 +6,11 @@ import { manifest as baseManifest } from '@moonwitness/orm-base';
 import { readQuranPassage } from '@moonwitness/corpus';
 import { jobsManifest } from '@moonwitness/jobs';
 import { manifest as notificationManifest } from '@moonwitness/orm-notification';
-import { manifest as workflowManifest, startWorkflow } from '@moonwitness/orm-workflow';
+import {
+  expireDueWorkflows,
+  manifest as workflowManifest,
+  startWorkflow,
+} from '@moonwitness/orm-workflow';
 import {
   activateResearchGraphRelease,
   createResearchGraphRelease,
@@ -405,6 +409,36 @@ describe('transactional research review service', () => {
     ).resolves.toMatchObject({ reviewStatus: 'unreviewed', access: 'readable' });
   });
 
+  it('does not use another company’s accepted review as this company’s consensus', async () => {
+    const first = await startReviewWorkflow();
+    await transitionResearchReview(db, reviewInput(first.id));
+    const otherCompanyId = Number(
+      await db('companies').insert({
+        name: 'Separate research review tenant',
+        timezone: 'UTC',
+        active: true,
+      })
+    );
+    await db('company_memberships').insert({
+      user_id: superadminId,
+      company_id: otherCompanyId,
+      is_default: false,
+    });
+    await expect(
+      resolveConceptProfileEvidence(db, evidenceId, {
+        authenticatedReader: {
+          userId: superadminId,
+          companyId: otherCompanyId,
+          role: 'superadmin',
+        },
+        corpusRootDirectory,
+      })
+    ).resolves.toMatchObject({ reviewStatus: 'unreviewed', access: 'readable' });
+    await expect(
+      readResearchReviewHistory(db, { subjectId: assertionId, companyId: otherCompanyId })
+    ).resolves.toMatchObject({ events: [], truncated: false });
+  });
+
   it('retains acceptance for the same assertion revision after an unrelated graph release', async () => {
     const started = await startReviewWorkflow();
     await transitionResearchReview(db, reviewInput(started.id));
@@ -643,6 +677,103 @@ describe('transactional research review service', () => {
       transitionResearchReview(db, { ...input, evidenceIds: ['mw:evidence:other'] })
     ).rejects.toMatchObject({ code: 'IDEMPOTENCY_CONFLICT' });
     expect(await db('knowledge_research_review_events')).toHaveLength(1);
+  });
+
+  it.each([
+    'altered',
+    'missing',
+    'noncanonical',
+    'mismatched-event',
+    'missing-projection',
+  ] as const)(
+    'fails closed across replay, history, and evidence resolution after %s workflow corruption',
+    async (corruption) => {
+      const started = await startReviewWorkflow();
+      const input = reviewInput(started.id);
+      await transitionResearchReview(db, input);
+      await db.raw('DROP TRIGGER workflow_events_reject_update');
+      await db.raw('DROP TRIGGER knowledge_research_review_events_reject_delete');
+      if (corruption === 'missing-projection') {
+        await db('knowledge_research_review_events')
+          .where({ workflow_instance_id: started.id })
+          .delete();
+      } else {
+        const stored = await db('workflow_events')
+          .where({ instance_id: started.id, sequence: 1 })
+          .first('payload');
+        const envelope = JSON.parse(String(stored?.payload)) as Record<string, unknown>;
+        let payload: string | null;
+        if (corruption === 'missing') payload = null;
+        else if (corruption === 'noncanonical') payload = JSON.stringify(envelope, null, 2);
+        else if (corruption === 'mismatched-event') {
+          const event = envelope.event as Record<string, unknown>;
+          payload = JSON.stringify({ ...envelope, event: { ...event, outcome: 'rejected' } });
+        } else payload = JSON.stringify({ ...envelope, unexpected: true });
+        await db('workflow_events')
+          .where({ instance_id: started.id, sequence: 1 })
+          .update({ payload });
+      }
+      await expect(transitionResearchReview(db, input)).rejects.toMatchObject({
+        code: expect.stringMatching(/INVALID_EVENT_PAYLOAD|IDEMPOTENCY_CONFLICT/),
+      });
+      await expect(
+        readResearchReviewHistory(db, { subjectId: assertionId, companyId })
+      ).rejects.toMatchObject({
+        code: 'INVALID_EVENT_PAYLOAD',
+      });
+      await expect(
+        resolveConceptProfileEvidence(db, evidenceId, {
+          authenticatedReader: { userId: superadminId, companyId, role: 'superadmin' },
+          corpusRootDirectory,
+        })
+      ).rejects.toMatchObject({ code: 'INVALID_EVENT_PAYLOAD' });
+    }
+  );
+
+  it('allows the ordinary timeout event without a research decision projection', async () => {
+    const started = await startReviewWorkflow();
+    await db('workflow_instances')
+      .where({ id: started.id })
+      .update({ due_at: '2026-10-16T00:00:00.000Z' });
+    await expect(expireDueWorkflows(db, new Date('2026-10-17T00:00:00.000Z'))).resolves.toBe(1);
+    await expect(
+      readResearchReviewHistory(db, { subjectId: assertionId, companyId })
+    ).resolves.toMatchObject({
+      events: [],
+      truncated: false,
+    });
+  });
+
+  it('keeps a multi-approval intermediate vote as event:null without a decision projection', async () => {
+    const definition = await db('workflow_definitions').where({ code: 'research.review' }).first();
+    const config = JSON.parse(String(definition?.config)) as {
+      transitions: Array<Record<string, unknown>>;
+    };
+    config.transitions = config.transitions.map((transition) =>
+      transition.action === 'approve' ? { ...transition, requiredApprovals: 2 } : transition
+    );
+    await db('workflow_definitions')
+      .where({ code: 'research.review' })
+      .update({ config: JSON.stringify(config) });
+    const started = await startReviewWorkflow();
+    await expect(transitionResearchReview(db, reviewInput(started.id))).resolves.toMatchObject({
+      currentState: 'submitted',
+      revision: 1,
+      status: 'active',
+    });
+    const stored = await db('workflow_events')
+      .where({ instance_id: started.id, sequence: 1 })
+      .first('payload');
+    expect(JSON.parse(String(stored?.payload))).toMatchObject({
+      event: null,
+      workflowPreparedPayload: 1,
+    });
+    expect(
+      await db('knowledge_research_review_events').where({ workflow_instance_id: started.id })
+    ).toHaveLength(0);
+    await expect(
+      readResearchReviewHistory(db, { subjectId: assertionId, companyId })
+    ).resolves.toMatchObject({ events: [] });
   });
 
   it('binds a relation decision to its active revision and directly linked evidence', async () => {

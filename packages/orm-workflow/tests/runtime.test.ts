@@ -49,13 +49,18 @@ async function actors(database: Knex) {
 
 function rejectAfterCommit(database: Knex, afterCommit?: () => Promise<void>): void {
   const transaction = database.transaction.bind(database);
+  let rejectNextAcknowledgement = true;
   Object.defineProperty(database, 'transaction', {
     configurable: true,
     value: async (handler: unknown) => {
       const callback = handler as (trx: Knex.Transaction) => Promise<unknown>;
-      await transaction(callback);
-      await afterCommit?.();
-      throw new Error('Simulated acknowledgement loss after commit');
+      const result = await transaction(callback);
+      if (rejectNextAcknowledgement) {
+        rejectNextAcknowledgement = false;
+        await afterCommit?.();
+        throw new Error('Simulated acknowledgement loss after commit');
+      }
+      return result;
     },
   });
 }
@@ -228,6 +233,7 @@ describe('workflow addon', () => {
       resourceId,
       idempotencyKey: 'lost-action-start-01',
     });
+    let replayChecks = 0;
     rejectAfterCommit(database);
 
     const result = await transitionWorkflow(database, {
@@ -238,10 +244,19 @@ describe('workflow addon', () => {
       action: 'submit',
       expectedRevision: 0,
       idempotencyKey: 'lost-action-ack-0001',
+      payload: { request: 'stable' },
+      preparePayload: async () => ({ committed: true }),
+      verifyPreparedPayloadReplay: async ({ trx, instance, event }) => {
+        replayChecks += 1;
+        expect(instance.id).toBe(started.id);
+        expect(event.action).toBe('submit');
+        expect(await trx('workflow_events').where({ id: event.id }).first()).toBeDefined();
+      },
     });
 
     expect(result).toMatchObject({ currentState: 'submitted', revision: 1, status: 'active' });
     expect(await database('workflow_events').where({ instance_id: started.id })).toHaveLength(2);
+    expect(replayChecks).toBe(1);
   });
 
   it('stores canonical transition payloads and checks them on idempotent replay', async () => {
@@ -313,6 +328,7 @@ describe('workflow addon', () => {
       now: new Date('2026-10-16T00:00:00.000Z'),
     });
     let prepareCalls = 0;
+    let replayChecks = 0;
     const input = {
       instanceId: started.id,
       companyId,
@@ -360,6 +376,17 @@ describe('workflow addon', () => {
         ).resolves.toMatchObject({ revision: 0 });
         return { requesterId: context.instance.started_by_id, subject: 'synthetic-subject' };
       },
+      verifyPreparedPayloadReplay: async ({
+        instance,
+        event,
+      }: {
+        instance: { id: number };
+        event: Record<string, unknown>;
+      }) => {
+        replayChecks += 1;
+        expect(instance.id).toBe(started.id);
+        expect(event.action).toBe('submit');
+      },
     };
 
     await transitionWorkflow(database, input);
@@ -376,6 +403,17 @@ describe('workflow addon', () => {
       currentState: 'submitted',
     });
     expect(prepareCalls).toBe(1);
+    expect(replayChecks).toBe(1);
+
+    const verifierError = new Error('injected read-only verifier failure');
+    await expect(
+      transitionWorkflow(database, {
+        ...input,
+        verifyPreparedPayloadReplay: () => {
+          throw verifierError;
+        },
+      })
+    ).rejects.toBe(verifierError);
 
     await expect(
       transitionWorkflow(database, {
