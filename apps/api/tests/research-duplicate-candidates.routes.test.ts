@@ -52,7 +52,9 @@ describe('research duplicate candidates API', () => {
   async function createApp(
     activeRelease: StoredResearchGraphRelease | null,
     role?: string,
-    companyId?: number | null
+    companyId?: number | null,
+    membershipState: 'active' | 'inactive' = 'active',
+    companyState: 'active' | 'inactive' = 'active'
   ) {
     const effectiveCompanyId =
       companyId === null
@@ -61,7 +63,36 @@ describe('research duplicate candidates API', () => {
     const app = Fastify();
     app.decorateRequest('auth', null);
     app.decorate('knex', {
-      transaction: async (callback: (trx: object) => Promise<unknown>) => callback({}),
+      transaction: async (callback: (trx: (table: string) => unknown) => Promise<unknown>) => {
+        const trx = (table: string) => {
+          let conditions: Record<string, unknown> = {};
+          const query = {
+            where: (next: Record<string, unknown>) => {
+              conditions = next;
+              return query;
+            },
+            forUpdate: () => query,
+            first: async () => {
+              if (table === 'companies') {
+                return companyState === 'active' && conditions.active === true
+                  ? { id: conditions.id }
+                  : undefined;
+              }
+              if (table === 'company_memberships') {
+                return membershipState === 'active' &&
+                  conditions.active === true &&
+                  conditions.user_id === 1 &&
+                  conditions.company_id === effectiveCompanyId
+                  ? { id: 10 }
+                  : undefined;
+              }
+              return undefined;
+            },
+          };
+          return query;
+        };
+        return callback(trx);
+      },
     } as never);
     app.addHook('onRequest', async (request) => {
       if (role === 'system' || role === 'superadmin' || role === 'user') {
@@ -73,7 +104,7 @@ describe('research duplicate candidates API', () => {
     return { app, readActiveRelease };
   }
 
-  it('requires authentication and active company context for human research roles', async () => {
+  it('requires authentication and rechecks active company membership for human research roles', async () => {
     const anonymous = await createApp(release());
     const anonymousResponse = await anonymous.app.inject({
       method: 'GET',
@@ -92,6 +123,26 @@ describe('research duplicate candidates API', () => {
     expect(userResponse.statusCode).toBe(200);
     expect(user.readActiveRelease).toHaveBeenCalledTimes(1);
     await user.app.close();
+
+    for (const role of ['user', 'superadmin'] as const) {
+      const inactiveMembership = await createApp(release(), role, 12, 'inactive');
+      const inactiveMembershipResponse = await inactiveMembership.app.inject({
+        method: 'GET',
+        url: '/api/research/duplicate-candidates',
+      });
+      expect(inactiveMembershipResponse.statusCode).toBe(403);
+      expect(inactiveMembership.readActiveRelease).not.toHaveBeenCalled();
+      await inactiveMembership.app.close();
+    }
+
+    const inactiveCompany = await createApp(release(), 'user', 12, 'active', 'inactive');
+    const inactiveCompanyResponse = await inactiveCompany.app.inject({
+      method: 'GET',
+      url: '/api/research/duplicate-candidates',
+    });
+    expect(inactiveCompanyResponse.statusCode).toBe(403);
+    expect(inactiveCompany.readActiveRelease).not.toHaveBeenCalled();
+    await inactiveCompany.app.close();
 
     const userWithoutCompany = await createApp(release(), 'user', null);
     const userWithoutCompanyResponse = await userWithoutCompany.app.inject({

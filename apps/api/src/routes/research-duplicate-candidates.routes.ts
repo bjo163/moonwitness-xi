@@ -171,7 +171,7 @@ export const researchDuplicateCandidateRoutes: FastifyPluginAsync<
           401: { description: 'Bearer authentication is required.', ...errorSchema },
           403: {
             description:
-              'The authenticated actor lacks an eligible role or active company context.',
+              'The authenticated actor lacks an eligible role or active company membership.',
             ...errorSchema,
           },
           503: {
@@ -187,17 +187,38 @@ export const researchDuplicateCandidateRoutes: FastifyPluginAsync<
         return reply.code(401).send({ success: false, error: 'Authentication required' });
       const hasActiveCompanyContext =
         Number.isInteger(request.auth.companyId) && (request.auth.companyId ?? 0) > 0;
-      const canReadAsActor =
-        request.auth.role === 'system' ||
-        ((request.auth.role === 'user' || request.auth.role === 'superadmin') &&
-          hasActiveCompanyContext);
+      const isTrustedSystem = request.auth.role === 'system';
+      const isHumanReader = request.auth.role === 'user' || request.auth.role === 'superadmin';
+      const canReadAsActor = isTrustedSystem || (isHumanReader && hasActiveCompanyContext);
       if (!canReadAsActor) {
         return reply.code(403).send({ success: false, error: 'Research access denied' });
       }
 
       try {
-        // Verify and detach one complete release before scoring; keep file/network work out of SQL.
-        const release = await fastify.knex.transaction((trx) => readRelease(trx, corpusKey));
+        // Revalidate human tenant membership in the same transaction as the shared release read.
+        // Trusted system callers are service identities and do not use company membership.
+        const releaseResult = await fastify.knex.transaction(async (trx) => {
+          if (!isTrustedSystem) {
+            const company = await trx('companies')
+              .where({ id: request.auth!.companyId, active: true })
+              .forUpdate()
+              .first('id');
+            const membership = await trx('company_memberships')
+              .where({
+                user_id: request.auth!.userId,
+                company_id: request.auth!.companyId,
+                active: true,
+              })
+              .forUpdate()
+              .first('id');
+            if (!company || !membership) return { denied: true as const };
+          }
+          return { denied: false as const, release: await readRelease(trx, corpusKey) };
+        });
+        if (releaseResult.denied) {
+          return reply.code(403).send({ success: false, error: 'Research access denied' });
+        }
+        const release = releaseResult.release;
         if (!release) {
           return reply
             .code(503)
