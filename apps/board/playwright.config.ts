@@ -30,6 +30,9 @@ if (!Number.isInteger(maxRetries) || maxRetries < 0 || maxRetries > 1) {
   throw new Error('Playwright CI retries must be an integer between 0 and 1.');
 }
 const flakeReporter = resolve(repositoryRoot, 'scripts/playwright-flake-reporter.mjs');
+const apiCommand = buildApiBeforeE2E
+  ? `pnpm exec node "${buildScript}" && pnpm --filter @moonwitness/api dev`
+  : 'node apps/api/dist/server.js';
 
 export default defineConfig({
   testDir: './e2e',
@@ -66,7 +69,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: `${buildApiBeforeE2E ? `pnpm exec node "${buildScript}" && ` : ''}pnpm --filter @moonwitness/api dev`,
+      command: apiCommand,
       cwd: repositoryRoot,
       url: `http://127.0.0.1:${apiPort}/readyz`,
       timeout: 120_000,

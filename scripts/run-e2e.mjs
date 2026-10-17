@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { mkdir, unlink } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
+import { isIP } from 'node:net';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { env, stderr, stdout, exit, argv } from 'node:process';
@@ -20,15 +21,25 @@ if (!env.POSTGRES_TEST_URL) {
   exit(2);
 }
 let testDatabaseName;
+let testDatabaseHostname;
 try {
-  testDatabaseName = decodeURIComponent(new URL(env.POSTGRES_TEST_URL).pathname.slice(1));
+  const testDatabaseUrl = new URL(env.POSTGRES_TEST_URL);
+  if (!['postgres:', 'postgresql:'].includes(testDatabaseUrl.protocol)) {
+    throw new Error('The E2E database URL must use PostgreSQL.');
+  }
+  testDatabaseName = decodeURIComponent(testDatabaseUrl.pathname.slice(1));
+  testDatabaseHostname = testDatabaseUrl.hostname.toLowerCase().replace(/^\[|\]$/gu, '');
 } catch {
   stderr.write('POSTGRES_TEST_URL must be a valid PostgreSQL connection URL.\n');
   exit(2);
 }
-if (!/(?:^|[_-])(?:test|e2e)(?:$|[_-])/iu.test(testDatabaseName)) {
+const loopbackHost =
+  testDatabaseHostname === 'localhost' ||
+  testDatabaseHostname === '::1' ||
+  (isIP(testDatabaseHostname) === 4 && Number(testDatabaseHostname.split('.')[0]) === 127);
+if (!loopbackHost || !/(?:^|[_-])(?:test|e2e|ci)(?:$|[_-])/iu.test(testDatabaseName)) {
   stderr.write(
-    'Refusing to reset E2E credentials: POSTGRES_TEST_URL database name must include test or e2e.\n'
+    'Refusing E2E setup: POSTGRES_TEST_URL must target a loopback database named for test, e2e, or ci.\n'
   );
   exit(2);
 }
@@ -115,6 +126,24 @@ await runPreflight(
     ...(packageManager.shell ? { shell: true } : {}),
   },
   packageManager.command
+);
+
+await runPreflight(
+  'seed-knowledge-search-fixture',
+  packageManager.command,
+  [
+    ...packageManager.prefixArgs,
+    '--filter',
+    '@moonwitness/api',
+    'exec',
+    'tsx',
+    'src/commands/seed-knowledge-e2e.ts',
+  ],
+  {
+    ...env,
+    DATABASE_URL: env.POSTGRES_TEST_URL,
+    ...(packageManager.shell ? { shell: true } : {}),
+  }
 );
 
 stderr.write('Starting Board E2E tests with Playwright.\n');
