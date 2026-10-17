@@ -58,9 +58,15 @@ function SourceCard({ citation, passage }: { citation: SourceCitation; passage: 
 export function KnowledgePage() {
   const { user } = useAuth();
   const [sourceId, setSourceId] = useState<SourceId>(sources[0].id);
+  const [requestedLocator, setRequestedLocator] = useState<string | null>(null);
   const [relationInput, setRelationInput] = useState('');
   const [relationId, setRelationId] = useState('');
-  const canReadResearch = user?.role === 'system' || user?.role === 'superadmin';
+  const activeCompanyId = client.getCompanyId();
+  const canReadResearch =
+    user?.role === 'system' ||
+    ((user?.role === 'superadmin' || user?.role === 'user') &&
+      Number.isSafeInteger(activeCompanyId) &&
+      (activeCompanyId ?? 0) > 0);
 
   const citationQuery = useQuery({
     queryKey: scopedQueryKey(['knowledge-source', sourceId]),
@@ -68,9 +74,16 @@ export function KnowledgePage() {
     enabled: canReadResearch,
   });
   const citation = citationQuery.data;
-  const locator = citation?.availablePassages[0];
+  let locator: string | undefined;
+  if (citation) {
+    if (requestedLocator === null) locator = citation.availablePassages[0];
+    else if (citation.availablePassages.includes(requestedLocator)) locator = requestedLocator;
+  }
+  const requestedPassageUnavailable = Boolean(
+    citation && requestedLocator && !citation.availablePassages.includes(requestedLocator)
+  );
   const passageQuery = useQuery({
-    queryKey: scopedQueryKey(['knowledge-passage', citation?.editionId, locator]),
+    queryKey: scopedQueryKey(['knowledge-passage', sourceId, citation?.editionId, locator]),
     queryFn: () => {
       if (!citation || !locator) throw new Error('The selected source has no available passage.');
       return client.getCorpusPassage(citation.editionId, locator);
@@ -88,12 +101,18 @@ export function KnowledgePage() {
     setRelationId(relationInput.trim());
   };
 
+  const selectSourcePassage = (id: SourceId, selectedLocator: string) => {
+    setSourceId(id);
+    setRequestedLocator(selectedLocator);
+  };
+
   if (!canReadResearch) {
     return (
       <section className="ink-panel mx-auto max-w-2xl bg-card p-6 sm:p-10" role="alert">
         <h1 className="font-display text-2xl uppercase">Knowledge explorer unavailable</h1>
         <p className="mt-3 text-ink-soft">
-          Your current role cannot access research records. The API enforces the same restriction.
+          Research access requires an authenticated system reader or a human account with a company
+          context. The API also verifies active company membership.
         </p>
       </section>
     );
@@ -127,7 +146,10 @@ export function KnowledgePage() {
               type="button"
               variant={sourceId === source.id ? 'default' : 'outline'}
               aria-pressed={sourceId === source.id}
-              onClick={() => setSourceId(source.id)}
+              onClick={() => {
+                setSourceId(source.id);
+                setRequestedLocator(null);
+              }}
             >
               {source.label}
             </Button>
@@ -141,6 +163,11 @@ export function KnowledgePage() {
         {passageQuery.isError && (
           <p className="text-sm text-destructive" role="alert">
             The exact passage could not be verified: {errorMessage(passageQuery.error)}
+          </p>
+        )}
+        {requestedPassageUnavailable && (
+          <p className="text-sm text-destructive" role="alert">
+            The selected evidence passage is not available in this pinned source edition.
           </p>
         )}
         {(citationQuery.isLoading || passageQuery.isLoading) && (
@@ -190,7 +217,7 @@ export function KnowledgePage() {
           <RelationCard
             digest={explanationQuery.data.releaseDigest}
             explanation={explanationQuery.data.explanation}
-            onSelectSource={setSourceId}
+            onSelectSource={selectSourcePassage}
             onSelectRelation={(id) => {
               setRelationInput(id);
               setRelationId(id);
@@ -210,7 +237,7 @@ function RelationCard({
 }: {
   digest: string;
   explanation: Awaited<ReturnType<typeof client.getResearchRelationExplanation>>['explanation'];
-  onSelectSource: (id: SourceId) => void;
+  onSelectSource: (id: SourceId, locator: string) => void;
   onSelectRelation: (id: string) => void;
 }) {
   return (
@@ -294,7 +321,7 @@ function EvidenceList({
   rows: Awaited<
     ReturnType<typeof client.getResearchRelationExplanation>
   >['explanation']['supporting_evidence'];
-  onSelectSource: (id: SourceId) => void;
+  onSelectSource: (id: SourceId, locator: string) => void;
 }) {
   return (
     <section className="min-w-0 space-y-2" aria-label={title}>
@@ -317,7 +344,7 @@ function EvidenceList({
                 <button
                   type="button"
                   className="mt-2 text-left text-xs font-medium underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime-700"
-                  onClick={() => onSelectSource(row.source_id as SourceId)}
+                  onClick={() => onSelectSource(row.source_id as SourceId, row.locator)}
                 >
                   Open pinned source passage {row.locator}
                 </button>
