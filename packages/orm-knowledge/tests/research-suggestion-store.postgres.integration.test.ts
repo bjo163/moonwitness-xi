@@ -47,34 +47,45 @@ const envelopeFor = (text: string, locator: string) =>
 
 const envelope = envelopeFor(sourceText, 'fixture://postgres/suggestion/1');
 
-const resolverForTransaction = (_trx: Knex.Transaction) => ({
+const resolverForTransaction = (trx: Knex.Transaction) => ({
   async resolvePassage(
     selector: (typeof envelope.suggestions)[number]['citations'][number]['selector']
   ) {
-    const text =
-      selector.locator === 'fixture://postgres/suggestion/changed-a'
-        ? 'Synthetic PostgreSQL changed version A.'
-        : selector.locator === 'fixture://postgres/suggestion/changed-b'
-          ? 'Synthetic PostgreSQL changed version B.'
-          : sourceText;
-    return {
-      source_id: selector.source_id,
-      edition_id: selector.edition_id,
-      locator: selector.locator,
-      content_sha256: sha256(text),
-      text,
-      readable: true,
-    };
+    const row = await trx('test_research_passage_access')
+      .where({
+        source_id: selector.source_id,
+        edition_id: selector.edition_id,
+        locator: selector.locator,
+      })
+      .first('content_sha256', 'text', 'readable');
+    return row
+      ? {
+          source_id: selector.source_id,
+          edition_id: selector.edition_id,
+          locator: selector.locator,
+          content_sha256: String(row.content_sha256),
+          text: String(row.text),
+          readable: Boolean(row.readable),
+        }
+      : null;
   },
-  async resolveAssertion() {
-    return { active: true, readable: true };
+  async resolveAssertion(assertionId: string) {
+    const row = await trx('test_research_assertion_access')
+      .where({ assertion_id: assertionId })
+      .first('active', 'readable');
+    return row ? { active: Boolean(row.active), readable: Boolean(row.readable) } : null;
   },
   async resolveEvidence(evidenceId: string) {
-    return {
-      assertion_id: 'mw:assertion:postgres-synthetic',
-      active: evidenceId === 'mw:evidence:postgres-synthetic',
-      readable: true,
-    };
+    const row = await trx('test_research_evidence_access')
+      .where({ evidence_id: evidenceId })
+      .first('assertion_id', 'active', 'readable');
+    return row
+      ? {
+          assertion_id: String(row.assertion_id),
+          active: Boolean(row.active),
+          readable: Boolean(row.readable),
+        }
+      : null;
   },
 });
 
@@ -95,6 +106,26 @@ postgresDescribe('research suggestion PostgreSQL integration', () => {
       pool: { min: 0, max: 3 },
     });
     await installAddons(db, [baseManifest, knowledgeManifest]);
+    await db.schema.createTable('test_research_passage_access', (table) => {
+      table.string('source_id').notNullable();
+      table.string('edition_id').notNullable();
+      table.string('locator').notNullable();
+      table.string('content_sha256').notNullable();
+      table.text('text').notNullable();
+      table.boolean('readable').notNullable();
+      table.primary(['source_id', 'edition_id', 'locator']);
+    });
+    await db.schema.createTable('test_research_assertion_access', (table) => {
+      table.string('assertion_id').primary();
+      table.boolean('active').notNullable();
+      table.boolean('readable').notNullable();
+    });
+    await db.schema.createTable('test_research_evidence_access', (table) => {
+      table.string('evidence_id').primary();
+      table.string('assertion_id').notNullable();
+      table.boolean('active').notNullable();
+      table.boolean('readable').notNullable();
+    });
   }, 30000);
 
   afterAll(async () => {
@@ -109,6 +140,43 @@ postgresDescribe('research suggestion PostgreSQL integration', () => {
     const userId = Number((await db('users').where({ login: 'superadmin' }).first('id'))?.id);
     const companyId = Number((await db('companies').first('id'))?.id);
     if (!userId || !companyId) throw new Error('Synthetic PostgreSQL actor/company is unavailable');
+    await db('test_research_passage_access').insert({
+      source_id: 'mw:source:synthetic-postgres',
+      edition_id: 'mw:edition:synthetic-postgres-v1',
+      locator: 'fixture://postgres/suggestion/1',
+      content_sha256: sha256(sourceText),
+      text: sourceText,
+      readable: true,
+    });
+    await db('test_research_passage_access').insert([
+      {
+        source_id: 'mw:source:synthetic-postgres',
+        edition_id: 'mw:edition:synthetic-postgres-v1',
+        locator: 'fixture://postgres/suggestion/changed-a',
+        content_sha256: sha256('Synthetic PostgreSQL changed version A.'),
+        text: 'Synthetic PostgreSQL changed version A.',
+        readable: true,
+      },
+      {
+        source_id: 'mw:source:synthetic-postgres',
+        edition_id: 'mw:edition:synthetic-postgres-v1',
+        locator: 'fixture://postgres/suggestion/changed-b',
+        content_sha256: sha256('Synthetic PostgreSQL changed version B.'),
+        text: 'Synthetic PostgreSQL changed version B.',
+        readable: true,
+      },
+    ]);
+    await db('test_research_assertion_access').insert({
+      assertion_id: 'mw:assertion:postgres-synthetic',
+      active: true,
+      readable: true,
+    });
+    await db('test_research_evidence_access').insert({
+      evidence_id: 'mw:evidence:postgres-synthetic',
+      assertion_id: 'mw:assertion:postgres-synthetic',
+      active: true,
+      readable: true,
+    });
     await db('company_memberships')
       .insert({ user_id: userId, company_id: companyId, is_default: true })
       .onConflict(['user_id', 'company_id'])
@@ -127,6 +195,7 @@ postgresDescribe('research suggestion PostgreSQL integration', () => {
     const stored = await readResearchSuggestionVersion(db, {
       authenticatedReader: input.authenticatedActor,
       suggestionId: 'mw:suggestion:postgres-integration',
+      resolverForTransaction,
     });
     expect(stored).toMatchObject({ version: 1, visibility: 'INTERNAL', status: 'unreviewed' });
     const changed = await Promise.all([
@@ -163,5 +232,15 @@ postgresDescribe('research suggestion PostgreSQL integration', () => {
         .where({ suggestion_id: 'mw:suggestion:postgres-integration' })
         .delete()
     ).rejects.toThrow('Knowledge research suggestions are append-only');
+    await db('test_research_evidence_access')
+      .where({ evidence_id: 'mw:evidence:postgres-synthetic' })
+      .update({ active: false, readable: false });
+    await expect(
+      readResearchSuggestionVersion(db, {
+        authenticatedReader: input.authenticatedActor,
+        suggestionId: 'mw:suggestion:postgres-integration',
+        resolverForTransaction,
+      })
+    ).rejects.toThrow(/trusted source and evidence validation/u);
   }, 30000);
 });

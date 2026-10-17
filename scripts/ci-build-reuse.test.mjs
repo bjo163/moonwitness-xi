@@ -174,6 +174,11 @@ test('built PostgreSQL mode reuses package output while running type and integra
       assert.equal(commands[0]?.args[0], mode === 'standalone' ? 'build' : '--filter');
       assert.ok(commands.some(({ args }) => args.includes('tsc')));
       assert.ok(commands.some(({ args }) => args.includes('vitest')));
+      assert.ok(
+        commands.some(({ args }) =>
+          args.includes('tests/research-suggestion-store.postgres.integration.test.ts')
+        )
+      );
       assert.ok(commands.every(({ postgresRequired }) => postgresRequired === 'true'));
     }
   } finally {

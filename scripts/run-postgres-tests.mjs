@@ -42,6 +42,7 @@ for (const args of [
     'tests/postgres.integration.test.ts',
     'tests/research-actor-identity.postgres.integration.test.ts',
     'tests/privacy-revocation.postgres.integration.test.ts',
+    'tests/research-suggestion-store.postgres.integration.test.ts',
     '--reporter=default',
   ],
   ['--filter', '@moonwitness/api', 'exec', 'tsc', '--noEmit', '-p', 'tsconfig.integration.json'],

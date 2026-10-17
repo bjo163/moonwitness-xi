@@ -75,7 +75,31 @@ const resolver = {
 
 function resolverForTransaction(trx: Knex.Transaction) {
   return {
-    ...resolver,
+    async resolvePassage(selector: ReturnType<typeof suggestion>['citations'][number]['selector']) {
+      const row = await trx('test_research_passage_access')
+        .where({
+          source_id: selector.source_id,
+          edition_id: selector.edition_id,
+          locator: selector.locator,
+        })
+        .first('content_sha256', 'text', 'readable');
+      return row
+        ? {
+            source_id: selector.source_id,
+            edition_id: selector.edition_id,
+            locator: selector.locator,
+            content_sha256: String(row.content_sha256),
+            text: String(row.text),
+            readable: Boolean(row.readable),
+          }
+        : null;
+    },
+    async resolveAssertion(assertionId: string) {
+      const row = await trx('test_research_assertion_access')
+        .where({ assertion_id: assertionId })
+        .first('active', 'readable');
+      return row ? { active: Boolean(row.active), readable: Boolean(row.readable) } : null;
+    },
     async resolveEvidence(evidenceId: string) {
       const row = await trx('test_research_evidence_access')
         .where({ evidence_id: evidenceId })
@@ -112,10 +136,45 @@ beforeEach(async () => {
     table.boolean('active').notNullable();
     table.boolean('readable').notNullable();
   });
+  await db.schema.createTable('test_research_assertion_access', (table) => {
+    table.string('assertion_id').primary();
+    table.boolean('active').notNullable();
+    table.boolean('readable').notNullable();
+  });
+  await db.schema.createTable('test_research_passage_access', (table) => {
+    table.string('source_id').notNullable();
+    table.string('edition_id').notNullable();
+    table.string('locator').notNullable();
+    table.string('content_sha256').notNullable();
+    table.text('text').notNullable();
+    table.boolean('readable').notNullable();
+    table.primary(['source_id', 'edition_id', 'locator']);
+  });
   await db('test_research_evidence_access').insert({
     evidence_id: 'mw:evidence:synthetic-evidence',
     assertion_id: 'mw:assertion:synthetic-assertion',
     active: true,
+    readable: true,
+  });
+  await db('test_research_assertion_access').insert({
+    assertion_id: 'mw:assertion:synthetic-assertion',
+    active: true,
+    readable: true,
+  });
+  await db('test_research_passage_access').insert({
+    source_id: 'mw:source:synthetic-source',
+    edition_id: 'mw:edition:synthetic-edition',
+    locator: 'synthetic:1',
+    content_sha256: sha256('Synthetic extractive passage.'),
+    text: 'Synthetic extractive passage.',
+    readable: true,
+  });
+  await db('test_research_passage_access').insert({
+    source_id: 'mw:source:synthetic-source',
+    edition_id: 'mw:edition:synthetic-edition',
+    locator: 'synthetic:revision',
+    content_sha256: sha256('Synthetic revised extractive passage.'),
+    text: 'Synthetic revised extractive passage.',
     readable: true,
   });
   userId = Number((await db('users').where({ login: 'superadmin' }).first('id'))?.id);
@@ -154,6 +213,7 @@ describe('tenant-scoped INTERNAL research suggestion versions', () => {
       readResearchSuggestionVersion(db, {
         authenticatedReader: actor(),
         suggestionId: first!.suggestionId,
+        resolverForTransaction,
       })
     ).resolves.toMatchObject({ version: 2, status: 'unreviewed', visibility: 'INTERNAL' });
     await expect(
@@ -182,6 +242,7 @@ describe('tenant-scoped INTERNAL research suggestion versions', () => {
       readResearchSuggestionVersion(db, {
         authenticatedReader: { ...actor(), companyId: companyId + 1 },
         suggestionId: 'mw:suggestion:synthetic-summary',
+        resolverForTransaction,
       })
     ).rejects.toThrow(/unavailable in this company context/u);
     await db('company_memberships')
@@ -191,6 +252,7 @@ describe('tenant-scoped INTERNAL research suggestion versions', () => {
       readResearchSuggestionVersion(db, {
         authenticatedReader: actor(),
         suggestionId: 'mw:suggestion:synthetic-summary',
+        resolverForTransaction,
       })
     ).rejects.toThrow(/unavailable in this company context/u);
   });
@@ -223,6 +285,7 @@ describe('tenant-scoped INTERNAL research suggestion versions', () => {
       readResearchSuggestionVersion(db, {
         authenticatedReader: actor(),
         suggestionId: 'mw:suggestion:synthetic-summary',
+        resolverForTransaction,
       })
     ).resolves.toMatchObject({ suggestion: { text: 'Synthetic extractive passage.' } });
   });
@@ -254,6 +317,7 @@ describe('tenant-scoped INTERNAL research suggestion versions', () => {
     const read = readResearchSuggestionVersion(db, {
       authenticatedReader: mutableReader,
       suggestionId: 'mw:suggestion:synthetic-summary',
+      resolverForTransaction,
     });
     mutableReader.companyId += 1;
     await expect(read).resolves.toMatchObject({
@@ -283,7 +347,43 @@ describe('tenant-scoped INTERNAL research suggestion versions', () => {
       readResearchSuggestionVersion(db, {
         authenticatedReader: actor(),
         suggestionId: 'mw:suggestion:synthetic-summary',
+        resolverForTransaction,
       })
     ).rejects.toThrow(/integrity verification/u);
   });
+
+  it.each(['source', 'assertion', 'evidence'] as const)(
+    'fails closed when current %s access or content changes after persistence',
+    async (record) => {
+      await storeResearchSuggestions(db, {
+        authenticatedActor: actor(),
+        envelope: envelope(),
+        resolverForTransaction,
+      });
+      if (record === 'source') {
+        await db('test_research_passage_access')
+          .where({ locator: 'synthetic:1' })
+          .update({
+            content_sha256: sha256('Changed source passage.'),
+            text: 'Changed source passage.',
+          });
+      } else if (record === 'assertion') {
+        await db('test_research_assertion_access')
+          .where({ assertion_id: 'mw:assertion:synthetic-assertion' })
+          .update({ active: false });
+      } else {
+        await db('test_research_evidence_access')
+          .where({ evidence_id: 'mw:evidence:synthetic-evidence' })
+          .update({ active: false, readable: false });
+      }
+
+      await expect(
+        readResearchSuggestionVersion(db, {
+          authenticatedReader: actor(),
+          suggestionId: 'mw:suggestion:synthetic-summary',
+          resolverForTransaction,
+        })
+      ).rejects.toThrow(/trusted source and evidence validation/u);
+    }
+  );
 });

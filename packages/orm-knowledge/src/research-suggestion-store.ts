@@ -21,6 +21,8 @@ export interface StoreResearchSuggestionsInput {
 
 export interface ReadResearchSuggestionInput {
   readonly authenticatedReader: AuthenticatedResearchReviewer;
+  /** Must re-resolve current authoritative sources and tenant-scoped records using this transaction. */
+  readonly resolverForTransaction: (trx: Knex.Transaction) => TrustedSuggestionResolver;
   readonly suggestionId: string;
   readonly version?: number;
 }
@@ -227,13 +229,21 @@ export async function readResearchSuggestionVersion(
     ) {
       fail('Stored research suggestion failed canonical projection verification');
     }
+    const resolver = input.resolverForTransaction(trx);
+    const [validatedSuggestion] = await validatedSuggestions(
+      { format: 'mw-local-ai-suggestion-envelope/v1', suggestions: [suggestion] },
+      resolver
+    );
+    if (!validatedSuggestion || validatedSuggestion.id !== row.suggestion_id) {
+      fail('Stored research suggestion failed trusted source and evidence revalidation');
+    }
     return {
       suggestionId: String(row.suggestion_id),
       version: Number(row.version),
       digest: suggestionDigest,
       visibility: 'INTERNAL',
       status: 'unreviewed',
-      suggestion,
+      suggestion: validatedSuggestion,
       idempotent: false,
     };
   });
