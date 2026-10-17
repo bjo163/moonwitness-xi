@@ -26,6 +26,8 @@ export function StoryWorkbenchPage() {
   const [draft, setDraft] = useState<string | null>(null);
   const [pagesDraft, setPagesDraft] = useState<StoryPageDocument[] | null>(null);
   const [selectedPageId, setSelectedPageId] = useState(initialPage.page_id);
+  const [revisionInput, setRevisionInput] = useState('');
+  const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -38,6 +40,12 @@ export function StoryWorkbenchPage() {
   });
   const current = storyQuery.data;
   const storyIsMissing = storyQuery.error instanceof NotFoundError;
+  const historyQuery = useQuery({
+    queryKey: ['story-workbench-version', client.getCompanyId(), storyId, selectedVersion],
+    queryFn: () => client.getStoryVersion(storyId, selectedVersion!),
+    enabled: selectedVersion !== null && selectedVersion < (current?.version ?? 0),
+    retry: false,
+  });
 
   if (user?.role !== 'user' && user?.role !== 'superadmin') {
     return (
@@ -48,10 +56,28 @@ export function StoryWorkbenchPage() {
     );
   }
 
-  const pages = pagesDraft ?? current?.story.pages ?? [initialPage];
-  const selectedPage = pages.find((page) => page.page_id === selectedPageId) ?? pages[0]!;
-  const value = draft ?? selectedPage.original_text;
+  const viewingHistory = selectedVersion !== null;
+  const displayed = viewingHistory ? historyQuery.data : current;
+  const pages = viewingHistory
+    ? (displayed?.story.pages ?? [])
+    : (pagesDraft ?? current?.story.pages ?? [initialPage]);
+  const selectedPage =
+    pages.find((page) => page.page_id === selectedPageId) ?? pages[0] ?? initialPage;
+  const value = viewingHistory ? selectedPage.original_text : (draft ?? selectedPage.original_text);
   const nextVersion = (current?.version ?? 0) + 1;
+  const canEdit =
+    !viewingHistory && !saving && !storyQuery.isLoading && (!storyQuery.isError || storyIsMissing);
+
+  function loadRevision() {
+    const version = Number(revisionInput);
+    if (!Number.isSafeInteger(version) || version < 1 || version >= (current?.version ?? 0)) return;
+    setSelectedVersion(version);
+  }
+
+  function viewLatestRevision() {
+    setSelectedVersion(null);
+    setSelectedPageId(current?.story.pages[0]?.page_id ?? initialPage.page_id);
+  }
 
   async function saveRevision() {
     setSaving(true);
@@ -144,6 +170,59 @@ export function StoryWorkbenchPage() {
             {current ? `Current v${current.version}` : 'New story'} · next v{nextVersion}
           </p>
         </div>
+        {current && (
+          <div className="flex flex-wrap items-end gap-3 border-y border-ink/15 py-3">
+            <label className="font-mono text-xs uppercase tracking-wider text-ink-faint">
+              <span className="mb-1 block">Inspect previous revision</span>
+              <input
+                aria-label="Previous revision number"
+                type="number"
+                min={1}
+                max={current.version - 1}
+                value={revisionInput}
+                onChange={(event) => setRevisionInput(event.currentTarget.value)}
+                disabled={current.version <= 1}
+                className="w-36 border-2 border-ink/30 bg-paper p-2 text-sm text-ink"
+              />
+            </label>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={loadRevision}
+              disabled={!revisionInput || current.version <= 1}
+            >
+              Load revision
+            </Button>
+            {viewingHistory && (
+              <Button type="button" variant="outline" onClick={viewLatestRevision}>
+                Return to latest revision
+              </Button>
+            )}
+            <p role="status" className="text-sm text-ink-soft">
+              {viewingHistory
+                ? `Viewing immutable revision ${selectedVersion}; editing is disabled.`
+                : `Latest revision ${current.version} is open for editing.`}
+            </p>
+          </div>
+        )}
+        {viewingHistory && historyQuery.isLoading && <p role="status">Loading revision…</p>}
+        {viewingHistory && historyQuery.isError && (
+          <div role="alert" className="flex flex-wrap items-center gap-3 text-sm text-destructive">
+            <p>Could not load that revision. The latest revision remains unchanged.</p>
+            <Button type="button" variant="outline" onClick={() => void historyQuery.refetch()}>
+              Retry loading revision
+            </Button>
+          </div>
+        )}
+        {viewingHistory && displayed && (
+          <p
+            role="note"
+            className="border-l-4 border-amber-700/50 bg-amber-100/50 p-3 text-sm text-ink dark:bg-amber-950/20"
+          >
+            Historical revisions are immutable. Return to the latest revision to make and save
+            edits.
+          </p>
+        )}
         <div
           role="note"
           className="flex gap-3 border-2 border-amber-700/50 bg-amber-100/50 p-3 text-sm text-ink dark:bg-amber-950/20"
@@ -181,7 +260,7 @@ export function StoryWorkbenchPage() {
               value={selectedPage.page_id}
               onChange={(event) => {
                 setSelectedPageId(event.currentTarget.value);
-                setDraft(null);
+                if (!viewingHistory) setDraft(null);
               }}
               className="w-full border-2 border-ink/30 bg-paper p-2 text-sm text-ink"
             >
@@ -192,24 +271,28 @@ export function StoryWorkbenchPage() {
               ))}
             </select>
           </label>
-          <Button type="button" onClick={addPage} disabled={pages.length >= 100}>
+          <Button type="button" onClick={addPage} disabled={!canEdit || pages.length >= 100}>
             Add page
           </Button>
           <Button
             type="button"
             onClick={() => moveSelectedPage(-1)}
-            disabled={pages[0]?.page_id === selectedPage.page_id}
+            disabled={!canEdit || pages[0]?.page_id === selectedPage.page_id}
           >
             Move up
           </Button>
           <Button
             type="button"
             onClick={() => moveSelectedPage(1)}
-            disabled={pages.at(-1)?.page_id === selectedPage.page_id}
+            disabled={!canEdit || pages.at(-1)?.page_id === selectedPage.page_id}
           >
             Move down
           </Button>
-          <Button type="button" onClick={removeSelectedPage} disabled={pages.length <= 1}>
+          <Button
+            type="button"
+            onClick={removeSelectedPage}
+            disabled={!canEdit || pages.length <= 1}
+          >
             Remove page
           </Button>
         </div>
@@ -234,6 +317,7 @@ export function StoryWorkbenchPage() {
           rows={12}
           maxLength={1000000}
           spellCheck={false}
+          readOnly={!canEdit || historyQuery.isLoading || pages.length === 0}
           className="min-h-64 w-full resize-y border-2 border-ink/30 bg-paper p-4 font-mono text-sm leading-relaxed text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime"
           aria-describedby="story-page-help"
         />
@@ -242,11 +326,7 @@ export function StoryWorkbenchPage() {
           to LF; other whitespace is preserved.
         </p>
         <div className="flex flex-wrap items-center gap-3">
-          <Button
-            type="button"
-            onClick={() => void saveRevision()}
-            disabled={saving || storyQuery.isLoading || (storyQuery.isError && !storyIsMissing)}
-          >
+          <Button type="button" onClick={() => void saveRevision()} disabled={!canEdit}>
             <Save aria-hidden="true" className="mr-2 size-4" />
             {saving ? 'Saving…' : `Save revision ${nextVersion}`}
           </Button>
@@ -262,16 +342,16 @@ export function StoryWorkbenchPage() {
           )}
         </div>
       </section>
-      {current && (
+      {displayed && (
         <section className="ink-panel bg-card p-5">
           <h2 className="font-display text-lg uppercase">Latest revision integrity</h2>
           <dl className="mt-3 grid gap-2 font-mono text-xs sm:grid-cols-[auto_minmax(0,1fr)]">
             <dt className="text-ink-faint">Version</dt>
-            <dd>{current.version}</dd>
+            <dd>{displayed.version}</dd>
             <dt className="text-ink-faint">SHA-256</dt>
-            <dd className="break-all">{current.digest}</dd>
+            <dd className="break-all">{displayed.digest}</dd>
             <dt className="text-ink-faint">Visibility</dt>
-            <dd>{current.visibility}</dd>
+            <dd>{displayed.visibility}</dd>
           </dl>
         </section>
       )}

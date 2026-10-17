@@ -1,10 +1,16 @@
+import { createHash } from 'node:crypto';
 import Fastify from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import knex, { type Knex } from 'knex';
 import { installAddons } from '@moonwitness/orm';
 import { manifest as baseManifest, Company } from '@moonwitness/orm-base';
-import { manifest as knowledgeManifest, WitnessTestimony } from '@moonwitness/orm-knowledge';
+import {
+  manifest as knowledgeManifest,
+  syntheticWitnessSubjectRefSha256,
+  WitnessTestimony,
+} from '@moonwitness/orm-knowledge';
 import { researchWitnessRoutes } from '../src/routes/research-witness.routes.js';
+import { researchPrivacyRoutes } from '../src/routes/research-privacy.routes.js';
 
 describe('owner-scoped synthetic witness API', () => {
   let db: Knex;
@@ -68,6 +74,7 @@ describe('owner-scoped synthetic witness API', () => {
       }
     });
     await app.register(researchWitnessRoutes);
+    await app.register(researchPrivacyRoutes);
   });
 
   afterEach(async () => {
@@ -220,6 +227,51 @@ describe('owner-scoped synthetic witness API', () => {
     expect(response.body).not.toContain('INACTIVE-WITNESS-CHILD-CANARY');
     expect(response.json().data.corrections).toHaveLength(1);
     expect(response.json().data.interpretations).toHaveLength(1);
+  });
+
+  it('conceals an owned synthetic witness after its tenant-scoped privacy withdrawal', async () => {
+    const externalKey = 'synthetic-witness-scoped-001';
+    const subjectRefSha256 = syntheticWitnessSubjectRefSha256(companyId, externalKey);
+    const projection = JSON.stringify({ canary: 'SYNTHETIC-WITNESS-REVOCATION-CANARY' });
+    const projectionDigest = createHash('sha256').update(projection).digest('hex');
+    await db('knowledge_privacy_projections').insert({
+      company_id: companyId,
+      projection_key: 'synthetic-witness-withdrawal-fixture',
+      subject_ref_sha256: subjectRefSha256,
+      projection_json: projection,
+      projection_digest: projectionDigest,
+      synthetic: true,
+      visibility: 'RESTRICTED',
+      state: 'active',
+    });
+
+    const withdrawal = await app.inject({
+      method: 'POST',
+      url: '/api/research/privacy/revocations',
+      headers: { 'x-test-role': 'superadmin' },
+      payload: {
+        subject_ref_sha256: subjectRefSha256,
+        consent_decision_ref_sha256: createHash('sha256')
+          .update('synthetic-consent-decision-fixture')
+          .digest('hex'),
+        idempotency_key: 'witness-withdrawal-001',
+      },
+    });
+    const concealedRead = await app.inject({
+      method: 'GET',
+      url: `/api/research/witnesses/${scopedWitnessId}`,
+      headers: { 'x-test-role': 'superadmin' },
+    });
+
+    expect(withdrawal.statusCode).toBe(201);
+    expect(concealedRead.statusCode).toBe(404);
+    expect(concealedRead.body).toBe(
+      JSON.stringify({ success: false, error: 'Witness record not found' })
+    );
+    expect(concealedRead.body).not.toContain('Synthetic owner-scoped example');
+    expect(await db('knowledge_witness_testimonies').where({ id: scopedWitnessId })).toHaveLength(
+      1
+    );
   });
 
   it('hides guessed, non-synthetic, wrong-owner and foreign-tenant records identically', async () => {

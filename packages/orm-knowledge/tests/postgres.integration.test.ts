@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, randomInt, randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,6 +13,7 @@ import { manifest as workflowManifest, startWorkflow } from '@moonwitness/orm-wo
 import { readQuranPassage, readTextualWitnessPassageSnapshot } from '@moonwitness/corpus';
 import {
   activateResearchGraphRelease,
+  applyPrivacyRevocation,
   createResearchGraphRelease,
   manifest,
   readActiveResearchGraphRelease,
@@ -23,6 +24,7 @@ import {
   resolveConceptProfileEvidence,
   readTextualAlignmentCandidateVersion,
   readStoryVersion,
+  syntheticWitnessSubjectRefSha256,
   type StoryMediaReference,
   ResearchGraphRecord,
   storeTextualAlignmentCandidates,
@@ -106,6 +108,7 @@ function syntheticAssertionContent(revision: number, claim: string) {
 
 postgresDescribe('knowledge addon PostgreSQL integration', () => {
   const schema = `mw_knowledge_${randomUUID().replaceAll('-', '')}`;
+  const applicationName = `mw_knowledge_test_${randomUUID().replaceAll('-', '')}`;
   let adminDb: Knex;
   let db: Knex;
 
@@ -114,9 +117,11 @@ postgresDescribe('knowledge addon PostgreSQL integration', () => {
     adminDb = knex({ client: 'pg', connection: connectionString, pool: { min: 0, max: 2 } });
     await adminDb.raw('select 1');
     await adminDb.raw('create schema ??', [schema]);
+    const testConnection = new URL(connectionString);
+    testConnection.searchParams.set('application_name', applicationName);
     db = knex({
       client: 'pg',
-      connection: connectionString,
+      connection: testConnection.toString(),
       searchPath: [schema],
       pool: { min: 0, max: 2 },
     });
@@ -168,6 +173,114 @@ postgresDescribe('knowledge addon PostgreSQL integration', () => {
       corrections: [{ sequence: 1 }],
       interpretations: [{ epistemicStatus: 'hypothesis' }],
     });
+    const scopedWitnessRow = await db('knowledge_witness_testimonies')
+      .where({ id: ownerScopedFixture?.id })
+      .first('external_key');
+    const witnessSubjectHash = syntheticWitnessSubjectRefSha256(
+      Number(company?.id),
+      String(scopedWitnessRow?.external_key)
+    );
+    const projectionJson = JSON.stringify({ canary: 'synthetic witness projection' });
+    await db('knowledge_privacy_projections').insert(
+      [1, 2].map((sequence) => ({
+        company_id: Number(company?.id),
+        projection_key: `synthetic-witness-${sequence}-${randomUUID()}`,
+        subject_ref_sha256: witnessSubjectHash,
+        projection_json: projectionJson,
+        projection_digest: artifactSha256(Buffer.from(projectionJson)),
+        synthetic: true,
+        visibility: 'RESTRICTED',
+        state: 'active',
+      }))
+    );
+    const lockId = randomInt(1, 2_000_000_000);
+    await db.raw(`
+      CREATE FUNCTION hold_witness_withdrawal()
+      RETURNS trigger AS $$
+      BEGIN
+        PERFORM pg_advisory_xact_lock(${lockId});
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql
+    `);
+    await db.raw(`
+      CREATE TRIGGER hold_witness_withdrawal
+      BEFORE UPDATE ON knowledge_privacy_projections
+      FOR EACH ROW EXECUTE FUNCTION hold_witness_withdrawal()
+    `);
+    const gate = await adminDb.transaction();
+    await gate.raw('SELECT pg_advisory_lock(?)', [lockId]);
+    const withdrawal = applyPrivacyRevocation(db, {
+      steward: {
+        userId: Number(superadmin?.id),
+        companyId: Number(company?.id),
+        role: 'superadmin',
+      },
+      subjectRefSha256: witnessSubjectHash,
+      consentDecisionRefSha256: artifactSha256(Buffer.from('synthetic consent fixture')),
+      idempotencyKey: `witness-withdrawal-${randomUUID()}`,
+    });
+    let concurrentRead: Promise<Awaited<ReturnType<typeof readOwnedSyntheticWitness>>> | null =
+      null;
+    const waitForProjectionWaiters = async (minimum: number) => {
+      for (let attempt = 0; attempt < 200; attempt += 1) {
+        const result = await adminDb.raw(
+          `SELECT count(*)::int AS count
+           FROM pg_stat_activity
+           WHERE wait_event_type = 'Lock'
+             AND query LIKE '%knowledge_privacy_projections%'
+             AND application_name = ?
+             AND pid <> pg_backend_pid()`,
+          [applicationName]
+        );
+        if (Number(result.rows[0]?.count) >= minimum) return;
+        await new Promise<void>((resolve) => setTimeout(resolve, 25));
+      }
+      throw new Error(`Expected ${minimum} witness projection lock waiters`);
+    };
+    let lockWaitError: unknown;
+    try {
+      await waitForProjectionWaiters(1);
+      concurrentRead = readOwnedSyntheticWitness(
+        db,
+        {
+          userId: Number(superadmin?.id),
+          companyId: Number(company?.id),
+          role: 'superadmin',
+        },
+        Number(ownerScopedFixture?.id)
+      );
+      await waitForProjectionWaiters(2);
+    } catch (error) {
+      lockWaitError = error;
+    } finally {
+      await gate.raw('SELECT pg_advisory_unlock(?)', [lockId]);
+      await gate.commit();
+    }
+    if (lockWaitError) {
+      await Promise.allSettled([withdrawal, ...(concurrentRead ? [concurrentRead] : [])]);
+      throw lockWaitError;
+    }
+    const [withdrawalResult, readResult] = await Promise.allSettled([
+      withdrawal,
+      concurrentRead as Promise<Awaited<ReturnType<typeof readOwnedSyntheticWitness>>>,
+    ]);
+    expect(withdrawalResult.status).toBe('fulfilled');
+    expect(readResult).toMatchObject({ status: 'rejected', reason: { code: 'NOT_FOUND' } });
+    await expect(
+      readOwnedSyntheticWitness(
+        db,
+        {
+          userId: Number(superadmin?.id),
+          companyId: Number(company?.id),
+          role: 'superadmin',
+        },
+        Number(ownerScopedFixture?.id)
+      )
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    expect(
+      await db('knowledge_witness_testimonies').where({ id: ownerScopedFixture?.id })
+    ).toHaveLength(1);
     await expect(
       readOwnedSyntheticWitness(
         db,

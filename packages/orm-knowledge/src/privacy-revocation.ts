@@ -52,6 +52,14 @@ function sha256(value: string): string {
   return createHash('sha256').update(value, 'utf8').digest('hex');
 }
 
+/** Stable tenant-scoped subject identity used to link a synthetic witness to withdrawal. */
+export function syntheticWitnessSubjectRefSha256(companyId: number, externalKey: string): string {
+  if (!Number.isSafeInteger(companyId) || companyId < 1 || !externalKey.trim()) {
+    throw new TypeError('A valid company and witness key are required');
+  }
+  return sha256(`moonwitness:knowledge:witness:v1:${companyId}:${externalKey}`);
+}
+
 function validSteward(steward: AuthenticatedPrivacySteward): boolean {
   return (
     Number.isSafeInteger(steward.userId) &&
@@ -165,16 +173,17 @@ export async function applyPrivacyRevocation(
     );
     if (current) return current;
 
-    const syntheticProjection = await trx(projectionTable)
+    const syntheticProjections = await trx(projectionTable)
       .where({
         company_id: input.steward.companyId,
         subject_ref_sha256: subjectRefSha256,
         state: 'active',
         synthetic: true,
       })
+      .orderBy('id', 'asc')
       .forUpdate()
-      .first('id');
-    if (!syntheticProjection) {
+      .select('id');
+    if (syntheticProjections.length === 0) {
       // A same-key request can wait on this projection row while its peer
       // commits the revocation. Recheck after the lock wait before returning 404.
       const concurrentReplay = await replayExistingRevocation(

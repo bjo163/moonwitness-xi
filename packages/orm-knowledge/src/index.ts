@@ -105,6 +105,7 @@ export {
   applyPrivacyRevocation,
   PrivacyRevocationError,
   readActivePrivacyProjections,
+  syntheticWitnessSubjectRefSha256,
 } from './privacy-revocation.js';
 export type {
   ActivePrivacyProjection,

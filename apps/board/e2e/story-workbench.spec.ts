@@ -84,3 +84,75 @@ test('story workbench keeps drafts and requires retry after an unavailable read'
   expect(readAttempts).toBe(2);
   expect(writeAttempts).toBe(0);
 });
+
+test('story workbench reads immutable prior revisions without losing the latest draft', async ({
+  page,
+}) => {
+  let writeAttempts = 0;
+  await page.route('**/api/research/stories/**', async (route) => {
+    if (route.request().method() === 'POST') {
+      writeAttempts += 1;
+      await route.fulfill({ status: 500, json: { success: false, error: 'Unexpected write' } });
+      return;
+    }
+    const version = new URL(route.request().url()).searchParams.get('version');
+    const revision = version === '1' ? 1 : 2;
+    const pageText = revision === 1 ? 'Immutable original page.' : 'Latest revised page.';
+    const digest = revision === 1 ? 'a'.repeat(64) : 'b'.repeat(64);
+    await route.fulfill({
+      status: 200,
+      json: {
+        success: true,
+        data: {
+          storyId: 'mw:story:editorial-sample',
+          version: revision,
+          digest,
+          previousDigest: revision === 1 ? null : 'a'.repeat(64),
+          visibility: 'INTERNAL',
+          idempotent: false,
+          story: {
+            schema_version: 1,
+            story_id: 'mw:story:editorial-sample',
+            version: revision,
+            title: 'Editorial sample',
+            visibility: 'INTERNAL',
+            pages: [
+              {
+                page_id: 'mw:story-page:editorial-sample-1',
+                page_order: 1,
+                original_text: pageText,
+              },
+            ],
+          },
+        },
+      },
+    });
+  });
+
+  await page.goto('/login');
+  await page.getByLabel('Login').fill('superadmin');
+  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await expect(page).toHaveURL(/\/$/u);
+
+  await page.getByRole('button', { name: 'Switch company. Current scope: Global Scope' }).click();
+  await page.getByRole('menuitem', { name: 'MoonWitness' }).click();
+  await page.getByRole('link', { name: 'Story workbench' }).click();
+  const editor = page.getByLabel('Page text · exact whitespace is preserved');
+  await expect(editor).toHaveValue('Latest revised page.');
+  const latestDraft = 'Unsaved latest draft must survive history browsing.';
+  await editor.fill(latestDraft);
+
+  await page.getByLabel('Previous revision number').fill('1');
+  await page.getByRole('button', { name: 'Load revision' }).click();
+  await expect(editor).toHaveValue('Immutable original page.');
+  await expect(editor).toHaveAttribute('readonly', '');
+  await expect(page.getByText('Viewing immutable revision 1; editing is disabled.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Save revision 3' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Add page' })).toBeDisabled();
+
+  await page.getByRole('button', { name: 'Return to latest revision' }).click();
+  await expect(editor).toHaveValue(latestDraft);
+  await expect(editor).not.toHaveAttribute('readonly', '');
+  expect(writeAttempts).toBe(0);
+});

@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { syntheticWitnessSubjectRefSha256 } from './privacy-revocation.js';
 
 export interface AuthenticatedWitnessSteward {
   userId: number;
@@ -170,102 +171,124 @@ export async function readOwnedSyntheticWitness(
   steward: AuthenticatedWitnessSteward,
   testimonyId: number
 ): Promise<ScopedSyntheticWitness> {
-  await verifyWitnessSteward(db, steward);
   if (!Number.isSafeInteger(testimonyId) || testimonyId < 1) {
     throw new WitnessAccessError('NOT_FOUND');
   }
 
-  const testimony = await db<WitnessTestimonyRow>('knowledge_witness_testimonies')
-    .where({
-      id: testimonyId,
-      active: true,
-      company_id: steward.companyId,
-      created_by_id: steward.userId,
-      synthetic: true,
-      visibility: 'RESTRICTED',
-    })
-    .first(
-      'id',
-      'external_key',
-      'original_text',
-      'source_label',
-      'source_locator',
-      'source_digest',
-      'received_time_text',
-      'received_time_precision',
-      'uncertainty_note',
-      'visibility',
-      'company_id',
-      'created_by_id',
-      'synthetic'
-    );
-  if (!testimony) throw new WitnessAccessError('NOT_FOUND');
-
-  const [corrections, interpretations] = await Promise.all([
-    db<WitnessCorrectionRow>('knowledge_witness_corrections')
-      .where({ testimony_id: testimony.id, synthetic: true, active: true })
-      .orderBy('sequence', 'asc')
-      .select(
-        'sequence',
-        'correction_text',
-        'reason',
+  return db.transaction(async (trx) => {
+    await verifyWitnessSteward(trx, steward);
+    const testimony = await trx<WitnessTestimonyRow>('knowledge_witness_testimonies')
+      .where({
+        id: testimonyId,
+        active: true,
+        company_id: steward.companyId,
+        created_by_id: steward.userId,
+        synthetic: true,
+        visibility: 'RESTRICTED',
+      })
+      .first(
+        'id',
+        'external_key',
+        'original_text',
         'source_label',
         'source_locator',
         'source_digest',
-        'asserted_time_text',
-        'asserted_time_precision',
-        'uncertainty_note'
-      ),
-    db<WitnessInterpretationRow>('knowledge_witness_interpretations')
+        'received_time_text',
+        'received_time_precision',
+        'uncertainty_note',
+        'visibility',
+        'company_id',
+        'created_by_id',
+        'synthetic'
+      );
+    if (!testimony) throw new WitnessAccessError('NOT_FOUND');
+
+    const subjectRefSha256 = syntheticWitnessSubjectRefSha256(
+      steward.companyId,
+      testimony.external_key
+    );
+    // Serialize reads with withdrawal: the revocation service locks these projection rows
+    // before recording the withdrawal and clearing their content.
+    await trx('knowledge_privacy_projections')
       .where({
-        testimony_id: testimony.id,
+        company_id: steward.companyId,
+        subject_ref_sha256: subjectRefSha256,
         synthetic: true,
-        active: true,
-        visibility: 'RESTRICTED',
       })
       .orderBy('id', 'asc')
-      .select(
-        'assertion_ref',
-        'evidence_ref',
-        'interpretation_text',
-        'method_label',
-        'method_version',
-        'epistemic_status',
-        'visibility'
-      ),
-  ]);
+      .forUpdate()
+      .select('id');
+    const revocation = await trx('knowledge_privacy_revocations')
+      .where({ company_id: steward.companyId, subject_ref_sha256: subjectRefSha256 })
+      .first('id');
+    if (revocation) throw new WitnessAccessError('NOT_FOUND');
 
-  return {
-    id: testimony.id,
-    externalKey: testimony.external_key,
-    originalText: testimony.original_text,
-    sourceLabel: testimony.source_label,
-    sourceLocator: testimony.source_locator,
-    sourceDigest: testimony.source_digest,
-    receivedTimeText: testimony.received_time_text,
-    receivedTimePrecision: testimony.received_time_precision,
-    uncertaintyNote: testimony.uncertainty_note,
-    corrections: corrections.map((correction) => ({
-      sequence: correction.sequence,
-      correctionText: correction.correction_text,
-      reason: correction.reason,
-      sourceLabel: correction.source_label,
-      sourceLocator: correction.source_locator,
-      sourceDigest: correction.source_digest,
-      assertedTimeText: correction.asserted_time_text,
-      assertedTimePrecision: correction.asserted_time_precision,
-      uncertaintyNote: correction.uncertainty_note,
-    })),
-    interpretations: interpretations.map((interpretation) => ({
-      assertionRef: interpretation.assertion_ref,
-      evidenceRef: interpretation.evidence_ref,
-      interpretationText: interpretation.interpretation_text,
-      methodLabel: interpretation.method_label,
-      methodVersion: interpretation.method_version,
-      epistemicStatus: interpretation.epistemic_status,
-      visibility: interpretation.visibility,
-    })),
-  };
+    const [corrections, interpretations] = await Promise.all([
+      trx<WitnessCorrectionRow>('knowledge_witness_corrections')
+        .where({ testimony_id: testimony.id, synthetic: true, active: true })
+        .orderBy('sequence', 'asc')
+        .select(
+          'sequence',
+          'correction_text',
+          'reason',
+          'source_label',
+          'source_locator',
+          'source_digest',
+          'asserted_time_text',
+          'asserted_time_precision',
+          'uncertainty_note'
+        ),
+      trx<WitnessInterpretationRow>('knowledge_witness_interpretations')
+        .where({
+          testimony_id: testimony.id,
+          synthetic: true,
+          active: true,
+          visibility: 'RESTRICTED',
+        })
+        .orderBy('id', 'asc')
+        .select(
+          'assertion_ref',
+          'evidence_ref',
+          'interpretation_text',
+          'method_label',
+          'method_version',
+          'epistemic_status',
+          'visibility'
+        ),
+    ]);
+
+    return {
+      id: testimony.id,
+      externalKey: testimony.external_key,
+      originalText: testimony.original_text,
+      sourceLabel: testimony.source_label,
+      sourceLocator: testimony.source_locator,
+      sourceDigest: testimony.source_digest,
+      receivedTimeText: testimony.received_time_text,
+      receivedTimePrecision: testimony.received_time_precision,
+      uncertaintyNote: testimony.uncertainty_note,
+      corrections: corrections.map((correction) => ({
+        sequence: correction.sequence,
+        correctionText: correction.correction_text,
+        reason: correction.reason,
+        sourceLabel: correction.source_label,
+        sourceLocator: correction.source_locator,
+        sourceDigest: correction.source_digest,
+        assertedTimeText: correction.asserted_time_text,
+        assertedTimePrecision: correction.asserted_time_precision,
+        uncertaintyNote: correction.uncertainty_note,
+      })),
+      interpretations: interpretations.map((interpretation) => ({
+        assertionRef: interpretation.assertion_ref,
+        evidenceRef: interpretation.evidence_ref,
+        interpretationText: interpretation.interpretation_text,
+        methodLabel: interpretation.method_label,
+        methodVersion: interpretation.method_version,
+        epistemicStatus: interpretation.epistemic_status,
+        visibility: interpretation.visibility,
+      })),
+    };
+  });
 }
 
 /** Append an owned synthetic restricted correction after shape-checking its attribution metadata. */
