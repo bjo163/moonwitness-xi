@@ -139,13 +139,17 @@ test('story workbench reads immutable prior revisions without losing the latest 
   await page.getByRole('menuitem', { name: 'MoonWitness' }).click();
   await page.getByRole('link', { name: 'Story workbench' }).click();
   const editor = page.getByLabel('Page text · exact whitespace is preserved');
+  const preview = page.getByRole('article', { name: 'Private preview of page 1' });
   await expect(editor).toHaveValue('Latest revised page.');
+  await expect(preview).toContainText('Latest revised page.');
   const latestDraft = 'Unsaved latest draft must survive history browsing.';
   await editor.fill(latestDraft);
+  await expect(preview).toContainText(latestDraft);
 
   await page.getByLabel('Previous revision number').fill('1');
   await page.getByRole('button', { name: 'Load revision' }).click();
   await expect(editor).toHaveValue('Immutable original page.');
+  await expect(preview).toContainText('Immutable original page.');
   await expect(editor).toHaveAttribute('readonly', '');
   await expect(page.getByText('Viewing immutable revision 1; editing is disabled.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Save revision 3' })).toBeDisabled();
@@ -153,6 +157,7 @@ test('story workbench reads immutable prior revisions without losing the latest 
 
   await page.getByRole('button', { name: 'Return to latest revision' }).click();
   await expect(editor).toHaveValue(latestDraft);
+  await expect(preview).toContainText(latestDraft);
   await expect(editor).not.toHaveAttribute('readonly', '');
   expect(writeAttempts).toBe(0);
 });

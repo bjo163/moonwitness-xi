@@ -342,6 +342,40 @@ export function StoryWorkbenchPage() {
           )}
         </div>
       </section>
+      <section className="space-y-3" aria-labelledby="story-page-preview-title">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-[0.18em] text-ink-faint">
+            Private draft · not published
+          </p>
+          <h2 id="story-page-preview-title" className="mt-1 font-display text-xl uppercase">
+            Page composition preview
+          </h2>
+        </div>
+        <article
+          aria-label={`Private preview of page ${selectedPage.page_order}`}
+          className="mx-auto flex min-h-[28rem] w-full max-w-[40rem] flex-col border-4 border-ink bg-paper p-6 text-ink shadow-[8px_8px_0_var(--color-ink)] sm:min-h-[40rem] sm:p-10"
+        >
+          <header className="flex items-start justify-between gap-4 border-b-2 border-ink/25 pb-4">
+            <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-ink-faint">
+              Editorial sample
+            </p>
+            <p className="font-mono text-xs uppercase text-ink-faint">
+              {selectedPage.page_order} / {pages.length}
+            </p>
+          </header>
+          <div className="flex flex-1 flex-col justify-center py-8">
+            <h3 className="font-display text-3xl uppercase leading-tight sm:text-5xl">
+              {current?.story.title ?? 'Editorial sample'}
+            </h3>
+            <p className="mt-6 whitespace-pre-wrap break-words text-base leading-relaxed sm:text-lg">
+              {value || 'Add synthetic page text to preview this composition.'}
+            </p>
+          </div>
+          <footer className="border-t-2 border-ink/25 pt-3 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-ink-faint">
+            Internal review only · no public or media export
+          </footer>
+        </article>
+      </section>
       {displayed && (
         <section className="ink-panel bg-card p-5">
           <h2 className="font-display text-lg uppercase">Latest revision integrity</h2>
