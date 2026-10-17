@@ -121,6 +121,11 @@ describe('Asma candidate projection', () => {
         rights_evidence_ref: 'docs/roadmap/evidence/K2-005.md#source-specific-rights-decision',
       },
     ]);
+    expect(productionProfile).toMatchObject({
+      lexical_inventory: 'none',
+      historical_metrics: { state: 'unverified' },
+      interpretation_scope: 'analysis_not_revelation',
+    });
     expect(quranRightsManifest.rights.state).toBe('permitted');
     expect(quranRightsManifest.rights.allowed_uses).toContain('read_analyze');
   });
