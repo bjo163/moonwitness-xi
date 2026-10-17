@@ -4,6 +4,7 @@ import { readQuranPassageSnapshot, readTextualWitnessPassageSnapshot } from '@mo
 import { generateLocalAiSuggestion } from '@moonwitness/local-ai';
 import {
   resolveConceptProfileEvidence,
+  readResearchSuggestionVersion,
   storeResearchSuggestions,
 } from '@moonwitness/orm-knowledge';
 import {
@@ -77,6 +78,221 @@ async function localPassage(selector: { source_id: string; edition_id: string; l
 
 export const localAiSuggestionRoutes: FastifyPluginAsync = async (fastify) => {
   const bodyWithAdditionalFields = new WeakSet<object>();
+  fastify.get<{ Params: { suggestionId: string }; Querystring: { version?: string } }>(
+    '/api/research/suggestions/:suggestionId',
+    {
+      attachValidation: true,
+      schema: {
+        tags: ['Research'],
+        summary: 'Read one tenant-scoped INTERNAL local research candidate',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['suggestionId'],
+          properties: {
+            suggestionId: { type: 'string', pattern: '^mw:suggestion:[a-z0-9][a-z0-9._-]{0,179}$' },
+          },
+        },
+        querystring: {
+          type: 'object',
+          additionalProperties: false,
+          properties: { version: { type: 'string', pattern: '^[1-9][0-9]{0,8}$' } },
+        },
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['success', 'data'],
+            properties: {
+              success: { const: true },
+              data: {
+                type: 'object',
+                additionalProperties: false,
+                required: [
+                  'suggestionId',
+                  'version',
+                  'digest',
+                  'visibility',
+                  'status',
+                  'suggestion',
+                ],
+                properties: {
+                  suggestionId: { type: 'string' },
+                  version: { type: 'integer' },
+                  digest: { type: 'string' },
+                  visibility: { const: 'INTERNAL' },
+                  status: { const: 'unreviewed' },
+                  suggestion: { type: 'object', additionalProperties: true },
+                },
+              },
+            },
+          },
+          400: error,
+          401: error,
+          403: error,
+          404: error,
+        },
+      },
+    },
+    async (request, reply) => {
+      reply.header('Cache-Control', 'private, no-store');
+      const auth = request.auth;
+      if (!auth) return reply.code(401).send({ success: false, error: 'Authentication required' });
+      const userId = auth.userId;
+      const companyId = auth.companyId;
+      if (
+        !['user', 'superadmin'].includes(auth.role) ||
+        !Number.isSafeInteger(userId) ||
+        !userId ||
+        userId < 1 ||
+        !Number.isSafeInteger(companyId) ||
+        !companyId ||
+        companyId < 1
+      )
+        return reply.code(403).send({ success: false, error: 'Suggestion is unavailable' });
+      const version =
+        request.query.version === undefined ? undefined : Number(request.query.version);
+      if (
+        request.validationError ||
+        (version !== undefined &&
+          (!Number.isSafeInteger(version) ||
+            version < 1 ||
+            String(version) !== request.query.version))
+      )
+        return reply.code(400).send({ success: false, error: 'Invalid suggestion version' });
+      const actor = { userId, companyId, role: auth.role as 'user' | 'superadmin' };
+      try {
+        // The preliminary lookup only constrains the resolver to citations in this candidate.
+        // The store then reloads and verifies the exact row in its transaction.
+        const row = await fastify
+          .db('knowledge_research_suggestion_versions')
+          .where({ company_id: actor.companyId, suggestion_id: request.params.suggestionId })
+          .modify((query) => {
+            if (version !== undefined) query.andWhere({ version });
+          })
+          .orderBy('version', 'desc')
+          .first('suggestion_json');
+        if (!row)
+          return reply.code(404).send({ success: false, error: 'Suggestion is unavailable' });
+        const value: unknown = JSON.parse(String(row.suggestion_json));
+        if (!isRecord(value) || !Array.isArray(value.citations))
+          return reply.code(404).send({ success: false, error: 'Suggestion is unavailable' });
+        const citations = value.citations.filter(isRecord);
+        if (citations.length !== value.citations.length)
+          return reply.code(404).send({ success: false, error: 'Suggestion is unavailable' });
+        const expected = new Map<
+          string,
+          {
+            assertionId: string;
+            selector: {
+              source_id: string;
+              edition_id: string;
+              locator: string;
+              content_sha256: string;
+            };
+          }
+        >();
+        for (const citation of citations) {
+          if (
+            typeof citation.evidence_id !== 'string' ||
+            typeof citation.assertion_id !== 'string' ||
+            !isRecord(citation.selector)
+          )
+            return reply.code(404).send({ success: false, error: 'Suggestion is unavailable' });
+          const selector = citation.selector;
+          if (
+            typeof selector.source_id !== 'string' ||
+            typeof selector.edition_id !== 'string' ||
+            typeof selector.locator !== 'string' ||
+            typeof selector.content_sha256 !== 'string'
+          )
+            return reply.code(404).send({ success: false, error: 'Suggestion is unavailable' });
+          expected.set(citation.evidence_id, {
+            assertionId: citation.assertion_id,
+            selector: selector as {
+              source_id: string;
+              edition_id: string;
+              locator: string;
+              content_sha256: string;
+            },
+          });
+        }
+        const resolverForTransaction = (
+          database: Knex | Knex.Transaction
+        ): TrustedSuggestionResolver => ({
+          async resolvePassage(selector) {
+            const item = [...expected.values()].find(
+              (candidate) =>
+                candidate.selector.source_id === selector.source_id &&
+                candidate.selector.edition_id === selector.edition_id &&
+                candidate.selector.locator === selector.locator &&
+                candidate.selector.content_sha256 === selector.content_sha256
+            );
+            if (
+              !item ||
+              !sources.some(
+                (source) =>
+                  source.source_id === selector.source_id &&
+                  source.edition_id === selector.edition_id &&
+                  source.locator === selector.locator
+              )
+            )
+              return null;
+            const passage = await localPassage(selector);
+            return passage && passage.content_sha256 === selector.content_sha256
+              ? { ...passage, readable: true }
+              : null;
+          },
+          async resolveAssertion(id) {
+            for (const [evidenceId, item] of expected)
+              if (item.assertionId === id) {
+                const trusted = await resolveConceptProfileEvidence(database, evidenceId, {
+                  authenticatedReader: actor,
+                  corpusRootDirectory: resolveCorpusDataRoot(),
+                });
+                if (trusted?.access === 'readable' && trusted.canonicalEvidence.assertion_id === id)
+                  return { active: true, readable: true };
+              }
+            return null;
+          },
+          async resolveEvidence(id) {
+            const item = expected.get(id);
+            if (!item) return null;
+            const trusted = await resolveConceptProfileEvidence(database, id, {
+              authenticatedReader: actor,
+              corpusRootDirectory: resolveCorpusDataRoot(),
+            });
+            return trusted?.access === 'readable' &&
+              trusted.canonicalEvidence.assertion_id === item.assertionId
+              ? { assertion_id: item.assertionId, active: true, readable: true }
+              : null;
+          },
+        });
+        const stored = await readResearchSuggestionVersion(fastify.db, {
+          authenticatedReader: actor,
+          suggestionId: request.params.suggestionId,
+          version,
+          resolverForTransaction,
+        });
+        if (!stored)
+          return reply.code(404).send({ success: false, error: 'Suggestion is unavailable' });
+        return reply.send({
+          success: true,
+          data: {
+            suggestionId: stored.suggestionId,
+            version: stored.version,
+            digest: stored.digest,
+            visibility: stored.visibility,
+            status: stored.status,
+            suggestion: stored.suggestion,
+          },
+        });
+      } catch {
+        return reply.code(404).send({ success: false, error: 'Suggestion is unavailable' });
+      }
+    }
+  );
   fastify.post<{ Body: unknown }>(
     '/api/research/suggestions/generate',
     {

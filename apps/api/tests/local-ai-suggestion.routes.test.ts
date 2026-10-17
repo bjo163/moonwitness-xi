@@ -305,6 +305,41 @@ describe('local AI suggestion generation route authorization boundary', () => {
       candidates: [{ version: 1, idempotent: false }],
     });
     expect(await db('knowledge_research_suggestion_versions')).toHaveLength(1);
+    const read = await app.inject({
+      method: 'GET',
+      url: '/api/research/suggestions/mw:suggestion:local-ai-suggestion-001?version=1',
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(read.statusCode).toBe(200);
+    expect(read.headers['cache-control']).toBe('private, no-store');
+    expect(read.json().data).toMatchObject({
+      suggestionId: 'mw:suggestion:local-ai-suggestion-001',
+      version: 1,
+      visibility: 'INTERNAL',
+      status: 'unreviewed',
+      suggestion: { text: firstScalar },
+    });
+    const denied = await app.inject({
+      method: 'GET',
+      url: '/api/research/suggestions/mw:suggestion:local-ai-suggestion-001',
+      headers: { authorization: 'Bearer test', 'x-test-company': 'foreign' },
+    });
+    expect(denied.statusCode).toBe(404);
+    expect(denied.json()).toEqual({ success: false, error: 'Suggestion is unavailable' });
+  });
+
+  it('requires authentication and a canonical positive version for candidate reads', async () => {
+    const unauthenticated = await app.inject({
+      method: 'GET',
+      url: '/api/research/suggestions/mw:suggestion:missing',
+    });
+    expect(unauthenticated.statusCode).toBe(401);
+    const invalidVersion = await app.inject({
+      method: 'GET',
+      url: '/api/research/suggestions/mw:suggestion:missing?version=01',
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(invalidVersion.statusCode).toBe(400);
   });
 
   it('supports only the separately approved local WEBP Genesis 1:1 sample', async () => {
