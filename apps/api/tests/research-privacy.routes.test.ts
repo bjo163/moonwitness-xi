@@ -280,6 +280,68 @@ describe('synthetic research privacy API', () => {
     expect(afterRevocation.body).not.toContain(consentHash);
   });
 
+  it('keeps reactivated or reinserted projections hidden after a subject withdrawal', async () => {
+    const subjectHash = sha256('synthetic-resurrection-subject');
+    const initialJson = JSON.stringify({ excerpt: 'SYNTHETIC-ORIGINAL-CANARY' });
+    await db('knowledge_privacy_projections').insert({
+      company_id: companyId,
+      projection_key: 'synthetic-resurrection-search-001',
+      subject_ref_sha256: subjectHash,
+      projection_json: initialJson,
+      projection_digest: sha256(initialJson),
+      synthetic: true,
+      visibility: 'RESTRICTED',
+      state: 'active',
+    });
+
+    const withdrawal = await app.inject({
+      method: 'POST',
+      url: '/api/research/privacy/revocations',
+      headers: { 'x-test-role': 'superadmin' },
+      payload: body({
+        subject_ref_sha256: subjectHash,
+        idempotency_key: 'synthetic-resurrection-revoke-001',
+      }),
+    });
+    expect(withdrawal.statusCode).toBe(201);
+    expect(withdrawal.json().data.invalidated_projection_count).toBe(1);
+
+    // Simulate a stale writer reactivating the tombstoned row and inserting a
+    // fresh projection for the same subject after the withdrawal committed.
+    const reactivatedJson = JSON.stringify({ excerpt: 'SYNTHETIC-REACTIVATED-CANARY' });
+    await db('knowledge_privacy_projections')
+      .where({ company_id: companyId, projection_key: 'synthetic-resurrection-search-001' })
+      .update({
+        projection_json: reactivatedJson,
+        projection_digest: sha256(reactivatedJson),
+        state: 'active',
+        revoked_at: null,
+      });
+    const reinsertedJson = JSON.stringify({ excerpt: 'SYNTHETIC-REINSERTED-CANARY' });
+    await db('knowledge_privacy_projections').insert({
+      company_id: companyId,
+      projection_key: 'synthetic-resurrection-search-002',
+      subject_ref_sha256: subjectHash,
+      projection_json: reinsertedJson,
+      projection_digest: sha256(reinsertedJson),
+      synthetic: true,
+      visibility: 'RESTRICTED',
+      state: 'active',
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/research/privacy/projections',
+      headers: { 'x-test-role': 'superadmin' },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['cache-control']).toBe('private, no-store');
+    expect(response.body).not.toContain('SYNTHETIC-REACTIVATED-CANARY');
+    expect(response.body).not.toContain('SYNTHETIC-REINSERTED-CANARY');
+    expect(response.body).not.toContain('synthetic-resurrection-search-001');
+    expect(response.body).not.toContain('synthetic-resurrection-search-002');
+  });
+
   it('rejects a client-supplied decision timestamp', async () => {
     const response = await app.inject({
       method: 'POST',
