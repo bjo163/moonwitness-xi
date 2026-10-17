@@ -99,12 +99,14 @@ export function formatSafeStartupDiagnostic(raw) {
   return 'unavailable';
 }
 
-function command(args, { root, environment, capture = false }) {
-  const result = spawnSync('docker', ['compose', ...args], {
+function command(args, { root, environment, capture = false, input }) {
+  const dockerArgs = args[0] === 'network' ? args : ['compose', ...args];
+  const result = spawnSync('docker', dockerArgs, {
     cwd: root,
     env: environment,
     encoding: 'utf8',
-    stdio: capture ? ['ignore', 'pipe', 'pipe'] : 'inherit',
+    stdio: capture ? [input === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'] : 'inherit',
+    input,
   });
   if (result.error || result.status !== 0) {
     const detail = capture ? `${result.stdout ?? ''}${result.stderr ?? ''}`.trim() : '';
@@ -209,6 +211,34 @@ export async function runContainerSmoke({
     LOG_PRETTY: 'false',
     PRINT_ROUTES: 'false',
   };
+  const containerFetch = `const fs=require('node:fs');const input=JSON.parse(fs.readFileSync(0,'utf8'));fetch(input.url,input.options).then(async response=>process.stdout.write(JSON.stringify({ok:response.ok,body:await response.text()}))).catch(()=>process.exit(2));`;
+  const smokeRequest =
+    request === responseText
+      ? async (url, options = {}) => {
+          const parsedUrl = new URL(url);
+          const isBoard = parsedUrl.port === String(boardPort);
+          const targetUrl = isBoard
+            ? `http://board:8080${parsedUrl.pathname}${parsedUrl.search}`
+            : `http://127.0.0.1:3000${parsedUrl.pathname}${parsedUrl.search}`;
+          const result = execute(
+            [...composeArgs, 'exec', '--no-TTY', 'api', 'node', '-e', containerFetch],
+            {
+              root,
+              environment: composeEnvironment,
+              capture: true,
+              input: JSON.stringify({
+                url: targetUrl,
+                options,
+              }),
+            }
+          );
+          try {
+            return JSON.parse(result);
+          } catch {
+            throw new Error('Container smoke request returned an invalid response.');
+          }
+        }
+      : request;
 
   const buildArgs = environment.SMOKE_USE_PREBUILT_IMAGES === 'true' ? ['--no-build'] : ['--build'];
   let failure;
@@ -218,6 +248,15 @@ export async function runContainerSmoke({
       root,
       environment: composeEnvironment,
     });
+
+    phase = 'network_egress_policy';
+    const networkPolicy = execute(
+      ['network', 'inspect', `${projectName}_default`, '--format', '{{.Internal}}'],
+      { root, environment: composeEnvironment, capture: true }
+    ).trim();
+    if (networkPolicy !== 'true') {
+      throw new Error('Smoke network does not deny external connectivity.');
+    }
 
     phase = 'api_start';
     execute([...composeArgs, 'up', '--detach', ...buildArgs, '--no-deps', 'api'], {
@@ -229,7 +268,7 @@ export async function runContainerSmoke({
       url: `http://127.0.0.1:${apiPort}/readyz`,
       phase,
       includes: '"status":"healthy"',
-      request,
+      request: smokeRequest,
       pause,
     });
     phase = 'api_root';
@@ -237,11 +276,11 @@ export async function runContainerSmoke({
       url: `http://127.0.0.1:${apiPort}/`,
       phase,
       includes: 'MoonWitness Enterprise ORM API',
-      request,
+      request: smokeRequest,
       pause,
     });
     phase = 'api_corpus_login';
-    const login = await request(`http://127.0.0.1:${apiPort}/auth/login`, {
+    const login = await smokeRequest(`http://127.0.0.1:${apiPort}/auth/login`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -266,7 +305,7 @@ export async function runContainerSmoke({
       url: `http://127.0.0.1:${apiPort}/api/corpus/sources/${encodeURIComponent('mw:source:tanzil-quran-text')}`,
       phase,
       includes: 'mw:source:tanzil-quran-text',
-      request: (url) => request(url, { headers: authorization }),
+      request: (url) => smokeRequest(url, { headers: authorization }),
       pause,
     });
     phase = 'api_corpus_tanzil_passage';
@@ -274,7 +313,7 @@ export async function runContainerSmoke({
       url: `http://127.0.0.1:${apiPort}/api/corpus/passages/${encodeURIComponent('mw:edition:tanzil-quran-text-v1.1-uthmani-txt2')}/${encodeURIComponent('Q7:46')}`,
       phase,
       includes: 'mw:source:tanzil-quran-text',
-      request: (url) => request(url, { headers: authorization }),
+      request: (url) => smokeRequest(url, { headers: authorization }),
       pause,
     });
     phase = 'api_corpus_webp_source';
@@ -282,7 +321,7 @@ export async function runContainerSmoke({
       url: `http://127.0.0.1:${apiPort}/api/corpus/sources/${encodeURIComponent('mw:source:ebible-webp-protestant')}`,
       phase,
       includes: 'mw:source:ebible-webp-protestant',
-      request: (url) => request(url, { headers: authorization }),
+      request: (url) => smokeRequest(url, { headers: authorization }),
       pause,
     });
     phase = 'api_corpus_webp_passage';
@@ -290,7 +329,7 @@ export async function runContainerSmoke({
       url: `http://127.0.0.1:${apiPort}/api/corpus/passages/${encodeURIComponent('mw:edition:webp-protestant-2020-stable')}/${encodeURIComponent('Genesis 1:1')}`,
       phase,
       includes: 'In the beginning, God created the heavens and the earth.',
-      request: (url) => request(url, { headers: authorization }),
+      request: (url) => smokeRequest(url, { headers: authorization }),
       pause,
     });
     phase = 'board_start';
@@ -303,7 +342,7 @@ export async function runContainerSmoke({
       url: `http://127.0.0.1:${boardPort}/`,
       phase,
       includes: 'MoonWitness',
-      request,
+      request: smokeRequest,
       pause,
     });
     phase = 'api_stop';

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import {
   formatSafeServiceStatus,
@@ -6,7 +7,7 @@ import {
   runContainerSmoke,
 } from './smoke-containers.mjs';
 
-function harness({ request, status, reportFailure, environment, logOutput } = {}) {
+function harness({ request, status, reportFailure, environment, logOutput, networkPolicy } = {}) {
   const calls = [];
   const outputs = [];
   const options = [];
@@ -14,6 +15,7 @@ function harness({ request, status, reportFailure, environment, logOutput } = {}
   const execute = (args, settings) => {
     calls.push(args);
     options.push(settings);
+    if (args[0] === 'network' && args[1] === 'inspect') return networkPolicy ?? 'true';
     if (args.includes('ps')) return status ?? '';
     return args.includes('logs') ? (logOutput ?? 'Graceful shutdown complete') : '';
   };
@@ -68,8 +70,10 @@ test('runs isolated Compose smoke phases and always removes only its project vol
 
   const commandTexts = fixture.calls.map((args) => args.join(' '));
   assert.match(commandTexts[0], /--wait-timeout 180 postgres$/u);
-  assert.match(commandTexts[1], /up --detach --build --no-deps api$/u);
-  assert.match(commandTexts[2], /up --detach --build --no-deps board$/u);
+  assert.ok(commandTexts[1].includes('network inspect moonwitness-smoke-55-1234_default'));
+  assert.match(commandTexts[1], /--format \{\{\.Internal\}\}$/u);
+  assert.match(commandTexts[2], /up --detach --build --no-deps api$/u);
+  assert.match(commandTexts[3], /up --detach --build --no-deps board$/u);
   assert.match(commandTexts[0], /--project-name moonwitness-smoke-55-1234/u);
   assert.ok(commandTexts.some((entry) => entry.includes('stop --timeout 45 api')));
   assert.ok(commandTexts.some((entry) => entry.endsWith('logs api')));
@@ -107,6 +111,21 @@ test('uses already-verified images without rebuilding them for release smoke', a
     'up --detach --no-build --no-deps api',
     'up --detach --no-build --no-deps board',
   ]);
+});
+
+test('requires the Docker smoke network to deny external connectivity before starting the API', async () => {
+  const fixture = harness({ networkPolicy: 'false' });
+
+  await assert.rejects(fixture.run(), /Container smoke failed during network_egress_policy/u);
+
+  assert.deepEqual(fixture.outputs, ['network_egress_policy']);
+  assert.ok(!fixture.calls.some((args) => args.includes('up') && args.includes('api')));
+  assert.match(fixture.calls.at(-1).join(' '), /down --volumes --remove-orphans$/u);
+});
+
+test('declares the smoke Compose default network internal', async () => {
+  const compose = await readFile(new URL('../docker-compose.smoke.yml', import.meta.url), 'utf8');
+  assert.match(compose, /networks:\s+default:\s+internal:\s+true/u);
 });
 
 test('reports the failing phase and still cleans up after an unhealthy endpoint', async () => {
@@ -220,6 +239,7 @@ test('preserves a smoke failure when cleanup also fails and reports the cleanup 
       execute(args) {
         calls.push(args);
         if (args.includes('down')) throw new Error('cleanup failure');
+        if (args[0] === 'network' && args[1] === 'inspect') return 'true';
         return '';
       },
     }),
