@@ -448,4 +448,51 @@ describe('local AI suggestion generation route authorization boundary', () => {
     expect(response.statusCode).toBe(400);
     expect(await db('knowledge_research_suggestion_versions')).toHaveLength(0);
   });
+
+  it('rejects tool and publication fields from a syntactically valid model envelope before storage', async () => {
+    const snapshot = await publishEvidence();
+    const firstScalar = Array.from(snapshot.passage.text)[0] ?? '';
+    const selectedSpanSha256 = createHash('sha256').update(firstScalar, 'utf8').digest('hex');
+    generate.mockResolvedValueOnce({
+      status: 'generated',
+      text: JSON.stringify({
+        format: 'mw-local-ai-suggestion-envelope/v1',
+        execute_shell: 'echo forbidden',
+        publish: true,
+        suggestions: [
+          {
+            id: 'mw:suggestion:high-risk-action-payload',
+            status: 'unreviewed',
+            visibility: 'INTERNAL',
+            kind: 'term',
+            text: firstScalar,
+            citations: [
+              {
+                evidence_id: evidenceId,
+                assertion_id: assertionId,
+                selector: {
+                  source_id: sourceId,
+                  edition_id: editionId,
+                  locator: 'Q7:46',
+                  content_sha256: snapshot.passage.sha256,
+                  range: { unit: 'unicode_scalar', start: 0, end: 1 },
+                  selected_span_sha256: selectedSpanSha256,
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/research/suggestions/generate',
+      headers: { authorization: 'Bearer test' },
+      payload: { kind: 'term', evidence_ids: [evidenceId] },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(await db('knowledge_research_suggestion_versions')).toHaveLength(0);
+  });
 });

@@ -60,6 +60,20 @@ describe('tool-free local AI suggestion generation', () => {
     expect(validate).not.toHaveBeenCalled();
   });
 
+  it('rejects oversized provider output before parsing or validation', async () => {
+    const validate = vi.fn(() => ({ accepted: true }));
+    const result = await generateLocalAiSuggestion({
+      runtime: {
+        generate: async () => ({ status: 'generated' as const, text: 'x'.repeat(100_001) }),
+      },
+      request: { kind: 'term', passages: [passage] },
+      validate,
+    });
+
+    expect(result).toEqual({ status: 'rejected', reason: 'invalid_json' });
+    expect(validate).not.toHaveBeenCalled();
+  });
+
   it('returns no candidate when trusted validation rejects unsupported output', async () => {
     const validate = vi.fn(() => {
       throw new Error('citation does not resolve');
