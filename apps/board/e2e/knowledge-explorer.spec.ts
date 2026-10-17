@@ -36,7 +36,9 @@ async function signIn(page: Page, login: string, password: string) {
   await expect(page).toHaveURL(/\/$/u);
 }
 
-test('superadmin research access follows company context and source locators', async ({ page }) => {
+test('superadmin research access follows company context and source locators', async ({
+  page,
+}, testInfo) => {
   let unavailablePassageRequested = false;
   await signIn(page, 'superadmin', E2E_SUPERADMIN_PASSWORD);
   const companySwitcher = page.getByRole('button', {
@@ -283,13 +285,35 @@ test('superadmin research access follows company context and source locators', a
   );
   await expect(page.getByText('Try another claim, relation ID, source, or passage.')).toBeVisible();
 
-  await page.setViewportSize({ width: 1440, height: 1000 });
-  await expectNoA11yViolations(page, 'knowledge/desktop/light');
-  await page.getByRole('button', { name: 'Toggle theme' }).click();
-  await expect(page.locator('html')).toHaveClass(/dark/u);
-  await expectNoA11yViolations(page, 'knowledge/desktop/dark');
-
-  await page.setViewportSize({ width: 390, height: 844 });
-  await expectNoHorizontalOverflow(page, 'knowledge/mobile/dark');
-  await expectNoA11yViolations(page, 'knowledge/mobile/dark');
+  const visualSizes = [
+    { name: 'desktop', width: 1440, height: 1000 },
+    { name: 'tablet', width: 768, height: 1024 },
+    { name: 'mobile', width: 390, height: 844 },
+  ] as const;
+  for (const size of visualSizes) {
+    await page.setViewportSize({ width: size.width, height: size.height });
+    for (const theme of ['light', 'dark'] as const) {
+      const isDark = await page
+        .locator('html')
+        .evaluate((element) => element.classList.contains('dark'));
+      if (isDark !== (theme === 'dark')) {
+        if (size.width < 640) {
+          await page.getByRole('button', { name: /^User menu for/u }).click();
+          await page.getByRole('menuitem', { name: 'Toggle theme' }).click();
+        } else {
+          await page.getByRole('button', { name: 'Toggle theme' }).click();
+        }
+      }
+      await expect(page.getByRole('heading', { name: 'Knowledge explorer' })).toBeVisible();
+      const label = `knowledge/${size.name}/${theme}`;
+      await expectNoHorizontalOverflow(page, label);
+      await expectNoA11yViolations(page, label);
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.screenshot({
+        path: testInfo.outputPath(`${size.name}-${theme}.png`),
+        fullPage: true,
+        animations: 'disabled',
+      });
+    }
+  }
 });
