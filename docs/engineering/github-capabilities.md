@@ -31,3 +31,9 @@ Read-only snapshot refreshed on 2026-10-17 against GitHub REST and remote `dev` 
 - Workflow directory contents currently return 21 files on each ref. This replaces the older 5/20 count and does not infer workflow activation from file presence.
 - Pages settings and Actions permissions endpoints were rejected as outside the connector's allowed public endpoint surface. Registry settings, GitHub Projects v2 field mapping, and current classic branch-protection details remain unknown. Local `gh auth status` reports its configured CLI token invalid; no secret value was read or displayed. The repository connection through the GitHub app remained usable for the reads above.
 - No settings, issues, releases, Pages configuration, or deployments were changed. This is remote evidence; local `dev` may contain unpushed work and is not represented by the remote SHA.
+
+## Follow-up governance read — 2026-10-17
+
+- A later GitHub REST read confirms remote `dev` is `2ee5fba228491e98b6e0743dfbd45df7557488e2` and `main` remains `9c9d5a326d566ed43f46e9db88d4b161ba3e4a0c`; exactly those two branches are listed and both branch objects report protected.
+- All three rulesets remain active and have no bypass actors: two-branch creation/deletion/non-fast-forward restriction, strict PR/`ci-gate`/thread-resolution/merge-only promotion to `main`, and immutable `v*` tags. The connector cannot read classic branch-protection details (HTTP 403); Pages settings, Actions permissions, registry settings and Projects v2 field mapping remain unknown.
+- Repository metadata still reports public visibility, `main` as default, Issues/Projects/Pages enabled and auto-merge enabled. No settings or repository data were changed. This later observation supersedes the older remote `dev` SHA in the preceding snapshot only; it does not report local unpushed files or hosted check completion.
