@@ -64,9 +64,30 @@ describe('offline textual witness passage retrieval', () => {
     const root = await setup();
     const snapshot = await readTextualWitnessPassageSnapshot({ rootDirectory: root, ...request });
 
+    expect(snapshot.sourceArtifactId).toBe('mw:artifact:webp-protestant-genesis-1-1');
     expect(snapshot.sourceManifestBytes).toEqual(await readFile(path.join(root, manifestRelative)));
     expect(snapshot.passage).not.toHaveProperty('sourceManifestBytes');
     expect(snapshot.passage).not.toHaveProperty('source_manifest_bytes');
+  });
+
+  it('allows exact artifact storage only when the source manifest grants store', async () => {
+    const root = await setup();
+    const stored = await readTextualWitnessPassageSnapshot({
+      rootDirectory: root,
+      ...request,
+      use: 'store',
+    });
+    expect(stored.sourceArtifactId).toBe('mw:artifact:webp-protestant-genesis-1-1');
+
+    const filePath = path.join(root, manifestRelative);
+    const manifest = JSON.parse(await readFile(filePath, 'utf8')) as {
+      rights: { allowed_uses: string[] };
+    };
+    manifest.rights.allowed_uses = ['read_analyze', 'quote_excerpt', 'redistribute_full'];
+    await writeFile(filePath, JSON.stringify(manifest));
+    await expect(
+      readTextualWitnessPassageSnapshot({ rootDirectory: root, ...request, use: 'store' })
+    ).rejects.toThrow('rights do not permit requested use: store');
   });
 
   it('rejects unknown expression, edition, or locator tuples', async () => {
@@ -109,6 +130,26 @@ describe('offline textual witness passage retrieval', () => {
     await expect(
       readTextualWitnessPassage({ rootDirectory: root, ...request, use: 'read_analyze' })
     ).rejects.toThrow('rights do not permit requested use: read_analyze');
+  });
+
+  it('denies storage when the manifest omits the store grant', async () => {
+    const root = await setup();
+    const stored = await readTextualWitnessPassageSnapshot({
+      rootDirectory: root,
+      ...request,
+      use: 'store',
+    });
+    expect(stored.sourceArtifactId).toBe('mw:artifact:webp-protestant-genesis-1-1');
+
+    const filePath = path.join(root, manifestRelative);
+    const manifest = JSON.parse(await readFile(filePath, 'utf8')) as {
+      rights: { allowed_uses: string[] };
+    };
+    manifest.rights.allowed_uses = ['read_analyze', 'redistribute_full'];
+    await writeFile(filePath, JSON.stringify(manifest));
+    await expect(
+      readTextualWitnessPassageSnapshot({ rootDirectory: root, ...request, use: 'store' })
+    ).rejects.toThrow('rights do not permit requested use: store');
   });
 
   it('rejects traversal paths and corrupt bytes instead of returning unchecked text', async () => {

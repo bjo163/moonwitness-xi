@@ -225,6 +225,39 @@ export type CorpusPassage =
       citation: string;
     };
 
+export interface StoryMediaReference {
+  artifact_id: string;
+  sha256: string;
+  media_type: string;
+  rights_ref: string;
+}
+
+export interface StoryPageDocument {
+  page_id: string;
+  page_order: number;
+  original_text: string;
+  media?: StoryMediaReference;
+}
+
+export interface StoryVersionDocument {
+  schema_version: 1;
+  story_id: string;
+  version: number;
+  title: string;
+  visibility: 'INTERNAL';
+  pages: StoryPageDocument[];
+}
+
+export interface StoredStoryVersion {
+  storyId: string;
+  version: number;
+  digest: string;
+  previousDigest: string | null;
+  visibility: 'INTERNAL';
+  story: StoryVersionDocument;
+  idempotent: boolean;
+}
+
 export interface ResearchExplanationEvidence {
   evidence: {
     id: string;

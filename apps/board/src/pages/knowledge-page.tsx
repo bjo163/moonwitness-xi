@@ -173,7 +173,7 @@ export function KnowledgePage() {
             Source metadata is unavailable: {errorMessage(citationQuery.error)}
           </p>
         )}
-        {passageQuery.isError && (
+        {passageQuery.isError && !requestedPassageUnavailable && (
           <p className="text-sm text-destructive" role="alert">
             The exact passage could not be verified: {errorMessage(passageQuery.error)}
           </p>

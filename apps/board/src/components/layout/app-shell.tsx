@@ -17,6 +17,7 @@ import {
   Moon,
   Network,
   Search,
+  BookOpenCheck,
   Sun,
   User,
   Users,
@@ -104,11 +105,13 @@ function ModelNavigation({
   groups,
   isLoading,
   canReadResearch,
+  canEditStories,
   onNavigate,
 }: {
   groups: Array<[string, ModelInfo[]]>;
   isLoading: boolean;
   canReadResearch: boolean;
+  canEditStories: boolean;
   onNavigate?: () => void;
 }) {
   return (
@@ -120,6 +123,15 @@ function ModelNavigation({
           label="Knowledge explorer"
           icon={Network}
           tilt={-1.2}
+          onNavigate={onNavigate}
+        />
+      )}
+      {canEditStories && (
+        <NavItem
+          to="/stories/workbench"
+          label="Story workbench"
+          icon={BookOpenCheck}
+          tilt={1.1}
           onNavigate={onNavigate}
         />
       )}
@@ -159,6 +171,8 @@ export function AppShell() {
     client.getCompanyId()
   );
   const researchAccess = canReadResearch(user?.role, client.getCompanyId());
+  const canEditStories =
+    (user?.role === 'user' || user?.role === 'superadmin') && Boolean(client.getCompanyId());
   const [developmentMode, setDevelopmentMode] = useState(readDevelopmentMode);
 
   const toggleDevelopmentMode = useCallback(() => {
@@ -326,6 +340,7 @@ export function AppShell() {
           groups={visibleGroups}
           isLoading={isLoading}
           canReadResearch={researchAccess}
+          canEditStories={canEditStories}
         />
         <div className="border-t-2 border-dashed border-ink/20 p-3">
           <button
@@ -373,6 +388,7 @@ export function AppShell() {
                 groups={visibleGroups}
                 isLoading={isLoading}
                 canReadResearch={researchAccess}
+                canEditStories={canEditStories}
                 onNavigate={() => setMobileNavOpen(false)}
               />
               <div className="border-t-2 border-dashed border-ink/20 p-3">

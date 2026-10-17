@@ -17,6 +17,8 @@ import type {
   ResearchGraphSearchResult,
   ResearchRelationExplanation,
   SourceCitation,
+  StoredStoryVersion,
+  StoryVersionDocument,
   TokenStorage,
   UserProfile,
 } from './types.js';
@@ -280,6 +282,24 @@ export class MoonWitnessClient implements HttpClient {
   async getCorpusPassage(editionId: string, locator: string): Promise<CorpusPassage> {
     const res = await this.request<{ success: true; data: CorpusPassage }>(
       `/api/corpus/passages/${encodeURIComponent(editionId)}/${encodeURIComponent(locator)}`
+    );
+    return res.data;
+  }
+
+  /** Read the latest or one exact INTERNAL story version in the selected company. */
+  async getStoryVersion(storyId: string, version?: number): Promise<StoredStoryVersion> {
+    const suffix = version === undefined ? '' : `?version=${encodeURIComponent(String(version))}`;
+    const res = await this.request<{ success: true; data: StoredStoryVersion }>(
+      `/api/research/stories/${encodeURIComponent(storyId)}${suffix}`
+    );
+    return res.data;
+  }
+
+  /** Append a new immutable INTERNAL story version in the selected company. */
+  async storeStoryVersion(story: StoryVersionDocument): Promise<StoredStoryVersion> {
+    const res = await this.request<{ success: true; data: StoredStoryVersion }>(
+      `/api/research/stories/${encodeURIComponent(story.story_id)}`,
+      { method: 'POST', body: story }
     );
     return res.data;
   }

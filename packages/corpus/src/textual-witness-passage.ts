@@ -28,7 +28,7 @@ export interface ReadTextualWitnessPassageRequest {
   editionId: string;
   locator: string;
   /** Requested use is checked against the pinned source manifest. */
-  use?: 'read_analyze' | 'quote_excerpt';
+  use?: 'read_analyze' | 'quote_excerpt' | 'store';
   indexPath?: string;
 }
 
@@ -46,6 +46,7 @@ export interface TextualWitnessPassage {
 }
 
 export interface TextualWitnessPassageSnapshot {
+  sourceArtifactId: string;
   passage: TextualWitnessPassage;
   sourceManifestBytes: Buffer;
 }
@@ -241,6 +242,7 @@ async function readTextualWitnessPassageSnapshotInternal(
   }
 
   return {
+    sourceArtifactId: entry.source_artifact_id,
     passage: {
       sourceId: manifest.source_id,
       expressionId: entry.expression_id,

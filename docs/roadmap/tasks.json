@@ -2009,6 +2009,7 @@
       "dependsOn": ["K5-004", "K8-001"],
       "output": "Original vs derived story revision, page text and media management",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
+      "evidence": "docs/roadmap/evidence/K8-002.md",
       "labels": ["local-ai-rebuild"],
       "priority": "p0"
     },

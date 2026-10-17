@@ -66,6 +66,9 @@ importers:
       '@moonwitness/jobs':
         specifier: workspace:*
         version: link:../../packages/jobs
+      '@moonwitness/knowledge':
+        specifier: workspace:*
+        version: link:../../packages/knowledge
       '@moonwitness/local-ai':
         specifier: workspace:*
         version: link:../../packages/local-ai
