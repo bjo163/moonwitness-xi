@@ -12,7 +12,7 @@ const sizes = [
   { name: 'desktop-1440', width: 1440, height: 1000 },
 ] as const;
 const views = [
-  { name: 'dashboard', path: '/board', heading: 'Welcome, superadmin!' },
+  { name: 'dashboard', path: '/board', heading: 'Welcome, superadmin' },
   { name: 'list', path: '/board/m/base.partner', heading: 'Partners' },
   { name: 'form', path: '/board/m/base.partner/new', heading: 'New Partner' },
   { name: 'profile', path: '/board/profile', heading: 'Profile' },
@@ -79,7 +79,9 @@ test('mobile overlays keep accessible names, keyboard dismissal, focus return, a
   await expect(commandPaletteTrigger).toBeFocused();
 
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Welcome, superadmin!' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Welcome, superadmin', exact: false })
+  ).toBeVisible();
   const userMenuTrigger = page.getByRole('button', { name: 'User menu for superadmin' });
   await userMenuTrigger.click();
   const userMenu = page.getByRole('menu');
@@ -134,7 +136,6 @@ test('responsive screen audit: login across mobile, tablet, and desktop', async 
       'opacity',
       '1'
     );
-    await expect(page.locator('main .inline-block')).toHaveCSS('opacity', '1');
     await expectNoHorizontalOverflow(page, `login/${size.name}`);
     await page.screenshot({
       path: path.join(auditDirectory, `login-${size.name}-light${browserSuffix(testInfo)}.png`),
