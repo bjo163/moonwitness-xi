@@ -462,8 +462,39 @@ Urutan: header → hero manga → tiga panel editorial → band koneksi → film
 
 ### Route lain
 
-- [ ] Terapkan wordmark, artwork, dan paper form ke login/register.
-- [ ] Pertahankan validation, password visibility, submit, dan return path lokal.
+- [ ] Tambahkan mockup login “Enter the Shadow” yang dilampirkan pengguna sebagai referensi visual auth khusus; jangan mengubahnya menjadi spesifikasi fitur baru.
+- [ ] Catat bahwa komposisi login memakai artwork malam-bulan-kota di sisi kanan dan panel form gelap di kiri.
+- [ ] Catat bahwa mahkota dan wordmark memakai sumber brand canonical, bukan lettering logo yang dirender sebagai teks.
+- [ ] Catat bahwa headline, label, helper text, status, dan tombol tetap berupa HTML yang dapat diakses.
+- [ ] Buat artwork login panorama tanpa teks, angka, logo, atau tombol tertanam.
+- [ ] Buat crop desktop dan mobile dengan focal point karakter/bulan yang tetap aman dari teks form.
+- [ ] Optimalkan artwork login sebagai aset responsif dan muat hanya pada route auth.
+- [ ] Daftarkan sumber, pembuat/metode, lisensi, dimensi, focal point, dan alt/decorative status artwork.
+- [ ] Susun header auth dengan crown/wordmark di kiri dan tautan “Follow the Signal” hanya bila tujuan route-nya nyata.
+- [ ] Buat panel form berbingkai tinta/kertas kasar dengan padding aman agar dekorasi tidak menabrak kontrol.
+- [ ] Tampilkan headline “Enter the Shadow” sebagai teks semantik; pastikan “Shadow” mendapat aksen brush tanpa merusak wrapping.
+- [ ] Tampilkan deskripsi singkat yang sesuai fungsi login produk dan tidak mengklaim fitur yang tidak tersedia.
+- [ ] Terapkan field email/username memakai komponen shared dan label yang selalu terlihat.
+- [ ] Terapkan field password memakai komponen shared serta kontrol tampil/sembunyi yang berlabel aksesibel.
+- [ ] Pertahankan validasi, autocomplete, submit, loading, error, dan return path lokal yang tervalidasi.
+- [ ] Verifikasi apakah “Remember me” didukung secara nyata; tampilkan hanya jika semantik persistensi session sudah ditetapkan.
+- [ ] Verifikasi apakah “Forgot password?” mempunyai alur reset aktif; tampilkan hanya jika route/flow tersebut tersedia.
+- [ ] Jangan membuat checkbox atau link auth dekoratif yang tidak melakukan aksi sebenarnya.
+- [ ] Terapkan CTA “Enter the Shadow” sebagai shared Button dengan treatment brush dan target klik stabil.
+- [ ] Periksa CTA dalam kondisi normal, hover, focus-visible, pressed, disabled, submitting, dan gagal.
+- [ ] Tambahkan pemisah “Authorized crew only” hanya sebagai keterangan akses yang benar dan tidak menggantikan pesan auth.
+- [ ] Gunakan eye crop, sticker “Witness the real”, globe, scribble, dan moon motif sebagai ornamen dekoratif non-interaktif.
+- [ ] Pastikan ornamen auth memakai SVG canonical, `aria-hidden`, tanpa tab stop, dan tidak menangkap pointer.
+- [ ] Tambahkan footer MoonWitness hanya dengan legal/support link yang benar-benar tersedia.
+- [ ] Jangan menambahkan link Privacy, Terms, atau Support menuju placeholder yang belum mempunyai tujuan.
+- [ ] Susun ulang halaman login mobile: brand dan form terbaca dahulu, artwork menjadi crop/section yang tidak menutupi form.
+- [ ] Periksa keyboard mobile terbuka, scroll, safe area, dan submit tanpa panel terpotong.
+- [ ] Periksa desktop di 1672×941 dan 1440×900, tablet di 768×1024, serta mobile di 390×844 dan lebar 320 px.
+- [ ] Ambil screenshot login normal, validasi, submitting, dan error dengan fixture deterministik.
+- [ ] Bandingkan screenshot login berdampingan dengan mockup “Enter the Shadow” sebelum menerima visual.
+- [ ] Periksa secara visual ejaan `MoonWitness`, `Enter the Shadow`, `Follow the Signal`, dan `Authorized crew only`; koreksi copy/asset jika ada huruf tertukar atau terpotong.
+- [ ] Pastikan kontras, fokus keyboard, label/nama aksesibel, zoom 200%, dan `prefers-reduced-motion` pada seluruh auth state.
+- [ ] Tautkan bukti screenshot yang sudah diperiksa pada checklist sebelum menandai desain login selesai.
 - [ ] Terapkan shared Toolbar/Table/Panel ke model list dan detail.
 - [ ] Pertahankan sorting keyboard, pagination, select-all, dan indeterminate.
 - [ ] Pertahankan filter, relational control, file input, dan row propagation.

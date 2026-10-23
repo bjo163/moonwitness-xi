@@ -8,6 +8,7 @@ This is the single design and implementation rulebook for `@moonwitness/ui`. `TO
 - **Reference 2** is the homepage composition: narrow masthead, dominant manga city hero, three editorial panels, connection/map band, illustrated process strip, and a high contrast closing CTA.
 - **Reference 3** guides the internal story workbench: navigator on the left, readable editor/preview in the center, and a compact inspector on the right.
 - **Reference 4** guides the Board shell: brand masthead, persistent left navigation, metric strip, and dense operational panels.
+- **The supplied “Enter the Shadow” login reference** guides the authentication composition: oversized manga moon/city artwork, a framed ink form panel, crown/brush identity, and a clear sign-in action. Treat “Remember me”, “Forgot password?”, and footer links as visual concepts to verify against real product behavior; the reference does not authorize adding unsupported auth features.
 
 The shared visual vocabulary uses ink black, warm paper, brush lettering, manga/city artwork, rough frames, tape, halftone, hand marks, and deliberate magenta, cyan, and yellow accents. It should feel assembled and editorial rather than like a clean admin template with a dark background. Artwork creates atmosphere; HTML remains responsible for every heading, label, number, control, and status. Do not use a complete mockup screenshot as a page background.
 
