@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createE2eSuffix, E2E_SUPERADMIN_PASSWORD } from './constants.js';
+import { createE2eSuffix, E2E_SUPERADMIN_PASSWORD, loginPageUrl } from './constants.js';
 
 test('users can edit only their profile, persist preferences, and change password safely', async ({
   page,
@@ -53,7 +53,7 @@ test('users can edit only their profile, persist preferences, and change passwor
 
   await page.getByRole('button', { name: 'superadmin' }).click();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();
-  await expect(page).toHaveURL(/\/login$/u);
+  await expect(page).toHaveURL(loginPageUrl);
   await page.getByLabel('Login').fill(login);
   await page.getByLabel('Password').fill(initialPassword);
   await page.getByRole('button', { name: 'Enter the board' }).click();
@@ -159,11 +159,11 @@ test('users can edit only their profile, persist preferences, and change passwor
   );
   await page.getByRole('button', { name: 'Change password' }).click();
   expect((await passwordChangeResponse).status()).toBe(200);
-  await expect(page).toHaveURL(/\/login$/u);
+  await expect(page).toHaveURL(loginPageUrl);
   await page.getByLabel('Login').fill(login);
   await page.getByLabel('Password').fill(initialPassword);
   await page.getByRole('button', { name: 'Enter the board' }).click();
-  await expect(page.getByRole('alert')).toContainText('Invalid credentials');
+  await expect(page.getByRole('alert').filter({ hasText: 'Invalid credentials' })).toBeVisible();
   await page.getByLabel('Password').fill(updatedPassword);
   await page.getByRole('button', { name: 'Enter the board' }).click();
   await expect(page).toHaveURL(/\/board$/u);

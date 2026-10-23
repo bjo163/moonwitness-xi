@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { E2E_SUPERADMIN_PASSWORD } from './constants.js';
+import { E2E_SUPERADMIN_PASSWORD, loginPageUrl } from './constants.js';
 
 test('login form renders and rejects invalid credentials', async ({ page }) => {
   await page.goto('/login');
@@ -11,8 +11,8 @@ test('login form renders and rejects invalid credentials', async ({ page }) => {
   await page.getByLabel('Password').fill('incorrect-e2e-password');
   await page.getByRole('button', { name: 'Enter the board' }).click();
 
-  await expect(page.getByRole('alert')).toBeVisible();
-  await expect(page).toHaveURL(/\/login$/u);
+  await expect(page.getByRole('alert').filter({ hasText: 'Invalid credentials' })).toBeVisible();
+  await expect(page).toHaveURL(loginPageUrl);
 });
 
 test('superadmin can log in, open dashboard, and log out', async ({ page }) => {
@@ -53,7 +53,7 @@ test('superadmin can log in, open dashboard, and log out', async ({ page }) => {
   await page.getByRole('button', { name: 'superadmin' }).click();
   await expect(page.getByRole('menuitem', { name: 'Sign out' })).toBeVisible();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();
-  await expect(page).toHaveURL(/\/login$/u);
+  await expect(page).toHaveURL(loginPageUrl);
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
 });
 

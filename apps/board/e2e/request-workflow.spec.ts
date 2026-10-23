@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createE2eSuffix, E2E_SUPERADMIN_PASSWORD } from './constants.js';
+import { createE2eSuffix, E2E_SUPERADMIN_PASSWORD, loginPageUrl } from './constants.js';
 
 interface BoardSession {
   access_token: string;
@@ -65,7 +65,7 @@ test('requester submits a request that superadmin approves or rejects in Board',
 
   await page.getByRole('button', { name: 'superadmin' }).click();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();
-  await expect(page).toHaveURL(/\/login$/u);
+  await expect(page).toHaveURL(loginPageUrl);
   await page.getByLabel('Login').fill(requesterLogin);
   await page.getByLabel('Password').fill(requesterPassword);
   await page.getByRole('button', { name: 'Enter the board' }).click();
@@ -144,11 +144,11 @@ test('requester submits a request that superadmin approves or rejects in Board',
 
   await page.getByRole('button', { name: requesterLogin }).click();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();
-  await expect(page).toHaveURL(/\/login$/u);
+  await expect(page).toHaveURL(loginPageUrl);
   await page.getByLabel('Login').fill('superadmin');
   await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the board' }).click();
-  await expect(page).not.toHaveURL(/\/login$/u);
+  await expect(page).not.toHaveURL(loginPageUrl);
   const purchaseRequests = page
     .getByRole('navigation', { name: 'Models' })
     .getByRole('link', { name: 'Purchase Requests' });
@@ -265,7 +265,7 @@ test('requester submits a request that superadmin approves or rejects in Board',
 
   await page.getByRole('button', { name: 'superadmin' }).click();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();
-  await expect(page).toHaveURL(/\/login$/u);
+  await expect(page).toHaveURL(loginPageUrl);
   await page.getByLabel('Login').fill(requesterLogin);
   await page.getByLabel('Password').fill(requesterPassword);
   await page.getByRole('button', { name: 'Enter the board' }).click();

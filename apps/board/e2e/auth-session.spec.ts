@@ -1,6 +1,11 @@
 import { createHmac } from 'node:crypto';
 import { expect, test, type Page } from '@playwright/test';
-import { createE2eSuffix, E2E_JWT_SECRET, E2E_SUPERADMIN_PASSWORD } from './constants.js';
+import {
+  createE2eSuffix,
+  E2E_JWT_SECRET,
+  E2E_SUPERADMIN_PASSWORD,
+  loginPageUrl,
+} from './constants.js';
 
 interface E2EUser {
   id: number;
@@ -89,7 +94,7 @@ test('reload restores session, concurrent requests share expired-token refresh, 
   expect(rotated?.refresh_token).not.toBe(original?.refresh_token);
   await page.getByRole('button', { name: 'superadmin' }).click();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();
-  await expect(page).toHaveURL(/\/login$/u);
+  await expect(page).toHaveURL(loginPageUrl);
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
   await expect(page.evaluate(() => localStorage.getItem('mw-board-session'))).resolves.toBeNull();
 
@@ -98,7 +103,7 @@ test('reload restores session, concurrent requests share expired-token refresh, 
   });
   expect(replay.status()).toBe(401);
   await page.goto('/board/profile');
-  await expect(page).toHaveURL(/\/login$/u);
+  await expect(page).toHaveURL(loginPageUrl);
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
 });
 
@@ -145,7 +150,7 @@ test('login returns to an internal page and rejects an external return target', 
 }) => {
   await page.goto('/board/m/base.partner?source=session-test');
   const applicationOrigin = new URL(page.url()).origin;
-  await expect(page).toHaveURL(/\/login$/u);
+  await expect(page).toHaveURL(loginPageUrl);
   await page.getByLabel('Login').fill('superadmin');
   await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the board' }).click();
@@ -154,7 +159,7 @@ test('login returns to an internal page and rejects an external return target', 
 
   await page.getByRole('button', { name: 'superadmin' }).click();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();
-  await expect(page).toHaveURL(/\/login$/u);
+  await expect(page).toHaveURL(loginPageUrl);
   await page.evaluate(() => {
     const current = window.history.state as { key?: string; idx?: number } | null;
     window.history.replaceState(
@@ -171,7 +176,7 @@ test('login returns to an internal page and rejects an external return target', 
   await page.getByLabel('Login').fill('superadmin');
   await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the board' }).click();
-  await expect(page).toHaveURL(/\/board$/u);
+  await expect(page).toHaveURL(/\/m\/base\.partner\?source=session-test$/u);
   expect(new URL(page.url()).origin).toBe(applicationOrigin);
-  await expect(page.getByText('Welcome, superadmin!', { exact: false })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Partners' })).toBeVisible();
 });

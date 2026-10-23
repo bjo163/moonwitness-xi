@@ -857,7 +857,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
             )}
           </div>
           <div
-            className="overflow-x-auto"
+            className="overflow-x-auto [&>.mw-ui-table-wrap]:overflow-x-visible"
             role="region"
             aria-label={`${views.title} records table`}
             tabIndex={0}

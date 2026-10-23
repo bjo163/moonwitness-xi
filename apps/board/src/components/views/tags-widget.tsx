@@ -97,7 +97,8 @@ export function TagsWidget({ model, recordId }: TagsWidgetProps) {
       // 1. Create the tag
       const createdTag = await client.model<TagItem>('base.tag').create({
         name: newTagName.trim(),
-        color: 'var(--mw-yellow)',
+        // The tag schema stores a hex color (the --mw-yellow design token).
+        color: '#e6ff00',
       });
       // 2. Attach link
       await client.model('base.tag_link').create({

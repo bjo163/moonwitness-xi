@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { createE2eSuffix, E2E_SUPERADMIN_PASSWORD } from './constants.js';
+import { createE2eSuffix, E2E_SUPERADMIN_PASSWORD, loginPageUrl } from './constants.js';
 
 interface BoardSession {
   access_token: string;
@@ -62,7 +62,9 @@ test('list loading, offline errors, retry, and empty results preserve the curren
   const searchTerm = `no-resilience-match-${Date.now()}`;
   simulateOffline = true;
   await page.getByRole('textbox', { name: 'Search partners...' }).fill(searchTerm);
-  const error = page.getByRole('alert');
+  const error = page
+    .getByRole('alert')
+    .filter({ hasText: 'Could not load records. Check your connection and try again.' });
   await expect(error).toContainText('Could not load records. Check your connection and try again.');
   expect(failedRequests).toBeGreaterThanOrEqual(2);
   await expect(page.getByRole('textbox', { name: 'Search partners...' })).toHaveValue(searchTerm);
@@ -145,7 +147,7 @@ test('signing into another account clears the previous account records', async (
   await expect(page.getByRole('table').getByText(adminOnlyName)).toBeVisible();
   await page.getByRole('button', { name: 'superadmin' }).click();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();
-  await expect(page).toHaveURL(/\/login$/u);
+  await expect(page).toHaveURL(loginPageUrl);
 
   await page.getByLabel('Login').fill(viewerLogin);
   await page.getByLabel('Password').fill(viewerPassword);

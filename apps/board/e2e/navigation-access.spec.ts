@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { E2E_SUPERADMIN_PASSWORD } from './constants.js';
+import { E2E_SUPERADMIN_PASSWORD, loginPageUrl } from './constants.js';
 
 test('development mode reveals technical navigation without changing API access', async ({
   page,
@@ -84,7 +84,7 @@ test('development mode reveals technical navigation without changing API access'
 
   await page.getByRole('button', { name: 'superadmin' }).click();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();
-  await expect(page).toHaveURL(/\/login$/u);
+  await expect(page).toHaveURL(loginPageUrl);
   await page.getByLabel('Login').fill(userLogin);
   await page.getByLabel('Password').fill(userPassword);
   await page.getByRole('button', { name: 'Enter the board' }).click();
@@ -116,7 +116,9 @@ test('development mode reveals technical navigation without changing API access'
   ).toHaveCount(0);
 
   await page.goto('/board/knowledge');
-  await expect(page.getByRole('alert')).toContainText('cannot access research records');
+  await expect(
+    page.getByRole('alert').filter({ hasText: 'cannot access research records' })
+  ).toBeVisible();
 
   const forbiddenModelResponse = page.waitForResponse((response) =>
     response.url().includes('/api/base.user/views')
