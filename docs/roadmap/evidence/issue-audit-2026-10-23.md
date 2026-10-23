@@ -82,6 +82,16 @@ Reproduksi lokal pada tree bersih menemukan tiga penyebab konkret atas lane mera
 
 Lane `ui` dan `browser` masih memerlukan baseline visual yang dirender pada runner Linux. Snapshot `win32` tidak dapat dipakai sebagai baseline, jadi keberhasilannya tetap bergantung pada akses Actions (`workflow_dispatch` + baca artifact) milik pemilik repo.
 
+## Diagnosis dua lane CI yang merah pada `dev`
+
+Lane `browser` (Board Playwright) merah dengan enam test gagal yang bukan satu penyebab:
+
+- Satu assertion memang basi. `apps/board/e2e/public-home.spec.ts:12` mencari link bernama `/Open your workspace/`, sedangkan teks itu dihapus dari `apps/board/src/app/page.tsx` pada `1949751`. Perbaikan mengarahkan assertion ke CTA yang benar-benar ada, `Sign in to your workspace` dengan `href="/login"`. Dua arah sudah diverifikasi pada jalan lokal (platform `win32`, jadi tidak menyentuh baseline yang kalah): sebelum perbaikan `1 failed, 3 passed` dengan kegagalan tepat di `public-home.spec.ts:12:74`, sesudah perbaikan `4 passed (49.8s)` dan exit 0.
+- Lima test lain (`visual-audit`) gagal karena baseline, bukan karena regresi tampilan. Inventory `apps/board/e2e/visual-audit.spec.ts-snapshots` mengukur 17 PNG: hanya 3 yang punya baseline `*-chromium-linux.png` (`board-list-desktop-1440-light`, `board-profile-desktop-1440-light`, `board-settings-desktop-1440-dark`, semuanya ditambahkan `336a19e` pada 2026-10-06), sedangkan 14 sisanya hanya ada untuk `win32`; `home-*` win32 ditambahkan `1949751` dan `workbench-*` win32 oleh `f038262`, keduanya hari ini. Artinya 11 snapshot yang benar-benar dibandingkan (`visual-audit.spec.ts:193-197` hanya memakai `toHaveScreenshot` untuk `home-mobile-390` dan `home-reference-1672`, sisanya 9 baseline `workbench-*`) tidak punya versi Linux; `home-tablet-768` dan `home-desktop-1440` memang tidak dibaseline, hanya disimpan sebagai screenshot audit.
+- Ini melanggar aturan yang baru ditegakkan pada rentang `f6273b5`/`d9093dc`: baseline visual harus dirender runner (Linux), bukan workstation. `CI=true` menolak `--update-snapshots`, jadi tidak ada mekanisme yang menghasilkan baseline Linux dari kerja lokal; yang tersedia adalah dispatch capture di sisi runner, dan itu aksi pemilik. Mengopi PNG win32 ke nama linux atau menaikkan ambang toleransi akan membuat lane hijau tanpa membuktikan apa pun, jadi tidak dilakukan.
+
+Lane `ui` merah karena satu anggaran, bukan kegagalan render: stylesheet `apps/ui-catalog` terukur 67.551 B raw terhadap `maxRawBytes` 65.536 B di `apps/ui-catalog/bundle-budget.json` (lebih 2.015 B) sementara gzip 13.300 B masih di bawah 16.384 B, dan JavaScript lolos kedua sisi (413.388 B dari 524.288 B; gzip 124.026 B dari 163.840 B). Budget tersebut dipasang sekali pada `b79cf3d` dan belum pernah dinaikkan. Pertumbuhannya terukur dari `packages/ui/src/styles/components.css` yang naik dari 16.691 B pada `main` (`9c9d5a3`) menjadi 27.416 B pada `dev`. Pilihannya adalah menaikkan `maxRawBytes` secara sadar atau memangkas ~2 KB CSS komponen; keduanya keputusan pemilik/desain, sehingga tidak diubah diam-diam oleh audit ini.
+
 ## Aksi yang ditunggu dari pemilik repo
 
 1. Review dan merge PR #51 (`dev` → `main`) setelah semua check hijau — ini gerbang tunggal untuk #26, #50, #59, #97 dan aktivasi schedule `main`.
