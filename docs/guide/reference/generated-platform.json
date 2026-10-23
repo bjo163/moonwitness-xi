@@ -4432,7 +4432,7 @@
         "knowledge.witness_testimony": 2,
         "knowledge.witness_correction": 2,
         "knowledge.witness_interpretation": 2,
-        "base.model_access": 14
+        "base.model_access": 15
       },
       "accessRules": [
         {
@@ -4494,6 +4494,14 @@
         {
           "group": "base.group_user",
           "model": "knowledge.research_review_event",
+          "read": false,
+          "create": false,
+          "write": false,
+          "unlink": false
+        },
+        {
+          "group": "base.group_user",
+          "model": "knowledge.research_suggestion_version",
           "read": false,
           "create": false,
           "write": false,
@@ -6278,5 +6286,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "376a4a9d114d23ae0ea61a11317398d3fab645d6b28e9d09e56593ad1703f2e7"
+  "generatedFromSha256": "9e65a0a5ba564ed790b7afd150433521c064974ec2a609a37af6c05e62035a8a"
 }

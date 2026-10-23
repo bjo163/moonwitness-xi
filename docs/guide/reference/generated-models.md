@@ -1,6 +1,6 @@
 # Generated model and addon reference
 
-Source fingerprint: `376a4a9d114d23ae0ea61a11317398d3fab645d6b28e9d09e56593ad1703f2e7`. Seed values and field defaults are intentionally omitted.
+Source fingerprint: `9e65a0a5ba564ed790b7afd150433521c064974ec2a609a37af6c05e62035a8a`. Seed values and field defaults are intentionally omitted.
 
 ## Addon `auth`
 
@@ -289,7 +289,7 @@ Models: 4; declared views: 0; menu entries: 0; seed rows: 1.
 
 Version: `1.6.0`; dependencies: `base`.
 
-Models: 15; declared views: 3; menu entries: 3; seed rows: 25.
+Models: 15; declared views: 3; menu entries: 3; seed rows: 26.
 
 | Model                                           | Table                                            | Field                         | Kind      | Required | Optional | Default    | Relation                           |
 | ----------------------------------------------- | ------------------------------------------------ | ----------------------------- | --------- | -------- | -------- | ---------- | ---------------------------------- |
@@ -422,7 +422,7 @@ Models: 15; declared views: 3; menu entries: 3; seed rows: 25.
 
 - Seed coverage: `base.access_group` has 2 declared seed row(s); seed values are not included.
 - Seed coverage: `base.group_membership` has 2 declared seed row(s); seed values are not included.
-- Seed coverage: `base.model_access` has 14 declared seed row(s); seed values are not included.
+- Seed coverage: `base.model_access` has 15 declared seed row(s); seed values are not included.
 - Seed coverage: `knowledge.privacy_projection` has 1 declared seed row(s); seed values are not included.
 - Seed coverage: `knowledge.witness_correction` has 2 declared seed row(s); seed values are not included.
 - Seed coverage: `knowledge.witness_interpretation` has 2 declared seed row(s); seed values are not included.
@@ -440,6 +440,7 @@ Models: 15; declared views: 3; menu entries: 3; seed rows: 25.
 | `base.group_user` | `knowledge.research_graph_record`               | No   | No     | No    | No     |
 | `base.group_user` | `knowledge.research_graph_release`              | No   | No     | No    | No     |
 | `base.group_user` | `knowledge.research_review_event`               | No   | No     | No    | No     |
+| `base.group_user` | `knowledge.research_suggestion_version`         | No   | No     | No    | No     |
 | `base.group_user` | `knowledge.story_page_version`                  | No   | No     | No    | No     |
 | `base.group_user` | `knowledge.story_version`                       | No   | No     | No    | No     |
 | `base.group_user` | `knowledge.textual_alignment_candidate_version` | No   | No     | No    | No     |
