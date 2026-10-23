@@ -49,6 +49,7 @@ Replace the TypeScript Baileys transport in `apps/whatsapp` with a Go service us
 - [x] Keep encrypted Baileys `auth_state` unchanged during migration; never interpret it as a whatsmeow session.
 - [x] Add PostgreSQL integration coverage for SQL schema creation, device persistence, and reload using an isolated schema.
 - [ ] Verify the production PostgreSQL provider and backups actually encrypt this session schema at rest; the app only checks an operator acknowledgment flag.
+- [ ] Keep SQLStore integration tests on a fresh dedicated PostgreSQL database. The pinned upstream migration helper checks `whatsmeow_version` globally by table name, so a random schema in a database with another whatsmeow schema is not isolated; the test now detects that condition and skips before making changes.
 
 ### 3. QR and connection lifecycle
 
@@ -99,12 +100,13 @@ Replace the TypeScript Baileys transport in `apps/whatsapp` with a Go service us
 
 - Go formatter check, repeated unit tests, `go vet`, and Linux `go test -race`: passed.
 - WhatsApp API route tests: 13 passed.
-- PostgreSQL SQLStore integration: passed against a randomly named temporary schema and confirmed device reload.
+- PostgreSQL SQLStore integration previously passed against a randomly named temporary schema and confirmed device reload. A fresh rerun against the current shared dev database was safely skipped because that database already contains `whatsmeow_version`; a fresh dedicated test database is required for a new run.
 - Board WhatsApp E2E: 2 passed against a separate `moonwitness_e2e` database.
 - API, Board, and WhatsApp workspace builds: passed.
 - Development and production Compose configuration checks: passed when layered on the base Compose file.
 - `whatsapp-runtime` Docker image build: passed; the runtime image is non-root and contains the Go binary.
 - Live WhatsApp pairing and provider encryption verification remain open gates. Historical chat import is intentionally excluded from v1 by the decision above.
+- The current shared development database is not a safe target for a fresh SQLStore migration test. The guard checks for an existing whatsmeow version table and skips before creating a schema or touching the active session.
 
 ### Follow-up validation (2026-10-24)
 

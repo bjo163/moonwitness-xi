@@ -16,11 +16,30 @@ import (
 func TestPostgresWhatsmeowSessionSchemaSurvivesReload(t *testing.T) {
 	dsn := os.Getenv("WHATSAPP_TEST_DATABASE_URL")
 	if dsn == "" {
-		t.Skip("set WHATSAPP_TEST_DATABASE_URL to run isolated PostgreSQL whatsmeow-store integration")
+		t.Skip("set WHATSAPP_TEST_DATABASE_URL to a fresh dedicated PostgreSQL database to run the whatsmeow-store integration")
 	}
-	schema := fmt.Sprintf("wa_test_%d", time.Now().UnixNano())
+	// whatsmeow's upstream migration helper checks information_schema by table
+	// name only (not schema). An isolated schema in a database already hosting
+	// another whatsmeow store is therefore not isolated for the version table.
+	// Require a fresh test database so this test never touches the live session.
+	probe, err := sql.Open("postgres", dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer probe.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+	if err := probe.PingContext(ctx); err != nil {
+		t.Fatal(err)
+	}
+	var existingVersionTables int
+	if err := probe.QueryRowContext(ctx, `SELECT count(*) FROM information_schema.tables WHERE table_name='whatsmeow_version'`).Scan(&existingVersionTables); err != nil {
+		t.Fatal(err)
+	}
+	if existingVersionTables > 0 {
+		t.Skip("WHATSAPP_TEST_DATABASE_URL must point to a fresh PostgreSQL database; whatsmeow migration version detection is not schema-scoped")
+	}
+	schema := fmt.Sprintf("wa_test_%d", time.Now().UnixNano())
 	storage, err := OpenStorage(ctx, dsn, schema)
 	if err != nil {
 		t.Fatal(err)
