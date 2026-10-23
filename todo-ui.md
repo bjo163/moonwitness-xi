@@ -35,7 +35,7 @@ Checklist ini menjadi rencana kerja untuk mendekatkan Home, Board, dan workbench
 - [x] Ambil screenshot homepage mobile `390×844`. Bukti: Playwright baseline `apps/board/e2e/visual-audit.spec.ts-snapshots/home-mobile-390-chromium-win32.png`.
 - [ ] Ambil screenshot Board untuk role pengguna biasa.
 - [x] Ambil screenshot Board untuk role admin. Bukti: `test-results/visual-audit/dashboard-desktop-1440-dark.png` (fixture E2E admin).
-- [x] Ambil screenshot workbench dengan dokumen berisi; periksa ejaan brand, judul, label, hash, dan teks preview secara visual. Bukti: `apps/board/e2e/visual-audit.spec.ts-snapshots/workbench-filled-desktop-1440-chromium-win32.png` dan `.../workbench-filled-mobile-390-chromium-win32.png`.
+- [x] Ambil screenshot workbench dengan dokumen berisi; periksa ejaan brand, judul, label, hash, dan teks preview secara visual. Bukti: baseline `workbench-filled-desktop-1440`, `workbench-filled-tablet-1024`, dan `workbench-filled-mobile-390` di `apps/board/e2e/visual-audit.spec.ts-snapshots/`.
 - [ ] Ambil screenshot workbench saat kosong dan saat ada error.
 - [ ] Inventarisasi halaman login, registrasi, Knowledge, profil, dan settings.
 - [ ] Inventarisasi halaman daftar/detail model, dialog, menu, sheet, toast, dan tabel.
@@ -446,7 +446,7 @@ Urutan: header → hero manga → tiga panel editorial → band koneksi → film
 - [ ] Jangan tampilkan autosaved tanpa autosave.
 - [ ] Jangan tampilkan upload, publish, poster editor, asset library, atau export yang belum tersedia.
 - [ ] Gunakan artwork dekoratif pada banner/frame tanpa mengklaimnya sebagai media story tersimpan.
-- [ ] Lipat inspector di tablet.
+- [x] Posisikan inspector setelah editor/preview di kolom kedua pada tablet. Bukti: populated workbench pada 1024×900; test memeriksa grid dua kolom, posisi inspector, overflow, dan aksesibilitas.
 - [ ] Ubah navigator dan inspector menjadi sheet/accordion pada mobile.
 
 ### Route lain
@@ -539,7 +539,7 @@ Pertahankan satu command manual/otomatis: **`pnpm board:ui:check`**.
 - [x] Tambahkan screenshot baseline workbench kosong dan populated desktop/mobile; ejaan brand/copy, pemuatan artwork, overflow, accessibility, dan hash contoh diperiksa secara visual. Bukti: baseline `workbench-desktop-1440`, `workbench-mobile-390`, `workbench-filled-desktop-1440`, dan `workbench-filled-mobile-390` di `apps/board/e2e/visual-audit.spec.ts-snapshots/`.
 - [ ] Tambahkan specimen tabel, form, overlay, dan state utama.
 - [ ] Gunakan data, waktu, font, dan dekorasi deterministik.
-- [x] Review di `1672×941`, `1440×900`, `768×1024`, dan `390×844`. Bukti: fullpage screenshots dan audit; 320 px masih tersisa.
+- [x] Review di `1672×941`, `1440×900`, `1024×900`, `768×1024`, dan `390×844`. Bukti: fullpage screenshots dan audit; 320 px masih tersisa.
 - [ ] Review light/dark dan reduced motion.
 - [ ] Pastikan body tidak overflow horizontal; tabel memakai scroll region berlabel.
 - [ ] Bandingkan side-by-side dengan referensi dan catat gap.

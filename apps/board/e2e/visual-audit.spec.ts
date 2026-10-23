@@ -312,6 +312,7 @@ test('story workbench editor and preview stay readable with a populated story', 
   const preview = page.getByRole('article', { name: 'Private preview of page 1' });
   for (const size of [
     { name: 'desktop-1440', width: 1440, height: 1000 },
+    { name: 'tablet-1024', width: 1024, height: 900 },
     { name: 'mobile-390', width: 390, height: 844 },
   ]) {
     await page.setViewportSize({ width: size.width, height: size.height });
@@ -321,6 +322,15 @@ test('story workbench editor and preview stay readable with a populated story', 
     await expect(preview).toContainText(pages[0].original_text);
     await expect(page.getByRole('heading', { name: 'Page navigator' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Revision inspector' })).toBeVisible();
+    const workbenchGrid = page.locator('.story-workbench-grid');
+    const gridColumns = await workbenchGrid.evaluate(
+      (element) => getComputedStyle(element).gridTemplateColumns.split(' ').length
+    );
+    expect(gridColumns).toBe(size.width >= 1280 ? 3 : size.width > 768 ? 2 : 1);
+    const inspectorColumn = await page
+      .locator('.story-workbench-inspector')
+      .evaluate((element) => getComputedStyle(element).gridColumnStart);
+    expect(inspectorColumn).toBe(size.width <= 1280 && size.width > 768 ? '2' : 'auto');
     await expectNoHorizontalOverflow(page, `workbench-filled/${size.name}`);
     await expectNoA11yViolations(page, `workbench-filled/${size.name}`);
     await page.screenshot({
