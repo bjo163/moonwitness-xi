@@ -1,32 +1,55 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type makeWASocket from '@whiskeysockets/baileys';
+import type { downloadMediaMessage } from '@whiskeysockets/baileys';
 import { DisconnectReason } from '@whiskeysockets/baileys';
 import { createWhatsappWorker, type Account, type Job } from '../src/worker.js';
 
+type JsonObject = Record<string, unknown>;
+type MockAuthentication = {
+  creds: JsonObject;
+  keys: {
+    get(name: string, ids: string[]): Promise<Record<string, { keyData: Buffer }>>;
+    set(value: Record<string, Record<string, { keyData: Buffer }>>): Promise<void>;
+  };
+};
+type MockSocket = {
+  user: { id: string } | undefined;
+  auth: MockAuthentication;
+  ev: { on(name: string, handler: (payload: unknown) => Promise<void>): void };
+  emit(name: string, payload: unknown): Promise<void>;
+  sendMessage(
+    jid: string,
+    message: JsonObject,
+    options: { messageId: string }
+  ): Promise<{ key: { id: string } }>;
+  groupMetadata(): Promise<{ subject: string }>;
+  end(): void;
+};
+
 function fixture() {
   const account: Account = { id: 1, company_id: 1, status: 'connecting', auth_state: null };
-  const requests: { path: string; body: any }[] = [];
-  const sent: { jid: string; message: any; options: any }[] = [];
-  const sockets: any[] = [];
+  const requests: { path: string; body: JsonObject | undefined }[] = [];
+  const sent: { jid: string; message: JsonObject; options: { messageId: string } }[] = [];
+  const sockets: MockSocket[] = [];
   const jobs: Job[] = [];
   let failSend = false,
     failIncoming = false,
     failPersistence = false;
-  const makeSocket = ((options: any) => {
-    const listeners = new Map<string, ((payload: any) => Promise<void>)[]>();
+  const makeSocket = ((options: { auth: MockAuthentication }) => {
+    const listeners = new Map<string, ((payload: unknown) => Promise<void>)[]>();
     const socket = {
       user: undefined as undefined | { id: string },
       auth: options.auth,
       ev: {
-        on(name: string, fn: (payload: any) => Promise<void>) {
+        on(name: string, fn: (payload: unknown) => Promise<void>) {
           listeners.set(name, [...(listeners.get(name) ?? []), fn]);
         },
       },
-      async emit(name: string, payload: any) {
+      async emit(name: string, payload: unknown) {
         for (const fn of listeners.get(name) ?? []) await fn(payload);
       },
-      async sendMessage(jid: string, message: any, options: any) {
+      async sendMessage(jid: string, message: JsonObject, options: { messageId: string }) {
         sent.push({ jid, message, options });
         if (failSend) throw new Error('temporary send failure');
         return { key: { id: options.messageId } };
@@ -70,7 +93,8 @@ function fixture() {
       {
         makeSocket,
         fetch: fetchMock,
-        downloadMedia: (async () => Buffer.from('downloaded-media')) as any,
+        downloadMedia: (async () =>
+          Buffer.from('downloaded-media')) as unknown as typeof downloadMediaMessage,
       }
     );
   const job = (id: number, payload: object = {}, attempts = 1): Job => ({
@@ -117,7 +141,7 @@ test('QR, connected state, encrypted credentials, restart recovery, reconnect an
   });
   await socket.emit('connection.update', { connection: 'open' });
   assert.equal(f.account.status, 'connected');
-  assert.equal((f.account as any).qr_code, null);
+  assert.equal((f.account as { qr_code?: unknown }).qr_code, null);
   assert.match(f.account.auth_state!, /^[^.]+\.[^.]+\.[^.]+$/);
   assert.ok(!f.account.auth_state!.includes('secret-key'));
   await worker.stop();
@@ -195,7 +219,7 @@ test('text and all media types use stable send IDs and failed sends retry with a
     );
     await worker.tick();
     assert.equal(f.sent.at(-1)?.jid, '123@g.us');
-    assert.equal(f.sent.at(-1)?.message[field].toString(), 'media-content');
+    assert.equal(String(f.sent.at(-1)?.message[field]), 'media-content');
   }
   f.failSend(true);
   f.jobs.push(f.job(99, {}, 8));
@@ -242,7 +266,10 @@ test('private and group messages, media, wrapped messages and history survive te
   assert.equal(groupEvent.is_group, true);
   assert.equal(groupEvent.name, 'Test group');
   assert.equal(groupEvent.sender_jid, '456@s.whatsapp.net');
-  assert.equal(Buffer.from(groupEvent.media_base64, 'base64').toString(), 'downloaded-media');
+  assert.equal(
+    Buffer.from(String(groupEvent.media_base64), 'base64').toString(),
+    'downloaded-media'
+  );
   await socket.emit('messaging-history.set', {
     messages: [
       {
