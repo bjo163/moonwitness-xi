@@ -7,6 +7,9 @@ const lifecycleWorkflow = readFileSync('.github/workflows/roadmap-issue-plan.yml
 const codeqlWorkflow = readFileSync('.github/workflows/codeql.yml', 'utf8');
 const gitleaksWorkflow = readFileSync('.github/workflows/gitleaks.yml', 'utf8');
 const pagesWorkflow = readFileSync('.github/workflows/pages.yml', 'utf8');
+const releaseWorkflow = readFileSync('.github/workflows/release.yml', 'utf8');
+const productionCompose = readFileSync('docker-compose.production.yml', 'utf8');
+const containerSmoke = readFileSync('scripts/smoke-containers.mjs', 'utf8');
 
 test('CI cancels stale runs only within the same target branch and event type', () => {
   assert.match(
@@ -101,4 +104,38 @@ test('Pages portal tests build and serve the publication site only once', () => 
   assert.doesNotMatch(pagesWorkflow, /name: Build documentation portal site/u);
   assert.match(pagesWorkflow, /name: Test documentation portal\s+id: docs_portal_tests/u);
   assert.match(pagesWorkflow, /run: pnpm --filter @moonwitness\/docs test/u);
+});
+
+test('every caller of the production Compose stack supplies each variable it requires', () => {
+  const required = [...productionCompose.matchAll(/\$\{([A-Z0-9_]+):\?[^}]*\}/gu)].map(
+    ([, name]) => name
+  );
+  assert.ok(required.includes('JWT_SECRET'), 'the Compose requirement scan must find real keys');
+
+  const callers = [
+    [
+      'CI containers job',
+      workflow.match(/name: Validate production Compose configuration[\s\S]*?config --quiet/u),
+    ],
+    [
+      'release verify job',
+      releaseWorkflow.match(
+        /name: Validate production Compose configuration[\s\S]*?config --quiet/u
+      ),
+    ],
+    [
+      'container smoke runner',
+      containerSmoke.match(/const composeEnvironment = \{[\s\S]*?\n {2}\};/u),
+    ],
+  ];
+  for (const [label, source] of callers) {
+    assert.ok(source, `${label} must keep its Compose variable source in place`);
+    for (const name of new Set(required)) {
+      assert.match(
+        source[0],
+        new RegExp(`\\b${name}\\s*:`, 'u'),
+        `${label} must define ${name}; Compose interpolation fails before any container starts`
+      );
+    }
+  }
 });

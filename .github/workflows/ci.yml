@@ -359,6 +359,8 @@ jobs:
         env:
           DATABASE_URL: postgresql://moonwitness:ci-password@postgres.example:5432/moonwitness
           JWT_SECRET: ci-only-secret-that-is-at-least-32-characters-long
+          WHATSAPP_INTERNAL_TOKEN: ci-only-whatsapp-token-that-is-at-least-32-characters-long
+          WHATSAPP_SESSION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
         run: docker compose -f docker-compose.production.yml config --quiet
       - name: Smoke test API and Board containers against isolated PostgreSQL
         run: bash scripts/smoke-containers.sh
