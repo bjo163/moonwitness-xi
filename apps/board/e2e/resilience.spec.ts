@@ -12,9 +12,9 @@ interface CreatedRecord {
 
 async function loginSuperadmin(page: Page): Promise<BoardSession> {
   await page.goto('/login');
-  await page.getByLabel('Login').fill('superadmin');
-  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await page.getByLabel('Email or Username').fill('superadmin');
+  await page.getByLabel('Password', { exact: true }).fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
   await expect(page).toHaveURL(/\/board$/u);
   const session = await page.evaluate(
     () => JSON.parse(localStorage.getItem('mw-board-session') ?? 'null') as BoardSession | null
@@ -149,9 +149,9 @@ test('signing into another account clears the previous account records', async (
   await page.getByRole('menuitem', { name: 'Sign out' }).click();
   await expect(page).toHaveURL(loginPageUrl);
 
-  await page.getByLabel('Login').fill(viewerLogin);
-  await page.getByLabel('Password').fill(viewerPassword);
-  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await page.getByLabel('Email or Username').fill(viewerLogin);
+  await page.getByLabel('Password', { exact: true }).fill(viewerPassword);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
   await expect(page).toHaveURL(/\/m\/base\.partner$/u);
   await page.goto('/board/m/base.partner');
   await expect(page.getByRole('table').getByText(adminOnlyName)).toHaveCount(0);

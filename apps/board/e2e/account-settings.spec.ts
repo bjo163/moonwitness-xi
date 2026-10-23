@@ -10,9 +10,9 @@ test('users can edit only their profile, persist preferences, and change passwor
   const updatedPassword = `account-updated-${suffix}`;
 
   await page.goto('/login');
-  await page.getByLabel('Login').fill('superadmin');
-  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await page.getByLabel('Email or Username').fill('superadmin');
+  await page.getByLabel('Password', { exact: true }).fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
   await expect(page).toHaveURL(/\/board$/u);
   const adminSession = await page.evaluate(
     () =>
@@ -54,9 +54,9 @@ test('users can edit only their profile, persist preferences, and change passwor
   await page.getByRole('button', { name: 'superadmin' }).click();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();
   await expect(page).toHaveURL(loginPageUrl);
-  await page.getByLabel('Login').fill(login);
-  await page.getByLabel('Password').fill(initialPassword);
-  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await page.getByLabel('Email or Username').fill(login);
+  await page.getByLabel('Password', { exact: true }).fill(initialPassword);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
   await expect(page).toHaveURL(/\/board$/u);
   const ordinarySession = await page.evaluate(
     () =>
@@ -160,12 +160,12 @@ test('users can edit only their profile, persist preferences, and change passwor
   await page.getByRole('button', { name: 'Change password' }).click();
   expect((await passwordChangeResponse).status()).toBe(200);
   await expect(page).toHaveURL(loginPageUrl);
-  await page.getByLabel('Login').fill(login);
-  await page.getByLabel('Password').fill(initialPassword);
-  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await page.getByLabel('Email or Username').fill(login);
+  await page.getByLabel('Password', { exact: true }).fill(initialPassword);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
   await expect(page.getByRole('alert').filter({ hasText: 'Invalid credentials' })).toBeVisible();
-  await page.getByLabel('Password').fill(updatedPassword);
-  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await page.getByLabel('Password', { exact: true }).fill(updatedPassword);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
   await expect(page).toHaveURL(/\/board$/u);
   await expect(page.getByRole('heading', { name: `Command center`, exact: false })).toBeVisible();
 });

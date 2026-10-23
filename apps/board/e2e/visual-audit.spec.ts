@@ -28,9 +28,9 @@ const visualBaselines = new Set([
 test('command shortcut stays inactive while typing in an editable control', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/login');
-  await page.getByLabel('Login').fill('superadmin');
-  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await page.getByLabel('Email or Username').fill('superadmin');
+  await page.getByLabel('Password', { exact: true }).fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
   await expect(page).toHaveURL(/\/board$/u);
 
   const search = page.getByRole('button', { name: /Search records, models, commands/u });
@@ -51,9 +51,9 @@ test('dashboard KPI cards show current values without fabricated trend percentag
 }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/login');
-  await page.getByLabel('Login').fill('superadmin');
-  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await page.getByLabel('Email or Username').fill('superadmin');
+  await page.getByLabel('Password', { exact: true }).fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
   await expect(page).toHaveURL(/\/board$/u);
   await expect(page.getByRole('heading', { name: 'Command center' })).toBeVisible();
 
@@ -78,9 +78,9 @@ test('ordinary-user dashboard has a verified visual baseline', async ({ page }) 
   await mkdir(auditDirectory, { recursive: true });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/login');
-  await page.getByLabel('Login').fill('superadmin');
-  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await page.getByLabel('Email or Username').fill('superadmin');
+  await page.getByLabel('Password', { exact: true }).fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
   await expect(page).toHaveURL(/board$/u);
 
   const administratorSession = await page.evaluate(
@@ -114,9 +114,9 @@ test('ordinary-user dashboard has a verified visual baseline', async ({ page }) 
   await page.getByRole('button', { name: 'superadmin' }).click();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();
   await expect.poll(() => new URL(page.url()).pathname).toBe('/login');
-  await page.getByLabel('Login').fill(login);
-  await page.getByLabel('Password').fill(password);
-  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await page.getByLabel('Email or Username').fill(login);
+  await page.getByLabel('Password', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
   await expect(page).toHaveURL(/board$/u);
   await expect(page.getByRole('heading', { name: 'Command center' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Upcoming Planned Activities' })).toBeVisible();
@@ -141,9 +141,9 @@ test('mobile overlays keep accessible names, keyboard dismissal, focus return, a
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('/login');
-  await page.getByLabel('Login').fill('superadmin');
-  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await page.getByLabel('Email or Username').fill('superadmin');
+  await page.getByLabel('Password', { exact: true }).fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
   await expect(page).toHaveURL(/\/board$/u);
 
   const modelNavigationTrigger = page.getByRole('button', { name: 'Open model navigation' });
@@ -233,29 +233,36 @@ function browserSuffix(testInfo: TestInfo): string {
   return testInfo.project.name === 'chromium' ? '' : `-${testInfo.project.name}`;
 }
 
-test('responsive screen audit: login across mobile, tablet, and desktop', async ({
+test('responsive screen audit: login matches the Enter the Shadow reference', async ({
   page,
 }, testInfo) => {
+  const authSizes = [
+    { name: 'mobile-320', width: 320, height: 800 },
+    { name: 'mobile-390', width: 390, height: 844 },
+    { name: 'tablet-768', width: 768, height: 1024 },
+    { name: 'desktop-1440', width: 1440, height: 900 },
+    { name: 'reference-1672', width: 1672, height: 941 },
+  ] as const;
   await mkdir(auditDirectory, { recursive: true });
-  for (const size of sizes) {
+  for (const size of authSizes) {
     await page.setViewportSize({ width: size.width, height: size.height });
     await page.goto('/login');
-    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
-    // Wait for Motion entrance effects so axe does not audit text mid-fade in slower engines.
-    await expect(page.getByRole('heading', { name: 'Sign in' }).locator('..')).toHaveCSS(
-      'opacity',
-      '1'
-    );
-    await expect(page.locator('main .mw-ui-speech-bubble')).toHaveCSS('opacity', '1');
+    await expect(
+      page.getByRole('heading', { name: 'Enter the Shadow', exact: true })
+    ).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Enter the Shadow' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Follow the Signal/u })).toBeVisible();
+    await expect(page.getByLabel('Email or Username')).toBeVisible();
+    await expect(page.getByLabel('Password', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Show password' })).toBeVisible();
     await expect
-      .poll(
-        () =>
-          page
-            .getByRole('img', { name: 'MoonWitness' })
-            .evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0),
-        { message: `MoonWitness logo should be decoded before the ${size.name} screenshot` }
+      .poll(() =>
+        page
+          .locator('.auth-shadow-picture img')
+          .evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)
       )
       .toBe(true);
+    await expect(page.getByRole('link', { name: 'MoonWitness home', exact: true })).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
     await expectNoHorizontalOverflow(page, `login/${size.name}`);
     await page.screenshot({
@@ -263,16 +270,26 @@ test('responsive screen audit: login across mobile, tablet, and desktop', async 
       fullPage: true,
     });
     await expectNoA11yViolations(page, `login/${size.name}`);
-    if (size.name === 'mobile-375') {
-      await page.getByRole('textbox', { name: 'Login' }).focus();
+    if (size.name === 'mobile-390') {
+      const identity = page.getByRole('textbox', { name: 'Email or Username' });
+      const password = page.getByLabel('Password', { exact: true });
+      const visibility = page.getByRole('button', { name: 'Show password' });
+      await identity.focus();
       await page.keyboard.press('Tab');
-      await expect(page.getByLabel('Password')).toBeFocused();
+      await expect(password).toBeFocused();
       await page.keyboard.press('Tab');
-      await expect(page.getByRole('button', { name: 'Enter the board' })).toBeFocused();
+      await expect(visibility).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect(page.getByRole('button', { name: 'Hide password' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+      await expect(password).toHaveAttribute('type', 'text');
+      await page.keyboard.press('Tab');
+      await expect(page.getByRole('button', { name: 'Enter the Shadow' })).toBeFocused();
     }
   }
 });
-
 test('homepage spelling, responsive layout, and reference screenshots', async ({
   page,
 }, testInfo) => {
@@ -289,7 +306,7 @@ test('homepage spelling, responsive layout, and reference screenshots', async ({
     await page.setViewportSize({ width: size.width, height: size.height });
     await page.goto('/');
     const brandLockup = page.locator('.home-lockup');
-    await expect(page.getByRole('link', { name: 'MoonWitness home' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'MoonWitness home', exact: true })).toBeVisible();
     await expect(brandLockup).toBeVisible();
     await expect
       .poll(() => brandLockup.evaluate((image: HTMLImageElement) => image.complete))
@@ -336,9 +353,9 @@ test('story workbench masthead keeps brand copy readable across viewports', asyn
   await mkdir(auditDirectory, { recursive: true });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/login');
-  await page.getByLabel('Login').fill('superadmin');
-  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await page.getByLabel('Email or Username').fill('superadmin');
+  await page.getByLabel('Password', { exact: true }).fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
   await expect(page).toHaveURL(/\/board$/u);
 
   for (const size of [
@@ -428,9 +445,9 @@ test('story workbench editor and preview stay readable with a populated story', 
 
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/login');
-  await page.getByLabel('Login').fill('superadmin');
-  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await page.getByLabel('Email or Username').fill('superadmin');
+  await page.getByLabel('Password', { exact: true }).fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
   await expect(page).toHaveURL(/\/board$/u);
   await page.getByRole('button', { name: 'Switch company. Current scope: Global Scope' }).click();
   await page.getByRole('menuitem', { name: 'MoonWitness' }).click();
@@ -509,9 +526,9 @@ test('empty and unavailable story workbench states explain the next action', asy
 
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/login');
-  await page.getByLabel('Login').fill('superadmin');
-  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await page.getByLabel('Email or Username').fill('superadmin');
+  await page.getByLabel('Password', { exact: true }).fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
   await expect(page).toHaveURL(/\/board$/u);
   await page.getByRole('button', { name: 'Switch company. Current scope: Global Scope' }).click();
   await page.getByRole('menuitem', { name: 'MoonWitness' }).click();
@@ -582,9 +599,9 @@ test('responsive protected screens fit and remain accessible in both themes', as
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/login');
-  await page.getByLabel('Login').fill('superadmin');
-  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await page.getByLabel('Email or Username').fill('superadmin');
+  await page.getByLabel('Password', { exact: true }).fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
   await expect(page).toHaveURL(/\/board$/u);
   await page.setViewportSize({ width: 1440, height: 1000 });
   for (const label of ['Organization Members', 'Notification Preferences']) {

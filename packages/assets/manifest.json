@@ -432,6 +432,22 @@
       "height": 24
     },
     {
+      "path": "icons/lock.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/mail.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
       "path": "icons/menu.svg",
       "kind": "icon",
       "variant": "currentColor",
@@ -592,6 +608,22 @@
       "height": 24
     },
     {
+      "path": "icons/visibility-off.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/visibility.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
       "path": "icons/volume-off.svg",
       "kind": "icon",
       "variant": "currentColor",
@@ -638,6 +670,26 @@
       "format": "svg",
       "width": 164,
       "height": 152
+    },
+    {
+      "path": "illustrations/auth-login-desktop.webp",
+      "source": "source/artwork/auth-login-shadow-master.png",
+      "kind": "artwork",
+      "variant": "auth-login-desktop",
+      "format": "webp",
+      "width": 1200,
+      "height": 1200,
+      "license": "OpenAI Terms of Use (Output owned by user, subject to applicable law)"
+    },
+    {
+      "path": "illustrations/auth-login-mobile.webp",
+      "source": "source/artwork/auth-login-shadow-master.png",
+      "kind": "artwork",
+      "variant": "auth-login-mobile",
+      "format": "webp",
+      "width": 1000,
+      "height": 600,
+      "license": "OpenAI Terms of Use (Output owned by user, subject to applicable law)"
     },
     {
       "path": "illustrations/board-masthead.webp",
@@ -847,6 +899,15 @@
       "durationSeconds": 0.28,
       "license": "ISC",
       "source": "scripts/generate-sounds.mjs"
+    },
+    {
+      "path": "source/artwork/auth-login-shadow-master.png",
+      "kind": "source",
+      "variant": "original-ai-artwork",
+      "format": "png",
+      "width": 1536,
+      "height": 1024,
+      "license": "OpenAI Terms of Use (Output owned by user, subject to applicable law)"
     },
     {
       "path": "source/artwork/board-masthead-master.png",

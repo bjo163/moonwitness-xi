@@ -39,9 +39,9 @@ function expiredAccessToken(user: E2EUser): string {
 
 async function loginSuperadmin(page: Page) {
   await page.goto('/login');
-  await page.getByLabel('Login').fill('superadmin');
-  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await page.getByLabel('Email or Username').fill('superadmin');
+  await page.getByLabel('Password', { exact: true }).fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
   await expect(page).toHaveURL(/\/board$/u);
   await expect(page.getByRole('heading', { name: 'Command center', exact: false })).toBeVisible();
 }
@@ -95,7 +95,7 @@ test('reload restores session, concurrent requests share expired-token refresh, 
   await page.getByRole('button', { name: 'superadmin' }).click();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();
   await expect(page).toHaveURL(loginPageUrl);
-  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Enter the Shadow' })).toBeVisible();
   await expect(page.evaluate(() => localStorage.getItem('mw-board-session'))).resolves.toBeNull();
 
   const replay = await page.request.post('/auth/refresh', {
@@ -104,7 +104,7 @@ test('reload restores session, concurrent requests share expired-token refresh, 
   expect(replay.status()).toBe(401);
   await page.goto('/board/profile');
   await expect(page).toHaveURL(loginPageUrl);
-  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Enter the Shadow' })).toBeVisible();
 });
 
 test('disabled accounts cannot establish an authentication session', async ({ page }) => {
@@ -151,9 +151,9 @@ test('login returns to an internal page and rejects an external return target', 
   await page.goto('/board/m/base.partner?source=session-test');
   const applicationOrigin = new URL(page.url()).origin;
   await expect(page).toHaveURL(loginPageUrl);
-  await page.getByLabel('Login').fill('superadmin');
-  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await page.getByLabel('Email or Username').fill('superadmin');
+  await page.getByLabel('Password', { exact: true }).fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
   await expect(page).toHaveURL(/\/m\/base\.partner\?source=session-test$/u);
   await expect(page.getByRole('heading', { name: 'Partners' })).toBeVisible();
 
@@ -173,9 +173,9 @@ test('login returns to an internal page and rejects an external return target', 
     );
   });
   await page.reload();
-  await page.getByLabel('Login').fill('superadmin');
-  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await page.getByLabel('Email or Username').fill('superadmin');
+  await page.getByLabel('Password', { exact: true }).fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
   await expect(page).toHaveURL(/\/m\/base\.partner\?source=session-test$/u);
   expect(new URL(page.url()).origin).toBe(applicationOrigin);
   await expect(page.getByRole('heading', { name: 'Partners' })).toBeVisible();
@@ -183,9 +183,9 @@ test('login returns to an internal page and rejects an external return target', 
   await page.getByRole('button', { name: 'superadmin' }).click();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();
   await page.goto('/login?returnTo=https%3A%2F%2Fattacker.example%2Fsteal-session');
-  await page.getByLabel('Login').fill('superadmin');
-  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await page.getByLabel('Email or Username').fill('superadmin');
+  await page.getByLabel('Password', { exact: true }).fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
   await expect(page).toHaveURL(/\/board$/u);
   expect(new URL(page.url()).origin).toBe(applicationOrigin);
   await expect(page.getByRole('heading', { name: 'Command center' })).toBeVisible();

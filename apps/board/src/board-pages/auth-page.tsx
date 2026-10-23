@@ -3,24 +3,22 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { motion } from 'motion/react';
 import { ApiError } from '@moonwitness/client';
 import { useAuth } from '@/hooks/use-auth-context';
+import { Logo } from '@/components/manga/logo';
+import {
+  ArrowRightIcon,
+  LockIcon,
+  MailIcon,
+  VisibilityIcon,
+  VisibilityOffIcon,
+} from '@moonwitness/ui/icons';
 import { Button } from '@moonwitness/ui/components/button';
-import { useSfx } from '@moonwitness/ui/components/audio';
 import { Input } from '@moonwitness/ui/components/input';
 import { Label } from '@moonwitness/ui/components/label';
-import {
-  AccentMarker,
-  Doodle,
-  EditorialTexture,
-  InkUnderline,
-  SpeechBubble,
-  SpeedLines,
-  LoadingSpinner,
-} from '@moonwitness/ui/components/effects';
-import { ArrowRightIcon } from '@moonwitness/ui/icons';
-import { Logo } from '@/components/manga/logo';
+import { Panel } from '@moonwitness/ui/components/panel';
+import { useSfx } from '@moonwitness/ui/components/audio';
+import { LoadingSpinner } from '@moonwitness/ui/components/effects';
 
 type Mode = 'login' | 'register';
 
@@ -59,7 +57,9 @@ export function AuthPage({ mode }: { mode: Mode }) {
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const from = safeReturnPath(searchParams?.get('returnTo'));
+  const isLogin = mode === 'login';
 
   useEffect(() => {
     if (user) router.replace(from);
@@ -73,7 +73,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
     setBusy(true);
     setError(null);
     try {
-      if (mode === 'login') {
+      if (isLogin) {
         await login({ login: value('login')!, password: String(form.get('password')) });
       } else {
         await register({
@@ -94,131 +94,187 @@ export function AuthPage({ mode }: { mode: Mode }) {
     }
   }
 
-  const isLogin = mode === 'login';
   return (
-    <main className="grid min-h-dvh lg:grid-cols-[1.15fr_1fr]">
-      {/* Left: comic splash panel */}
-      <section className="dark relative hidden overflow-hidden border-r-4 border-night bg-paper text-ink lg:block">
-        <SpeedLines className="opacity-25" origin={[0.5, 0.55]} inner={0.12} count={90} />
-        <EditorialTexture className="absolute inset-0 opacity-40" />
-        <div className="relative flex h-full flex-col justify-between p-12">
-          <Logo surface="dark" />
-          <div>
-            <motion.h2
-              initial={{ y: 40, opacity: 0, rotate: -3 }}
-              animate={{ y: 0, opacity: 1, rotate: -2 }}
-              transition={{ type: 'spring', stiffness: 160, damping: 16 }}
-              className="ink-title text-[clamp(4rem,9vw,8.5rem)]"
-            >
-              Run the
-              <br />
-              <span className="bg-lime px-3 text-on-accent">whole</span> show.
-            </motion.h2>
-            <p className="mt-6 max-w-md text-lg text-ink-soft">
-              Every model, every record, one board. Views are generated from your data — no screen
-              to hand-build.
+    <div className="auth-shadow" data-auth-mode={mode}>
+      <header className="auth-shadow-header">
+        <Link href="/" aria-label="MoonWitness home" className="auth-shadow-home">
+          <Logo surface="dark" className="auth-shadow-logo" />
+        </Link>
+        <Button asChild treatment="brush" className="auth-shadow-follow">
+          <Link href="/" aria-label="Follow the Signal — return to MoonWitness home">
+            Follow the Signal <ArrowRightIcon aria-hidden="true" />
+          </Link>
+        </Button>
+      </header>
+
+      <main className="auth-shadow-main">
+        <section className="auth-shadow-form-side" aria-labelledby="auth-title">
+          <Panel surface="ink" frame="line" density="comfortable" className="auth-shadow-card">
+            <div className="auth-shadow-eyebrow">
+              <span className="auth-shadow-eyebrow-mark" aria-hidden="true" />
+              MoonWitness access // {isLogin ? 'Sign in' : 'Create account'}
+            </div>
+            <h1 id="auth-title" className="auth-shadow-title">
+              <span>{isLogin ? 'Enter' : 'Join'}</span>
+              <span className="auth-shadow-title-line">
+                <small>the</small>
+                <em>{isLogin ? 'Shadow' : 'Crew'}</em>
+              </span>
+            </h1>
+            <p className="auth-shadow-intro">
+              {isLogin
+                ? 'Sign in to access your MoonWitness workspace.'
+                : 'Create an account to join your MoonWitness workspace.'}
             </p>
-          </div>
-          <div className="flex items-center gap-3 font-mono text-xs uppercase tracking-widest text-ink-faint">
-            <Doodle kind="bolt" className="size-5" /> Today &gt; yesterday · +1 every deploy
-          </div>
-        </div>
-      </section>
 
-      {/* Right: form */}
-      <section className="relative flex items-center justify-center p-6 sm:p-12">
-        <Doodle kind="star" className="absolute right-10 top-10 size-8 rotate-12" />
-        <Doodle kind="sparkle" className="absolute bottom-16 left-10 size-7 text-pink" />
-        <div className="w-full max-w-md">
-          <div className="mb-8 lg:hidden">
-            <Logo surface="light" />
-          </div>
-          <SpeechBubble className="mb-5">
-            {isLogin ? 'Welcome back!' : 'New here? Nice.'}
-          </SpeechBubble>
-          <h1 className="ink-title text-6xl">
-            <AccentMarker>{isLogin ? 'Sign in' : 'Join'}</AccentMarker>
-          </h1>
-          <InkUnderline className="mt-1 w-40" />
+            <form id="auth-form" onSubmit={onSubmit} className="auth-shadow-fields">
+              {!isLogin && (
+                <div className="auth-shadow-field">
+                  <Label htmlFor="name">Full name</Label>
+                  <Input id="name" name="name" autoComplete="name" maxLength={255} />
+                </div>
+              )}
 
-          <form
-            method="post"
-            onSubmit={onSubmit}
-            className="ink-panel mt-8 space-y-5 p-6"
-            noValidate={false}
-          >
-            {!isLogin && (
-              <div className="space-y-2">
-                <Label htmlFor="name">Full name</Label>
-                <Input id="name" name="name" autoComplete="name" maxLength={255} />
+              <div className="auth-shadow-field">
+                <Label htmlFor="login">Email or Username</Label>
+                <div className="auth-shadow-input-wrap">
+                  <MailIcon aria-hidden="true" className="auth-shadow-input-icon" />
+                  <Input
+                    id="login"
+                    name="login"
+                    autoComplete="username"
+                    placeholder="Enter your email or username"
+                    required
+                    minLength={isLogin ? 1 : 3}
+                    maxLength={255}
+                    className="auth-shadow-input"
+                  />
+                </div>
               </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="login">Login</Label>
-              <Input
-                id="login"
-                name="login"
-                autoComplete="username"
-                required
-                minLength={isLogin ? 1 : 3}
-                maxLength={255}
-                autoFocus
-              />
-            </div>
-            {!isLogin && (
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" autoComplete="email" maxLength={255} />
+
+              {!isLogin && (
+                <div className="auth-shadow-field">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="you@example.com"
+                    maxLength={255}
+                  />
+                </div>
+              )}
+
+              <div className="auth-shadow-field">
+                <Label htmlFor="password">Password</Label>
+                <div className="auth-shadow-input-wrap">
+                  <LockIcon aria-hidden="true" className="auth-shadow-input-icon" />
+                  <Input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete={isLogin ? 'current-password' : 'new-password'}
+                    placeholder="Enter your password"
+                    required
+                    minLength={isLogin ? 1 : 6}
+                    className="auth-shadow-input auth-shadow-password"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="auth-shadow-visibility"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    aria-pressed={showPassword}
+                    aria-controls="password"
+                    onClick={() => setShowPassword((visible) => !visible)}
+                  >
+                    {showPassword ? (
+                      <VisibilityOffIcon aria-hidden="true" />
+                    ) : (
+                      <VisibilityIcon aria-hidden="true" />
+                    )}
+                  </Button>
+                </div>
               </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete={isLogin ? 'current-password' : 'new-password'}
-                required
-                minLength={isLogin ? 1 : 6}
-              />
-            </div>
 
-            {error && (
-              <motion.p
-                role="alert"
-                initial={{ x: -8 }}
-                animate={{ x: [8, -6, 4, 0] }}
-                className="border-2 border-ink bg-pink px-3 py-2 text-sm font-bold text-on-pink"
+              {error ? (
+                <p role="alert" className="auth-shadow-error">
+                  {error}
+                </p>
+              ) : null}
+
+              <Button
+                id="auth-submit"
+                type="submit"
+                size="lg"
+                treatment="brush"
+                className="auth-shadow-submit"
+                disabled={busy}
+                aria-busy={busy}
               >
-                {error}
-              </motion.p>
-            )}
+                {busy ? <LoadingSpinner /> : null}
+                {busy
+                  ? isLogin
+                    ? 'Entering the shadow…'
+                    : 'Creating account…'
+                  : isLogin
+                    ? 'Enter the Shadow'
+                    : 'Create account'}
+                {!busy ? <ArrowRightIcon aria-hidden="true" /> : null}
+              </Button>
+            </form>
 
-            <Button id="auth-submit" type="submit" size="lg" className="w-full" disabled={busy}>
-              {busy ? <LoadingSpinner /> : <ArrowRightIcon aria-hidden="true" />}
-              {busy
-                ? isLogin
-                  ? 'Signing in…'
-                  : 'Creating account…'
-                : isLogin
-                  ? 'Enter the board'
-                  : 'Create account'}
-            </Button>
-          </form>
+            <p className="auth-shadow-switch">
+              {isLogin ? 'New to MoonWitness?' : 'Already part of the crew?'}{' '}
+              <Button asChild variant="link" className="auth-shadow-switch-link">
+                <Link
+                  id="auth-switch"
+                  href={`${isLogin ? '/register' : '/login'}?returnTo=${encodeURIComponent(from)}`}
+                >
+                  {isLogin ? 'Create an account' : 'Sign in'}
+                </Link>
+              </Button>
+            </p>
+            <p className="auth-shadow-access-note">
+              <span aria-hidden="true" />
+              Your credentials stay private and secure.
+            </p>
+          </Panel>
+        </section>
 
-          <p className="mt-6 text-sm text-ink-soft">
-            {isLogin ? 'No account yet? ' : 'Already have one? '}
-            <Button asChild variant="link" className="h-auto p-0 text-sm text-ink">
-              <Link
-                id="auth-switch"
-                href={`${isLogin ? '/register' : '/login'}?returnTo=${encodeURIComponent(from)}`}
-              >
-                {isLogin ? 'Register' : 'Sign in'}
-              </Link>
-            </Button>
+        <aside className="auth-shadow-art" aria-label="MoonWitness night city artwork">
+          <picture className="auth-shadow-picture">
+            <source
+              media="(max-width: 899px)"
+              srcSet="/illustrations/auth-login-mobile.webp"
+              width="1000"
+              height="600"
+            />
+            <img
+              src="/illustrations/auth-login-desktop.webp"
+              alt="A hooded person looking over a neon city beneath a full moon."
+              width="1200"
+              height="1200"
+              fetchPriority="high"
+              decoding="async"
+            />
+          </picture>
+          <div className="auth-shadow-art-shade" aria-hidden="true" />
+          <p className="auth-shadow-art-copy">
+            Same moon.
+            <br />
+            Different people.
           </p>
-        </div>
-      </section>
-    </main>
+          <span className="auth-shadow-art-caption">Stories beyond borders</span>
+        </aside>
+      </main>
+
+      <footer className="auth-shadow-footer">
+        <span>MoonWitness&nbsp; // &nbsp;Create · Curate · Publish</span>
+        <span className="auth-shadow-footer-note">A shared sky for every story.</span>
+      </footer>
+    </div>
   );
 }

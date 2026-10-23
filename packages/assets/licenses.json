@@ -119,6 +119,24 @@
   ],
   "artwork": [
     {
+      "path": "illustrations/auth-login-desktop.webp",
+      "sourceFile": "source/artwork/auth-login-shadow-master.png",
+      "creator": "OpenAI image generation, commissioned by MoonWitness contributors",
+      "source": "Codex image_gen using the user-provided MoonWitness visual references",
+      "terms": "https://openai.com/policies/terms-of-use/",
+      "generatedOn": "2026-10-24",
+      "notes": "Original illustration generated without embedded typography or UI. The user-provided reference was used for art direction; no screenshot was used as artwork."
+    },
+    {
+      "path": "illustrations/auth-login-mobile.webp",
+      "sourceFile": "source/artwork/auth-login-shadow-master.png",
+      "creator": "OpenAI image generation, commissioned by MoonWitness contributors",
+      "source": "Codex image_gen using the user-provided MoonWitness visual references",
+      "terms": "https://openai.com/policies/terms-of-use/",
+      "generatedOn": "2026-10-24",
+      "notes": "Original illustration generated without embedded typography or UI. The user-provided reference was used for art direction; no screenshot was used as artwork."
+    },
+    {
       "path": "illustrations/board-masthead.webp",
       "sourceFile": "source/artwork/board-masthead-master.png",
       "creator": "OpenAI image generation, commissioned by MoonWitness contributors",

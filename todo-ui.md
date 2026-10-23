@@ -509,6 +509,24 @@ Urutan: header → hero manga → tiga panel editorial → band koneksi → film
 
 ## L. Motion, loading, special FX, dan SFX
 
+### Animasi yang dirancang dan diverifikasi
+
+- [ ] Tetapkan token durasi dan easing untuk feedback cepat, transisi panel, dan dekorasi; hindari nilai acak yang tersebar.
+- [ ] Animasi tombol saat hover, focus, active, dan submit tanpa mengubah ukuran area klik atau menggeser layout.
+- [ ] Animasi underline navigasi dan indikator panel aktif dengan transisi singkat.
+- [ ] Animasi masuk/keluar Dialog, Sheet, Dropdown, Popover, dan Toast; pastikan overlay serta fokus tetap benar.
+- [ ] Animasi reveal artwork/hero satu kali dan singkat; jangan membuat gerakan dekoratif terus-menerus.
+- [ ] Animasi kartu/panel saat hover dengan perubahan ringan pada tinta, border, atau marker; hormati perangkat tanpa hover.
+- [ ] Animasi Skeleton hanya selama request nyata; jangan memakai shimmer tanpa proses aktif.
+- [x] Animasi LoadingSpinner shared sudah tersedia dan dipakai auth. Bukti: `packages/ui/src/components/effects.tsx`, `packages/ui/src/styles/components.css`, dan tes `packages/ui/tests/effects.test.mjs`; CSS juga menghormati reduced motion.
+- [x] Periksa secara visual spinner auth saat submit: ukuran, alignment dengan label tombol, kontras pada treatment brush, dan tidak mengubah lebar tombol. Bukti: `docs/design/ui-catalog/auth-login-loading-mobile-390.png`; E2E mengukur lebar tombol sebelum/saat proses.
+- [x] Periksa label tombol saat submit tetap menyatakan proses yang berjalan, termasuk pada login dan registrasi. Bukti: `apps/board/e2e/auth.spec.ts` menguji label busy login; implementasi memakai label tersendiri untuk login dan registrasi.
+- [ ] Periksa success, warning, dan error feedback dengan transisi yang tidak bergantung pada warna atau gerakan saja.
+- [ ] Pastikan animasi dekoratif berhenti saat elemen keluar viewport dan tidak berjalan terus di halaman kerja.
+- [ ] Pastikan `prefers-reduced-motion` mematikan putaran, shimmer, parallax, dan perpindahan non-esensial; sediakan state statis yang tetap jelas.
+- [ ] Uji keyboard dan pointer untuk memastikan animasi tidak menunda input, menutup focus ring, atau menghalangi aksi.
+- [ ] Ambil screenshot state animasi pada frame deterministik; nonaktifkan/selesaikan animasi pada screenshot regression.
+
 ### FX dan loading
 
 - [ ] Gunakan texture statis untuk speckle, halftone, dan tinta.

@@ -30,9 +30,9 @@ async function expectNoHorizontalOverflow(page: Page, label: string) {
 
 async function signIn(page: Page, login: string, password: string) {
   await page.goto('/login');
-  await page.getByLabel('Login').fill(login);
-  await page.getByLabel('Password').fill(password);
-  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await page.getByLabel('Email or Username').fill(login);
+  await page.getByLabel('Password', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
   await expect(page).toHaveURL(/\/board$/u);
 }
 

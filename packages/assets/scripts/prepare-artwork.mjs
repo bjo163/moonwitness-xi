@@ -67,6 +67,26 @@ const generated = [
     quality: 77,
   },
 ];
+generated.push(
+  {
+    source: 'source/artwork/auth-login-shadow-master.png',
+    extract: { left: 512, top: 0, width: 1024, height: 1024 },
+    path: 'illustrations/auth-login-desktop.webp',
+    variant: 'auth-login-desktop',
+    width: 1200,
+    height: 1200,
+    quality: 76,
+  },
+  {
+    source: 'source/artwork/auth-login-shadow-master.png',
+    extract: { left: 536, top: 0, width: 1000, height: 600 },
+    path: 'illustrations/auth-login-mobile.webp',
+    variant: 'auth-login-mobile',
+    width: 1000,
+    height: 600,
+    quality: 72,
+  }
+);
 const assets = [];
 
 async function atomicWrite(filePath, content) {
@@ -132,7 +152,7 @@ const artworkProvenance = generated.map(({ path, source }) => ({
   creator: 'OpenAI image generation, commissioned by MoonWitness contributors',
   source: 'Codex image_gen using the user-provided MoonWitness visual references',
   terms: 'https://openai.com/policies/terms-of-use/',
-  generatedOn: '2026-10-23',
+  generatedOn: path.includes('auth-login-') ? '2026-10-24' : '2026-10-23',
   notes:
     'Original illustration generated without embedded typography or UI. The user-provided reference was used for art direction; no screenshot was used as artwork.',
 }));

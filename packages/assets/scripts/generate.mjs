@@ -151,6 +151,29 @@ const icons = [
       '<path d="M12 3 20 6v5.5c0 4.6-3 7.6-8 9.5-5-1.9-8-4.9-8-9.5V6l8-3Z"/><path d="m8.5 12 2.3 2.3 4.8-5"/>',
   },
   {
+    name: 'mail',
+    title: 'Email',
+    paths: '<rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="m4 6 8 6 8-6"/>',
+  },
+  {
+    name: 'lock',
+    title: 'Password',
+    paths:
+      '<rect x="4.5" y="10" width="15" height="11" rx="1.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v3"/>',
+  },
+  {
+    name: 'visibility',
+    title: 'Show password',
+    paths:
+      '<path d="M2.5 12s3.2-5.5 9.5-5.5 9.5 5.5 9.5 5.5-3.2 5.5-9.5 5.5S2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.5"/>',
+  },
+  {
+    name: 'visibility-off',
+    title: 'Hide password',
+    paths:
+      '<path d="m3 3 18 18M10.6 6.6c.5-.1.9-.1 1.4-.1 6.3 0 9.5 5.5 9.5 5.5a16 16 0 0 1-3 3.7M6.2 6.8C3.8 8.3 2.5 12 2.5 12s3.2 5.5 9.5 5.5c.8 0 1.6-.1 2.3-.3"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
+  },
+  {
     name: 'check',
     title: 'Check',
     paths: '<path d="m5 12.5 4.5 4.5L19 7"/>',

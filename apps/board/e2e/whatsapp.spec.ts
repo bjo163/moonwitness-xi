@@ -3,9 +3,9 @@ import { E2E_SUPERADMIN_PASSWORD } from './constants.js';
 
 test('company WhatsApp inbox displays chats and queues a reply', async ({ page }) => {
   await page.goto('/login');
-  await page.getByLabel('Login').fill('superadmin');
-  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await page.getByLabel('Email or Username').fill('superadmin');
+  await page.getByLabel('Password', { exact: true }).fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
   await expect(page).toHaveURL(/\/board$/u);
 
   await page.route('**/whatsapp/account', (route) =>
@@ -89,7 +89,7 @@ test('connect shows QR, media is queued, and failures preserve the draft', async
   await page.goto('/login');
   await page.getByLabel('Login', { exact: true }).fill('superadmin');
   await page.getByLabel('Password', { exact: true }).fill(E2E_SUPERADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
   await expect(page).toHaveURL(/\/board$/u);
   let status = 'disconnected';
   await page.route('**/whatsapp/account', (route) =>

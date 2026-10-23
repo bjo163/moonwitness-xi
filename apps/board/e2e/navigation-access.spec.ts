@@ -5,9 +5,9 @@ test('development mode reveals technical navigation without changing API access'
   page,
 }) => {
   await page.goto('/login');
-  await page.getByLabel('Login').fill('superadmin');
-  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await page.getByLabel('Email or Username').fill('superadmin');
+  await page.getByLabel('Password', { exact: true }).fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
   await expect(page).toHaveURL(/\/board$/u);
 
   const session = await page.evaluate(
@@ -85,9 +85,9 @@ test('development mode reveals technical navigation without changing API access'
   await page.getByRole('button', { name: 'superadmin' }).click();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();
   await expect(page).toHaveURL(loginPageUrl);
-  await page.getByLabel('Login').fill(userLogin);
-  await page.getByLabel('Password').fill(userPassword);
-  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await page.getByLabel('Email or Username').fill(userLogin);
+  await page.getByLabel('Password', { exact: true }).fill(userPassword);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
   await expect(page).toHaveURL(/\/board$/u);
   await expect(page.getByRole('button', { name: 'Development Mode: On' }).first()).toBeVisible();
   await expect(page.getByRole('link', { name: 'Knowledge explorer' })).toHaveCount(0);
