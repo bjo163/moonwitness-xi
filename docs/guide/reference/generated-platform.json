@@ -295,7 +295,7 @@
       "architecture:generate": "pnpm --filter @moonwitness/knowledge build && pnpm --filter @moonwitness/corpus build && pnpm --filter @moonwitness/research build && pnpm --filter @moonwitness/orm build && pnpm --filter @moonwitness/orm-base build && pnpm --filter @moonwitness/auth build && pnpm --filter @moonwitness/jobs build && pnpm --filter @moonwitness/orm-integration build && pnpm --filter @moonwitness/orm-workflow build && pnpm --filter @moonwitness/orm-knowledge build && pnpm --filter @moonwitness/orm-notification build && pnpm --filter @moonwitness/orm-organization build && pnpm --filter @moonwitness/orm-request build && pnpm --filter @moonwitness/orm-storage build && node scripts/architecture/generate-diagrams.mjs",
       "assets:check:docs": "node scripts/export-doc-assets.mjs --check",
       "assets:export:docs": "node scripts/export-doc-assets.mjs",
-      "assets:generate": "node packages/assets/scripts/generate.mjs && node packages/assets/scripts/generate-illustrations.mjs && node packages/assets/scripts/generate-sounds.mjs && pnpm --filter @moonwitness/assets fonts:prepare && pnpm --filter @moonwitness/assets artwork:prepare && node scripts/export-doc-assets.mjs",
+      "assets:generate": "node packages/assets/scripts/generate.mjs && node packages/assets/scripts/generate-illustrations.mjs && node packages/assets/scripts/generate-sounds.mjs && node scripts/export-doc-assets.mjs",
       "assets:generate:illustrations": "node packages/assets/scripts/generate-illustrations.mjs && node scripts/export-doc-assets.mjs",
       "assets:render": "node packages/assets/scripts/render-social.mjs",
       "assets:validate": "node packages/assets/scripts/validate.mjs",
@@ -6273,5 +6273,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "1b161f1cf1cfd06d104074b8c94fe68a1a99fff4b7ae71b07e835b92b5ab92da"
+  "generatedFromSha256": "5e085fd7dbc61a8014d3fe5f87ec2601104fe7d865bab4f61d670f91e33ebe8d"
 }
