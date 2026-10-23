@@ -8,9 +8,11 @@ import {
 } from './check-workflow-checkout-trust.mjs';
 
 const expressionStart = '$' + '{';
-const pagesAssetReconciler = await readFile(
-  new NodeURL('./docs/reconcile-versioned-docs-asset.mjs', import.meta.url),
-  'utf8'
+const normalize = (source) => source.replace(/\r\n/gu, '\n');
+const readWorkflow = async (name) =>
+  normalize(await readFile(new NodeURL(`../.github/workflows/${name}`, import.meta.url), 'utf8'));
+const pagesAssetReconciler = normalize(
+  await readFile(new NodeURL('./docs/reconcile-versioned-docs-asset.mjs', import.meta.url), 'utf8')
 );
 const pages = `
       - uses: actions/checkout@0123456789012345678901234567890123456789 # v4
@@ -136,7 +138,7 @@ test('all repository-writing workflow jobs use their non-cancelling resource loc
   const workflows = await Promise.all(
     files.map(async (name) => ({
       name,
-      source: await readFile(new NodeURL(`../.github/workflows/${name}`, import.meta.url), 'utf8'),
+      source: await readWorkflow(name),
     }))
   );
   assert.deepEqual(inspectRepositoryWriteCoordination(workflows), []);
@@ -155,6 +157,33 @@ test('all repository-writing workflow jobs use their non-cancelling resource loc
     inspectRepositoryWriteCoordination(unsafeWorkflows).some((finding) =>
       finding.includes('dependency-candidate.yml job "publish"')
     )
+  );
+});
+
+test('release orchestration is exact-source, ci-gated, and confirmation-bound', async () => {
+  const releaseOrchestrate = await readWorkflow('release-orchestrate.yml');
+  assert.deepEqual(policies({ releaseOrchestrate }), []);
+
+  const unsafeSource = releaseOrchestrate
+    .replace('if [[ "$current" != "$source" ]]', 'true')
+    .replace('test "$CONFIRM_STABLE" = "$TAG"', 'true');
+  const findings = policies({ releaseOrchestrate: unsafeSource });
+  assert.ok(findings.some((finding) => finding.includes('source to be current main')));
+  assert.ok(findings.some((finding) => finding.includes('confirm_version to equal')));
+
+  const unsafeGate = policies({
+    releaseOrchestrate: releaseOrchestrate.replace(
+      '.name == "ci-gate" and .conclusion == "success"',
+      '.name == "ci"'
+    ),
+  });
+  assert.ok(unsafeGate.some((finding) => finding.includes('exact-SHA main ci-gate before writes')));
+
+  const unsafeAutomaticStable = policies({
+    releaseOrchestrate: releaseOrchestrate.replace('version" != *-rc.*', 'version" == ""'),
+  });
+  assert.ok(
+    unsafeAutomaticStable.some((finding) => finding.includes('reserve stable publication'))
   );
 });
 
@@ -192,6 +221,7 @@ test('write workflows use separate resource locks while keeping conflicting writ
     ['release-prepare.yml', 'dev-branch-updates'],
     ['roadmap-issue-plan.yml', 'roadmap-issue-sync'],
     ['release.yml', 'release-asset-updates'],
+    ['release-orchestrate.yml', 'release-asset-updates'],
     ['pages.yml', 'release-asset-updates'],
     ['pages.yml', 'pages-site-deployment'],
     ['pages.yml', 'maintenance-incident-documentation'],
@@ -203,11 +233,15 @@ test('write workflows use separate resource locks while keeping conflicting writ
     cases.map(async ([name, group]) => ({
       name,
       group,
-      source: await readFile(new NodeURL(`../.github/workflows/${name}`, import.meta.url), 'utf8'),
+      source: await readWorkflow(name),
     }))
   );
   for (const { name, group, source } of sources) {
-    assert.match(source, new RegExp(`group: ${group}\\n\\s+cancel-in-progress: false`, 'u'), name);
+    assert.match(
+      source.replace(/\r\n/gu, '\n'),
+      new RegExp(`group: ${group}\\n\\s+cancel-in-progress: false`, 'u'),
+      name
+    );
   }
   assert.equal(
     sources.find(({ name, group }) => name === 'release.yml' && group === 'release-asset-updates')
@@ -236,10 +270,7 @@ test('write workflows use separate resource locks while keeping conflicting writ
 });
 
 test('promotion report refresh is trusted, dev-scoped, and read-only outside the PR body', async () => {
-  const promotionReportRefresh = await readFile(
-    new NodeURL('../.github/workflows/refresh-promotion-report.yml', import.meta.url),
-    'utf8'
-  );
+  const promotionReportRefresh = await readWorkflow('refresh-promotion-report.yml');
   assert.deepEqual(policies({ promotionReportRefresh }), []);
 
   const unsafe = promotionReportRefresh
@@ -252,7 +283,7 @@ test('promotion report refresh is trusted, dev-scoped, and read-only outside the
 
 test('issue intake workflow keeps the current permission lookup scoped and report inert', async () => {
   const [issueIntake, issueIntakeRunner] = await Promise.all([
-    readFile(new NodeURL('../.github/workflows/roadmap-issue-intake.yml', import.meta.url), 'utf8'),
+    readWorkflow('roadmap-issue-intake.yml'),
     readFile(new NodeURL('./roadmap/run-issue-intake.mjs', import.meta.url), 'utf8'),
   ]);
   assert.deepEqual(policies({ issueIntake, issueIntakeRunner }), []);
@@ -260,7 +291,7 @@ test('issue intake workflow keeps the current permission lookup scoped and repor
 
 test('issue intake policy rejects write scopes, unpinned checkout, and user text in summaries', async () => {
   const [issueIntake, issueIntakeRunner] = await Promise.all([
-    readFile(new NodeURL('../.github/workflows/roadmap-issue-intake.yml', import.meta.url), 'utf8'),
+    readWorkflow('roadmap-issue-intake.yml'),
     readFile(new NodeURL('./roadmap/run-issue-intake.mjs', import.meta.url), 'utf8'),
   ]);
   const unsafeWorkflow = issueIntake
@@ -291,10 +322,7 @@ test('issue intake policy rejects write scopes, unpinned checkout, and user text
 });
 
 test('roadmap issue resume dispatch is bounded and Actions write stays apply-scoped', async () => {
-  const issueSync = await readFile(
-    new NodeURL('../.github/workflows/roadmap-issue-plan.yml', import.meta.url),
-    'utf8'
-  );
+  const issueSync = await readWorkflow('roadmap-issue-plan.yml');
   assert.deepEqual(policies({ issueSync }), []);
 
   const unsafePlanPermission = issueSync.replace(
@@ -320,8 +348,8 @@ test('roadmap issue resume dispatch is bounded and Actions write stays apply-sco
 
 test('scheduled regression incidents are main-only, isolated, and narrowly scoped', async () => {
   const [browserMatrix, deepRegression] = await Promise.all([
-    readFile(new NodeURL('../.github/workflows/browser-matrix.yml', import.meta.url), 'utf8'),
-    readFile(new NodeURL('../.github/workflows/deep-regression.yml', import.meta.url), 'utf8'),
+    readWorkflow('browser-matrix.yml'),
+    readWorkflow('deep-regression.yml'),
   ]);
   assert.deepEqual(policies({ browserMatrix, deepRegression }), []);
 

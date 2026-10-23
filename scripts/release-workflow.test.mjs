@@ -2,10 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 
-const workflow = await readFile(
-  new globalThis.URL('../.github/workflows/release.yml', import.meta.url),
-  'utf8'
-);
+const workflow = (
+  await readFile(new globalThis.URL('../.github/workflows/release.yml', import.meta.url), 'utf8')
+).replace(/\r\n/gu, '\n');
 const smokeScript = await readFile(
   new globalThis.URL('./smoke-containers.sh', import.meta.url),
   'utf8'
@@ -220,6 +219,20 @@ test('critical candidates fail verification and latest only advances for a newer
   assert.match(assetReconciler, /if \(!existing && !isDraft\)/u);
 });
 
+test('stable publication requires the exact confirmation after tag revalidation', () => {
+  const header = workflow.slice(0, jobsStart);
+  assert.match(header, /confirm_stable:\n\s+description: .*\n\s+required: false/u);
+  const tagGuard = publish.indexOf('Require the source tag to remain on the verified SHA');
+  const confirmation = publish.indexOf('Require explicit stable release confirmation');
+  const registryLogin = publish.indexOf('uses: docker/login-action@');
+  assert.ok(tagGuard >= 0 && tagGuard < confirmation);
+  assert.ok(confirmation < registryLogin, 'confirmation must precede any registry write');
+  const guard = publish.slice(confirmation, registryLogin);
+  assert.match(guard, /RELEASE_TAG" == \*-\*/u);
+  assert.match(guard, /CONFIRM_STABLE" != "\$RELEASE_TAG"/u);
+  assert.match(publish, /CONFIRM_STABLE: \$\{\{ inputs\.confirm_stable \}\}/u);
+});
+
 test('publish revalidates the source tag after verification before any image write', () => {
   assert.match(
     publish,
@@ -235,7 +248,7 @@ test('publish revalidates the source tag after verification before any image wri
 
 test('release fault recovery preserves no-op plans and explicitly models hostile failures', () => {
   assert.match(releasePlanner, /classification\.changeKind === 'none'/u);
-  assert.match(releasePlanner, /result\.status = 'no-release'/u);
+  assert.match(releasePlanner, /plan\.status = 'no-release'/u);
   assert.match(imagePublisher, /manifest unknown/iu);
   assert.match(imagePublisher, /if \(!missingImageManifest\(error\)\) throw error/u);
   assert.match(publish, /remote_tag_sha/u);
