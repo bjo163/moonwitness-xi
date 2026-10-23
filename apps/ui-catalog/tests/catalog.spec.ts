@@ -403,6 +403,37 @@ test('catalog reflows component examples for a narrow screen', async ({ page }, 
   await page.screenshot({ path: testInfo.outputPath('mobile.png'), fullPage: false });
 });
 
+test('reduced motion removes decorative animation and keeps loading status visible', async ({
+  page,
+}, testInfo) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('./#materials');
+  const motionGrid = page.locator('.catalog-motion-grid');
+  const speedLines = motionGrid.locator('.mw-ui-speed-lines-pulse');
+  const underline = motionGrid.locator('.mw-ui-ink-underline-path');
+  const speechBubble = motionGrid.getByText('Story saved');
+  const progress = page.getByRole('status', { name: 'Loading preview' });
+  const progressBar = progress.locator('span').first();
+
+  for (const element of [speedLines, underline, speechBubble, progressBar]) {
+    await expect
+      .poll(() => element.evaluate((node) => getComputedStyle(node).animationName))
+      .not.toBe('none');
+  }
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  for (const element of [speedLines, underline, speechBubble, progressBar]) {
+    await expect
+      .poll(() => element.evaluate((node) => getComputedStyle(node).animationName))
+      .toBe('none');
+  }
+  await expect(progress).toBeVisible();
+  await expect(page.getByText('Loading preview…')).toBeVisible();
+  await expect(speechBubble).toBeVisible();
+  expect(await speechBubble.evaluate((node) => getComputedStyle(node).opacity)).toBe('1');
+  await motionGrid.screenshot({ path: testInfo.outputPath('reduced-motion-states.png') });
+});
+
 test('representative visual layout and token contract stays stable @visual', async ({ page }) => {
   test.setTimeout(15_000);
   await page.goto('./');

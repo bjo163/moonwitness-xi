@@ -74,6 +74,13 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@moonwitness/ui/components/tabs';
 import { toast, ToastHost } from '@moonwitness/ui/components/toast';
 import { SoundProvider, SoundToggle, useSfx } from '@moonwitness/ui/components/audio';
+import {
+  InkUnderline,
+  LoadingProgress,
+  SignalOrbit,
+  SpeechBubble,
+  SpeedLines,
+} from '@moonwitness/ui/components/effects';
 import { Toolbar } from '@moonwitness/ui/components/toolbar';
 import {
   Tooltip,
@@ -578,6 +585,30 @@ function CatalogContent() {
                   </Panel>
                   <PaperNote accent="yellow">Same moon. Different people.</PaperNote>
                   <div className="material-halftone" aria-hidden="true" />
+                </div>
+              </Example>
+              <Example
+                title="Motion and reduced motion"
+                description="Decorative motion is brief; reduced motion keeps the mark and status visible without animation."
+              >
+                <div className="catalog-motion-grid">
+                  <div>
+                    <span>Focus lines</span>
+                    <div className="catalog-motion-lines">
+                      <SpeedLines count={20} />
+                    </div>
+                  </div>
+                  <div>
+                    <span>Ink underline</span>
+                    <InkUnderline />
+                  </div>
+                  <SignalOrbit className="catalog-motion-orbit">
+                    <SpeechBubble>Story saved</SpeechBubble>
+                  </SignalOrbit>
+                  <div className="catalog-motion-progress">
+                    <span>Loading preview…</span>
+                    <LoadingProgress label="Loading preview" />
+                  </div>
                 </div>
               </Example>
             </Section>

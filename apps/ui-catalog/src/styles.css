@@ -773,6 +773,47 @@ a:focus-visible {
   display: grid;
   gap: 1.5rem;
 }
+.catalog-motion-grid {
+  display: grid;
+  gap: 1rem;
+}
+.catalog-motion-grid > div:not(.mw-ui-signal-orbit) {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--mw-muted-foreground);
+  font-size: 0.75rem;
+}
+.catalog-motion-lines {
+  position: relative;
+  min-height: 3rem;
+  overflow: hidden;
+  border: 1px solid var(--mw-border);
+  background: var(--mw-paper);
+}
+.catalog-motion-lines .mw-ui-speed-lines {
+  color: var(--mw-signal-blue);
+}
+.catalog-motion-orbit {
+  width: min(100%, 12rem);
+  min-height: 3rem;
+  display: grid;
+  align-items: center;
+  justify-items: start;
+  padding: 0.35rem;
+}
+.catalog-motion-grid .mw-ui-ink-underline {
+  max-width: 14rem;
+}
+.catalog-motion-progress {
+  display: grid;
+  gap: 0.35rem;
+  max-width: 22rem;
+  color: var(--mw-muted-foreground);
+  font-size: 0.75rem;
+}
+.catalog-motion-progress .mw-ui-loading-progress {
+  width: 100%;
+}
 .catalog-skeleton {
   width: min(100%, 24rem);
   height: 4rem;

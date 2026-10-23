@@ -530,7 +530,7 @@ Pertahankan satu command manual/otomatis: **`pnpm board:ui:check`**.
 - [x] Uji canonical SVG dan generated React wrapper. Bukti: `packages/ui/tests/icons.test.mjs` membandingkan atribut pada 50 wrapper; UI Catalog merender semua pasangan di browser dan memeriksa ukuran render, lalu contact sheet diperiksa visual dan disimpan di `docs/design/ui-catalog/canonical-vs-react-icons.png`.
 - [x] Uji inventory, lisensi, package exports, dan generator deterministik. Bukti: `pnpm test:assets` (24/24) memeriksa exact inventory, provenance/hash font, dan isi tarball; `pnpm assets:generate` dijalankan dua kali dan hash seluruh media tetap identik.
 - [x] Uji mute persistence, lazy load, dan playback failure. `packages/ui/tests/audio.test.mjs` mencakup preference, gating, constructor/reject, dan overlap; UI Catalog E2E membuktikan default mute, toggle tersimpan setelah reload, tanpa request audio saat muted, dan request baru saat cue eksplisit dimainkan. Screenshot label ditinjau dan disimpan di `docs/design/ui-catalog/sound-toggle-enabled-state.png`.
-- [ ] Uji reduced-motion tanpa kehilangan informasi state.
+- [x] Uji reduced-motion tanpa kehilangan informasi state. Bukti: UI Catalog E2E mengonfirmasi animasi dekoratif berhenti pada `prefers-reduced-motion: reduce` sementara label “Story saved” dan “Loading preview…” tetap terlihat; screenshot diperiksa visual dan ejaan di `docs/design/ui-catalog/reduced-motion-states.png`.
 - [ ] Uji zoom 200%, font fallback, dan image load failure.
 
 ### Visual regression dan responsive
