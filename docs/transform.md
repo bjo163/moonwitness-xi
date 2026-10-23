@@ -8,6 +8,8 @@ Tidak menambah app workspace baru. `apps/board` menjadi app Next.js; `apps/docs`
 
 “Lengkap” berarti seluruh kebutuhan UI yang benar-benar dipakai homepage dan Board tercakup dalam sistem bersama. Bukan berarti setiap fitur pada mockup otomatis dibuat, semua file harus vektor, atau semua media dimasukkan ke `@moonwitness/ui`.
 
+Pelaksanaan detail visual Home, Board, workbench, aset sampai detail kecil, Bible terbaru, dan bukti review dicatat pada [`todo-ui.md`](../todo-ui.md). Checklist tersebut adalah satu-satunya rencana eksekusi visual agar tahapan tidak diduplikasi di sini.
+
 ## 1. Pembagian tanggung jawab package
 
 Pertahankan dua package yang sudah ada; jangan membuat package atau contract JSON baru.
@@ -55,7 +57,7 @@ Interpretasi referensi:
 
 - Gambar 1–2: homepage editorial, ilustratif, padat tekstur, dengan tinta gelap dan aksen magenta, cyan/biru, serta kuning.
 - Gambar 3–4: bahasa visual untuk Board—panel padat, aksen neon, kolase, hirarki dashboard. **Gambar ini bukan spesifikasi fitur Board baru.**
-- Audit brand mark yang sudah ada sebelum mengubah bentuk logo. Siapkan versi vektor dan variant yang dibutuhkan dari satu sumber; jangan menganggap artwork mockup otomatis logo final.
+- Audit brand mark yang sudah ada sebelum mengubah bentuk logo. Keputusan visual yang disetujui menetapkan crown + brush wordmark sebagai identitas utama baru; buat semua varian vektor dari satu sumber canonical dan jangan menjadikan artwork mockup sebagai logo final.
 - Pertahankan kontras teks/fokus, hierarki konten, dan keterbacaan. Tekstur atau dekorasi tidak boleh membuat teks penting jadi gambar.
 - Audit konten sebelum menulis homepage. Jangan mengarang statistik, crew, publishing pipeline, atau klaim bahwa fitur internal sudah tersedia untuk umum.
 

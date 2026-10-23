@@ -1,4 +1,4 @@
-import { cp, mkdir } from 'node:fs/promises';
+import { cp, copyFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -10,5 +10,7 @@ for (const directory of ['brand', 'illustrations', 'sounds']) {
   await cp(path.join(source, directory), path.join(target, directory), {
     recursive: true,
     force: true,
+    filter: (sourcePath) => !sourcePath.includes(`${path.sep}source${path.sep}`),
   });
 }
+await copyFile(path.join(source, 'brand/favicon.svg'), path.join(target, 'favicon.svg'));

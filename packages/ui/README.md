@@ -1,56 +1,89 @@
 # MoonWitness UI Bible
 
-This document is the single shared UI rulebook for MoonWitness. `TOKENS.md` is its technical companion for token values, theme mapping, and contrast. Product copy and feature truth stay with each app; this package owns reusable presentation and interaction behavior.
+This is the single design and implementation rulebook for `@moonwitness/ui`. `TOKENS.md` records the token contract and contrast requirements. `todo-ui.md` tracks implementation work; it is not a second source of design rules. Product copy and feature truth stay in the app.
 
-## Visual direction
+## Art direction from the references
 
-The MoonWitness identity pairs an ink-dark editorial canvas with bright magenta, signal blue, and high-visibility yellow. Homepage references 1–2 guide expressive typography, irregular collage composition, tactile paper/halftone texture, and clear calls to action. Board references 3–4 guide compact panels, crisp section hierarchy, neon signal accents, and dense information layout. They do not define new product features.
+- **Reference 1** supplies detail language for the homepage: story cards, captions, notes, orbit paths, moon phases, arrows, and collage fragments.
+- **Reference 2** is the homepage composition: narrow masthead, dominant manga city hero, three editorial panels, connection/map band, illustrated process strip, and a high contrast closing CTA.
+- **Reference 3** guides the internal story workbench: navigator on the left, readable editor/preview in the center, and a compact inspector on the right.
+- **Reference 4** guides the Board shell: brand masthead, persistent left navigation, metric strip, and dense operational panels.
 
-The existing crescent and wordmark in `@moonwitness/assets` remain the brand source. Use its SVG light, dark, monochrome, symbol, and lockup variants. UI icons come from the canonical SVG files in the same package; `scripts/generate-icons.mjs` creates the typed React wrappers. Do not redraw either source in an app. Use optimized raster artwork for complex scenes, but never rasterize labels, navigation, or important state.
+The shared visual vocabulary uses ink black, warm paper, brush lettering, manga/city artwork, rough frames, tape, halftone, hand marks, and deliberate magenta, cyan, and yellow accents. It should feel assembled and editorial rather than like a clean admin template with a dark background. Artwork creates atmosphere; HTML remains responsible for every heading, label, number, control, and status. Do not use a complete mockup screenshot as a page background.
 
-Keep readable hierarchy ahead of texture. Text, focus, borders, and state labels must meet the contrast and keyboard rules in `TOKENS.md`. Decorations cannot block input or carry meaning by color, animation, or sound alone.
+Use `Road Rage` (`--mw-font-brush`) for short expressive headings, `Anton` (`--mw-font-display`) for compact section labels and large metrics, `Space Grotesk` (`--mw-font-sans`) for controls and prose, and `JetBrains Mono` (`--mw-font-mono`) for technical identifiers and timestamps. Brush lettering is not for paragraphs, long titles that must wrap predictably, or dense data. The logo is custom vector artwork and does not depend on a font at runtime.
 
-## Component layers
+## Brand and imagery
 
-Build upward only when reuse calls for it:
+The crown and hand-drawn `MOONWITNESS` mark are the current primary identity. The editable canonical SVG source is `@moonwitness/assets/brand/source/moonwitness-master.svg`; generated symbol, wordmark, lockup, favicon, and social assets must be rebuilt from this source. Do not recreate the old crescent as a competing primary mark. Use a lockup where it fits, the crown symbol in compact rails, and the simplified favicon at tiny sizes. Keep clear space around the mark at least equal to the crown's central spike height; never stretch or rotate the logo. For digital use, keep the crown at least 16 px high and the wordmark at least 20 px high; below that, use the simplified crown favicon.
 
-1. **Foundation** — semantic color, type, spacing, shape, layer, shadow, and motion tokens in `styles/tokens.css`.
-2. **Primitive** — one accessible behavior such as `Button`, `Input`, `Checkbox`, `SelectField`, `Textarea`, `Badge`, `Avatar`, and `Skeleton`.
-3. **Composition** — arrangements such as `Field`, `Panel`, `Toolbar`, `Table`, `Pagination`, `PageHeader`, `Dialog`, and `EmptyState`.
-4. **Pattern/effect** — reusable editorial texture, accent marker, signal orbit, ink speed lines, doodles, ink underline/frame, speech bubble, loading progress, and sound preference/playback behavior. These live in `components/effects` so apps consume the same ink language instead of maintaining local copies.
+Canonical interface icons live in `@moonwitness/assets/icons` on a 24×24 grid and are generated as individually imported typed React wrappers by the UI package. Interactive icons must have a recognizable action and accessible name via their control; decorative marks are separate, hidden from assistive technology, and cannot take focus or pointer input. Never paste inline SVG paths into app screens or substitute Unicode glyphs for a canonical icon.
 
-Use the nearest existing public component. Add a component when at least two product surfaces can use it, or when a single surface needs a meaningful accessibility/behavior primitive that cannot be safely duplicated. Put app-specific navigation, data, auth, routes, and domain flows in the app. Avoid wrappers that only rename an element or folders created to satisfy an “atomic” label.
+Complex manga scenes and collage art are optimized raster assets. Keep editable high-quality masters and provenance in the assets package; export WebP crops for desktop, mobile, and masthead use. Every image has an intentional focal crop and is marked decorative or given accurate alt text. Never generate embedded UI copy, statistics, logos, or fake product controls into artwork.
 
-## Import and contribution rules
+Material assets include torn edges, ink frames, paper notes, tape, halftone, speckle, and hand-drawn arrows. Keep texture on a decorative layer with `pointer-events: none`; it must not lower text contrast, cover a focus ring, or make a control's click target irregular. Prefer deterministic SVG/CSS pattern assets and restrained opacity over repeated expensive filters.
 
-Import components and icons only through exported public subpaths, for example `@moonwitness/ui/components/button`, `@moonwitness/ui/components/table`, or `@moonwitness/ui/icons/search`. Never import `packages/ui/dist` or another internal path. CSS is imported once by the app: tokens first, then component styles.
+## Decoration intensity
 
-When adding a shared component:
+| Surface | Intensity | Allowed treatment |
+| --- | --- | --- |
+| Public hero / closing CTA | Expressive | Large art, layered brush headings, torn color strips, a few notes and doodles |
+| Editorial cards / catalog specimens | Balanced | One image, one accent, light frame texture, concise caption |
+| Board table / workbench / forms | Restrained | Strong hierarchy, small accent marks, mostly square readable panels |
+| Errors / access / empty / loading | Functional first | Clear state text and action; illustration or motion stays secondary |
 
-1. Confirm its behavior and accessibility contract, then document the public props.
-2. Implement it in `src/components/` with tokens and existing shared helpers.
-3. Add a public export in `package.json`; do not add a giant all-components barrel.
-4. Add or update the package-level behavior/contrast checks for the contract.
-5. Use it from Board/homepage and run `pnpm board:ui:check`.
+Do not rotate tables, forms, paragraphs, dashboard figures, or interactive panels. Tiny rotation belongs only to non-interactive paper notes, tape, and artwork. A motif that decorates a hero should not be repeated behind every row of a dense dashboard.
 
-Board source must not use raw JSX `<button>`, `<input>`, `<select>`, or `<textarea>`. Use shared controls, including `Checkbox` for checkboxes and `Input` for file controls. The AST gate ignores text, comments, and capitalized component names. It also rejects internal `dist` imports. Run it manually with `pnpm board:ui:check`; the same command runs before push and in quality CI. Errors include the source line, shared replacement, and recheck command.
+## Component layers and ownership
 
-Tables preserve native table semantics. Use the shared table composition for tabular data and keep keyboard/sort behavior, mobile visibility, and horizontal overflow explicit. Form controls preserve labels, `disabled`, focus, validation, controlled values, exact textarea whitespace, and selection state.
+Build upward only where repeated behavior requires it:
 
-## Motion and effects
+1. **Foundation** — semantic color, typography, spacing, shape, depth, layer, and motion tokens in `styles/tokens.css`.
+2. **Primitive** — one accessible behavior: `Button`, `Input`, `Checkbox`, `SelectField`, `Textarea`, `Badge`, `Avatar`, `Switch`, and `Skeleton`.
+3. **Composition** — reusable arrangements: `Field`, `Panel`, `Toolbar`, `Table`, `Pagination`, `PageHeader`, `Dialog`, and `EmptyState`.
+4. **Pattern/effect** — reusable editorial frame, ribbon, note, artwork frame, signal motif, progress state, and sound behavior.
 
-Prefer CSS/SVG and tokenized transitions. Keep animation short and purposeful; honor `prefers-reduced-motion` in both CSS and JavaScript. Stop or avoid continuous work when an effect is off-screen. Load heavy visuals only where used. Do not add canvas/WebGL without a measured need and an explicit performance budget.
+`@moonwitness/ui` owns presentation and reusable interaction mechanics. `@moonwitness/assets` owns source and generated media, fonts, sounds, inventory, and provenance. Neither package owns app routes, auth, API access, permission, persisted product data, analytics meaning, or workflow rules. A component belongs in the shared package when multiple surfaces need it, or one surface needs an accessibility primitive that cannot safely be duplicated.
 
-Loading UI belongs only to a real pending request or operation. Use skeletons for known content shape and a labeled progress indicator for an active operation. Empty, error, success, and loading states always include visible text; effects only reinforce them. Do not animate indefinitely after work finishes.
+Import through public subpaths such as `@moonwitness/ui/components/button`, `@moonwitness/ui/icons/search`, and `@moonwitness/ui/components.css`. Never import `dist` or package internals. Import styles once with tokens before component styles. Board pages must use shared buttons, inputs, selects, textareas, checkboxes, and shared table compositions; do not add new raw native JSX controls. Preserve the existing controlled state, labels, validation, disabled behavior, keyboard use, file input behavior, indeterminate checkboxes, sorting, and row propagation.
 
-## Sound
+When adding a component: first record its behavior and accessibility contract; build it from existing tokens and helpers; expose a narrow public subpath; add a catalog specimen and relevant package checks; then use it from the product surface. Do not add a duplicate “manga” component when an existing primitive can accept a visual treatment.
 
-Use `SoundProvider`, `useSfx`, and `SoundToggle` from `components/audio`; never load audio files from individual Board components. The provider activates playback only after the first pointer or keyboard interaction, honors the locally saved mute choice, and creates audio lazily on use. The package asset catalog is limited to named short cues. Use sound only for selected success, important alert, or explicit media actions—never hover, scrolling, or every ordinary click. Text and visual status remain complete if audio is muted, blocked, or missing.
+## Accessibility, responsive behavior, and states
 
-Audio is optional enhancement. A playback failure must never prevent the related action. Keep cues quiet and short, and add provenance/license information in the assets package manifest whenever a file changes.
+- Body text, data, and control labels stay high contrast. Normal text pairs meet WCAG AA (4.5:1); focus and non-text boundaries target at least 3:1 against adjacent surfaces. Saturated pink, cyan, and yellow are accents; use their paired dark foreground for text.
+- Every keyboard-operable control has a visible `:focus-visible` treatment that remains above rough frames and texture. Headings retain semantic order; decorative art is ignored by screen readers.
+- Status uses text and shape as well as color. Charts keep labels, markers or an accessible table.
+- Desktop composition may be dense; mobile must be deliberately reordered. Navigation collapses into an operable menu/sheet, side inspectors become sheets or accordions, card rows stack, and tables own their horizontal scroll region. At 200% zoom content must remain reachable without whole-page horizontal overflow.
+- Controls retain a stable hit area behind brush-shaped visuals. Do not let torn edges create inaccessible click targets.
+- Distinguish loading, refreshing, empty, zero, unavailable, and failed data. Loading UI appears only while a real operation is pending, always describes it in text, and stops when it settles. Keep user work and a retry action after recoverable failure.
 
-## Product boundary
+## Motion and sound
 
-`@moonwitness/ui` owns visual tokens, reusable components, accessibility mechanics, motion/effect primitives, icon wrappers, and sound controls. `@moonwitness/assets` owns the canonical SVG/media files, artwork, font provenance, licenses, and asset manifest. Neither package owns Board routes, authorization, API calls, persistence of product data, analytics meaning, or workflow rules.
+Motion is brief, purposeful, and never required to understand a state. Respect `prefers-reduced-motion` in CSS and JavaScript. Avoid perpetual parallax, animated texture, or hidden/off-screen work. Effects never intercept input. Prefer CSS/SVG; add canvas/WebGL only for a measured need with an explicit performance budget.
 
-See [`TOKENS.md`](./TOKENS.md) for theme and contrast constraints.
+Use `SoundProvider`, `useSfx`, and `SoundToggle` from the audio public subpath. Default to muted. Sound is available only after a user interaction and an explicit unmuted preference, stored locally. Load a named short cue only when an approved success, important alert, or explicit media action occurs. Never sound on hover, scrolling, or every click. Audio failure cannot affect the product action, and visual/text status remains complete when sound is unavailable.
+
+## Quick visual examples
+
+| Prefer | Avoid |
+| --- | --- |
+| A short brush heading such as “FOLLOW THE SIGNAL”, with body copy in the UI font | Brush lettering for a paragraph, long record title, or dense table |
+| Dark ink text on yellow and a visible focus ring outside the rough frame | White text on saturated pink, or a torn edge that hides keyboard focus |
+| Halftone on a separate decorative layer with `pointer-events: none` | Texture baked over labels, controls, or information that needs to remain selectable |
+| Explicit “No data available” or an error message with retry | Replacing missing, zero, or failed values with an invented metric |
+| A chart with labels and a text/table alternative | A chart that communicates meaning through color alone |
+
+## Review against the mockups
+
+Before calling a visual change complete, compare an implementation screenshot with the supplied reference at the same viewport. Check, in order: overall silhouette and density; hero/artwork scale and focal point; type scale and wrapping; paper/ink material; section spacing; then icons, captions, badges, arrows, notes, focus and responsive details. Record remaining visible gaps and review them again after corrections. A green build, a neon palette, or added noise alone does not establish visual similarity. Do not report a numeric “similarity score” for AI mockups.
+
+Use real product copy and data on production pages. The mockups are visual direction, not evidence that public stories, crew directories, a publishing pipeline, audience metrics, or live location maps exist. Fictional examples are allowed only in the UI Catalog and must say “contoh desain”.
+
+## Checks
+
+- `pnpm board:ui:check` enforces shared native controls and public package paths across Home and Board. It catches structural rules, not subjective visual quality.
+- `pnpm test:ui`, `pnpm test:assets`, and the existing UI Catalog screenshot tests check reusable behavior and generated sources.
+- Visual acceptance uses reviewed screenshots and responsive specimens. The same deterministically rendered catalog examples are the visual regression surface.
+
+See [`TOKENS.md`](./TOKENS.md) for semantic token values, theme behavior, typography, and contrast targets. See repository [`todo-ui.md`](../../todo-ui.md) for the phased execution checklist and its current evidence.

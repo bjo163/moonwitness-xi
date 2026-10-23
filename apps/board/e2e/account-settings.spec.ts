@@ -168,6 +168,6 @@ test('users can edit only their profile, persist preferences, and change passwor
   await page.getByRole('button', { name: 'Enter the board' }).click();
   await expect(page).toHaveURL(/\/board$/u);
   await expect(
-    page.getByRole('heading', { name: `Welcome, ${login}`, exact: false })
+    page.getByRole('heading', { name: `Command center`, exact: false })
   ).toBeVisible();
 });

@@ -23,7 +23,7 @@ test('superadmin can log in, open dashboard, and log out', async ({ page }) => {
 
   await expect(page).toHaveURL(/\/board$/u);
   await expect(
-    page.getByRole('heading', { name: 'Welcome, superadmin', exact: false })
+    page.getByRole('heading', { name: 'Command center', exact: false })
   ).toBeVisible();
   await expect(page.getByRole('img', { name: 'Background job status distribution' })).toBeVisible();
   await expect(
@@ -77,7 +77,7 @@ test('shared select works with keyboard and profile feedback is announced', asyn
   await page.getByRole('button', { name: 'Enter the board' }).click();
   await expect(page).toHaveURL(/\/board$/u);
   await expect(
-    page.getByRole('heading', { name: 'Welcome, superadmin', exact: false })
+    page.getByRole('heading', { name: 'Command center', exact: false })
   ).toBeVisible();
 
   await page.goto('/board/settings');

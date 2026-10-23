@@ -84,14 +84,14 @@ function NavItem({
       title={label}
       className={cn(
         'group relative flex min-w-0 items-center gap-3 px-3 py-2 font-display text-lg uppercase tracking-wide text-ink/70 transition-colors hover:text-ink',
-        active && 'text-on-accent hover:text-on-accent'
+        active && 'text-on-pink hover:text-on-pink'
       )}
     >
       <>
         {active && (
           <motion.span
             layoutId="nav-active"
-            className="absolute inset-0 -z-0 border-2 border-ink bg-lime shadow-[3px_3px_0_0_var(--ink)]"
+            className="absolute inset-0 -z-0 border-2 border-ink bg-pink shadow-[3px_3px_0_0_var(--ink)]"
             style={{ rotate: tilt }}
             transition={{ type: 'spring', stiffness: 500, damping: 34 }}
           />
@@ -337,7 +337,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <div className="grid min-h-dvh grid-cols-1 lg:grid-cols-[16rem_minmax(0,1fr)]">
+    <div className="grid min-h-dvh grid-cols-1 lg:grid-cols-[13rem_minmax(0,1fr)]">
       <ToastHost theme={theme} />
       {/* Sidebar: scoped .dark tokens keep it ink-black with light ink in BOTH themes. */}
       <aside className="dark sticky top-0 hidden h-dvh flex-col border-r-4 border-ink bg-night text-ink lg:flex">

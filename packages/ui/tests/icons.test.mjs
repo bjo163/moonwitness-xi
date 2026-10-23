@@ -23,9 +23,13 @@ const assetsRoot = resolve(root, '../assets/icons');
 const sourceRoot = resolve(root, 'src/icons');
 const distRoot = resolve(root, 'dist/icons');
 const iconFiles = (await readdir(assetsRoot)).filter((file) => file.endsWith('.svg')).sort();
+const assetManifest = JSON.parse(
+  await readFile(resolve(root, '../assets/manifest.json'), 'utf8')
+);
+const manifestIconCount = assetManifest.assets.filter(({ kind }) => kind === 'icon').length;
 
 test('each static asset has a typed source and isolated compiled component subpath', async () => {
-  assert.equal(iconFiles.length, 24);
+  assert.equal(iconFiles.length, manifestIconCount);
   for (const file of iconFiles) {
     const name = file.slice(0, -4);
     const source = await readFile(resolve(sourceRoot, `${name}.tsx`), 'utf8');

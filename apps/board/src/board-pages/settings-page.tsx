@@ -162,7 +162,7 @@ export function SettingsPage() {
                 type="button"
                 aria-pressed={selected}
                 onClick={() => updatePreference('theme', theme)}
-                className={`flex items-center gap-3 border-2 p-4 text-left text-ink transition-colors ${selected ? 'border-ink bg-lime/30 shadow-ink-sm' : 'border-ink/30 bg-card hover:border-ink'}`}
+                className={`flex items-center gap-3 border-2 p-4 text-left transition-colors ${selected ? 'border-ink bg-lime/30 shadow-ink-sm' : 'border-ink/30 hover:border-ink'}`}
               >
                 <Icon className="size-5" />
                 <span className="font-display uppercase">{theme} theme</span>

@@ -19,6 +19,11 @@ import { Badge } from '@moonwitness/ui/components/badge';
 import { BarChart, LineChart } from '@moonwitness/ui/components/chart';
 import { Checkbox } from '@moonwitness/ui/components/checkbox';
 import { Button } from '@moonwitness/ui/components/button';
+import { ArtworkFrame } from '@moonwitness/ui/components/artwork-frame';
+import homeHeroMobile from '@moonwitness/assets/illustrations/home-hero-mobile.webp';
+import { MetricTile } from '@moonwitness/ui/components/metric-tile';
+import { PaperNote } from '@moonwitness/ui/components/paper-note';
+import { SectionRibbon } from '@moonwitness/ui/components/section-ribbon';
 import {
   Dialog,
   DialogContent,
@@ -209,20 +214,20 @@ export function Catalog() {
                 </>
               }
               description="A practical catalog of the shared MoonWitness UI package. Explore real components, keyboard behavior, themes, and responsive states."
-              actions={<Badge variant="primary">21 public components</Badge>}
+              actions={<Badge variant="primary">50 typed icons</Badge>}
             />
 
             <Panel
               className="catalog-intro-panel"
-              title="Built from the package, not a mock"
-              description="Every example below renders the public @moonwitness/ui exports used by the Board. The same semantic token source drives both themes."
+              title="MoonWitness visual system"
+              description="Shared assets, readable controls, and expressive editorial details are built from the public @moonwitness/ui package."
             >
               <div className="catalog-intro-meta">
                 <span>
-                  <strong>21</strong> components
+                  <strong>50</strong> typed icons
                 </span>
                 <span>
-                  <strong>24</strong> typed icons
+                  <strong>4</strong> new compositions
                 </span>
                 <span>
                   <strong>AA</strong> contrast checked
@@ -260,7 +265,7 @@ export function Catalog() {
                 description="Avatar initials stay accessible; badges retain text labels across themes."
               >
                 <div className="catalog-inline">
-                  <Avatar name="Moon Witness" />
+                  <Avatar name="MoonWitness" />
                   <Avatar name="System Operator" />
                   <Badge>Draft</Badge>
                   <Badge variant="primary">Active</Badge>
@@ -269,7 +274,7 @@ export function Catalog() {
               </Example>
               <Example
                 title="Typed product icons"
-                description="Package-owned exports are individually importable and tree-shakeable."
+                description="Canonical vector paths generate individually importable, tree-shakeable React icons."
               >
                 <div className="icon-grid">
                   {iconSamples.map(({ Component, label }) => (
@@ -277,6 +282,19 @@ export function Catalog() {
                       <Component aria-hidden="true" /> <small>{label}</small>
                     </span>
                   ))}
+                </div>
+              </Example>
+              <Example
+                title="Editorial composition"
+                description="These reusable package components create the visual rhythm used by the homepage and Board."
+              >
+                <SectionRibbon title="Stories" number="01" accent="magenta" />
+                <div className="catalog-inline">
+                  <PaperNote accent="yellow">Same moon. Different people.</PaperNote>
+                  <MetricTile label="Stories in progress" value="12" detail="Example design data" />
+                  <ArtworkFrame shape="portrait" caption="Example artwork">
+                    <img src={homeHeroMobile} alt="Illustrative night city artwork" />
+                  </ArtworkFrame>
                 </div>
               </Example>
             </Section>
@@ -292,6 +310,7 @@ export function Catalog() {
               >
                 <div className="catalog-button-grid">
                   <Button>Primary action</Button>
+                  <Button treatment="brush">Brush action</Button>
                   <Button variant="secondary">Secondary</Button>
                   <Button variant="outline">Outline</Button>
                   <Button variant="destructive">Delete record</Button>

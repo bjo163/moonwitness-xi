@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { replaceGeneratedAssets } from './manifest-ownership.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const sampleRate = 16000;
@@ -66,21 +67,24 @@ await mkdir(resolve(root, 'sounds'), { recursive: true });
 for (const [name, notes] of sounds) await writeFile(resolve(root, 'sounds', name), toneWav(notes));
 const manifestPath = resolve(root, 'manifest.json');
 const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
-manifest.assets = manifest.assets.filter((asset) => asset.kind !== 'sound');
-for (const [name] of sounds)
-  manifest.assets.push({
-    path: `sounds/${name}`,
-    kind: 'sound',
-    variant: 'ui',
-    format: 'wav',
-    durationSeconds: 0.28,
-    license: 'ISC',
-    source: 'scripts/generate-sounds.mjs',
-  });
+const soundAssets = sounds.map(([name]) => ({
+  path: `sounds/${name}`,
+  kind: 'sound',
+  variant: 'ui',
+  format: 'wav',
+  durationSeconds: 0.28,
+  license: 'ISC',
+  source: 'scripts/generate-sounds.mjs',
+}));
+manifest.assets = replaceGeneratedAssets(
+  manifest.assets,
+  soundAssets,
+  new Set(soundAssets.map(({ path }) => path))
+);
 await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 const licensePath = resolve(root, 'licenses.json');
 const licenses = JSON.parse(await readFile(licensePath, 'utf8'));
-licenses.soundEffects = sounds.map(([name]) => ({
+const soundLicenses = sounds.map(([name]) => ({
   path: `sounds/${name}`,
   creator: 'MoonWitness contributors',
   source: 'packages/assets/scripts/generate-sounds.mjs',
@@ -88,5 +92,10 @@ licenses.soundEffects = sounds.map(([name]) => ({
   modifications:
     'Original short synthesized interface cue; generated from PCM oscillators for this project.',
 }));
+licenses.soundEffects = replaceGeneratedAssets(
+  licenses.soundEffects,
+  soundLicenses,
+  new Set(soundLicenses.map(({ path }) => path))
+);
 await writeFile(licensePath, `${JSON.stringify(licenses, null, 2)}\n`);
 console.log(`Generated ${sounds.length} original, short interface sound effects.`);

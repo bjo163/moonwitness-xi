@@ -143,6 +143,7 @@ test('semantic text pairs meet WCAG AA in both theme mappings', () => {
     ['muted-foreground', 'muted'],
     ['primary-foreground', 'primary'],
     ['destructive-foreground', 'destructive'],
+    ['on-error', 'error'],
     ['on-success', 'success'],
     ['on-warning', 'warning'],
     ['on-info', 'info'],
@@ -181,7 +182,7 @@ test('control boundaries and focus indicators meet the 3:1 non-text target', () 
 test('pink accent uses dark foreground instead of low-contrast white', () => {
   assert.ok(contrast(tokenValue('on-pink'), tokenValue('pink')) >= 4.5);
   assert.ok(contrast('#ffffff', tokenValue('pink')) < 4.5);
-  assert.equal(tokenValue('destructive-foreground'), 'var(--mw-on-pink)');
+  assert.equal(tokenValue('destructive-foreground'), 'var(--mw-on-error)');
 });
 
 test('status semantics and chart palette are theme-stable and chart-safe by contract', () => {
@@ -198,11 +199,20 @@ test('status semantics and chart palette are theme-stable and chart-safe by cont
     assert.match(tokenValue(name), /^#[\da-f]{6}$/i);
     assert.equal(declaration(name, '\\.dark'), undefined);
   }
+  assert.notEqual(tokenValue('error'), tokenValue('magenta'));
+  assert.equal(tokenValue('destructive'), 'var(--mw-error)');
+  assert.notEqual(resolvedValue('error', ':root'), resolvedValue('error', '\\.dark'));
   assert.match(css, /Charts use color plus labels, shape, or line style/);
 });
 
 test('type, spacing, shape, shadow and reduced-motion scales are present', () => {
   for (const name of [
+    'paper-cream',
+    'ink-black',
+    'ink-panel',
+    'yellow',
+    'signal-blue',
+    'font-brush',
     'font-display',
     'font-sans',
     'font-mono',
@@ -210,6 +220,13 @@ test('type, spacing, shape, shadow and reduced-motion scales are present', () =>
     'line-height-normal',
     'space-1',
     'space-8',
+    'panel-gap-compact',
+    'panel-gap-comfortable',
+    'panel-padding-compact',
+    'panel-padding-comfortable',
+    'frame-width',
+    'torn-safe-inset',
+    'decorative-rotation',
     'radius-sm',
     'radius-lg',
     'shadow-ink',
@@ -218,6 +235,10 @@ test('type, spacing, shape, shadow and reduced-motion scales are present', () =>
   ]) {
     assert.ok(tokenValue(name).length > 0, `Expected --mw-${name}`);
   }
+  assert.equal(tokenValue('paper-cream'), '#f3efe4');
+  assert.equal(tokenValue('ink-black'), '#0d0d0d');
+  assert.equal(tokenValue('yellow'), '#ffe031');
+  assert.equal(tokenValue('signal-blue'), '#00b8f0');
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
   assert.match(css, /--mw-motion-normal:\s*0ms/);
 });

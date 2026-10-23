@@ -20,7 +20,14 @@ export const metadata: Metadata = {
     description: 'A thoughtful workspace for stories, people, and connected knowledge.',
   },
   robots: { index: true, follow: true },
-  icons: { icon: '/favicon.svg' },
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/brand/app-icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/brand/app-icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [{ url: '/brand/app-icon-192.png', sizes: '192x192', type: 'image/png' }],
+  },
 };
 
 // Next.js viewport metadata is also required to be exported from the root layout.
@@ -29,16 +36,7 @@ export const viewport: Viewport = { themeColor: '#0d0d0d', colorScheme: 'light d
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <script
-          // Restored from the pre-Next entry document: apply the saved theme
-          // before first paint so a reload never flashes the light palette.
-          dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('mw-theme');var d=t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);}catch(e){}`,
-          }}
-        />
-      </head>
+    <html lang="en">
       <body>
         <SoundProvider>{children}</SoundProvider>
       </body>

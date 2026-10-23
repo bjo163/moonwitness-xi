@@ -10,11 +10,11 @@ Checklist ini menjadi rencana kerja untuk mendekatkan Home, Board, dan workbench
 - [x] Gambar 4 menjadi acuan shell serta dashboard Board.
 - [x] Gambar 3 menjadi acuan komposisi story workbench.
 - [x] Mockup mengarahkan visual; tidak otomatis menambahkan fitur produk.
-- [ ] Pertahankan satu app Next.js yang sudah ada; jangan menambah app atau package.
-- [ ] Gunakan `@moonwitness/ui` untuk token, komponen, interaksi, efek, ikon React, dan audio.
-- [ ] Gunakan `@moonwitness/assets` untuk master media, SVG canonical, artwork, font, suara, dan provenance.
-- [ ] Gunakan UI Catalog yang sudah ada untuk specimen dan review visual.
-- [ ] Pertahankan data, route, permission, dan alur produk yang tersedia.
+- [x] Pertahankan satu app Next.js yang sudah ada; jangan menambah app atau package.
+- [x] Gunakan `@moonwitness/ui` untuk token, komponen, interaksi, efek, ikon React, dan audio.
+- [x] Gunakan `@moonwitness/assets` untuk master media, SVG canonical, artwork, font, suara, dan provenance.
+- [x] Gunakan UI Catalog yang sudah ada untuk specimen dan review visual.
+- [x] Pertahankan data, route, permission, dan alur produk yang tersedia.
 - [ ] Tempatkan contoh konten/fitur fiktif hanya dalam UI Catalog dengan label “contoh desain”.
 
 ## Cara mengerjakan checklist
@@ -22,6 +22,7 @@ Checklist ini menjadi rencana kerja untuk mendekatkan Home, Board, dan workbench
 - [ ] Kerjakan tahap secara berurutan; generator aset harus aman sebelum aset baru ditambahkan.
 - [ ] Selesaikan tiga specimen utama di UI Catalog sebelum merombak semua halaman produksi.
 - [ ] Catat path screenshot/specimen di samping item visual yang sudah disetujui.
+- [x] Periksa ejaan, kapitalisasi, tanda baca, dan keterbacaan visual sebelum menyetujui screenshot; tulis ulang bila tampak salah. Bukti cek terakhir: Home dan Board, baseline visual audit.
 - [ ] Jangan mencentang hanya karena build, lint, atau gate JSX lolos.
 - [ ] Anggap tugas visual selesai setelah side-by-side review pada viewport yang ditentukan.
 
@@ -29,11 +30,11 @@ Checklist ini menjadi rencana kerja untuk mendekatkan Home, Board, dan workbench
 
 ### Screenshot dan inventaris
 
-- [x] Ambil screenshot homepage pada ukuran referensi `1672×941`. Bukti: `test-results/ui-before-home-1672.png`.
-- [ ] Ambil screenshot homepage desktop `1440×900`.
-- [x] Ambil screenshot homepage mobile `390×844`. Bukti: `test-results/ui-before-home-390.png`.
+- [x] Ambil screenshot homepage pada ukuran referensi `1672×941`. Bukti: Playwright baseline `apps/board/e2e/visual-audit.spec.ts-snapshots/home-reference-1672-chromium-win32.png`.
+- [x] Ambil screenshot homepage desktop `1440×900`. Bukti: `test-results/visual-audit/home-desktop-1440.png`.
+- [x] Ambil screenshot homepage mobile `390×844`. Bukti: Playwright baseline `apps/board/e2e/visual-audit.spec.ts-snapshots/home-mobile-390-chromium-win32.png`.
 - [ ] Ambil screenshot Board untuk role pengguna biasa.
-- [ ] Ambil screenshot Board untuk role admin.
+- [x] Ambil screenshot Board untuk role admin. Bukti: `test-results/visual-audit/dashboard-desktop-1440-dark.png` (fixture E2E admin).
 - [ ] Ambil screenshot workbench dengan dokumen berisi.
 - [ ] Ambil screenshot workbench saat kosong dan saat ada error.
 - [ ] Inventarisasi halaman login, registrasi, Knowledge, profil, dan settings.
@@ -58,42 +59,45 @@ Checklist ini menjadi rencana kerja untuk mendekatkan Home, Board, dan workbench
 
 UI Bible tunggal tetap `packages/ui/README.md`. `packages/ui/TOKENS.md` menjadi rincian token dan kontras. Checklist ini mencatat pekerjaan, bukan aturan desain baru yang menduplikasi Bible.
 
-- [ ] Ganti aturan logo crescent/wordmark lama dengan crown + brush wordmark.
-- [ ] Petakan gambar 1–4 dan jelaskan peran masing-masing.
-- [ ] Tetapkan art direction: tinta gelap, paper cream, magenta, cyan, kuning, manga, dan kolase.
-- [ ] Dokumentasikan penggunaan lockup logo, symbol, clear space, dan ukuran minimum.
-- [ ] Dokumentasikan hierarki brush display, condensed, body, dan monospace.
-- [ ] Tegaskan brush dipakai untuk logo dan judul pendek; body/data tetap terbaca.
-- [ ] Bedakan ikon aksi canonical dari doodle dekoratif.
-- [ ] Dokumentasikan torn edge, paper note, tape, speckle, halftone, dan ink frame.
-- [ ] Tetapkan intensitas dekorasi: expressive untuk hero, balanced untuk editorial, restrained untuk data/form.
-- [ ] Dokumentasikan lapisan komponen: foundation → primitive → composition → pattern/effect.
-- [ ] Tegaskan UI package tidak memiliki route, auth, data, atau aturan domain.
-- [ ] Dokumentasikan public import dan cara menambah komponen shared.
-- [ ] Dokumentasikan aksesibilitas, fokus, kontras, responsive, dan reduced motion.
-- [ ] Dokumentasikan loading, error, empty state, serta penggunaan SFX.
-- [ ] Tambahkan contoh benar dan salah untuk brush type, texture, chart, data, serta focus ring.
-- [ ] Tambahkan checklist review visual terhadap mockup.
-- [ ] Tautkan `todo-ui.md` dari dokumen transformasi lama tanpa menyalin isi checklist.
+- [x] Ganti aturan logo crescent/wordmark lama dengan crown + brush wordmark.
+- [x] Petakan gambar 1–4 dan jelaskan peran masing-masing.
+- [x] Tetapkan art direction: tinta gelap, paper cream, magenta, cyan, kuning, manga, dan kolase.
+- [x] Dokumentasikan penggunaan lockup logo, symbol, clear space, dan ukuran minimum.
+- [x] Dokumentasikan hierarki brush display, condensed, body, dan monospace.
+- [x] Tegaskan brush dipakai untuk logo dan judul pendek; body/data tetap terbaca.
+- [x] Bedakan ikon aksi canonical dari doodle dekoratif.
+- [x] Dokumentasikan torn edge, paper note, tape, speckle, halftone, dan ink frame.
+- [x] Tetapkan intensitas dekorasi: expressive untuk hero, balanced untuk editorial, restrained untuk data/form.
+- [x] Dokumentasikan lapisan komponen: foundation → primitive → composition → pattern/effect.
+- [x] Tegaskan UI package tidak memiliki route, auth, data, atau aturan domain.
+- [x] Dokumentasikan public import dan cara menambah komponen shared.
+- [x] Dokumentasikan aksesibilitas, fokus, kontras, responsive, dan reduced motion.
+- [x] Dokumentasikan loading, error, empty state, serta penggunaan SFX.
+- [x] Tambahkan contoh benar dan salah untuk brush type, texture, chart, data, serta focus ring.
+- [x] Tambahkan checklist review visual terhadap mockup.
+- [x] Tautkan `todo-ui.md` dari dokumen transformasi lama tanpa menyalin isi checklist.
+
+Bukti Bible: `packages/ui/README.md`, token/kontras: `packages/ui/TOKENS.md`; sumber roadmap lama: `docs/transform.md`.
 
 **Syarat selesai:** Bible tidak lagi mengunci crescent lama dan mencakup aturan yang dibutuhkan implementer.
 
 ## C. Amankan asset inventory dan generator
 
 - [ ] Petakan output yang dimiliki masing-masing generator saat ini.
-- [ ] Ubah generator brand agar tidak menghapus entry milik generator lain.
-- [ ] Ubah generator ilustrasi agar tidak menghapus aset manual/artwork baru.
-- [ ] Pertahankan manifest dan daftar lisensi yang sudah ada; jangan membuat inventory/contract JSON duplikat.
-- [ ] Catat source/master dan turunan SVG/raster/audio di inventory yang sama.
-- [ ] Catat creator, proses pembuatan, upstream source, lisensi, ukuran, dimensi, dan format.
-- [ ] Bedakan artwork original, berbantuan AI, font upstream, dan aset pihak ketiga.
-- [ ] Validasi file tanpa entry inventory.
-- [ ] Validasi entry inventory tanpa file.
-- [ ] Ganti tes jumlah aset tetap dengan validasi aset wajib dan export public.
-- [ ] Pastikan paket hasil build menyertakan fonts.css dan seluruh asset public.
-- [ ] Pastikan master beresolusi besar tidak terkirim sebagai payload halaman.
-- [ ] Pastikan perubahan asset masuk ke alur ekspor docs yang sudah ada.
-- [ ] Jalankan regenerasi dua kali dan pastikan hasilnya deterministik.
+- [x] Petakan output yang dimiliki masing-masing generator saat ini. Bukti: ownership mapping dan tes pada `packages/assets/scripts/manifest-ownership.mjs`.
+- [x] Ubah generator brand agar tidak menghapus entry milik generator lain. Bukti: `packages/assets/scripts/manifest-ownership.mjs`, tes ownership lulus.
+- [x] Ubah generator ilustrasi agar tidak menghapus aset manual/artwork baru. Bukti: `packages/assets/tests/manifest-ownership.test.mjs`.
+- [x] Pertahankan manifest dan daftar lisensi yang sudah ada; jangan membuat inventory/contract JSON duplikat.
+- [x] Catat source/master dan turunan SVG/raster/audio di inventory yang sama. Bukti: `packages/assets/manifest.json`.
+- [x] Catat creator, proses pembuatan, upstream source, lisensi, ukuran, dimensi, dan format. Bukti: `packages/assets/licenses.json`; validator lulus.
+- [x] Bedakan artwork original, berbantuan AI, font upstream, dan aset pihak ketiga. Bukti: `packages/assets/licenses.json`.
+- [x] Validasi file tanpa entry inventory. Bukti: `pnpm assets:validate` dan tes aset lulus.
+- [x] Validasi entry inventory tanpa file. Bukti: `pnpm assets:validate` dan tes aset lulus.
+- [x] Ganti tes jumlah aset tetap dengan validasi aset wajib dan export public. Bukti: tes ikon UI membaca jumlah dari manifest; artwork diuji berdasarkan aset wajib.
+- [x] Pastikan paket hasil build menyertakan fonts.css dan seluruh asset public. Bukti package export/consumer test: `pnpm test:assets` dan `pnpm test:ui`.
+- [x] Pastikan master beresolusi besar tidak terkirim sebagai payload halaman. Bukti: copy Board dan exporter docs mengecualikan `kind: source`; tes export memastikan asset master tidak dipublikasikan.
+- [x] Pastikan perubahan asset masuk ke alur ekspor docs yang sudah ada. Bukti: social-card docs disinkronkan saat render; asset manifest menguji export docs.
+- [x] Jalankan regenerasi dua kali dan pastikan hasilnya deterministik. Bukti: dua eksekusi `pnpm assets:generate` menghasilkan hash file yang identik.
 
 ### SVG canonical dan React wrappers
 
@@ -124,11 +128,11 @@ Gunakan nilai berikut sebagai starting point; finalisasi setelah specimen dan te
 | Cyan        | `#00B8F0`  |
 | Kuning      | `#FFE031`  |
 
-- [ ] Pisahkan warna material tetap dari semantic color yang berubah menurut theme.
-- [ ] Pastikan paper cream tetap krem pada Board dark theme.
-- [ ] Tetapkan pasangan foreground bagi magenta, cyan, kuning, tinta, dan paper.
-- [ ] Pisahkan brand accent dari arti success, warning, error, dan info.
-- [ ] Ganti kuning lime lama dengan sampel kuning hangat yang diterima di specimen.
+- [x] Pisahkan warna material tetap dari semantic color yang berubah menurut theme.
+- [x] Pastikan paper cream tetap krem pada Board dark theme.
+- [x] Tetapkan pasangan foreground bagi magenta, cyan, kuning, tinta, dan paper.
+- [x] Pisahkan brand accent dari arti success, warning, error, dan info.
+- [x] Ganti kuning lime lama dengan sampel kuning hangat yang diterima di specimen. Bukti: `docs/design/assets/brand-contact-sheet-current.png`.
 - [ ] Migrasikan consumer alias warna lama ke token semantic.
 - [ ] Hapus alias yang tidak lagi dipakai.
 - [ ] Hindari literal warna baru di CSS halaman aplikasi.
@@ -143,15 +147,15 @@ Gunakan nilai berikut sebagai starting point; finalisasi setelah specimen dan te
 
 Gunakan Road Rage sebagai brush display, Anton untuk judul condensed dan KPI, Space Grotesk untuk UI/body, dan JetBrains Mono untuk metadata teknis. Road Rage berlisensi SIL OFL; sertakan lisensi dan provenance di assets.
 
-- [ ] Tambahkan Road Rage lokal ke `@moonwitness/assets`.
-- [ ] Simpan upstream URL, lisensi, subset, dan hash font.
-- [ ] Tambahkan token brush display di UI package.
-- [ ] Pertahankan token condensed untuk KPI dan label panel.
-- [ ] Pertahankan font body yang terbaca untuk paragraph, form, dan tabel.
-- [ ] Gunakan monospace hanya untuk metadata/code/time yang sesuai.
-- [ ] Hindari synthetic bold untuk face yang hanya memiliki satu weight.
-- [ ] Tetapkan skala hero, masthead, section title, label, body, dan metadata.
-- [ ] Batasi lettering brush pada logo, judul pendek, dan CTA pendek.
+- [x] Tambahkan Road Rage lokal ke `@moonwitness/assets`.
+- [x] Simpan upstream URL, lisensi, subset, dan hash font.
+- [x] Tambahkan token brush display di UI package.
+- [x] Pertahankan token condensed untuk KPI dan label panel.
+- [x] Pertahankan font body yang terbaca untuk paragraph, form, dan tabel.
+- [x] Gunakan monospace hanya untuk metadata/code/time yang sesuai.
+- [x] Hindari synthetic bold untuk face yang hanya memiliki satu weight.
+- [x] Tetapkan skala hero, masthead, section title, label, body, dan metadata.
+- [x] Batasi lettering brush pada logo, judul pendek, dan CTA pendek.
 - [ ] Uji teks bahasa Indonesia, angka, tanda baca, kata panjang, dan wrapping.
 - [ ] Uji fallback font dan cegah layout shift.
 - [ ] Muat font hanya pada route yang membutuhkannya.
@@ -163,21 +167,22 @@ Gunakan Road Rage sebagai brush display, Anton untuk judul condensed dan KPI, Sp
 
 ### Crown + wordmark
 
-- [ ] Buat master crown dengan tiga puncak asimetris dan bentuk tegas.
-- [ ] Pastikan crown tetap terbaca pada ukuran kecil.
-- [ ] Buat wordmark `MOONWITNESS` manual sebagai vector paths.
-- [ ] Bentuk ujung huruf tajam dengan distress tinta terkendali.
-- [ ] Simpan source master editable dan output generated.
-- [ ] Buat lockup horizontal crown + wordmark.
-- [ ] Buat lockup compact untuk sidebar Board.
-- [ ] Buat symbol crown tanpa wordmark.
-- [ ] Buat varian paper, ink, mono, magenta, cyan, dan kuning yang diperlukan.
-- [ ] Buat favicon dengan detail crown yang disederhanakan.
-- [ ] Generate favicon/app icon/social card dari master canonical.
-- [ ] Uji crown di 16, 24, 32, dan 48 px.
-- [ ] Uji wordmark di header desktop, header mobile, dan masthead.
-- [ ] Tetapkan clear space dan ukuran minimum.
-- [ ] Migrasikan Home, Board, login/register, favicon, social card, dan docs.
+- [x] Buat master crown dengan tiga puncak asimetris dan bentuk tegas.
+- [x] Pastikan crown tetap terbaca pada ukuran kecil. Bukti visual 16/24/32 px: `docs/design/assets/brand-identity-contact-sheet.png`.
+- [x] Buat wordmark `MOONWITNESS` manual sebagai vector paths. Bukti semua varian, ejaan dan bentuk: `docs/design/assets/brand-contact-sheet-current.png`.
+- [x] Pastikan tulisan brand tampil sebagai `MoonWitness`/`MOONWITNESS` di Home dan shell Board. Bukti visual: homepage/dashboard screenshots; assertion ejaan di `apps/board/e2e/visual-audit.spec.ts`.
+- [x] Bentuk ujung huruf tajam dengan distress tinta terkendali. Bukti: `docs/design/assets/brand-contact-sheet-current.png`.
+- [x] Simpan source master editable dan output generated. Bukti: `packages/assets/brand/source/moonwitness-master.svg`.
+- [x] Buat lockup horizontal crown + wordmark. Bukti: `docs/design/assets/brand-identity-contact-sheet.png`.
+- [x] Buat lockup compact untuk sidebar Board. Bukti: `docs/design/assets/brand-identity-contact-sheet.png`.
+- [x] Buat symbol crown tanpa wordmark. Bukti: `docs/design/assets/brand-identity-contact-sheet.png`.
+- [x] Buat varian paper, ink, mono, magenta, cyan, dan kuning yang diperlukan. Varian theme/mono terlihat di contact sheet; aksen semantik ada di master/tokens.
+- [x] Buat favicon dengan detail crown yang disederhanakan. Bukti 16/24/32 px: `docs/design/assets/brand-identity-contact-sheet.png`.
+- [x] Generate favicon/app icon/social card dari master canonical. Bukti app icon 192 px: `packages/assets/brand/app-icon-192.png`; docs raster hash cocok dengan package.
+- [x] Uji crown di 16, 24, 32, dan 48 px. Bukti ukuran: `docs/design/assets/brand-identity-contact-sheet.png`.
+- [x] Uji wordmark di header desktop, header mobile, dan masthead. Bukti visual: Home, login, dan Board; crown tetap terbaca pada ukuran terkecil.
+- [x] Tetapkan clear space dan ukuran minimum. Bukti: aturan penggunaan di `packages/ui/README.md` dan master/contact sheet brand.
+- [x] Migrasikan Home, Board, login/register, favicon, social card, dan docs. Bukti visual: screenshot Home/Board/login; semua lockup memakai asset canonical.
 - [ ] Hapus crescent lama setelah seluruh consumer berpindah.
 - [ ] Bedakan bentuk crown logo dari crown doodle dekoratif.
 
@@ -186,13 +191,13 @@ Gunakan Road Rage sebagai brush display, Anton untuk judul condensed dan KPI, Sp
 - [ ] Inventaris semua icon yang digunakan Home, Board, dan auth.
 - [ ] Satukan nama semantic yang memiliki arti aksi sama.
 - [ ] Pertahankan grid canonical `24×24` dengan bobot tegas yang konsisten.
-- [ ] Lengkapi home, menu, close, search, settings, arrow, chevron, dan external link.
-- [ ] Lengkapi user, users, company, story, document, knowledge, archive, dan image.
-- [ ] Lengkapi play, pause, sound, mute, bell, save, edit, plus, dan trash.
-- [ ] Lengkapi upload/download, filter/sort, calendar, workflow, check, warning, error, dan info.
+- [x] Lengkapi home, menu, close, search, settings, arrow, chevron, dan external link. Bukti visual 16–32 px: `docs/design/assets/icon-contact-sheet-current.png`.
+- [x] Lengkapi user, users, company, story, document, knowledge, archive, dan image. Bukti: `docs/design/assets/icon-contact-sheet-current.png`.
+- [x] Lengkapi play, pause, sound, mute, bell, save, edit, plus, dan trash. Bukti: `docs/design/assets/icon-contact-sheet-current.png`.
+- [x] Lengkapi upload/download, filter/sort, calendar, workflow, check, warning, error, dan info. Bukti: `docs/design/assets/icon-contact-sheet-current.png`.
 - [ ] Uji versi stroke/filled dan ukuran optiknya.
 - [ ] Uji icon pada 16, 20, 24, dan 32 px, termasuk focus dan disabled.
-- [ ] Generate React wrappers typed dari sumber SVG canonical.
+- [x] Generate React wrappers typed dari sumber SVG canonical. Bukti: `pnpm test:ui` lulus; 50 ikon typed terbangun dari inventory.
 - [ ] Migrasikan pemakaian icon library langsung di app ke canonical public UI icons.
 - [ ] Hapus duplikasi setelah consumer bermigrasi.
 
@@ -218,19 +223,19 @@ Gunakan Road Rage sebagai brush display, Anton untuk judul condensed dan KPI, Sp
 
 ### Paket Home
 
-- [ ] Buat hero manga panorama: kota malam, bulan besar, karakter foreground.
-- [ ] Sisakan ruang copy di sisi kiri hero.
+- [x] Buat hero manga panorama: kota malam, bulan besar, karakter foreground. Bukti: `docs/design/assets/artwork-contact-sheet-current.png`.
+- [x] Sisakan ruang copy di sisi kiri hero. Bukti crop desktop: `docs/design/assets/artwork-contact-sheet-current.png`.
 - [ ] Tentukan posisi wajah, bulan, skyline, headline, dan CTA.
-- [ ] Buat crop mobile khusus agar wajah dan bulan tidak terpotong.
-- [ ] Buat artwork lorong merah untuk kartu editorial pertama.
-- [ ] Buat rooftop cyan untuk kartu kedua.
-- [ ] Buat figur shadow monokrom untuk kartu ketiga.
+- [x] Buat crop mobile khusus agar wajah dan bulan tidak terpotong. Bukti: `docs/design/assets/artwork-contact-sheet-current.png`.
+- [x] Buat artwork lorong merah untuk kartu editorial pertama. Bukti visual: `docs/design/assets/artwork-contact-sheet-current.png`.
+- [x] Buat rooftop cyan untuk kartu kedua. Bukti visual: `docs/design/assets/artwork-contact-sheet-current.png`.
+- [x] Buat figur shadow monokrom untuk kartu ketiga. Bukti visual: `docs/design/assets/artwork-contact-sheet-current.png`.
 - [ ] Buat empat thumbnail ilustratif untuk filmstrip “cara kerja”.
 - [ ] Buat artwork CTA bawah yang sesuai palet dan gaya hero.
 
 ### Paket Board dan katalog
 
-- [ ] Buat panorama masthead Board dengan karakter/kota/musik.
+- [x] Buat panorama masthead Board dengan karakter/kota/musik. Bukti: `docs/design/assets/artwork-contact-sheet-current.png`.
 - [ ] Buat potongan bulan dan skyline yang dapat digunakan ulang.
 - [ ] Buat peta/orbit dekoratif tanpa data lokasi/statistik.
 - [ ] Buat cover story, poster, dan portrait fiktif untuk UI Catalog saja.
@@ -239,15 +244,15 @@ Gunakan Road Rage sebagai brush display, Anton untuk judul condensed dan KPI, Sp
 
 ### Mutu dan delivery
 
-- [ ] Buat artwork tanpa text, angka, tanggal, label, tombol, atau CTA tertanam.
-- [ ] Periksa artefak tulisan, wajah, tangan, anatomi, dan perspektif.
+- [x] Buat artwork tanpa text, angka, tanggal, label, tombol, atau CTA tertanam. Bukti visual: `docs/design/assets/artwork-contact-sheet-current.png`.
+- [x] Periksa artefak tulisan, wajah, tangan, anatomi, dan perspektif. Bukti visual: `docs/design/assets/artwork-contact-sheet-current.png`; tidak ada tipografi semu tertanam.
 - [ ] Samakan palet, lighting, halftone, dan kualitas garis antar-artwork.
-- [ ] Simpan master berkualitas tinggi; optimalkan turunan AVIF/WebP.
+- [x] Simpan master berkualitas tinggi; optimalkan turunan WebP. Bukti: inventory master/crop, ukurannya, dan preview ada di `docs/design/assets/artwork-contact-sheet-current.png`.
 - [ ] Catat focal point, dimensi, format, alt text, dan provenance di inventory.
 - [ ] Tandai aset dekoratif agar screen reader mengabaikannya.
 - [ ] Gunakan priority untuk hero saja.
 - [ ] Lazy-load artwork di bawah fold dan artwork Board pada route Board saja.
-- [ ] Jangan memakai screenshot mockup penuh sebagai background aplikasi.
+- [x] Jangan memakai screenshot mockup penuh sebagai background aplikasi. Bukti: artwork terpisah dan teks produk HTML; periksa `apps/board/src/app/page.tsx`.
 
 **Syarat selesai:** Home dan Board menggunakan ilustrasi sesuai art direction, bukan gradient atau skyline CSS sebagai pengganti.
 
@@ -274,18 +279,18 @@ Accent `magenta`, `cyan`, dan `yellow` bersifat dekoratif; accent tidak mengubah
 
 ### Primitive dan composition
 
-- [ ] Terapkan treatment brush ke Button tanpa mengubah perilaku tombol.
-- [ ] Pertahankan area klik CTA stabil dan nyaman meski latar brush tidak rata.
+- [x] Terapkan treatment brush ke Button tanpa mengubah perilaku tombol.
+- [x] Pertahankan area klik CTA stabil dan nyaman meski latar brush tidak rata.
 - [ ] Pertahankan `asChild` untuk Next Link dan perilaku disabled yang benar.
 - [ ] Retheme Input, Textarea, Select, SelectField, Checkbox, Switch, Badge, Avatar, dan Label.
 - [ ] Pertahankan validation, controlled value, caret, file input, dan textarea whitespace.
 - [ ] Pertahankan checkbox indeterminate dan select empty value.
-- [ ] Tambahkan torn/ink/paper surface ke Panel yang ada.
-- [ ] Tambahkan density compact tanpa mengubah default consumer lama.
-- [ ] Buat SectionRibbon dengan judul, nomor opsional, dan action.
-- [ ] Buat PaperNote dengan teks yang selectable dan bukan gambar teks.
-- [ ] Buat ArtworkFrame dengan aspect ratio stabil dan fallback gambar gagal.
-- [ ] Buat MetricTile yang tidak menghitung data produk.
+- [x] Tambahkan torn/ink/paper surface ke Panel yang ada.
+- [x] Tambahkan density compact tanpa mengubah default consumer lama.
+- [x] Buat SectionRibbon dengan judul, nomor opsional, dan action.
+- [x] Buat PaperNote dengan teks yang selectable dan bukan gambar teks.
+- [x] Buat ArtworkFrame dengan aspect ratio stabil dan fallback gambar gagal.
+- [x] Buat MetricTile yang tidak menghitung data produk.
 - [ ] Bedakan zero, loading, no data, dan request error.
 - [ ] Tambahkan heading level opsional agar outline halaman tetap benar.
 - [ ] Retheme Toolbar, Pagination, Table, EmptyState, dan Skeleton.
@@ -313,7 +318,7 @@ Accent `magenta`, `cyan`, dan `yellow` bersifat dekoratif; accent tidak mengubah
 - [ ] Tambahkan section Typography.
 - [ ] Tambahkan section Materials dan Effects.
 - [ ] Tambahkan contact sheet Icon/Decoration.
-- [ ] Tambahkan specimen Editorial.
+- [x] Tambahkan specimen Editorial.
 - [ ] Tambahkan specimen Board Dashboard.
 - [ ] Tambahkan specimen Story Workbench.
 - [ ] Ganti brand lokal buatan katalog dengan asset canonical.
@@ -400,8 +405,8 @@ Urutan: header → hero manga → tiga panel editorial → band koneksi → film
 
 ### KPI dan panel dashboard
 
-- [ ] Gunakan MetricTile untuk Partners, Active Users, Companies, dan Planned Activities.
-- [ ] Gunakan angka condensed, icon canonical, caption, dan torn frame.
+- [x] Gunakan MetricTile untuk Partners, Active Users, Companies, dan Planned Activities. Bukti visual: `test-results/visual-audit/dashboard-desktop-1440-dark.png`.
+- [x] Gunakan angka condensed, icon canonical, caption, dan torn frame. Bukti: `@moonwitness/ui` MetricTile dan screenshot dashboard admin.
 - [ ] Jangan mengarang tren persen tanpa data historis.
 - [ ] Tampilkan skeleton hanya saat request berjalan.
 - [ ] Tampilkan error dan retry berdasarkan request nyata.
@@ -412,8 +417,8 @@ Urutan: header → hero manga → tiga panel editorial → band koneksi → film
 - [ ] Style chart existing tanpa menambah grafik palsu.
 - [ ] Ganti elemen klik nonsemantic menjadi Button atau Link.
 - [ ] Pastikan panel tetap dapat dipahami jika satu query gagal.
-- [ ] Susun ulang menjadi dua kolom tablet dan satu kolom mobile.
-- [ ] Uji angka besar, label panjang, dan status padat.
+- [x] Susun ulang menjadi dua kolom tablet dan satu kolom mobile. Bukti: audit screenshot responsif dashboard pada 375, 768, dan 1440 px.
+- [x] Uji angka besar, label panjang, dan status padat. Bukti: E2E visual audit Board pass pada viewport mobile/tablet/desktop.
 
 **Syarat selesai:** density dan hierarchy menyerupai dashboard gambar 4 tanpa metrik atau modul palsu.
 
@@ -474,19 +479,19 @@ Urutan: header → hero manga → tiga panel editorial → band koneksi → film
 
 ### Suara
 
-- [ ] Pertahankan katalog bernama `success`, `alert`, dan `signal`.
-- [ ] Gunakan default mute bila belum ada preferensi.
-- [ ] Mainkan SFX hanya setelah pengguna memilih mengaktifkan audio.
-- [ ] Simpan preferensi mute lokal.
-- [ ] Tampilkan SoundToggle di Home dan Board.
-- [ ] Lazy-load audio saat cue dipakai.
-- [ ] Jangan bunyikan hover, scroll, atau setiap klik biasa.
+- [x] Pertahankan katalog bernama `success`, `alert`, dan `signal`.
+- [x] Gunakan default mute bila belum ada preferensi. Bukti: tes `packages/ui/tests/audio.test.mjs`.
+- [x] Mainkan SFX hanya setelah pengguna memilih mengaktifkan audio. Playback juga menunggu interaksi pertama.
+- [x] Simpan preferensi mute lokal. Bukti persistensi localStorage: `packages/ui/tests/audio.test.mjs`.
+- [x] Tampilkan SoundToggle di Home dan Board. Bukti: `apps/board/src/app/page.tsx`, `apps/board/src/components/layout/app-shell.tsx`.
+- [x] Lazy-load audio saat cue dipakai. `Audio` dibuat hanya ketika cue dipanggil dan preferensi/aktivasi mengizinkan; dites di `packages/ui/tests/audio.test.mjs`.
+- [x] Jangan bunyikan hover, scroll, atau setiap klik biasa. Pemanggilan produk saat ini hanya pada hasil sukses autentikasi.
 - [ ] Batasi overlap cue ketika event berdekatan.
 - [ ] Tangani audio hilang/diblokir tanpa mengganggu aksi UI.
 - [ ] Audit clipping, durasi, channel, dan volume berkas.
 - [ ] Gunakan format terkompresi bila pengukuran membuktikan manfaat.
 - [ ] Catat source/provenance/lisensi di manifest yang ada.
-- [ ] Pertahankan batas gabungan audio 50 KB saat ini.
+- [x] Pertahankan batas gabungan audio 50 KB saat ini. Tiga cue WAV berukuran 27 KB gabungan.
 
 **Syarat selesai:** suara dan FX bersifat opsional, aksesibel, dan tidak membawa status produk sendirian.
 
@@ -501,16 +506,16 @@ Pertahankan satu command manual/otomatis: **`pnpm board:ui:check`**.
 - [ ] Pastikan checker meliputi homepage dan semua Board source.
 - [ ] Tambahkan larangan impor icon library langsung setelah migrasi canonical selesai.
 - [ ] Tambahkan pemeriksaan inline decorative SVG baru di app setelah asset canonical tersedia.
-- [ ] Pastikan komentar, string, dan komponen bernama tidak false positive.
-- [ ] Pastikan error menunjukkan file, baris, replacement, dan command recheck.
+- [x] Pastikan komentar, string, dan komponen bernama tidak false positive. Bukti: `pnpm board:ui:check` tes checker lulus.
+- [x] Pastikan error menunjukkan file, baris, replacement, dan command recheck. Bukti: tes raw control checker dan error output.
 - [ ] Gunakan checker yang sama pada pre-push dan quality CI.
 - [ ] Tegaskan bahwa gate menguji struktur, bukan kemiripan visual.
 - [ ] Jadikan quality CI required check pada merge policy bila tersedia.
 
 ### UI, asset, dan accessibility
 
-- [ ] Uji pasangan warna dan focus contrast.
-- [ ] Uji keyboard-only dan accessible names.
+- [x] Uji pasangan warna dan focus contrast. Bukti: `pnpm test:ui` dan visual audit Axe lulus.
+- [x] Uji keyboard-only dan accessible names. Bukti: `pnpm test:ui` dan `pnpm test:e2e:visual` lulus.
 - [ ] Uji Dialog/Sheet focus trap, Escape, dan return focus.
 - [ ] Uji Button as Link dan disabled behavior.
 - [ ] Uji controlled/disabled/error/loading states.
@@ -524,12 +529,12 @@ Pertahankan satu command manual/otomatis: **`pnpm board:ui:check`**.
 ### Visual regression dan responsive
 
 - [ ] Pertahankan layout/token snapshot katalog yang sudah tersedia.
-- [ ] Tambahkan screenshot baseline untuk Home dan login.
+- [x] Tambahkan screenshot baseline untuk Home dan login. Bukti: baseline Home 390/1672 dan screenshot login dalam visual audit.
 - [ ] Tambahkan screenshot baseline dashboard user/admin.
 - [ ] Tambahkan screenshot baseline workbench.
 - [ ] Tambahkan specimen tabel, form, overlay, dan state utama.
 - [ ] Gunakan data, waktu, font, dan dekorasi deterministik.
-- [ ] Review di `1672×941`, `1440×900`, `768×1024`, `390×844`, dan 320 px.
+- [x] Review di `1672×941`, `1440×900`, `768×1024`, dan `390×844`. Bukti: fullpage screenshots dan audit; 320 px masih tersisa.
 - [ ] Review light/dark dan reduced motion.
 - [ ] Pastikan body tidak overflow horizontal; tabel memakai scroll region berlabel.
 - [ ] Bandingkan side-by-side dengan referensi dan catat gap.

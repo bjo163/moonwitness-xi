@@ -12,7 +12,7 @@ const sizes = [
   { name: 'desktop-1440', width: 1440, height: 1000 },
 ] as const;
 const views = [
-  { name: 'dashboard', path: '/board', heading: 'Welcome, superadmin' },
+  { name: 'dashboard', path: '/board', heading: 'Command center' },
   { name: 'list', path: '/board/m/base.partner', heading: 'Partners' },
   { name: 'form', path: '/board/m/base.partner/new', heading: 'New Partner' },
   { name: 'profile', path: '/board/profile', heading: 'Profile' },
@@ -80,7 +80,7 @@ test('mobile overlays keep accessible names, keyboard dismissal, focus return, a
 
   await page.reload();
   await expect(
-    page.getByRole('heading', { name: 'Welcome, superadmin', exact: false })
+    page.getByRole('heading', { name: 'Command center', exact: false })
   ).toBeVisible();
   const userMenuTrigger = page.getByRole('button', { name: 'User menu for superadmin' });
   await userMenuTrigger.click();
@@ -136,6 +136,7 @@ test('responsive screen audit: login across mobile, tablet, and desktop', async 
       'opacity',
       '1'
     );
+    await expect(page.locator('main .mw-ui-speech-bubble')).toHaveCSS('opacity', '1');
     await expectNoHorizontalOverflow(page, `login/${size.name}`);
     await page.screenshot({
       path: path.join(auditDirectory, `login-${size.name}-light${browserSuffix(testInfo)}.png`),
@@ -148,6 +149,46 @@ test('responsive screen audit: login across mobile, tablet, and desktop', async 
       await expect(page.getByLabel('Password')).toBeFocused();
       await page.keyboard.press('Tab');
       await expect(page.getByRole('button', { name: 'Enter the board' })).toBeFocused();
+    }
+  }
+});
+
+test('homepage spelling, responsive layout, and reference screenshots', async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  const homeSizes = [
+    { name: 'mobile-390', width: 390, height: 844 },
+    { name: 'tablet-768', width: 768, height: 1024 },
+    { name: 'desktop-1440', width: 1440, height: 900 },
+    { name: 'reference-1672', width: 1672, height: 941 },
+  ] as const;
+  await mkdir(auditDirectory, { recursive: true });
+
+  for (const size of homeSizes) {
+    await page.setViewportSize({ width: size.width, height: size.height });
+    await page.goto('/');
+    await expect(page.getByRole('link', { name: 'MoonWitness home' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'MOONWITNESS', exact: true })).toBeVisible();
+    await expect(page.getByText('People. Places. Stories. Another side of reality.', { exact: true })).toBeVisible();
+    await expect(page.locator('.home-hero-ribbon')).toHaveText('Follow the signal');
+    await expect(page.getByRole('heading', { name: 'Different people. Shared context.', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Enable interface sounds' })).toBeVisible();
+    await expectNoHorizontalOverflow(page, `homepage/${size.name}`);
+    const heroImage = await page.locator('.home-hero-art-image').evaluate((image) => ({
+      loaded: image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0,
+      alt: image.getAttribute('alt'),
+    }));
+    expect(heroImage).toEqual({ loaded: true, alt: '' });
+    await expectNoA11yViolations(page, `homepage/${size.name}`);
+    await page.screenshot({
+      path: path.join(auditDirectory, `home-${size.name}${browserSuffix(testInfo)}.png`),
+      fullPage: true,
+    });
+    if (testInfo.project.name === 'chromium' && ['mobile-390', 'reference-1672'].includes(size.name)) {
+      await expect(page).toHaveScreenshot(`home-${size.name}.png`, {
+        animations: 'disabled',
+        caret: 'hide',
+        fullPage: true,
+      });
     }
   }
 });
@@ -228,6 +269,10 @@ test('responsive protected screens fit and remain accessible in both themes', as
           await expect(page.getByRole('heading', { name: 'Super Administrator' })).toBeVisible();
         }
         if (view.name === 'dashboard') {
+          await expect(page.getByText('MoonWitness / Command Center', { exact: true })).toBeVisible();
+          await expect(page.locator('.dashboard-masthead-subtitle')).toHaveText(
+            /Welcome,\s*superadmin\s*— your workspace at a glance\./u
+          );
           await expect(
             page.getByRole('img', { name: 'Background job status distribution' })
           ).toBeVisible();

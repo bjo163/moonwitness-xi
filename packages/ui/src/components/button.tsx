@@ -4,11 +4,13 @@ import type { ComponentProps } from 'react';
 export type ButtonVariant = 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
 export type ButtonSize =
   'default' | 'xs' | 'sm' | 'lg' | 'icon' | 'icon-xs' | 'icon-sm' | 'icon-lg';
+export type ButtonTreatment = 'solid' | 'brush';
 
 export type ButtonProps = ComponentProps<'button'> & {
   asChild?: boolean;
   size?: ButtonSize;
   variant?: ButtonVariant;
+  treatment?: ButtonTreatment;
 };
 
 export function Button({
@@ -16,6 +18,7 @@ export function Button({
   className,
   size = 'default',
   variant = 'default',
+  treatment = 'solid',
   ...props
 }: ButtonProps) {
   const Component = asChild ? Slot.Root : 'button';
@@ -25,6 +28,7 @@ export function Button({
     <Component
       data-slot="button"
       data-size={size}
+      data-treatment={treatment}
       data-variant={variant}
       className={classes}
       {...props}

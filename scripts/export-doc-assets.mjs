@@ -66,6 +66,9 @@ export function createDocAssetArtifacts({
       throw new Error(`Duplicate asset manifest path '${sourcePath}'`);
     }
     seenSources.add(sourcePath);
+    // Source masters stay in the workspace/package for regeneration; docs only
+    // receives the optimized public derivatives described by the same manifest.
+    if (asset.kind === 'source') continue;
     const contents = assetSources.get(sourcePath);
     if (!contents) throw new Error(`Asset source '${sourcePath}' was not loaded`);
     const outputPath = safeRelativePath(sourcePath);
@@ -184,7 +187,9 @@ export async function exportDocAssets({ check = false } = {}) {
   const expected = new Set(artifacts.keys());
   const currentFiles = await collectOutputFiles(outputDirectory);
   const ownedFiles = await readOwnedOutputs();
-  const untrackedFiles = [...currentFiles].filter((file) => !ownedFiles.has(file));
+  const untrackedFiles = [...currentFiles].filter(
+    (file) => !ownedFiles.has(file) && !expected.has(file)
+  );
   if (untrackedFiles.length) {
     throw new Error(
       `Untracked files in generated docs assets: ${untrackedFiles.join(', ')}. Keep hand-authored files outside '${outputDirectoryRelative}'.`

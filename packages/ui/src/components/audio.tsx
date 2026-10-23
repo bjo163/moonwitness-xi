@@ -28,13 +28,13 @@ type SfxContextValue = {
 const SfxContext = createContext<SfxContextValue | null>(null);
 
 export function SoundProvider({ children }: { children: ReactNode }) {
-  const [enabled, setEnabledState] = useState(true);
+  const [enabled, setEnabledState] = useState(false);
   const [ready, setReady] = useState(false);
   useEffect(() => {
     try {
       setEnabledState(readSoundPreference(window.localStorage));
     } catch {
-      setEnabledState(true);
+      setEnabledState(false);
     }
     const activate = () => setReady(true);
     window.addEventListener('pointerdown', activate, { once: true, passive: true });

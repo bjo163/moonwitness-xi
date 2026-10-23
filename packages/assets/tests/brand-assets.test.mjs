@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
+import sharp from 'sharp';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -14,7 +15,20 @@ test('manifest describes all stable brand and icon exports with unique paths', (
   assert.equal(manifest.schemaVersion, 1);
   assert.equal(manifest.licenseManifest, 'licenses.json');
   assert.equal(assetByPath.size, manifest.assets.length);
-  assert.equal(manifest.assets.length, 59);
+  assert.ok(manifest.assets.length >= 59);
+
+  for (const path of [
+    'brand/source/moonwitness-master.svg',
+    'source/artwork/home-hero-master.png',
+    'source/artwork/board-masthead-master.png',
+    'source/fonts/RoadRage-Regular.ttf',
+    'illustrations/home-hero-desktop.webp',
+    'illustrations/home-hero-mobile.webp',
+    'illustrations/board-masthead.webp',
+    'fonts/RoadRage-latin.woff2',
+  ]) {
+    assert.ok(assetByPath.has(path), `${path} is in the manifest`);
+  }
 
   for (const kind of ['symbol', 'wordmark', 'lockup']) {
     for (const variant of ['light', 'dark', 'mono-light', 'mono-dark']) {
@@ -23,6 +37,8 @@ test('manifest describes all stable brand and icon exports with unique paths', (
   }
   for (const requiredPath of [
     'brand/favicon.svg',
+    'brand/app-icon-192.png',
+    'brand/app-icon-512.png',
     'brand/social-card.svg',
     'brand/social-card.png',
     'brand/readme-banner.svg',
@@ -36,6 +52,10 @@ test('manifest describes all stable brand and icon exports with unique paths', (
   }
   const iconNames = [
     'user',
+    'users',
+    'document',
+    'knowledge',
+    'image',
     'partner',
     'company',
     'team',
@@ -49,16 +69,38 @@ test('manifest describes all stable brand and icon exports with unique paths', (
     'jobs',
     'workflow',
     'security',
+    'check',
+    'warning',
+    'error',
+    'info',
     'search',
+    'close',
     'add',
     'edit',
+    'save',
     'delete',
     'settings',
     'calendar',
     'filter',
+    'sort',
+    'upload',
+    'download',
     'refresh',
     'external-link',
     'menu',
+    'home',
+    'arrow-right',
+    'chevron-right',
+    'globe',
+    'moon',
+    'play',
+    'pause',
+    'volume',
+    'volume-off',
+    'archive',
+    'book-open',
+    'story',
+    'signal',
   ];
   assert.equal(manifest.assets.filter(({ kind }) => kind === 'icon').length, iconNames.length);
   for (const name of iconNames) {
@@ -88,6 +130,14 @@ test('manifest describes all stable brand and icon exports with unique paths', (
   }
   assert.ok(assetByPath.has('illustrations/orbit-pattern-light.svg'));
   assert.ok(assetByPath.has('illustrations/orbit-pattern-dark.svg'));
+  for (const path of [
+    'illustrations/home-hero-desktop.webp',
+    'illustrations/home-hero-mobile.webp',
+    'illustrations/board-masthead.webp',
+  ]) {
+    assert.equal(assetByPath.get(path)?.kind, 'artwork');
+    assert.equal(assetByPath.get(path)?.format, 'webp');
+  }
 });
 
 test('every manifest path exists and its dimensions match the declared media size', async () => {
@@ -104,11 +154,36 @@ test('every manifest path exists and its dimensions match the declared media siz
   }
 });
 
+test('all checked-in asset generator inputs are inventoried', async () => {
+  for (const path of [
+    'brand/source/moonwitness-master.svg',
+    'source/artwork/home-hero-master.png',
+    'source/artwork/board-masthead-master.png',
+    'source/fonts/RoadRage-Regular.ttf',
+  ]) {
+    assert.ok(assetByPath.has(path), `${path} has a manifest entry`);
+    assert.equal(assetByPath.get(path)?.kind, 'source');
+  }
+});
+
 test('social card raster is a real 1200 by 630 PNG', async () => {
   const png = await readFile(resolve(packageRoot, 'brand/social-card.png'));
   assert.equal(png.toString('hex', 0, 8), '89504e470d0a1a0a');
   assert.equal(png.readUInt32BE(16), 1200);
   assert.equal(png.readUInt32BE(20), 630);
+});
+
+test('app icons are canonical square PNG derivatives at installable sizes', async () => {
+  for (const size of [192, 512]) {
+    const path = `brand/app-icon-${size}.png`;
+    const asset = assetByPath.get(path);
+    assert.equal(asset?.kind, 'app-icon');
+    assert.equal(asset?.source, 'brand/favicon.svg');
+    const metadata = await sharp(resolve(packageRoot, path)).metadata();
+    assert.equal(metadata.format, 'png');
+    assert.equal(metadata.width, size);
+    assert.equal(metadata.height, size);
+  }
 });
 
 test('all SVG exports are self-contained and have no executable or external references', async () => {
@@ -117,6 +192,46 @@ test('all SVG exports are self-contained and have no executable or external refe
     assert.doesNotMatch(svg, /<script\b|<foreignObject\b/iu, asset.path);
     assert.doesNotMatch(svg, /(?:href|src)\s*=\s*["'](?:https?:|\/\/)/iu, asset.path);
     assert.doesNotMatch(svg, /@import|url\(\s*["']?(?:https?:|\/\/)/iu, asset.path);
+  }
+});
+
+test('brand master is hand-authored vector and artwork has intentional optimized crops', async () => {
+  const master = await readFile(
+    resolve(packageRoot, 'brand/source/moonwitness-master.svg'),
+    'utf8'
+  );
+  assert.match(master, /id="mw-brand-source-moonwitness-master-svg-crown"/u);
+  assert.match(master, /id="mw-brand-source-moonwitness-master-svg-wordmark"/u);
+  assert.doesNotMatch(master, /<text\b|<image\b|base64,/iu);
+  assert.doesNotMatch(master, /NaN|Infinity/u, 'canonical wordmark paths contain valid SVG numbers');
+  const wordmark = master.match(
+    /<g id="mw-brand-source-moonwitness-master-svg-wordmark"[^>]*>([\s\S]*?)<\/g>/u
+  )?.[1];
+  assert.ok(wordmark, 'canonical source includes an outlined wordmark');
+  assert.equal((wordmark.match(/<path\b/gu) ?? []).length, 11, 'MOONWITNESS has 11 outlined glyphs');
+  const brandGenerator = await readFile(
+    resolve(packageRoot, 'scripts/prepare-brand-master.mjs'),
+    'utf8'
+  );
+  assert.match(brandGenerator, /const wordmark = 'MOONWITNESS'/u);
+  for (const variant of ['light', 'dark', 'mono-light', 'mono-dark']) {
+    const output = await readFile(
+      resolve(packageRoot, `brand/moonwitness-wordmark-${variant}.svg`),
+      'utf8'
+    );
+    assert.equal((output.match(/<path\b/gu) ?? []).length, 11, `${variant} includes all glyphs`);
+    assert.doesNotMatch(output, /NaN|Infinity/u, `${variant} has valid SVG path numbers`);
+  }
+
+  const artwork = manifest.assets.filter(({ kind }) => kind === 'artwork');
+  assert.ok(artwork.length >= 3, 'the manifest includes the required production artwork crops');
+  for (const asset of artwork) {
+    assert.equal(asset.license, 'OpenAI Terms of Use (Output owned by user, subject to applicable law)');
+    const image = sharp(resolve(packageRoot, asset.path));
+    const metadata = await image.metadata();
+    assert.equal(metadata.format, 'webp');
+    assert.equal(metadata.width, asset.width);
+    assert.equal(metadata.height, asset.height);
   }
 });
 
@@ -147,28 +262,41 @@ test('provenance covers original design assets and every externally sourced font
     'packages/assets/scripts/generate-illustrations.mjs'
   );
   assert.equal(provenance.originalAssets.license, 'ISC');
-  assert.equal(provenance.fonts.length, 3);
+  assert.equal(provenance.fonts.length, 4);
   assert.deepEqual(
     provenance.fonts.map(({ family }) => family).sort(),
-    ['Anton', 'JetBrains Mono', 'Space Grotesk'].sort()
+    ['Anton', 'JetBrains Mono', 'Road Rage', 'Space Grotesk'].sort()
   );
   for (const font of provenance.fonts) {
     assert.equal(font.license, 'SIL Open Font License 1.1');
     assert.match(font.source, /^https:\/\//u);
     assert.match(font.usage, /Bundled/u);
-    assert.ok(font.files.length >= 2);
+    assert.ok(font.files.length >= 1);
     for (const file of font.files) {
       assert.match(file.path, /^fonts\/.+\.woff2$/u);
-      assert.match(file.source, /^https:\/\/fonts\.gstatic\.com\//u);
+      assert.match(file.source, /^https:\/\//u);
       assert.match(file.sha256, /^[A-F0-9]{64}$/u);
       const bytes = await readFile(resolve(packageRoot, file.path));
       assert.equal(bytes.toString('hex', 0, 4), '774f4632', `${file.path} is WOFF2`);
       assert.equal(createHash('sha256').update(bytes).digest('hex').toUpperCase(), file.sha256);
+      if (font.family !== 'Road Rage') {
+        assert.match(file.source, /^https:\/\/fonts\.gstatic\.com\//u);
+      }
     }
     const licensePath = resolve(packageRoot, `fonts/OFL-${font.family.replaceAll(' ', '')}.txt`);
     const licenseText = await readFile(licensePath, 'utf8');
     assert.match(licenseText, /SIL OPEN FONT LICENSE Version 1\.1/u);
   }
+
+  const roadRage = provenance.fonts.find(({ family }) => family === 'Road Rage');
+  assert.equal(roadRage.files.length, 1);
+  assert.equal(roadRage.files[0].sourceFile, 'source/fonts/RoadRage-Regular.ttf');
+  assert.match(
+    await readFile(resolve(packageRoot, 'fonts/OFL-RoadRage.txt'), 'utf8'),
+    /SIL OPEN FONT LICENSE Version 1\.1/u
+  );
+  assert.equal(provenance.artwork.length, 6);
+  assert.ok(provenance.artwork.every(({ terms, source }) => terms && source));
 });
 
 test('Board, UI catalog, and docs portal consume the shared local font export', async () => {

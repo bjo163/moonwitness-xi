@@ -23,7 +23,7 @@
     "test:integration": "node scripts/run-postgres-tests.mjs",
     "test:integration:built": "node scripts/run-postgres-tests.mjs --built",
     "test:restore-drill": "node scripts/verify-application-restore.mjs",
-    "assets:generate": "node packages/assets/scripts/generate.mjs && node packages/assets/scripts/generate-illustrations.mjs && node packages/assets/scripts/generate-sounds.mjs && node scripts/export-doc-assets.mjs",
+    "assets:generate": "pnpm --filter @moonwitness/assets brand:prepare && node packages/assets/scripts/generate.mjs && node packages/assets/scripts/generate-illustrations.mjs && node packages/assets/scripts/generate-sounds.mjs && pnpm --filter @moonwitness/assets fonts:prepare && pnpm --filter @moonwitness/assets artwork:prepare && node scripts/export-doc-assets.mjs && node scripts/copy-board-public-assets.mjs",
     "assets:generate:illustrations": "node packages/assets/scripts/generate-illustrations.mjs && node scripts/export-doc-assets.mjs",
     "assets:export:docs": "node scripts/export-doc-assets.mjs",
     "assets:check:docs": "node scripts/export-doc-assets.mjs --check",

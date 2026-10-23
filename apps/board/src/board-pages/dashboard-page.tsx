@@ -2,24 +2,25 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  AlertTriangle,
-  Building2,
-  Calendar,
-  CheckCircle2,
-  Cpu,
-  ExternalLink,
-  Layers,
-  Plus,
-  RefreshCw,
-  RotateCw,
-  Sparkles,
-  Trash2,
-  UserPlus,
-  Users,
-  Zap,
-} from 'lucide-react';
+  WarningIcon as AlertTriangle,
+  CompanyIcon as Building2,
+  CalendarIcon as Calendar,
+  CheckIcon as CheckCircle2,
+  JobsIcon as Cpu,
+  ExternalLinkIcon as ExternalLink,
+  AddonIcon as Layers,
+  AddIcon as Plus,
+  RefreshIcon as RefreshCw,
+  RefreshIcon as RotateCw,
+  SignalIcon as Sparkles,
+  DeleteIcon as Trash2,
+  UserIcon as UserPlus,
+  UsersIcon as Users,
+  SignalIcon as Zap,
+} from '@moonwitness/ui/icons';
 import { client } from '@/lib/client';
 import { formatDateTime } from '@/lib/date-format';
 import { readPreferences } from '@/lib/preferences';
@@ -28,7 +29,7 @@ import { useAuth } from '@/hooks/use-auth-context';
 import { useModels } from '@/hooks/use-model';
 import { modelIcon, modelLabel } from '@/lib/models';
 import { DEVELOPMENT_MODE_EVENT, readDevelopmentMode } from '@/lib/navigation';
-import { AccentMarker, Doodle, SpeedLines } from '@moonwitness/ui/components/effects';
+import { AccentMarker, Doodle } from '@moonwitness/ui/components/effects';
 import { Button } from '@moonwitness/ui/components/button';
 import {
   Dialog,
@@ -40,6 +41,7 @@ import {
 import { CronSchedulerPanel } from '@/components/layout/cron-scheduler-panel';
 import { cn } from '@/lib/utils';
 import { BarChart } from '@moonwitness/ui/components/chart';
+import { MetricTile } from '@moonwitness/ui/components/metric-tile';
 
 export function DashboardPage() {
   const { user } = useAuth();
@@ -281,20 +283,28 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* Hero Welcome Banner with Speedlines */}
-      <div className="relative overflow-hidden border-4 border-ink bg-paper p-5 sm:p-8 lg:p-12 shadow-ink-lg">
-        <SpeedLines className="opacity-20" origin={[0.85, 0.4]} inner={0.15} count={60} />
-        <div className="relative max-w-2xl space-y-4">
-          <div className="inline-flex items-center gap-2 border-2 border-ink bg-lime px-3 py-1 font-mono text-xs font-bold uppercase tracking-wider text-on-accent">
-            <Sparkles className="size-3.5" /> MoonWitness Mission Control
+      {/* Command center masthead: operational copy stays HTML over shared artwork. */}
+      <section className="dashboard-masthead">
+        <Image
+          src="/illustrations/board-masthead.webp"
+          alt=""
+          fill
+          priority
+          sizes="(max-width: 1024px) 100vw, calc(100vw - 16rem)"
+          className="dashboard-masthead-art"
+        />
+        <div className="dashboard-masthead-shade" aria-hidden="true" />
+        <div className="dashboard-masthead-copy">
+          <div className="dashboard-masthead-kicker">
+            <Sparkles className="size-3.5" aria-hidden="true" /> MoonWitness / Command Center
           </div>
-          <h1 className="ink-title text-3xl leading-tight sm:text-6xl sm:leading-none">
-            Welcome, <AccentMarker>{user?.login}</AccentMarker>!
+          <h1 className="dashboard-masthead-title">
+            Command center
           </h1>
-          <p className="text-base sm:text-lg text-ink-soft">
-            Role: <span className="font-mono font-bold uppercase text-ink">{user?.role}</span>.
-            Real-time multi-tenant telemetry, data-driven administrative modules, and live event
-            streams.
+          <p className="dashboard-masthead-subtitle">
+            <span>Welcome,</span>
+            <AccentMarker>{user?.login}</AccentMarker>
+            <span>— your workspace at a glance.</span>
           </p>
 
           {/* Quick Action Buttons */}
@@ -316,7 +326,7 @@ export function DashboardPage() {
             </Button>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Admin Subview Switcher */}
       {isAdmin && (
@@ -330,7 +340,7 @@ export function DashboardPage() {
                 'px-4 py-1.5 font-display text-sm uppercase tracking-wider transition-colors',
                 adminSubView === 'telemetry'
                   ? 'border-2 border-ink bg-lime text-on-accent font-bold shadow-[2px_2px_0_0_var(--ink)]'
-                  : 'bg-card text-ink-soft hover:text-ink hover:bg-paper-raised'
+                  : 'text-ink-soft hover:text-ink hover:bg-paper-raised'
               )}
             >
               Overview & Telemetry
@@ -343,7 +353,7 @@ export function DashboardPage() {
                 'px-4 py-1.5 font-display text-sm uppercase tracking-wider transition-colors',
                 adminSubView === 'crons'
                   ? 'border-2 border-ink bg-lime text-on-accent font-bold shadow-[2px_2px_0_0_var(--ink)]'
-                  : 'bg-card text-ink-soft hover:text-ink hover:bg-paper-raised'
+                  : 'text-ink-soft hover:text-ink hover:bg-paper-raised'
               )}
             >
               Cron Scheduler & Queue
@@ -357,101 +367,37 @@ export function DashboardPage() {
       ) : (
         <>
           {/* KPI Counters Grid */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="dashboard-metrics">
             {/* Partner Count */}
             <Link
               href="/board/m/base.partner"
-              className="ink-panel group relative block p-5 transition-transform hover:-translate-y-1 hover:shadow-ink-lg"
+              className="dashboard-metric-link"
             >
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-xs uppercase tracking-wider text-ink-faint">
-                  Partners & Contacts
-                </span>
-                <div className="size-8 border-2 border-ink bg-lime/20 flex items-center justify-center group-hover:bg-lime group-hover:text-on-accent transition-colors">
-                  <Users className="size-4" />
-                </div>
-              </div>
-              <div className="mt-3">
-                <div className="font-display text-4xl uppercase tracking-tight">
-                  {partnerLoading ? '—' : (partnerStats?.total ?? 0)}
-                </div>
-                <p className="text-xs text-ink-faint mt-1 flex items-center gap-1 font-mono">
-                  <span>View Directory</span>
-                  <ExternalLink className="size-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </p>
-              </div>
+              <MetricTile label="Partners & contacts" value={partnerLoading ? '—' : (partnerStats?.total ?? 0)} detail="View directory" icon={<Users className="size-4" />} accent="magenta" />
             </Link>
 
             {/* Active Users */}
             <Link
               href="/board/m/base.user"
-              className="ink-panel group relative block p-5 transition-transform hover:-translate-y-1 hover:shadow-ink-lg"
+              className="dashboard-metric-link"
             >
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-xs uppercase tracking-wider text-ink-faint">
-                  Active Users
-                </span>
-                <div className="size-8 border-2 border-ink bg-paper flex items-center justify-center group-hover:bg-lime group-hover:text-on-accent transition-colors">
-                  <UserPlus className="size-4" />
-                </div>
-              </div>
-              <div className="mt-3">
-                <div className="font-display text-4xl uppercase tracking-tight">
-                  {userLoading ? '—' : (userStats?.total ?? 0)}
-                </div>
-                <p className="text-xs text-ink-faint mt-1 flex items-center gap-1 font-mono">
-                  <span>System Accounts</span>
-                  <ExternalLink className="size-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </p>
-              </div>
+              <MetricTile label="Active users" value={userLoading ? '—' : (userStats?.total ?? 0)} detail="System accounts" icon={<UserPlus className="size-4" />} accent="cyan" />
             </Link>
 
             {/* Companies / Multi-Tenant */}
             <Link
               href="/board/m/base.company"
-              className="ink-panel group relative block p-5 transition-transform hover:-translate-y-1 hover:shadow-ink-lg"
+              className="dashboard-metric-link"
             >
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-xs uppercase tracking-wider text-ink-faint">
-                  Tenants & Companies
-                </span>
-                <div className="size-8 border-2 border-ink bg-paper flex items-center justify-center group-hover:bg-lime group-hover:text-on-accent transition-colors">
-                  <Building2 className="size-4" />
-                </div>
-              </div>
-              <div className="mt-3">
-                <div className="font-display text-4xl uppercase tracking-tight">
-                  {companyLoading ? '—' : (companyStats?.total ?? 0)}
-                </div>
-                <p className="text-xs text-ink-faint mt-1 flex items-center gap-1 font-mono">
-                  <span>Tenant Scopes</span>
-                  <ExternalLink className="size-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </p>
-              </div>
+              <MetricTile label="Companies" value={companyLoading ? '—' : (companyStats?.total ?? 0)} detail="Tenant scopes" icon={<Building2 className="size-4" />} accent="yellow" />
             </Link>
 
             {/* Pending Activities */}
             <Link
               href="/board/m/base.activity"
-              className="ink-panel group relative block p-5 transition-transform hover:-translate-y-1 hover:shadow-ink-lg"
+              className="dashboard-metric-link"
             >
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-xs uppercase tracking-wider text-ink-faint">
-                  Pending Tasks
-                </span>
-                <div className="size-8 border-2 border-ink bg-pink/20 flex items-center justify-center group-hover:bg-pink group-hover:text-on-pink transition-colors">
-                  <CheckCircle2 className="size-4" />
-                </div>
-              </div>
-              <div className="mt-3">
-                <div className="font-display text-4xl uppercase tracking-tight">
-                  {activityLoading ? '—' : (activityStats?.total ?? 0)}
-                </div>
-                <p className="text-xs text-ink-faint mt-1 flex items-center gap-1 font-mono">
-                  <span>Active Reminders</span>
-                  <ExternalLink className="size-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </p>
-              </div>
+              <MetricTile label="Planned activities" value={activityLoading ? '—' : (activityStats?.total ?? 0)} detail="Active reminders" icon={<CheckCircle2 className="size-4" />} accent="magenta" />
             </Link>
           </div>
 

@@ -7,19 +7,19 @@ import {
   SOUND_PREFERENCE_KEY,
 } from '../dist/lib/audio-runtime.js';
 
-test('sound preference defaults to enabled and persists the local mute choice', () => {
+test('sound preference defaults to muted and persists explicit user choice', () => {
   const values = new Map();
   const storage = {
     getItem: (key) => values.get(key) ?? null,
     setItem: (key, value) => values.set(key, value),
   };
 
-  assert.equal(readSoundPreference(storage), true);
-  persistSoundPreference(storage, false);
   assert.equal(readSoundPreference(storage), false);
-  assert.equal(values.get(SOUND_PREFERENCE_KEY), 'false');
   persistSoundPreference(storage, true);
   assert.equal(readSoundPreference(storage), true);
+  assert.equal(values.get(SOUND_PREFERENCE_KEY), 'true');
+  persistSoundPreference(storage, false);
+  assert.equal(readSoundPreference(storage), false);
 });
 
 test('sound preference storage failures fall back without breaking UI actions', () => {
@@ -32,7 +32,7 @@ test('sound preference storage failures fall back without breaking UI actions', 
     },
   };
 
-  assert.equal(readSoundPreference(storage), true);
+  assert.equal(readSoundPreference(storage), false);
   assert.doesNotThrow(() => persistSoundPreference(storage, false));
 });
 

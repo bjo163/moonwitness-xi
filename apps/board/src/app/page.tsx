@@ -1,6 +1,11 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { Button } from '@moonwitness/ui/components/button';
+import { PaperNote } from '@moonwitness/ui/components/paper-note';
+import { SectionRibbon } from '@moonwitness/ui/components/section-ribbon';
 import { SoundToggle } from '@moonwitness/ui/components/audio';
+import { ArrowRightIcon, GlobeIcon, MoonIcon } from '@moonwitness/ui/icons';
 
 // Next.js route metadata must be exported from the route file alongside its component.
 // oxlint-disable-next-line react/only-export-components
@@ -13,14 +18,7 @@ export const metadata: Metadata = {
     siteName: 'MoonWitness',
     title: 'Real people. Unfiltered worlds.',
     description: 'A shared workspace for people, stories, knowledge, and the signals between them.',
-    images: [
-      {
-        url: '/brand/social-card.png',
-        width: 1200,
-        height: 630,
-        alt: 'MoonWitness — real people and connected stories',
-      },
-    ],
+    images: [{ url: '/brand/social-card.png', width: 1200, height: 630, alt: 'MoonWitness — real people and connected stories' }],
   },
   twitter: {
     card: 'summary_large_image',
@@ -30,93 +28,124 @@ export const metadata: Metadata = {
   },
 };
 
+const editorialCards = [
+  {
+    id: 'people',
+    number: '01',
+    label: 'PEOPLE & RECORDS',
+    title: 'Different people. Shared context.',
+    body: 'Keep partners, organizations, and their records connected in one workspace, with access shaped by your role.',
+    crop: 'people',
+    artwork: '/illustrations/editorial-people.webp',
+  },
+  {
+    id: 'knowledge',
+    number: '02',
+    label: 'KNOWLEDGE',
+    title: 'Look further than the record.',
+    body: 'Bring research and working knowledge into view alongside the people and context your team already uses.',
+    crop: 'knowledge',
+    artwork: '/illustrations/editorial-knowledge.webp',
+  },
+  {
+    id: 'stories',
+    number: '03',
+    label: 'STORY WORKBENCH',
+    title: 'Make the signal legible.',
+    body: 'Organize narrative work while keeping its underlying information connected to the workspace.',
+    crop: 'stories',
+    artwork: '/illustrations/editorial-stories.webp',
+  },
+] as const;
+
 export default function HomePage() {
   return (
     <main className="home-page">
       <header className="home-header">
         <Link href="/" className="home-mark" aria-label="MoonWitness home">
-          <img
-            src="/brand/moonwitness-lockup-dark.svg"
-            alt=""
-            className="home-lockup"
-            width="500"
-            height="80"
-          />
+          <Image src="/brand/moonwitness-lockup-dark.svg" alt="MoonWitness" className="home-lockup" width={500} height={80} priority />
         </Link>
         <nav className="home-nav" aria-label="Main navigation">
-          <a href="#stories">Stories</a>
           <a href="#people">People</a>
-          <a href="#signals">Signals</a>
+          <a href="#knowledge">Knowledge</a>
+          <a href="#stories">Stories</a>
           <a href="#about">About</a>
         </nav>
-        <div className="flex items-center gap-3">
+        <div className="home-header-actions">
           <SoundToggle />
-          <Link href="/login" className="home-cta">
-            Enter the board <span aria-hidden>→</span>
-          </Link>
+          <Button asChild treatment="brush" size="sm"><Link href="/login">Enter the board <ArrowRightIcon aria-hidden="true" /></Link></Button>
         </div>
       </header>
+
       <section className="home-hero" aria-labelledby="home-title">
+        <picture className="home-hero-art">
+          <source media="(max-width: 600px)" srcSet="/illustrations/home-hero-mobile.webp" />
+          <img className="home-hero-art-image" src="/illustrations/home-hero-desktop.webp" alt="" fetchPriority="high" />
+        </picture>
+        <div className="home-hero-shade" aria-hidden="true" />
         <div className="home-hero-copy">
-          <span className="home-kicker">A workspace for connected stories</span>
-          <h1 id="home-title" className="home-title">
-            Moon<span>Witness</span>
-          </h1>
-          <p className="home-lede">
-            Different people. Shared context. A clear view of the records, knowledge, and stories
-            that connect your work.
-          </p>
+          <span className="home-kicker">People. Places. Stories. Another side of reality.</span>
+          <h1 id="home-title" className="home-title">MOON<span>WITNESS</span></h1>
+          <p className="home-hero-ribbon">Follow the signal</p>
+          <p className="home-lede">Different people. Shared context. A clearer view of the stories, knowledge, and records that connect our work.</p>
           <div className="home-actions">
-            <Link className="home-cta primary" href="/login">
-              Open your workspace <span aria-hidden>→</span>
-            </Link>
-            <a className="home-cta" href="#about">
-              Discover MoonWitness <span aria-hidden>↓</span>
-            </a>
+            <Button asChild treatment="brush" size="lg"><Link href="/register">Explore MoonWitness <ArrowRightIcon aria-hidden="true" /></Link></Button>
+            <Link className="home-text-link" href="/login">Sign in to your workspace <span aria-hidden="true">↗</span></Link>
           </div>
         </div>
-        <div
-          className="home-art"
-          role="img"
-          aria-label="Illustrated night city beneath a bright moon"
-        >
-          <span className="home-art-skyline" />
+        <PaperNote className="home-hero-note" accent="yellow">Same moon.<br />Different people.</PaperNote>
+        <div className="home-hero-caption" aria-hidden="true">A workspace for real human stories</div>
+      </section>
+
+      <div className="home-band"><span>Real people.</span> <strong>Connected knowledge.</strong> <span>A wider perspective.</span></div>
+
+      <section className="home-editorial" aria-label="Explore MoonWitness">
+        <div className="home-editorial-grid">
+          {editorialCards.map((card) => (
+            <article className={`home-editorial-card crop-${card.crop}`} id={card.id} key={card.id}>
+              <SectionRibbon title={card.label} number={card.number} accent={card.number === '02' ? 'cyan' : 'magenta'} />
+              <div className="home-card-art" aria-hidden="true">
+                <Image src={card.artwork} alt="" fill sizes="(max-width: 800px) 100vw, 33vw" />
+                <span className="home-card-mark">{card.number === '01' ? <GlobeIcon /> : card.number === '02' ? <MoonIcon /> : <ArrowRightIcon />}</span>
+              </div>
+              <div className="home-card-copy">
+                <h2>{card.title}</h2>
+                <p>{card.body}</p>
+                <Link href={card.id === 'stories' ? '/login' : '/register'} className="home-card-link">Explore <ArrowRightIcon aria-hidden="true" /></Link>
+              </div>
+            </article>
+          ))}
         </div>
       </section>
-      <div className="home-band">
-        Real people. <strong>Connected knowledge.</strong> A wider perspective.
-      </div>
-      <section className="home-sections" id="stories" aria-label="What MoonWitness brings together">
-        <article className="home-section" id="people">
-          <small>01 / PEOPLE</small>
-          <h2>See the connections</h2>
-          <p>
-            Keep people, organizations, and their shared records in one workspace, with access
-            shaped by your role.
-          </p>
-        </article>
-        <article className="home-section" id="signals">
-          <small>02 / KNOWLEDGE</small>
-          <h2>Follow the signal</h2>
-          <p>
-            Bring research and knowledge into view alongside the records and context your team
-            already uses.
-          </p>
-        </article>
-        <article className="home-section" id="about">
-          <small>03 / STORIES</small>
-          <h2>Make work legible</h2>
-          <p>
-            Use the story workbench to organize narrative work while keeping the underlying
-            information connected.
-          </p>
-        </article>
+
+      <section className="home-connection" id="about" aria-labelledby="connection-title">
+        <div className="home-connection-art" aria-hidden="true"><Image src="/illustrations/home-hero-desktop.webp" alt="" fill sizes="(max-width: 800px) 100vw, 60vw" /></div>
+        <div className="home-connection-copy">
+          <span className="home-kicker">One workspace, many perspectives</span>
+          <h2 id="connection-title">Stories keep orbiting.</h2>
+          <p>MoonWitness brings people, knowledge, and narrative work into a shared view. Your team controls what is visible and who can act.</p>
+          <Button asChild treatment="brush" variant="secondary"><Link href="/register">Join the workspace <ArrowRightIcon aria-hidden="true" /></Link></Button>
+        </div>
+        <div className="home-orbit-note"><MoonIcon aria-hidden="true" /> Different witnesses.<br />Shared context.</div>
       </section>
+
+      <section className="home-steps" aria-label="How the workspace connects">
+        <SectionRibbon title="Follow the signal" number="04" accent="yellow" />
+        <div className="home-step-grid">
+          <div><span>01 / CONNECT</span><h3>People and records</h3><p>Keep the details together.</p></div>
+          <div><span>02 / UNDERSTAND</span><h3>Knowledge in context</h3><p>See what informs the work.</p></div>
+          <div><span>03 / TELL</span><h3>Stories with meaning</h3><p>Shape a clearer narrative.</p></div>
+        </div>
+      </section>
+
+      <section className="home-join-band" aria-label="Join MoonWitness">
+        <div><span>More perspectives.</span><strong> More connected work.</strong></div>
+        <Button asChild treatment="brush" variant="outline" size="lg"><Link href="/register">Join MoonWitness <ArrowRightIcon aria-hidden="true" /></Link></Button>
+      </section>
+
       <footer className="home-footer">
-        <span>MOONWITNESS · DIFFERENT PEOPLE, SHARED CONTEXT</span>
-        <span>
-          <Link href="/login">Sign in</Link> · <Link href="/register">Create an account</Link>
-        </span>
+        <div className="home-footer-brand"><Image src="/brand/moonwitness-symbol-mono-light.svg" alt="" width={42} height={42} /><span>MOONWITNESS<br /><small>DIFFERENT PEOPLE. SHARED CONTEXT.</small></span></div>
+        <div className="home-footer-actions"><Link href="/login">Sign in</Link><Link href="/register">Create an account</Link></div>
       </footer>
     </main>
   );

@@ -25,6 +25,6 @@
 
 `search`, `add`, `edit`, `delete`, `settings`, `calendar`, `filter`, `refresh`, `external-link`, and `menu` provide reusable actions. Keep labels and accessible names in the consuming UI so each symbol is interpreted in its real context.
 
-The [contact sheet](assets/icon-contact-sheet.png) renders all 24 symbols at 16, 20, 24 and 32 px on light and dark surfaces. Icons are built from original geometric paths; the current set uses no IDs, gradients, masks, scripts, external URLs, or borrowed artwork. The package validator rejects those executable/external SVG constructs and checks any future local reference IDs.
+The [current contact sheet](assets/icon-contact-sheet-current.png) renders all canonical symbols at 16, 20, 24 and 32 px on light and dark surfaces. Icons are built from original geometric paths; the current set uses no IDs, gradients, masks, scripts, external URLs, or borrowed artwork. The package validator rejects those executable/external SVG constructs and checks any future local reference IDs.
 
 SVG roots include a descriptive title for static image consumers. For theme-aware inline rendering, use the typed wrappers in `@moonwitness/ui` when available; an SVG loaded as an `<img>` cannot inherit the host element's `currentColor`, so it uses the SVG initial color instead.

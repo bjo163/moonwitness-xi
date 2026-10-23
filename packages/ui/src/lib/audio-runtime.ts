@@ -21,9 +21,9 @@ type AudioPlayback = {
 
 export function readSoundPreference(storage: SoundStorage): boolean {
   try {
-    return storage.getItem(SOUND_PREFERENCE_KEY) !== 'false';
+    return storage.getItem(SOUND_PREFERENCE_KEY) === 'true';
   } catch {
-    return true;
+    return false;
   }
 }
 

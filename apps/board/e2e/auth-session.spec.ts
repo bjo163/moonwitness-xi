@@ -44,7 +44,7 @@ async function loginSuperadmin(page: Page) {
   await page.getByRole('button', { name: 'Enter the board' }).click();
   await expect(page).toHaveURL(/\/board$/u);
   await expect(
-    page.getByRole('heading', { name: 'Welcome, superadmin', exact: false })
+    page.getByRole('heading', { name: 'Command center', exact: false })
   ).toBeVisible();
 }
 
@@ -60,7 +60,7 @@ test('reload restores session, concurrent requests share expired-token refresh, 
   await page.reload();
   await expect(page).toHaveURL(/\/board$/u);
   await expect(
-    page.getByRole('heading', { name: 'Welcome, superadmin', exact: false })
+    page.getByRole('heading', { name: 'Command center', exact: false })
   ).toBeVisible();
 
   const expired = expiredAccessToken(original!.user);
@@ -80,7 +80,7 @@ test('reload restores session, concurrent requests share expired-token refresh, 
   await page.reload();
   await expect(page).toHaveURL(/\/board$/u);
   await expect(
-    page.getByRole('heading', { name: 'Welcome, superadmin', exact: false })
+    page.getByRole('heading', { name: 'Command center', exact: false })
   ).toBeVisible();
   await expect
     .poll(async () =>
@@ -185,4 +185,14 @@ test('login returns to an internal page and rejects an external return target', 
   await expect(page).toHaveURL(/\/m\/base\.partner\?source=session-test$/u);
   expect(new URL(page.url()).origin).toBe(applicationOrigin);
   await expect(page.getByRole('heading', { name: 'Partners' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'superadmin' }).click();
+  await page.getByRole('menuitem', { name: 'Sign out' }).click();
+  await page.goto('/login?returnTo=https%3A%2F%2Fattacker.example%2Fsteal-session');
+  await page.getByLabel('Login').fill('superadmin');
+  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await expect(page).toHaveURL(/\/board$/u);
+  expect(new URL(page.url()).origin).toBe(applicationOrigin);
+  await expect(page.getByRole('heading', { name: 'Command center' })).toBeVisible();
 });
