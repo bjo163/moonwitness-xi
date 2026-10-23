@@ -35,7 +35,7 @@ Checklist ini menjadi rencana kerja untuk mendekatkan Home, Board, dan workbench
 - [x] Ambil screenshot homepage mobile `390×844`. Bukti: Playwright baseline `apps/board/e2e/visual-audit.spec.ts-snapshots/home-mobile-390-chromium-win32.png`.
 - [ ] Ambil screenshot Board untuk role pengguna biasa.
 - [x] Ambil screenshot Board untuk role admin. Bukti: `test-results/visual-audit/dashboard-desktop-1440-dark.png` (fixture E2E admin).
-- [ ] Ambil screenshot workbench dengan dokumen berisi.
+- [x] Ambil screenshot workbench dengan dokumen berisi; periksa ejaan brand, judul, label, hash, dan teks preview secara visual. Bukti: `apps/board/e2e/visual-audit.spec.ts-snapshots/workbench-filled-desktop-1440-chromium-win32.png` dan `.../workbench-filled-mobile-390-chromium-win32.png`.
 - [ ] Ambil screenshot workbench saat kosong dan saat ada error.
 - [ ] Inventarisasi halaman login, registrasi, Knowledge, profil, dan settings.
 - [ ] Inventarisasi halaman daftar/detail model, dialog, menu, sheet, toast, dan tabel.
@@ -49,7 +49,7 @@ Checklist ini menjadi rencana kerja untuk mendekatkan Home, Board, dan workbench
 - [ ] Petakan KPI ke Partners, Active Users, Companies, dan Planned Activities.
 - [ ] Petakan panel operasional admin ke jobs, outbox, cron, dan audit yang tersedia.
 - [ ] Petakan aktivitas user ke aktivitas terencana yang tersedia.
-- [ ] Petakan workbench ke navigator halaman, editor/preview, dan riwayat revisi.
+- [x] Petakan workbench ke navigator halaman kiri, editor/preview tengah, dan inspector revisi kanan. Bukti: screenshot populated desktop/mobile dan assertions pada `apps/board/e2e/visual-audit.spec.ts`.
 - [ ] Tandai workbench sebagai internal dan pertahankan batas tanpa publishing/upload/export.
 - [ ] Jangan menambahkan statistik crew, negara, reach, atau tren tanpa sumber data.
 - [ ] Jangan menampilkan publishing pipeline, arsip publik, poster editor, atau peta live yang belum tersedia.
@@ -328,7 +328,7 @@ Accent `magenta`, `cyan`, dan `yellow` bersifat dekoratif; accent tidak mengubah
 - [ ] Ganti brand lokal buatan katalog dengan asset canonical.
 - [ ] Buat hero proof berdasarkan gambar 2.
 - [ ] Buat dashboard proof berdasarkan gambar 4.
-- [ ] Buat workbench proof berdasarkan gambar 3.
+- [x] Buat workbench proof berdasarkan gambar 3 menggunakan halaman produksi dan data fixture internal yang deterministik. Bukti: baseline populated desktop/mobile pada `apps/board/e2e/visual-audit.spec.ts-snapshots/`.
 - [ ] Masukkan detail sticker/orbit dari gambar 1.
 - [ ] Gunakan komponen shared yang sama dengan halaman produksi.
 - [ ] Gunakan data fixture deterministik berlabel “contoh desain”.
@@ -431,10 +431,11 @@ Urutan: header → hero manga → tiga panel editorial → band koneksi → film
 ### Story workbench berdasarkan gambar 3
 
 - [ ] Buat banner/toolbar dengan gaya SHADOW/command-center yang sesuai brand baru.
-- [ ] Tempatkan page navigator di rail kiri desktop.
+- [x] Tempatkan page navigator di rail kiri desktop. Bukti visual: `apps/board/e2e/visual-audit.spec.ts-snapshots/workbench-filled-desktop-1440-chromium-win32.png`.
 - [ ] Pertahankan add/remove/reorder dan batas jumlah halaman existing.
-- [ ] Tempatkan editor atau preview pada area tengah yang sama.
-- [ ] Tempatkan revision, visibility, dan digest pada inspector kanan.
+- [x] Tempatkan editor dan preview pada area tengah yang sama; pastikan teks fixture muncul dengan ejaan benar di keduanya. Bukti: populated desktop/mobile screenshot.
+- [x] Tempatkan revision, visibility, dan digest pada inspector kanan; gunakan hash SHA-256 deterministik yang terbaca realistis. Bukti: populated desktop screenshot dan fixture test.
+- [x] Verifikasi urutan halaman berubah saat aksi Move Up/Move Down dan teks halaman yang dipilih tetap benar. Bukti: interaksi pada `apps/board/e2e/visual-audit.spec.ts`.
 - [ ] Gunakan brush untuk judul pendek; isi dokumen tetap UI/body font.
 - [ ] Pertahankan whitespace textarea dan preview dengan tepat.
 - [ ] Tampilkan history revisi yang tersedia.
@@ -535,7 +536,7 @@ Pertahankan satu command manual/otomatis: **`pnpm board:ui:check`**.
 - [ ] Pertahankan layout/token snapshot katalog yang sudah tersedia.
 - [x] Tambahkan screenshot baseline untuk Home dan login. Bukti: baseline Home 390/1672 dan screenshot login dalam visual audit.
 - [ ] Tambahkan screenshot baseline dashboard user/admin.
-- [x] Tambahkan screenshot baseline workbench desktop dan mobile; exact brand copy, pemuatan artwork, overflow, dan accessibility diperiksa. Bukti: `apps/board/e2e/visual-audit.spec.ts-snapshots/workbench-desktop-1440-chromium-win32.png`, `apps/board/e2e/visual-audit.spec.ts-snapshots/workbench-mobile-390-chromium-win32.png`, serta `test-results/visual-audit/workbench-desktop-1440.png` dan `test-results/visual-audit/workbench-mobile-390.png`.
+- [x] Tambahkan screenshot baseline workbench kosong dan populated desktop/mobile; ejaan brand/copy, pemuatan artwork, overflow, accessibility, dan hash contoh diperiksa secara visual. Bukti: baseline `workbench-desktop-1440`, `workbench-mobile-390`, `workbench-filled-desktop-1440`, dan `workbench-filled-mobile-390` di `apps/board/e2e/visual-audit.spec.ts-snapshots/`.
 - [ ] Tambahkan specimen tabel, form, overlay, dan state utama.
 - [ ] Gunakan data, waktu, font, dan dekorasi deterministik.
 - [x] Review di `1672×941`, `1440×900`, `768×1024`, dan `390×844`. Bukti: fullpage screenshots dan audit; 320 px masih tersisa.

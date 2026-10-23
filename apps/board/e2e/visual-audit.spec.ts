@@ -1,6 +1,7 @@
 import { AxeBuilder } from '@axe-core/playwright';
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { E2E_SUPERADMIN_PASSWORD } from './constants.js';
 
@@ -239,6 +240,118 @@ test('story workbench masthead keeps brand copy readable across viewports', asyn
         fullPage: true,
       });
     }
+  }
+});
+
+test('story workbench editor and preview stay readable with a populated story', async ({
+  page,
+}, testInfo) => {
+  const storyId = 'mw:story:editorial-sample';
+  const previousDigest = createHash('sha256').update('workbench-v1').digest('hex');
+  const currentDigest = createHash('sha256').update('workbench-v2').digest('hex');
+  const pages = [
+    {
+      page_id: 'mw:story-page:editorial-sample-1',
+      page_order: 1,
+      original_text: 'A small signal can change a larger sky.',
+    },
+    {
+      page_id: 'mw:story-page:editorial-sample-2',
+      page_order: 2,
+      original_text: 'Different places. Same curiosity.',
+    },
+  ];
+  await page.route('**/api/research/stories/**', async (route) => {
+    if (route.request().method() !== 'GET') return route.continue();
+    const requestedVersion = new URL(route.request().url()).searchParams.get('version');
+    const version = requestedVersion === '1' ? 1 : 2;
+    const storyPages =
+      version === 1
+        ? [
+            {
+              ...pages[0],
+              original_text: 'Signal before dawn.',
+            },
+          ]
+        : pages;
+    await route.fulfill({
+      status: 200,
+      json: {
+        success: true,
+        data: {
+          storyId,
+          version,
+          digest: version === 1 ? previousDigest : currentDigest,
+          previousDigest: version === 1 ? null : previousDigest,
+          visibility: 'INTERNAL',
+          idempotent: false,
+          story: {
+            schema_version: 1,
+            story_id: storyId,
+            title: 'The Ones Who Watch',
+            visibility: 'INTERNAL',
+            pages: storyPages,
+          },
+        },
+      },
+    });
+  });
+
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/login');
+  await page.getByLabel('Login').fill('superadmin');
+  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await expect(page).toHaveURL(/\/board$/u);
+  await page.getByRole('button', { name: 'Switch company. Current scope: Global Scope' }).click();
+  await page.getByRole('menuitem', { name: 'MoonWitness' }).click();
+  await page.getByRole('link', { name: 'Story workbench' }).click();
+
+  const pageSelector = page.getByLabel('Story page');
+  const editor = page.getByLabel('Page text · exact whitespace is preserved');
+  const preview = page.getByRole('article', { name: 'Private preview of page 1' });
+  for (const size of [
+    { name: 'desktop-1440', width: 1440, height: 1000 },
+    { name: 'mobile-390', width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize({ width: size.width, height: size.height });
+    await expect(page.getByRole('heading', { name: 'Story workbench', exact: true })).toBeVisible();
+    await expect(editor).toHaveValue(pages[0].original_text);
+    await expect(preview).toContainText('The Ones Who Watch');
+    await expect(preview).toContainText(pages[0].original_text);
+    await expect(page.getByRole('heading', { name: 'Page navigator' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Revision inspector' })).toBeVisible();
+    await expectNoHorizontalOverflow(page, `workbench-filled/${size.name}`);
+    await expectNoA11yViolations(page, `workbench-filled/${size.name}`);
+    await page.screenshot({
+      path: path.join(
+        auditDirectory,
+        `workbench-filled-${size.name}${browserSuffix(testInfo)}.png`
+      ),
+      fullPage: true,
+    });
+    if (testInfo.project.name === 'chromium') {
+      await expect(page).toHaveScreenshot(`workbench-filled-${size.name}.png`, {
+        animations: 'disabled',
+        caret: 'hide',
+        fullPage: true,
+      });
+    }
+
+    await pageSelector.selectOption(pages[1].page_id);
+    await expect(editor).toHaveValue(pages[1].original_text);
+    await expect(page.getByRole('article', { name: 'Private preview of page 2' })).toContainText(
+      pages[1].original_text
+    );
+    await pageSelector.selectOption(pages[0].page_id);
+    await pageSelector.selectOption(pages[1].page_id);
+    await page.getByRole('button', { name: 'Move up' }).click();
+    await expect(page.getByText('Page 1 of 2', { exact: true })).toBeVisible();
+    await expect(editor).toHaveValue(pages[1].original_text);
+    await page.getByRole('button', { name: 'Move down' }).click();
+    await expect(page.getByText('Page 2 of 2', { exact: true })).toBeVisible();
+    await expect(editor).toHaveValue(pages[1].original_text);
+    await pageSelector.selectOption(pages[0].page_id);
   }
 });
 
