@@ -13,10 +13,14 @@ Add two independent secrets to `.env` before starting the service:
 node -e "const c=require('node:crypto'); console.log('WHATSAPP_INTERNAL_TOKEN='+c.randomBytes(48).toString('base64url')); console.log('WHATSAPP_SESSION_KEY='+c.randomBytes(32).toString('base64'))"
 ```
 
-Start PostgreSQL and the API, then run `pnpm dev:whatsapp` in a separate terminal. The Board is
+Start PostgreSQL, then run `pnpm dev` from the repository root. It starts the API, Board, and
+WhatsApp worker together. You can also start only the worker with `pnpm dev:whatsapp`. The Board is
 available at `http://localhost:5173/board/whatsapp`. Choose **Connect WhatsApp**, scan the QR code
 from Linked devices on the phone, then use the inbox to reply. Keep the session key backed up;
 changing it makes existing encrypted sessions unreadable and requires pairing again.
+
+For local production-mode startup, build the workspace with `pnpm build`, then run `pnpm start`
+(equivalent to `pnpm start:built`). This starts the built API, Board, and WhatsApp worker together.
 
 ## Production
 

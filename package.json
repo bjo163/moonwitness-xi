@@ -4,10 +4,12 @@
   "version": "1.0.0-rc.1",
   "type": "module",
   "scripts": {
-    "dev": "pnpm --filter @moonwitness/api --filter @moonwitness/board --parallel dev",
+    "dev": "pnpm --filter @moonwitness/api --filter @moonwitness/board --filter @moonwitness/whatsapp --parallel dev",
     "dev:api": "pnpm --filter @moonwitness/api dev",
     "dev:board": "pnpm --filter @moonwitness/board dev",
     "dev:whatsapp": "pnpm --filter @moonwitness/whatsapp dev",
+    "start": "pnpm --filter @moonwitness/api --filter @moonwitness/board --filter @moonwitness/whatsapp --parallel start",
+    "start:built": "pnpm --filter @moonwitness/api --filter @moonwitness/board --filter @moonwitness/whatsapp --parallel start:built",
     "reset:superadmin-password": "pnpm --filter @moonwitness/api reset:superadmin-password",
     "revoke:auth-sessions": "pnpm --filter @moonwitness/api revoke:auth-sessions",
     "attachments:reconcile": "pnpm --filter @moonwitness/api attachments:reconcile",

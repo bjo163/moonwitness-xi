@@ -15,6 +15,7 @@
     "jobs:outbox": "tsx src/commands/outbox-worker.ts",
     "build": "tsc",
     "start": "node dist/server.js",
+    "start:built": "node dist/server.js",
     "test": "vitest run"
   },
   "keywords": [
