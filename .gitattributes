@@ -1,6 +1,11 @@
 # Source artifacts are content-addressed; Git must preserve their exact bytes.
 corpus/reference/sha256/** -text
 
+# Every text file checks out with LF on every platform. Prettier, the byte-exact
+# docs reference check and the roadmap contract tests all compare LF content that
+# is produced on Linux runners, so an autocrlf Windows checkout fails them.
+* text=auto eol=lf
+
 # Bash scripts must keep LF endings when checked out on Windows hosts.
 scripts/*.sh text eol=lf
 

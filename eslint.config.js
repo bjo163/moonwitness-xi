@@ -6,10 +6,23 @@ export default [
     files: ['**/*.mjs'],
     languageOptions: {
       // .mjs files in this workspace are Node.js scripts, CLI tools, and tests.
-      globals: { Buffer: 'readonly', console: 'readonly', process: 'readonly' },
+      globals: {
+        Buffer: 'readonly',
+        URL: 'readonly',
+        console: 'readonly',
+        process: 'readonly',
+      },
     },
   },
   {
-    ignores: ['**/dist/**', '**/node_modules/**', 'services/**', 'pnpm-lock.yaml', '.env*'],
+    ignores: [
+      '**/dist/**',
+      '**/.next*/**',
+      '**/node_modules/**',
+      '.qoder-tmp/**',
+      'services/**',
+      'pnpm-lock.yaml',
+      '.env*',
+    ],
   },
 ];

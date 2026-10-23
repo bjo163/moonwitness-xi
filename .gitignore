@@ -16,4 +16,5 @@ roadmap-issue-plan.json
 test-results/
 coverage/
 playwright-report/
+.qoder-tmp/
 .DS_Store
