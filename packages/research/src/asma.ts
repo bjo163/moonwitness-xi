@@ -8,6 +8,9 @@ import {
 } from './semantics.js';
 import type { ResolvedEvidenceReference } from './evidence.js';
 
+const methodIdentifier = /^mw:asma-method:[a-z0-9][a-z0-9._-]{0,159}$/u;
+const methodVersion = /^\d+\.\d+\.\d+$/u;
+
 export interface AsmaAnalysisMethod {
   id: string;
   version: string;
@@ -105,7 +108,9 @@ function projectWithProfile(
   if (typeof selectedProfile.id !== 'string' || !allowedPassage) {
     return { status: 'rejected', reason: 'profile_source' };
   }
-  if (!method.id.trim() || !method.version.trim()) return { status: 'rejected', reason: 'method' };
+  if (!methodIdentifier.test(method.id) || !methodVersion.test(method.version)) {
+    return { status: 'rejected', reason: 'method' };
+  }
 
   const validation = validateResearchSemanticAnnotation(annotation, evidence);
   const projection = projectResearchSemanticAnnotation(annotation, evidence);
@@ -128,14 +133,24 @@ function projectWithProfile(
     return { status: 'rejected', reason: 'term_span' };
   }
 
+  // Every field the candidate persists and that can differ while the evidence id stays the same
+  // belongs here; omitting one makes two distinct candidates share a single identity.
   const identity = createHash('sha256')
     .update(
       JSON.stringify([
         selectedProfile.id,
         evidence.evidence.id,
+        evidence.source_id,
+        evidence.edition_id,
+        evidence.locator,
         evidence.content_sha256,
+        annotation.id,
+        annotation.subject_assertion_id,
+        annotation.context.mode,
         term_span.byte_start,
         term_span.byte_end,
+        term_span.scalar_start,
+        term_span.scalar_end,
         method.id,
         method.version,
       ]),

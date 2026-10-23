@@ -106,6 +106,7 @@ const quranRightsManifest = JSON.parse(
   source_id: string;
   edition_id: string;
   artifact: { sha256: string };
+  attribution: { text: string };
   rights: { state: string; allowed_uses: string[] };
 };
 
@@ -141,7 +142,7 @@ describe('Asma candidate projection', () => {
       annotation,
       evidence: resolved,
       term_span: span(text, start, start + 'compassion'.length),
-      method: { id: 'synthetic:attribute-review', version: '1.0.0' },
+      method: { id: 'mw:asma-method:attribute-review', version: '1.0.0' },
       profile: syntheticProfile,
     });
     expect(result.status).toBe('candidate');
@@ -153,7 +154,10 @@ describe('Asma candidate projection', () => {
       content_sha256: sourceHash,
       evidence_id: evidence.id,
     });
-    expect(result.candidate.method).toEqual({ id: 'synthetic:attribute-review', version: '1.0.0' });
+    expect(result.candidate.method).toEqual({
+      id: 'mw:asma-method:attribute-review',
+      version: '1.0.0',
+    });
     expect(result.candidate).toMatchObject({
       status: 'candidate',
       interpretation_scope: 'analysis_not_revelation',
@@ -169,7 +173,7 @@ describe('Asma candidate projection', () => {
         annotation,
         evidence: resolved,
         term_span: badSpan,
-        method: { id: 'synthetic:attribute-review', version: '1.0.0' },
+        method: { id: 'mw:asma-method:attribute-review', version: '1.0.0' },
         profile: syntheticProfile,
       })
     ).toEqual({ status: 'rejected', reason: 'term_span' });
@@ -195,7 +199,7 @@ describe('Asma candidate projection', () => {
         annotation: { ...annotation, ...overrides } as ResearchSemanticAnnotation,
         evidence: resolved,
         term_span,
-        method: { id: 'synthetic:attribute-review', version: '1.0.0' },
+        method: { id: 'mw:asma-method:attribute-review', version: '1.0.0' },
         profile: syntheticProfile,
       });
       expect(result).toEqual({ status: 'rejected', reason: 'semantic_annotation' });
@@ -227,7 +231,7 @@ describe('Asma candidate projection', () => {
         annotation,
         evidence: counterevidence,
         term_span: span(text, start, start + 'compassion'.length),
-        method: { id: 'synthetic:attribute-review', version: '1.0.0' },
+        method: { id: 'mw:asma-method:attribute-review', version: '1.0.0' },
         profile: syntheticProfile,
       })
     ).toEqual({ status: 'rejected', reason: 'semantic_annotation' });
@@ -241,8 +245,158 @@ describe('Asma candidate projection', () => {
         annotation,
         evidence: resolved,
         term_span: span(text, start, start + 'compassion'.length),
-        method: { id: 'synthetic:attribute-review', version: '1.0.0' },
+        method: { id: 'mw:asma-method:attribute-review', version: '1.0.0' },
       })
     ).toEqual({ status: 'rejected', reason: 'profile_source' });
+  });
+
+  /**
+   * Golden path over the real, rights-cleared Q7:46 bytes rather than a synthetic string. The term
+   * is the token at a position in the verified line, so the fixture pins reproducibility of the
+   * projection and source binding; which token is a divine attribute stays a human reading and the
+   * profile keeps `lexical_inventory: none`.
+   */
+  it('projects verified Q7:46 source bytes through the production profile', async () => {
+    const artifact = await readFile(
+      new URL(
+        '../../../corpus/reference/sha256/6f/6ff83b01099fb7992b5f7fa101cfab3d6556607ca6b1fe69d53cb76f97027760',
+        import.meta.url
+      )
+    );
+    expect(createHash('sha256').update(artifact).digest('hex')).toBe(
+      '6ff83b01099fb7992b5f7fa101cfab3d6556607ca6b1fe69d53cb76f97027760'
+    );
+    expect(quranRightsManifest).toMatchObject({
+      source_id: 'mw:source:tanzil-quran-text',
+      edition_id: 'mw:edition:tanzil-quran-text-v1.1-uthmani-txt2',
+    });
+    const line = artifact.toString('utf8');
+    const term = line.split(' ')[2];
+    if (typeof term !== 'string' || term.length === 0) throw new Error('Q7:46 token is missing');
+    const quranPassage: ResolvablePassage = {
+      source_id: 'mw:source:tanzil-quran-text',
+      edition_id: 'mw:edition:tanzil-quran-text-v1.1-uthmani-txt2',
+      locator: 'Q7:46',
+      text: line,
+      content_sha256: quranRightsManifest.artifact.sha256,
+      citation: quranRightsManifest.attribution.text,
+    };
+    const quranEvidence: ResearchEvidenceReference = {
+      id: 'mw:evidence:asma-q7-46-golden',
+      assertion_id: 'mw:assertion:asma-q7-46-golden',
+      direction: 'supporting',
+      selector: {
+        source_id: quranPassage.source_id,
+        edition_id: quranPassage.edition_id,
+        locator: quranPassage.locator,
+        content_sha256: quranPassage.content_sha256,
+      },
+    };
+    const quranAnnotation: ResearchSemanticAnnotation = {
+      ...annotation,
+      id: 'mw:semantic-annotation:asma-q7-46-golden',
+      subject_assertion_id: 'mw:assertion:asma-q7-46-golden',
+      evidence_id: 'mw:evidence:asma-q7-46-golden',
+      source_content_sha256: quranPassage.content_sha256,
+      source_range: span(line, 0, Array.from(line).length),
+    };
+    const resolved = await resolveResearchEvidenceReference(
+      quranEvidence,
+      async () => quranPassage
+    );
+    expect(validateResearchSemanticAnnotation(quranAnnotation, resolved).valid).toBe(true);
+    const start = scalarIndexOf(line, term);
+    const termSpan = span(line, start, start + Array.from(term).length);
+    const method = { id: 'mw:asma-method:source-span-binding', version: '1.0.0' };
+
+    const first = projectAsmaAttributeCandidate({
+      annotation: quranAnnotation,
+      evidence: resolved,
+      term_span: termSpan,
+      method,
+    });
+    expect(first.status).toBe('candidate');
+    if (first.status !== 'candidate') return;
+    expect(first.candidate.term.original_text).toBe(term);
+    expect(first.candidate.source).toEqual({
+      source_id: 'mw:source:tanzil-quran-text',
+      edition_id: 'mw:edition:tanzil-quran-text-v1.1-uthmani-txt2',
+      locator: 'Q7:46',
+      content_sha256: quranRightsManifest.artifact.sha256,
+      evidence_id: 'mw:evidence:asma-q7-46-golden',
+      assertion_id: 'mw:assertion:asma-q7-46-golden',
+      rights_evidence_ref: 'docs/roadmap/evidence/K2-005.md#source-specific-rights-decision',
+    });
+    expect(first.candidate.profile_id).toBe(productionProfile.id);
+    // Reproducibility anchor: re-deriving this from the pinned bytes must give the same digest.
+    expect(first.candidate.id).toBe(
+      'mw:asma-candidate:520cc83e540d4325b46e884db03fdb70d6fcf5dddf524f08ab94386b2a4e5acd'
+    );
+    expect(first.candidate.interpretation_scope).toBe('analysis_not_revelation');
+    expect(first.candidate.status).toBe('candidate');
+    expect(
+      projectAsmaAttributeCandidate({
+        annotation: quranAnnotation,
+        evidence: resolved,
+        term_span: termSpan,
+        method,
+      })
+    ).toEqual(first);
+  });
+
+  it('refuses a method that is not a named, versioned identity', async () => {
+    const resolved = await resolvedEvidence();
+    const start = scalarIndexOf(text, 'compassion');
+    const termSpan = span(text, start, start + 'compassion'.length);
+    for (const method of [
+      { id: ' ', version: '1.0.0' },
+      { id: 'synthetic:attribute-review', version: '1.0.0' },
+      { id: 'attribute-review', version: '1.0.0' },
+      { id: 'mw:asma-method:', version: '1.0.0' },
+      { id: 'mw:asma-method:Attribute Review', version: '1.0.0' },
+      { id: 'mw:asma-method:attribute-review', version: '1' },
+      { id: 'mw:asma-method:attribute-review', version: 'v1.0' },
+      { id: 'mw:asma-method:attribute-review', version: ' ' },
+    ]) {
+      expect(
+        projectAsmaAttributeCandidateWithProfile({
+          annotation,
+          evidence: resolved,
+          term_span: termSpan,
+          method,
+          profile: syntheticProfile,
+        }),
+        `method ${method.id}/${method.version}`
+      ).toEqual({ status: 'rejected', reason: 'method' });
+    }
+  });
+
+  it('binds the candidate identity to every field the record persists', async () => {
+    const resolved = await resolvedEvidence();
+    const start = scalarIndexOf(text, 'compassion');
+    const termSpan = span(text, start, start + 'compassion'.length);
+    const method = { id: 'mw:asma-method:attribute-review', version: '1.0.0' };
+    const project = (overrides: Partial<ResearchSemanticAnnotation>) =>
+      projectAsmaAttributeCandidateWithProfile({
+        annotation: { ...annotation, ...overrides } as ResearchSemanticAnnotation,
+        evidence: resolved,
+        term_span: termSpan,
+        method,
+        profile: syntheticProfile,
+      });
+    const analysis = project({});
+    const narration = project({ context: { mode: 'narration' } });
+    expect(analysis.status).toBe('candidate');
+    expect(narration.status).toBe('candidate');
+    if (analysis.status !== 'candidate' || narration.status !== 'candidate') return;
+    expect(analysis.candidate.context_mode).toBe('analysis');
+    expect(narration.candidate.context_mode).toBe('narration');
+    expect(narration.candidate.id).not.toBe(analysis.candidate.id);
+    const shifted = project({
+      id: 'mw:semantic-annotation:asma-fixture-alt',
+    } as Partial<ResearchSemanticAnnotation>);
+    expect(shifted.status).toBe('candidate');
+    if (shifted.status === 'candidate')
+      expect(shifted.candidate.id).not.toBe(analysis.candidate.id);
   });
 });
