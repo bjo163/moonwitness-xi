@@ -5,6 +5,8 @@ import test from 'node:test';
 import { fileURLToPath, URL } from 'node:url';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { pathToFileURL } from 'node:url';
+import { parseIconSvg } from '../scripts/icon-svg-to-jsx.mjs';
 import { UserIcon } from '../dist/icons/user.js';
 import { Avatar } from '../dist/components/avatar.js';
 import { Badge } from '../dist/components/badge.js';
@@ -23,9 +25,7 @@ const assetsRoot = resolve(root, '../assets/icons');
 const sourceRoot = resolve(root, 'src/icons');
 const distRoot = resolve(root, 'dist/icons');
 const iconFiles = (await readdir(assetsRoot)).filter((file) => file.endsWith('.svg')).sort();
-const assetManifest = JSON.parse(
-  await readFile(resolve(root, '../assets/manifest.json'), 'utf8')
-);
+const assetManifest = JSON.parse(await readFile(resolve(root, '../assets/manifest.json'), 'utf8'));
 const manifestIconCount = assetManifest.assets.filter(({ kind }) => kind === 'icon').length;
 
 test('each static asset has a typed source and isolated compiled component subpath', async () => {
@@ -40,7 +40,55 @@ test('each static asset has a typed source and isolated compiled component subpa
     assert.match(source, /aria-labelledby=\{title \? titleId : undefined\}/u, name);
     assert.match(compiled, /currentColor/u, name);
     assert.doesNotMatch(compiled, /from ['"].*\/(?:index|icons)\.js/u, name);
+
+    const svg = await readFile(resolve(assetsRoot, file), 'utf8');
+    const canonical = parseIconSvg(svg, file);
+    const module = await import(pathToFileURL(resolve(distRoot, `${name}.js`)).href);
+    const componentName = `${name.replace(/(^|-)([a-z])/gu, (_match, _dash, letter) => letter.toUpperCase())}Icon`;
+    const markup = renderToStaticMarkup(createElement(module[componentName]));
+    for (const [attribute, value] of Object.entries(canonical.attributes)) {
+      if (
+        ['xmlns', 'width', 'height', 'role', 'aria-label', 'aria-labelledby'].includes(attribute)
+      ) {
+        continue;
+      }
+      assert.ok(
+        markup.includes(`${attribute}="${value}"`),
+        `${name} wrapper preserves canonical root ${attribute}="${value}"`
+      );
+    }
   }
+});
+
+test('SVG generator preserves supported root and group presentation attributes', () => {
+  const parsed = parseIconSvg(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f00" stroke="none" fill-rule="evenodd"><g transform="rotate(4 12 12)"><path d="M1 1h2" fill="#fff" clip-rule="evenodd" /></g></svg>',
+    'fixture.svg'
+  );
+  assert.deepEqual(parsed.attributes, {
+    xmlns: 'http://www.w3.org/2000/svg',
+    viewBox: '0 0 24 24',
+    fill: '#f00',
+    stroke: 'none',
+    'fill-rule': 'evenodd',
+  });
+  assert.match(parsed.children, /<g transform="rotate\(4 12 12\)">/u);
+  assert.ok(parsed.children.includes('fill="#fff" clipRule="evenodd"'));
+});
+
+test('SVG generator rejects unsupported markup with a repairable source location', () => {
+  assert.throws(
+    () => parseIconSvg('<svg viewBox="0 0 24 24"><defs /></svg>', 'icons/example.svg'),
+    /icons\/example\.svg: unsupported SVG element "defs"/u
+  );
+  assert.throws(
+    () =>
+      parseIconSvg(
+        '<svg viewBox="0 0 24 24"><path id="clip-1" d="M1 1" /></svg>',
+        'icons/example.svg'
+      ),
+    /flatten the source paths first/u
+  );
 });
 
 test('component barrel exposes every typed icon by stable name', async () => {
@@ -118,8 +166,8 @@ test('core controls preserve native form semantics and use package-owned styles'
     /data-slot="badge"/u
   );
   assert.match(
-    renderToStaticMarkup(createElement(Avatar, { name: 'Moon Witness' })),
-    /aria-label="Moon Witness"[^>]*>MW</u
+    renderToStaticMarkup(createElement(Avatar, { name: 'MoonWitness' })),
+    /aria-label="MoonWitness"[^>]*>M</u
   );
 
   const componentCss = await readFile(resolve(root, 'src/styles/components.css'), 'utf8');

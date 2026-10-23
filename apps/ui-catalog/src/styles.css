@@ -197,7 +197,7 @@ a:focus-visible {
   font-family: var(--mw-font-display);
   font-size: clamp(3.2rem, 8vw, 6rem);
   letter-spacing: -0.04em;
-  line-height: 0.95;
+  line-height: 1.05;
   text-transform: uppercase;
 }
 .catalog-content .mw-ui-page-header-description {
@@ -206,11 +206,15 @@ a:focus-visible {
   line-height: 1.65;
 }
 .catalog-highlight {
-  display: inline;
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 0.1em;
   color: var(--mw-on-accent);
   background: var(--mw-lime);
   box-decoration-break: clone;
-  padding-inline: 0.08em;
+  padding: 0.04em 0.08em 0.08em;
+  line-height: 1.05;
 }
 .catalog-intro-panel {
   margin-bottom: 4rem;

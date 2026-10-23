@@ -185,6 +185,17 @@ test('pink accent uses dark foreground instead of low-contrast white', () => {
   assert.equal(tokenValue('destructive-foreground'), 'var(--mw-on-error)');
 });
 
+test('editorial accent text has readable theme-aware colors on both surfaces', () => {
+  for (const selector of [':root', '\\.dark']) {
+    for (const token of ['magenta-readable', 'cyan-readable', 'yellow-readable']) {
+      assert.ok(
+        contrast(resolvedValue(token, selector), resolvedValue('surface', selector)) >= 4.5,
+        `${token} on surface in ${selector} is below 4.5:1`
+      );
+    }
+  }
+});
+
 test('status semantics and chart palette are theme-stable and chart-safe by contract', () => {
   for (const name of [
     'success',
@@ -211,6 +222,9 @@ test('type, spacing, shape, shadow and reduced-motion scales are present', () =>
     'ink-black',
     'ink-panel',
     'yellow',
+    'yellow-readable',
+    'magenta-readable',
+    'cyan-readable',
     'signal-blue',
     'font-brush',
     'font-display',

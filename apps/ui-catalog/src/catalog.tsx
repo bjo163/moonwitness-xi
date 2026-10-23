@@ -208,9 +208,7 @@ export function Catalog() {
             <PageHeader
               title={
                 <>
-                  One system.
-                  <br />
-                  <span className="catalog-highlight">Every screen.</span>
+                  One system. <span className="catalog-highlight">Every screen.</span>
                 </>
               }
               description="A practical catalog of the shared MoonWitness UI package. Explore real components, keyboard behavior, themes, and responsive states."

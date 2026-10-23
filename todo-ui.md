@@ -101,15 +101,15 @@ Bukti Bible: `packages/ui/README.md`, token/kontras: `packages/ui/TOKENS.md`; su
 
 ### SVG canonical dan React wrappers
 
-- [ ] Perbaiki generator icon agar menjaga atribut SVG root yang didukung.
-- [ ] Jaga `fill`, `stroke`, `fillRule`, dan `clipRule` dari sumber canonical.
-- [ ] Pertahankan transform grup atau ratakan sebelum generation.
-- [ ] Beri error yang jelas untuk SVG yang strukturnya tidak didukung.
-- [ ] Bandingkan render canonical SVG dengan React wrapper.
-- [ ] Pastikan mask/clip ID aman saat SVG digunakan berulang.
-- [ ] Pertahankan validasi SVG tanpa script, external reference, atau konten executable.
+- [x] Perbaiki generator icon agar menjaga atribut SVG root yang didukung. Bukti: parser `packages/ui/scripts/icon-svg-to-jsx.mjs`.
+- [x] Jaga `fill`, `stroke`, `fillRule`, dan `clipRule` dari sumber canonical. Bukti: tes fixture dan render server di `packages/ui/tests/icons.test.mjs`.
+- [x] Pertahankan transform grup atau ratakan sebelum generation. Bukti: `<g transform>` dipertahankan; diuji pada fixture SVG.
+- [x] Beri error yang jelas untuk SVG yang strukturnya tidak didukung. Bukti: tes `defs` dan pesan file/elemen di `packages/ui/tests/icons.test.mjs`.
+- [x] Bandingkan render canonical SVG dengan React wrapper. Bukti: tes membandingkan semua root presentation attributes pada 50 wrappers hasil render React.
+- [x] Pastikan mask/clip ID aman saat SVG digunakan berulang. Bukti: generator menolak ID/mask/clip yang berpotensi bentrok dan memberikan arahan flatten path.
+- [x] Pertahankan validasi SVG tanpa script, external reference, atau konten executable. Bukti: `pnpm test:assets` memvalidasi semua 82 SVG.
 - [ ] Pastikan `viewBox` dan batas path mencegah bentuk terpotong.
-- [ ] Pastikan semua public export mempunyai file dalam hasil paket.
+- [x] Pastikan semua public export mempunyai file dalam hasil paket. Bukti: `pnpm test:ui` memeriksa package tarball dan subpath.
 
 **Syarat selesai:** generator tidak membuang aset baru dan output wrapper mempertahankan bentuk sumber.
 
@@ -132,6 +132,7 @@ Gunakan nilai berikut sebagai starting point; finalisasi setelah specimen dan te
 - [x] Pastikan paper cream tetap krem pada Board dark theme.
 - [x] Tetapkan pasangan foreground bagi magenta, cyan, kuning, tinta, dan paper.
 - [x] Pisahkan brand accent dari arti success, warning, error, dan info.
+- [x] Sediakan pasangan aksen editorial yang terbaca pada paper dan ink surface, lalu cek kontras di dua theme. Bukti: token `*-readable`, tes contrast, dan axe catalog lulus.
 - [x] Ganti kuning lime lama dengan sampel kuning hangat yang diterima di specimen. Bukti: `docs/design/assets/brand-contact-sheet-current.png`.
 - [ ] Migrasikan consumer alias warna lama ke token semantic.
 - [ ] Hapus alias yang tidak lagi dipakai.
@@ -288,6 +289,7 @@ Accent `magenta`, `cyan`, dan `yellow` bersifat dekoratif; accent tidak mengubah
 - [x] Tambahkan torn/ink/paper surface ke Panel yang ada.
 - [x] Tambahkan density compact tanpa mengubah default consumer lama.
 - [x] Buat SectionRibbon dengan judul, nomor opsional, dan action.
+- [x] Buat SectionRibbon memilih warna nomor menurut material paper/ink agar kontras tetap benar. Bukti: prop `surface`, token contrast tests, dan UI Catalog Axe.
 - [x] Buat PaperNote dengan teks yang selectable dan bukan gambar teks.
 - [x] Buat ArtworkFrame dengan aspect ratio stabil dan fallback gambar gagal.
 - [x] Buat MetricTile yang tidak menghitung data produk.

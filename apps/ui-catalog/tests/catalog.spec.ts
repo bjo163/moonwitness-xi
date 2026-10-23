@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import { EOL } from 'node:os';
 
 test('static catalog loads under the repository Pages subpath with its shared UI assets', async ({
   page,
@@ -9,7 +10,9 @@ test('static catalog loads under the repository Pages subpath with its shared UI
 
   await page.goto('./');
 
-  await expect(page.getByRole('heading', { name: 'One system. Every screen.' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'One system. Every screen.', exact: true })
+  ).toBeVisible();
   await expect(page.getByRole('link', { name: 'Charts' })).toHaveAttribute('href', '#charts');
   await expect(page.locator('.mw-ui-button').first()).toBeVisible();
   await expect(page.locator('.catalog-footer a')).toHaveAttribute(
@@ -141,9 +144,11 @@ test('representative visual layout and token contract stays stable @visual', asy
     };
   });
 
-  await expect(JSON.stringify({ desktop, darkTokens, mobile }, null, 2)).toMatchSnapshot(
-    'layout-contract.txt'
+  const snapshotText = JSON.stringify({ desktop, darkTokens, mobile }, null, 2).replace(
+    /\n/gu,
+    EOL
   );
+  await expect(snapshotText).toMatchSnapshot('layout-contract.txt');
 });
 
 test('catalog has no WCAG 2.1 A/AA accessibility violations in light or dark themes', async ({

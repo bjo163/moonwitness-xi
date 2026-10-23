@@ -25,12 +25,12 @@ Material assets include torn edges, ink frames, paper notes, tape, halftone, spe
 
 ## Decoration intensity
 
-| Surface | Intensity | Allowed treatment |
-| --- | --- | --- |
-| Public hero / closing CTA | Expressive | Large art, layered brush headings, torn color strips, a few notes and doodles |
-| Editorial cards / catalog specimens | Balanced | One image, one accent, light frame texture, concise caption |
-| Board table / workbench / forms | Restrained | Strong hierarchy, small accent marks, mostly square readable panels |
-| Errors / access / empty / loading | Functional first | Clear state text and action; illustration or motion stays secondary |
+| Surface                             | Intensity        | Allowed treatment                                                             |
+| ----------------------------------- | ---------------- | ----------------------------------------------------------------------------- |
+| Public hero / closing CTA           | Expressive       | Large art, layered brush headings, torn color strips, a few notes and doodles |
+| Editorial cards / catalog specimens | Balanced         | One image, one accent, light frame texture, concise caption                   |
+| Board table / workbench / forms     | Restrained       | Strong hierarchy, small accent marks, mostly square readable panels           |
+| Errors / access / empty / loading   | Functional first | Clear state text and action; illustration or motion stays secondary           |
 
 Do not rotate tables, forms, paragraphs, dashboard figures, or interactive panels. Tiny rotation belongs only to non-interactive paper notes, tape, and artwork. A motif that decorates a hero should not be repeated behind every row of a dense dashboard.
 
@@ -52,6 +52,7 @@ When adding a component: first record its behavior and accessibility contract; b
 ## Accessibility, responsive behavior, and states
 
 - Body text, data, and control labels stay high contrast. Normal text pairs meet WCAG AA (4.5:1); focus and non-text boundaries target at least 3:1 against adjacent surfaces. Saturated pink, cyan, and yellow are accents; use their paired dark foreground for text.
+- `SectionRibbon` declares `surface="paper|ink"`; its accent number chooses a theme- and surface-readable color rather than relying on the bright accent over every background.
 - Every keyboard-operable control has a visible `:focus-visible` treatment that remains above rough frames and texture. Headings retain semantic order; decorative art is ignored by screen readers.
 - Status uses text and shape as well as color. Charts keep labels, markers or an accessible table.
 - Desktop composition may be dense; mobile must be deliberately reordered. Navigation collapses into an operable menu/sheet, side inspectors become sheets or accordions, card rows stack, and tables own their horizontal scroll region. At 200% zoom content must remain reachable without whole-page horizontal overflow.
@@ -66,13 +67,13 @@ Use `SoundProvider`, `useSfx`, and `SoundToggle` from the audio public subpath. 
 
 ## Quick visual examples
 
-| Prefer | Avoid |
-| --- | --- |
-| A short brush heading such as “FOLLOW THE SIGNAL”, with body copy in the UI font | Brush lettering for a paragraph, long record title, or dense table |
-| Dark ink text on yellow and a visible focus ring outside the rough frame | White text on saturated pink, or a torn edge that hides keyboard focus |
-| Halftone on a separate decorative layer with `pointer-events: none` | Texture baked over labels, controls, or information that needs to remain selectable |
-| Explicit “No data available” or an error message with retry | Replacing missing, zero, or failed values with an invented metric |
-| A chart with labels and a text/table alternative | A chart that communicates meaning through color alone |
+| Prefer                                                                           | Avoid                                                                               |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| A short brush heading such as “FOLLOW THE SIGNAL”, with body copy in the UI font | Brush lettering for a paragraph, long record title, or dense table                  |
+| Dark ink text on yellow and a visible focus ring outside the rough frame         | White text on saturated pink, or a torn edge that hides keyboard focus              |
+| Halftone on a separate decorative layer with `pointer-events: none`              | Texture baked over labels, controls, or information that needs to remain selectable |
+| Explicit “No data available” or an error message with retry                      | Replacing missing, zero, or failed values with an invented metric                   |
+| A chart with labels and a text/table alternative                                 | A chart that communicates meaning through color alone                               |
 
 ## Review against the mockups
 

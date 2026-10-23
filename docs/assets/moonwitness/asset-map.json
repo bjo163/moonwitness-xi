@@ -6,7 +6,7 @@
     "assetManifest": "manifest.json",
     "assetManifestSha256": "cca95374ad277d8599d489adf29cd64ca03f82a5ff27c5babff31f771c4b72e8",
     "tokens": "packages/ui/src/styles/tokens.css",
-    "tokensSha256": "35c0bec174d4557cb302d56562a0f6594b5d71ae4fd814324a90a45dc05d7398"
+    "tokensSha256": "c95c112b247fa59ec5f9cc5b6aa62a54fb9e5c44956bc41701330a76e76b9060"
   },
   "assets": [
     {
@@ -852,7 +852,7 @@
     {
       "source": "packages/ui/src/styles/tokens.css",
       "output": "docs/assets/moonwitness/styles/tokens.css",
-      "sha256": "35c0bec174d4557cb302d56562a0f6594b5d71ae4fd814324a90a45dc05d7398"
+      "sha256": "c95c112b247fa59ec5f9cc5b6aa62a54fb9e5c44956bc41701330a76e76b9060"
     }
   ]
 }

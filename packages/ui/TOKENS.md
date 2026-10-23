@@ -4,17 +4,18 @@
 
 ## Color roles
 
-| Role | Token | Value / behavior |
-| --- | --- | --- |
-| Fixed brand paper | `--mw-paper-cream` | `#f3efe4`; remains warm cream in either theme |
-| Fixed brand ink | `--mw-ink-black` | `#0d0d0d`; remains available on paper and accents |
-| Dark panel | `--mw-ink-panel` | `#17171a` |
-| Semantic page | `--mw-background` / `--mw-foreground` | Theme-aware page surface and text |
-| Semantic raised surface | `--mw-surface` / `--mw-surface-foreground` | Theme-aware panels and controls |
-| Brand yellow | `--mw-yellow` | `#ffe031`; use paired dark ink for text |
-| Brand magenta | `--mw-magenta` | `#ff2e88`; use `--mw-on-pink` for text |
-| Brand cyan | `--mw-signal-blue` | `#00b8f0`; decorative accent unless paired contrast is checked |
-| Semantic state | `--mw-success`, `--mw-warning`, `--mw-info`, `--mw-error` / `--mw-destructive` | Status colors have distinct semantic tokens, separate from brand magenta, and pair with text/shape |
+| Role                    | Token                                                                          | Value / behavior                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| Fixed brand paper       | `--mw-paper-cream`                                                             | `#f3efe4`; remains warm cream in either theme                                                      |
+| Fixed brand ink         | `--mw-ink-black`                                                               | `#0d0d0d`; remains available on paper and accents                                                  |
+| Dark panel              | `--mw-ink-panel`                                                               | `#17171a`                                                                                          |
+| Semantic page           | `--mw-background` / `--mw-foreground`                                          | Theme-aware page surface and text                                                                  |
+| Semantic raised surface | `--mw-surface` / `--mw-surface-foreground`                                     | Theme-aware panels and controls                                                                    |
+| Brand yellow            | `--mw-yellow`                                                                  | `#ffe031`; use paired dark ink for text                                                            |
+| Brand magenta           | `--mw-magenta`                                                                 | `#ff2e88`; use `--mw-on-pink` for text                                                             |
+| Brand cyan              | `--mw-signal-blue`                                                             | `#00b8f0`; decorative accent unless paired contrast is checked                                     |
+| Editorial accent text   | `--mw-magenta-readable`, `--mw-cyan-readable`, `--mw-yellow-readable`          | Darker palette-matched values on paper surfaces; bright brand accents on dark surfaces             |
+| Semantic state          | `--mw-success`, `--mw-warning`, `--mw-info`, `--mw-error` / `--mw-destructive` | Status colors have distinct semantic tokens, separate from brand magenta, and pair with text/shape |
 
 `--mw-lime` and `--mw-pink` are migration aliases. New UI must use semantic names. Remove aliases after app consumers have migrated. `--mw-paper` and `--mw-ink` are theme-aware surface tokens; use the fixed brand tokens when a design needs paper or ink to stay unchanged in dark mode.
 
@@ -24,12 +25,12 @@ Normal text pairs meet WCAG AA at 4.5:1. Non-text control boundaries and focus i
 
 ## Typography
 
-| Token | Stack | Use |
-| --- | --- | --- |
-| `--mw-font-brush` | Road Rage, Impact fallback | Short expressive headings and ribbons |
-| `--mw-font-display` | Anton, Impact fallback | Metrics, section titles, compact labels |
-| `--mw-font-sans` | Space Grotesk, system fallback | Body, navigation, controls, tables |
-| `--mw-font-mono` | JetBrains Mono, monospace fallback | Technical IDs, timestamps, code |
+| Token               | Stack                              | Use                                     |
+| ------------------- | ---------------------------------- | --------------------------------------- |
+| `--mw-font-brush`   | Road Rage, Impact fallback         | Short expressive headings and ribbons   |
+| `--mw-font-display` | Anton, Impact fallback             | Metrics, section titles, compact labels |
+| `--mw-font-sans`    | Space Grotesk, system fallback     | Body, navigation, controls, tables      |
+| `--mw-font-mono`    | JetBrains Mono, monospace fallback | Technical IDs, timestamps, code         |
 
 Fonts are self-hosted by the consuming app from `@moonwitness/assets/fonts.css`; no remote font request belongs in this stylesheet. Road Rage is subsetted for short editorial headings. Do not fake unavailable font weights. Keep meaningful text readable if a font fails or loads late.
 

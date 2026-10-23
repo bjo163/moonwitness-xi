@@ -24,6 +24,9 @@
   --mw-moon: #b6cad7;
   --mw-yellow: #ffe031;
   --mw-magenta: #ff2e88;
+  --mw-yellow-readable: #705900;
+  --mw-magenta-readable: #b20f55;
+  --mw-cyan-readable: #00749a;
   --mw-on-accent: #0d0d0d;
   --mw-on-pink: #0d0d0d;
   --mw-halftone-dot: rgb(13 13 13 / 13%);
@@ -110,6 +113,9 @@
 
 .dark {
   color-scheme: dark;
+  --mw-yellow-readable: var(--mw-yellow);
+  --mw-magenta-readable: var(--mw-magenta);
+  --mw-cyan-readable: var(--mw-signal-blue);
   --mw-paper: #0e0e10;
   --mw-paper-raised: #17171a;
   --mw-ink: #f3efe4;

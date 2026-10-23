@@ -79,9 +79,7 @@ test('mobile overlays keep accessible names, keyboard dismissal, focus return, a
   await expect(commandPaletteTrigger).toBeFocused();
 
   await page.reload();
-  await expect(
-    page.getByRole('heading', { name: 'Command center', exact: false })
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Command center', exact: false })).toBeVisible();
   const userMenuTrigger = page.getByRole('button', { name: 'User menu for superadmin' });
   await userMenuTrigger.click();
   const userMenu = page.getByRole('menu');
@@ -153,7 +151,9 @@ test('responsive screen audit: login across mobile, tablet, and desktop', async 
   }
 });
 
-test('homepage spelling, responsive layout, and reference screenshots', async ({ page }, testInfo) => {
+test('homepage spelling, responsive layout, and reference screenshots', async ({
+  page,
+}, testInfo) => {
   test.setTimeout(120_000);
   const homeSizes = [
     { name: 'mobile-390', width: 390, height: 844 },
@@ -168,9 +168,13 @@ test('homepage spelling, responsive layout, and reference screenshots', async ({
     await page.goto('/');
     await expect(page.getByRole('link', { name: 'MoonWitness home' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'MOONWITNESS', exact: true })).toBeVisible();
-    await expect(page.getByText('People. Places. Stories. Another side of reality.', { exact: true })).toBeVisible();
+    await expect(
+      page.getByText('People. Places. Stories. Another side of reality.', { exact: true })
+    ).toBeVisible();
     await expect(page.locator('.home-hero-ribbon')).toHaveText('Follow the signal');
-    await expect(page.getByRole('heading', { name: 'Different people. Shared context.', exact: true })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Different people. Shared context.', exact: true })
+    ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Enable interface sounds' })).toBeVisible();
     await expectNoHorizontalOverflow(page, `homepage/${size.name}`);
     const heroImage = await page.locator('.home-hero-art-image').evaluate((image) => ({
@@ -183,7 +187,10 @@ test('homepage spelling, responsive layout, and reference screenshots', async ({
       path: path.join(auditDirectory, `home-${size.name}${browserSuffix(testInfo)}.png`),
       fullPage: true,
     });
-    if (testInfo.project.name === 'chromium' && ['mobile-390', 'reference-1672'].includes(size.name)) {
+    if (
+      testInfo.project.name === 'chromium' &&
+      ['mobile-390', 'reference-1672'].includes(size.name)
+    ) {
       await expect(page).toHaveScreenshot(`home-${size.name}.png`, {
         animations: 'disabled',
         caret: 'hide',
@@ -269,7 +276,9 @@ test('responsive protected screens fit and remain accessible in both themes', as
           await expect(page.getByRole('heading', { name: 'Super Administrator' })).toBeVisible();
         }
         if (view.name === 'dashboard') {
-          await expect(page.getByText('MoonWitness / Command Center', { exact: true })).toBeVisible();
+          await expect(
+            page.getByText('MoonWitness / Command Center', { exact: true })
+          ).toBeVisible();
           await expect(page.locator('.dashboard-masthead-subtitle')).toHaveText(
             /Welcome,\s*superadmin\s*— your workspace at a glance\./u
           );
