@@ -91,10 +91,10 @@ Bukti Bible: `packages/ui/README.md`, token/kontras: `packages/ui/TOKENS.md`; su
 - [x] Catat source/master dan turunan SVG/raster/audio di inventory yang sama. Bukti: `packages/assets/manifest.json`.
 - [x] Catat creator, proses pembuatan, upstream source, lisensi, ukuran, dimensi, dan format. Bukti: `packages/assets/licenses.json`; validator lulus.
 - [x] Bedakan artwork original, berbantuan AI, font upstream, dan aset pihak ketiga. Bukti: `packages/assets/licenses.json`.
-- [x] Validasi file tanpa entry inventory. Bukti: `pnpm assets:validate` dan tes aset lulus.
-- [x] Validasi entry inventory tanpa file. Bukti: `pnpm assets:validate` dan tes aset lulus.
+- [x] Validasi file tanpa entry inventory. Bukti: `packages/assets/scripts/asset-inventory.mjs` memindai media dalam folder asset; tes menguji mismatch; `pnpm assets:validate` lulus setelah enam subset font dicatat di manifest.
+- [x] Validasi entry inventory tanpa file. Bukti: perbandingan inventory melaporkan path manifest tanpa file; fixture missing/unlisted diuji terpisah di `packages/assets/tests/asset-inventory.test.mjs`.
 - [x] Ganti tes jumlah aset tetap dengan validasi aset wajib dan export public. Bukti: tes ikon UI membaca jumlah dari manifest; artwork diuji berdasarkan aset wajib.
-- [x] Pastikan paket hasil build menyertakan fonts.css dan seluruh asset public. Bukti package export/consumer test: `pnpm test:assets` dan `pnpm test:ui`.
+- [x] Pastikan paket hasil build menyertakan `fonts.css` dan seluruh asset public. Bukti nyata: tes `pnpm pack --dry-run --json` di `packages/assets/tests/brand-assets.test.mjs` memeriksa setiap manifest asset non-source dan semua export target; sebelumnya audit ini menemukan dan memperbaiki `fonts.css` yang tertinggal dari package allowlist.
 - [x] Pastikan master beresolusi besar tidak terkirim sebagai payload halaman. Bukti: copy Board dan exporter docs mengecualikan `kind: source`; tes export memastikan asset master tidak dipublikasikan.
 - [x] Pastikan perubahan asset masuk ke alur ekspor docs yang sudah ada. Bukti: social-card docs disinkronkan saat render; asset manifest menguji export docs.
 - [x] Jalankan regenerasi dua kali dan pastikan hasilnya deterministik. Bukti: dua eksekusi `pnpm assets:generate` menghasilkan hash file yang identik.
@@ -528,7 +528,7 @@ Pertahankan satu command manual/otomatis: **`pnpm board:ui:check`**.
 - [x] Uji controlled/disabled/error/loading states. Bukti: `apps/ui-catalog/tests/catalog.spec.ts` menguji input dan checkbox controlled, tombol disabled, field validation dengan `aria-invalid`/`aria-describedby`, skeleton `aria-busy`, serta chart loading/error; screenshot states diperiksa visual di `test-results/ui-catalog/catalog-shared-controls-ex-32dea-lidation-and-loading-states/`.
 - [x] Uji Table sort, selection, pagination, dan overflow. Bukti: UI Catalog E2E menguji sort keyboard, seleksi semua/baris, pagination terkendali, region overflow bernama/focusable dengan Arrow Left/Right dan Home/End, serta body tanpa overflow; screenshot mobile diperiksa di `test-results/ui-catalog/catalog-shared-table-keeps-90b7b-ion-and-overflow-accessible/table-mobile.png`.
 - [x] Uji canonical SVG dan generated React wrapper. Bukti: `packages/ui/tests/icons.test.mjs` membandingkan atribut pada 50 wrapper; UI Catalog merender semua pasangan di browser dan memeriksa ukuran render, lalu contact sheet diperiksa visual dan disimpan di `docs/design/ui-catalog/canonical-vs-react-icons.png`.
-- [ ] Uji inventory, lisensi, package exports, dan generator deterministik.
+- [x] Uji inventory, lisensi, package exports, dan generator deterministik. Bukti: `pnpm test:assets` (24/24) memeriksa exact inventory, provenance/hash font, dan isi tarball; `pnpm assets:generate` dijalankan dua kali dan hash seluruh media tetap identik.
 - [ ] Uji mute persistence, lazy load, dan playback failure.
 - [ ] Uji reduced-motion tanpa kehilangan informasi state.
 - [ ] Uji zoom 200%, font fallback, dan image load failure.

@@ -4,7 +4,7 @@
   "generatedFrom": "packages/assets/manifest.json and packages/ui/src/styles/tokens.css",
   "sources": {
     "assetManifest": "manifest.json",
-    "assetManifestSha256": "431a1865a7943df24b8d562c89ffe1b41592defbefdf1e5eece55b0ef0df36b7",
+    "assetManifestSha256": "182c0f9e215a6d39eedbc291cf9d8d25ea4444798353b2de4d6dcb13392550d9",
     "tokens": "packages/ui/src/styles/tokens.css",
     "tokensSha256": "c95c112b247fa59ec5f9cc5b6aa62a54fb9e5c44956bc41701330a76e76b9060"
   },
@@ -172,11 +172,53 @@
       "sha256": "ec40ffcd5cd1f022dc2786fbbaf1ba30b1340d27fadbd14603dcd5b204f65b3b"
     },
     {
+      "source": "packages/assets/fonts/Anton-latin-ext.woff2",
+      "output": "docs/assets/moonwitness/fonts/Anton-latin-ext.woff2",
+      "kind": "font",
+      "format": "woff2",
+      "sha256": "0d17b7880f389deeb6663a52fa4eadc6d9116bdda725f0aa1f3d404fbb7d3d59"
+    },
+    {
+      "source": "packages/assets/fonts/Anton-latin.woff2",
+      "output": "docs/assets/moonwitness/fonts/Anton-latin.woff2",
+      "kind": "font",
+      "format": "woff2",
+      "sha256": "d0fa07ff63dd60cbc0e2f58e29c802dca2a5ae0276c999f59c6111ab7bbaec3b"
+    },
+    {
+      "source": "packages/assets/fonts/JetBrainsMono-latin-ext.woff2",
+      "output": "docs/assets/moonwitness/fonts/JetBrainsMono-latin-ext.woff2",
+      "kind": "font",
+      "format": "woff2",
+      "sha256": "db5ff4db83e580426280e9337a58dc57d3a83784a1b03ad80914651594441d52"
+    },
+    {
+      "source": "packages/assets/fonts/JetBrainsMono-latin.woff2",
+      "output": "docs/assets/moonwitness/fonts/JetBrainsMono-latin.woff2",
+      "kind": "font",
+      "format": "woff2",
+      "sha256": "83c005d49d8a6a50474c73a5a36ac0468076e9c4a29da7bdb14995d80560a5be"
+    },
+    {
       "source": "packages/assets/fonts/RoadRage-latin.woff2",
       "output": "docs/assets/moonwitness/fonts/RoadRage-latin.woff2",
       "kind": "font",
       "format": "woff2",
       "sha256": "0f8b4556881b76cba826b74b46a7def0b73512d2ee19e8b56c33e1ff3966db70"
+    },
+    {
+      "source": "packages/assets/fonts/SpaceGrotesk-latin-ext.woff2",
+      "output": "docs/assets/moonwitness/fonts/SpaceGrotesk-latin-ext.woff2",
+      "kind": "font",
+      "format": "woff2",
+      "sha256": "952dddb45d2f96f71cbf3b7f510b24379afc3c89ea02fcf89d377b45d62c0166"
+    },
+    {
+      "source": "packages/assets/fonts/SpaceGrotesk-latin.woff2",
+      "output": "docs/assets/moonwitness/fonts/SpaceGrotesk-latin.woff2",
+      "kind": "font",
+      "format": "woff2",
+      "sha256": "0640890476fc1198ab4de571fb658de443c4d85b66466ec09534a8737ab1ce9d"
     },
     {
       "source": "packages/assets/icons/activity.svg",

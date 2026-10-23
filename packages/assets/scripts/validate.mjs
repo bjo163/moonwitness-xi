@@ -2,6 +2,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { dirname, isAbsolute, resolve, sep } from 'node:path';
 import { argv, stdout } from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { compareAssetInventory, listInventoryMedia } from './asset-inventory.mjs';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const manifest = JSON.parse(await readFile(resolve(packageRoot, 'manifest.json'), 'utf8'));
@@ -189,6 +190,22 @@ export function validateSvg(source, filePath) {
 }
 
 if (argv[1] && resolve(argv[1]) === fileURLToPath(import.meta.url)) {
+  const inventoryDirectories = ['brand', 'fonts', 'icons', 'illustrations', 'sounds', 'source'];
+  const packageFiles = await listInventoryMedia(packageRoot, inventoryDirectories);
+  const inventoryDiff = compareAssetInventory(
+    manifest.assets.map(({ path }) => path),
+    packageFiles
+  );
+  if (inventoryDiff.unlistedFiles.length || inventoryDiff.missingFiles.length) {
+    const details = [
+      ...inventoryDiff.unlistedFiles.map(
+        (path) => `- Unlisted asset file: ${path}. Add it to manifest.json and record provenance.`
+      ),
+      ...inventoryDiff.missingFiles.map((path) => `- Manifest asset file is missing: ${path}.`),
+    ];
+    throw new Error(`Asset inventory mismatch:\n${details.join('\n')}`);
+  }
+
   const globalIds = new Set();
   let validatedSvgCount = 0;
   const seenAssets = new Set();

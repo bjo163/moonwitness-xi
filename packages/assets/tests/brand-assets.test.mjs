@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import sharp from 'sharp';
@@ -15,8 +16,6 @@ test('manifest describes all stable brand and icon exports with unique paths', (
   assert.equal(manifest.schemaVersion, 1);
   assert.equal(manifest.licenseManifest, 'licenses.json');
   assert.equal(assetByPath.size, manifest.assets.length);
-  assert.ok(manifest.assets.length >= 59);
-
   for (const path of [
     'brand/source/moonwitness-master.svg',
     'source/artwork/home-hero-master.png',
@@ -260,9 +259,30 @@ test('package exports only framework-independent static assets', async () => {
   assert.equal(packageJson.exports['./licenses.json'], './licenses.json');
   assert.ok(packageJson.files.includes('brand'));
   assert.ok(packageJson.files.includes('fonts'));
+  assert.ok(packageJson.files.includes('fonts.css'));
   assert.ok(packageJson.files.includes('icons'));
   assert.ok(packageJson.files.includes('illustrations'));
   assert.ok(packageJson.files.includes('manifest.json'));
+  for (const asset of manifest.assets.filter(({ kind }) => kind !== 'source')) {
+    assert.ok(
+      packageJson.files.includes(asset.path.split('/')[0]),
+      `${asset.path} is included by the published package file allowlist`
+    );
+  }
+});
+
+test('pnpm package tarball contains every public manifest asset and export target', async () => {
+  const packed = JSON.parse(
+    execSync('pnpm pack --dry-run --json', { cwd: packageRoot, encoding: 'utf8' })
+  );
+  const packedPaths = new Set(packed.files.map(({ path }) => path));
+  const packageJson = JSON.parse(await readFile(resolve(packageRoot, 'package.json'), 'utf8'));
+  for (const asset of manifest.assets.filter(({ kind }) => kind !== 'source')) {
+    assert.ok(packedPaths.has(asset.path), `${asset.path} is present in the package tarball`);
+  }
+  for (const target of Object.values(packageJson.exports).filter((path) => !path.includes('*'))) {
+    assert.ok(packedPaths.has(target.slice(2)), `${target} is present in the package tarball`);
+  }
 });
 
 test('provenance covers original design assets and every externally sourced font family', async () => {
@@ -289,6 +309,16 @@ test('provenance covers original design assets and every externally sourced font
       assert.match(file.path, /^fonts\/.+\.woff2$/u);
       assert.match(file.source, /^https:\/\//u);
       assert.match(file.sha256, /^[A-F0-9]{64}$/u);
+      const fontAsset = assetByPath.get(file.path);
+      assert.equal(fontAsset?.kind, 'font', `${file.path} is inventoried as a font`);
+      assert.equal(fontAsset?.format, 'woff2', `${file.path} records its format`);
+      assert.equal(fontAsset?.license, font.license, `${file.path} records its license`);
+      assert.equal(
+        fontAsset?.source,
+        file.sourceFile ?? file.source,
+        `${file.path} records its source asset or upstream source`
+      );
+      assert.equal(fontAsset?.sha256, file.sha256, `${file.path} hash matches provenance`);
       const bytes = await readFile(resolve(packageRoot, file.path));
       assert.equal(bytes.toString('hex', 0, 4), '774f4632', `${file.path} is WOFF2`);
       assert.equal(createHash('sha256').update(bytes).digest('hex').toUpperCase(), file.sha256);
