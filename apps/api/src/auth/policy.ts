@@ -13,6 +13,7 @@ const NON_GENERIC_MODELS = new Set([
   'knowledge.witness_interpretation',
   'knowledge.story_version',
   'knowledge.story_page_version',
+  'knowledge.research_suggestion_version',
 ]);
 
 /** Only administrative roles may touch these; ordinary users use dedicated endpoints. */

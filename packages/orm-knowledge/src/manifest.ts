@@ -260,6 +260,7 @@ export const manifest = defineAddon({
         ResearchActorIdentity,
         ResearchPrivacyRevocation,
         ResearchPrivacyProjection,
+        ResearchSuggestionVersion,
       ] as const
     ).map((model) =>
       seed(ModelAccess, `knowledge.access_user_${model.modelName.replaceAll('.', '_')}_read`, {
