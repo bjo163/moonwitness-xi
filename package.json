@@ -7,6 +7,7 @@
     "dev": "pnpm --filter @moonwitness/api --filter @moonwitness/board --parallel dev",
     "dev:api": "pnpm --filter @moonwitness/api dev",
     "dev:board": "pnpm --filter @moonwitness/board dev",
+    "dev:whatsapp": "pnpm --filter @moonwitness/whatsapp dev",
     "reset:superadmin-password": "pnpm --filter @moonwitness/api reset:superadmin-password",
     "revoke:auth-sessions": "pnpm --filter @moonwitness/api revoke:auth-sessions",
     "attachments:reconcile": "pnpm --filter @moonwitness/api attachments:reconcile",

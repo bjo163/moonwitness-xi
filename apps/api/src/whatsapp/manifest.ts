@@ -1,0 +1,101 @@
+import { defineAddon, defineView, ref, seed } from '@moonwitness/orm';
+import { ModelAccess } from '@moonwitness/orm-base';
+import { WhatsappAccount, WhatsappConversation, WhatsappJob, WhatsappMessage } from './models.js';
+
+const models = [WhatsappAccount, WhatsappConversation, WhatsappMessage, WhatsappJob] as const;
+export const whatsappManifest = defineAddon({
+  name: 'whatsapp',
+  version: '1.0.0',
+  depends: ['base', 'jobs'],
+  models: [...models],
+  data: models.flatMap((model) => [
+    seed(ModelAccess, `whatsapp.access_user_read_${model.modelName.replaceAll('.', '_')}`, {
+      group: ref('base.group_user'),
+      model_name: model.modelName,
+      read: true,
+      create: false,
+      write: false,
+      unlink: false,
+    }),
+    seed(ModelAccess, `whatsapp.access_superadmin_${model.modelName.replaceAll('.', '_')}`, {
+      group: ref('base.group_superadmin'),
+      model_name: model.modelName,
+      read: true,
+      create: true,
+      write: true,
+      unlink: true,
+    }),
+  ]),
+  views: [
+    defineView(WhatsappAccount, {
+      title: 'WhatsApp Accounts',
+      list: { columns: ['company', 'status', 'phone_number'] },
+      form: {
+        sections: [
+          { title: 'Account', fields: ['company', 'status', 'phone_number', 'last_error'] },
+        ],
+      },
+      search: { fields: ['phone_number'] },
+    }),
+    defineView(WhatsappConversation, {
+      title: 'WhatsApp Conversations',
+      list: { columns: ['name', 'jid', 'is_group', 'unread_count', 'last_message_at'] },
+      form: {
+        sections: [
+          {
+            title: 'Conversation',
+            fields: ['company', 'account', 'jid', 'name', 'is_group', 'unread_count'],
+          },
+        ],
+      },
+      search: { fields: ['name', 'jid'] },
+    }),
+    defineView(WhatsappMessage, {
+      title: 'WhatsApp Messages',
+      list: { columns: ['conversation', 'direction', 'message_type', 'status', 'create_date'] },
+      form: {
+        sections: [
+          {
+            title: 'Message',
+            fields: [
+              'conversation',
+              'direction',
+              'message_type',
+              'content',
+              'status',
+              'media_mime_type',
+            ],
+          },
+        ],
+      },
+      search: { fields: ['content'] },
+    }),
+    defineView(WhatsappJob, {
+      title: 'WhatsApp Queue',
+      list: { columns: ['message', 'recipient_jid', 'status', 'attempts', 'available_at'] },
+      form: {
+        sections: [
+          {
+            title: 'Queue item',
+            fields: [
+              'message',
+              'recipient_jid',
+              'status',
+              'attempts',
+              'available_at',
+              'last_error',
+            ],
+          },
+        ],
+      },
+      search: { fields: ['recipient_jid'] },
+    }),
+  ],
+  menus: models.map((model, index) => ({
+    model: model.modelName,
+    label: model.modelName.split('.')[1],
+    group: 'Technical',
+    sequence: 520 + index,
+    developmentOnly: true,
+  })),
+});

@@ -25,6 +25,7 @@ import {
   Sun,
   User,
   Users,
+  MessageCircle,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { client } from '@/lib/client';
@@ -143,6 +144,13 @@ function ModelNavigation({
           onNavigate={onNavigate}
         />
       )}
+      <NavItem
+        to="/board/whatsapp"
+        label="WhatsApp"
+        icon={MessageCircle}
+        tilt={-0.8}
+        onNavigate={onNavigate}
+      />
       {isLoading &&
         Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-8 bg-ink/10" />)}
       {groups.map(([group, items]) => (

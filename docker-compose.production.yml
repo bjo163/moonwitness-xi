@@ -53,12 +53,16 @@ services:
       JWT_SECRET: ${JWT_SECRET:?Set a persistent random JWT_SECRET of at least 32 characters}
       SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-}
       METRICS_TOKEN: ${METRICS_TOKEN:-}
+      WHATSAPP_INTERNAL_TOKEN: ${WHATSAPP_INTERNAL_TOKEN:?Set a random WHATSAPP_INTERNAL_TOKEN of at least 32 characters}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       LOG_TO_FILE: 'false'
       LOG_PRETTY: 'false'
       PRINT_ROUTES: 'false'
+      ATTACHMENT_STORAGE_DIR: ${ATTACHMENT_STORAGE_DIR:-/var/lib/moonwitness/attachments}
       JOB_HANDLERS_MODULE: ${JOB_HANDLERS_MODULE:-}
       OUTBOX_HANDLERS_MODULE: ${OUTBOX_HANDLERS_MODULE:-}
+    volumes:
+      - whatsapp_attachments:/var/lib/moonwitness/attachments
     healthcheck:
       test:
         - CMD
@@ -117,3 +121,42 @@ services:
     healthcheck:
       disable: true
     environment: *app_environment
+
+  whatsapp:
+    build:
+      context: .
+      target: whatsapp-runtime
+    image: moonwitness-whatsapp:production
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 45s
+    environment:
+      NODE_ENV: production
+      WHATSAPP_API_URL: http://api:3000
+      WHATSAPP_PORT: 3100
+      WHATSAPP_INTERNAL_TOKEN: ${WHATSAPP_INTERNAL_TOKEN:?Set WHATSAPP_INTERNAL_TOKEN}
+      WHATSAPP_SESSION_KEY: ${WHATSAPP_SESSION_KEY:?Set WHATSAPP_SESSION_KEY to a base64-encoded 32-byte key}
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:3100/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  whatsapp_attachments:

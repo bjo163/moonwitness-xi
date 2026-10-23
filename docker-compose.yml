@@ -1,4 +1,33 @@
 services:
+  whatsapp:
+    build:
+      context: .
+      target: whatsapp-runtime
+    image: moonwitness-whatsapp:development
+    restart: unless-stopped
+    init: true
+    environment:
+      NODE_ENV: production
+      WHATSAPP_API_URL: http://host.docker.internal:${API_PORT:-3000}
+      WHATSAPP_PORT: 3100
+      WHATSAPP_INTERNAL_TOKEN: ${WHATSAPP_INTERNAL_TOKEN:?Set WHATSAPP_INTERNAL_TOKEN in .env}
+      WHATSAPP_SESSION_KEY: ${WHATSAPP_SESSION_KEY:?Set WHATSAPP_SESSION_KEY in .env}
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    ports:
+      - '127.0.0.1:3100:3100'
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:3100/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
   postgres:
     image: postgres:16-alpine
     container_name: moonwitness_postgres

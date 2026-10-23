@@ -14,6 +14,7 @@ import { genericRoutes } from './routes/generic.routes.js';
 import { healthRoutes } from './routes/health.routes.js';
 import { jobsRoutes } from './routes/jobs.routes.js';
 import { notificationRoutes } from './routes/notification.routes.js';
+import { whatsappRoutes } from './routes/whatsapp.routes.js';
 import { workflowRoutes } from './routes/workflow.routes.js';
 import { corpusRoutes } from './routes/corpus.routes.js';
 import { evidenceRoutes } from './routes/evidence.routes.js';
@@ -41,6 +42,7 @@ import { manifest as notificationAddon } from '@moonwitness/orm-notification';
 import { manifest as workflowAddon } from '@moonwitness/orm-workflow';
 import { manifest as organizationAddon } from '@moonwitness/orm-organization';
 import { manifest as integrationAddon } from '@moonwitness/orm-integration';
+import { whatsappManifest } from './whatsapp/manifest.js';
 import { manifest as requestAddon } from '@moonwitness/orm-request';
 import { manifest as knowledgeAddon } from '@moonwitness/orm-knowledge';
 
@@ -98,6 +100,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       authAddon,
       jobsManifest,
       integrationAddon,
+      whatsappManifest,
       requestAddon,
       notificationAddon,
       organizationAddon,
@@ -256,6 +259,13 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     loginRateMax: options.loginRateMax ?? authConfig.loginRateMax,
   });
   await app.register(genericRoutes, {
+    attachmentStorage:
+      options.attachmentStorage ??
+      new LocalFileAttachmentStorage(
+        options.attachmentStorageDirectory ?? config.attachmentStorageDirectory
+      ),
+  });
+  await app.register(whatsappRoutes, {
     attachmentStorage:
       options.attachmentStorage ??
       new LocalFileAttachmentStorage(

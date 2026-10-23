@@ -12,6 +12,7 @@ const proxyPrefixes = [
   '/metrics',
   '/notifications',
   '/notifications/:path*',
+  '/whatsapp/:path*',
   '/workflows',
   '/workflows/:path*',
 ];
