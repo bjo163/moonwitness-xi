@@ -3,3 +3,21 @@ corpus/reference/sha256/** -text
 
 # Bash scripts must keep LF endings when checked out on Windows hosts.
 scripts/*.sh text eol=lf
+
+# Design assets are hashed byte-for-byte into docs/assets/moonwitness/asset-map.json,
+# so a CRLF checkout on Windows would commit hashes that Linux CI cannot reproduce.
+packages/assets/**/*.svg text eol=lf
+packages/assets/**/*.json text eol=lf
+packages/assets/**/*.css text eol=lf
+packages/assets/**/*.txt text eol=lf
+packages/assets/**/*.md text eol=lf
+packages/assets/**/*.mjs text eol=lf
+docs/assets/**/*.svg text eol=lf
+docs/assets/**/*.json text eol=lf
+docs/assets/**/*.css text eol=lf
+packages/ui/src/styles/tokens.css text eol=lf
+packages/assets/**/*.png -text
+packages/assets/**/*.woff2 -text
+packages/assets/**/*.wav -text
+docs/assets/**/*.png -text
+docs/assets/**/*.wav -text
