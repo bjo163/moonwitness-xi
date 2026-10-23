@@ -1,5 +1,7 @@
+'use client';
+
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router';
+import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AlertTriangle,
@@ -298,17 +300,17 @@ export function DashboardPage() {
           {/* Quick Action Buttons */}
           <div className="flex flex-wrap items-center gap-3 pt-2">
             <Button asChild size="sm" className="gap-1.5 shadow-ink">
-              <Link to="/m/base.partner?create=1">
+              <Link href="/board/m/base.partner?create=1">
                 <Plus className="size-4" /> New Partner
               </Link>
             </Button>
             <Button asChild variant="outline" size="sm" className="gap-1.5 shadow-ink">
-              <Link to="/m/base.company?create=1">
+              <Link href="/board/m/base.company?create=1">
                 <Building2 className="size-4" /> New Company
               </Link>
             </Button>
             <Button asChild variant="outline" size="sm" className="gap-1.5 shadow-ink">
-              <Link to="/m/base.activity?create=1">
+              <Link href="/board/m/base.activity?create=1">
                 <Calendar className="size-4" /> Schedule Task
               </Link>
             </Button>
@@ -320,7 +322,7 @@ export function DashboardPage() {
       {isAdmin && (
         <div className="flex items-center gap-2 border-b-2 border-ink pb-3">
           <div className="inline-flex border-2 border-ink bg-card p-1 shadow-ink-sm">
-            <button
+            <Button
               id="tab-telemetry-overview"
               type="button"
               onClick={() => setAdminSubView('telemetry')}
@@ -332,8 +334,8 @@ export function DashboardPage() {
               )}
             >
               Overview & Telemetry
-            </button>
-            <button
+            </Button>
+            <Button
               id="tab-cron-scheduler"
               type="button"
               onClick={() => setAdminSubView('crons')}
@@ -345,7 +347,7 @@ export function DashboardPage() {
               )}
             >
               Cron Scheduler & Queue
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -358,7 +360,7 @@ export function DashboardPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {/* Partner Count */}
             <Link
-              to="/m/base.partner"
+              href="/board/m/base.partner"
               className="ink-panel group relative block p-5 transition-transform hover:-translate-y-1 hover:shadow-ink-lg"
             >
               <div className="flex items-center justify-between">
@@ -382,7 +384,7 @@ export function DashboardPage() {
 
             {/* Active Users */}
             <Link
-              to="/m/base.user"
+              href="/board/m/base.user"
               className="ink-panel group relative block p-5 transition-transform hover:-translate-y-1 hover:shadow-ink-lg"
             >
               <div className="flex items-center justify-between">
@@ -406,7 +408,7 @@ export function DashboardPage() {
 
             {/* Companies / Multi-Tenant */}
             <Link
-              to="/m/base.company"
+              href="/board/m/base.company"
               className="ink-panel group relative block p-5 transition-transform hover:-translate-y-1 hover:shadow-ink-lg"
             >
               <div className="flex items-center justify-between">
@@ -430,7 +432,7 @@ export function DashboardPage() {
 
             {/* Pending Activities */}
             <Link
-              to="/m/base.activity"
+              href="/board/m/base.activity"
               className="ink-panel group relative block p-5 transition-transform hover:-translate-y-1 hover:shadow-ink-lg"
             >
               <div className="flex items-center justify-between">
@@ -497,7 +499,7 @@ export function DashboardPage() {
                     return (
                       <Link
                         key={audit.id}
-                        to={`/m/${audit.model}/${audit.record_id}`}
+                        href={`/board/m/${audit.model}/${audit.record_id}`}
                         className="group min-w-0 overflow-hidden border-2 border-ink bg-card p-3 font-mono text-xs transition-transform hover:-translate-y-0.5 hover:shadow-ink flex flex-col justify-between"
                       >
                         <div className="flex items-center justify-between gap-2">
@@ -551,7 +553,7 @@ export function DashboardPage() {
                 {recentActivities.records.map((act) => (
                   <Link
                     key={act.id}
-                    to={`/m/${act.resource_model}/${act.resource_id}`}
+                    href={`/board/m/${act.resource_model}/${act.resource_id}`}
                     className="group border-2 border-ink bg-card p-3 font-mono text-xs transition-transform hover:-translate-y-0.5 hover:shadow-ink"
                   >
                     <div className="flex items-center justify-between">
@@ -801,7 +803,7 @@ export function DashboardPage() {
                   return (
                     <Link
                       key={m.model}
-                      to={`/m/${m.model}`}
+                      href={`/board/m/${m.model}`}
                       className="ink-panel group relative block p-6 transition-transform hover:-translate-y-1 hover:shadow-ink-lg"
                     >
                       <div className="flex items-start justify-between">
@@ -848,7 +850,7 @@ export function DashboardPage() {
 
           {/* Modal Tabs */}
           <div className="flex border-2 border-ink bg-paper font-mono text-xs">
-            <button
+            <Button
               type="button"
               onClick={() => setFailureTab('jobs')}
               className={cn(
@@ -857,8 +859,8 @@ export function DashboardPage() {
               )}
             >
               Dead Jobs ({deadJobs?.data?.length ?? 0})
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={() => setFailureTab('outbox')}
               className={cn(
@@ -869,7 +871,7 @@ export function DashboardPage() {
               )}
             >
               Dead Outbox Events ({deadOutbox?.data?.length ?? 0})
-            </button>
+            </Button>
           </div>
 
           {/* Tab Content */}

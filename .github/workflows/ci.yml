@@ -92,6 +92,8 @@ jobs:
       - run: pnpm format:check
       - run: pnpm typecheck
       - run: pnpm test:board-budget
+      - name: Enforce shared Board UI controls
+        run: pnpm board:ui:check
       - name: Check route-aware Board bundle budgets
         run: pnpm board:budget
       - run: pnpm test:architecture

@@ -88,7 +88,7 @@ test('static export rejects traversal and duplicate asset paths from a manifest'
 
 test('committed Pages assets match the package manifest and shared UI tokens', async () => {
   const result = await exportDocAssets({ check: true });
-  assert.equal(result.assetCount, 56);
+  assert.equal(result.assetCount, 59);
   assert.equal(result.changedCount, 0);
 
   const [mappingSource, readme, documentationPage] = await Promise.all([
@@ -97,7 +97,7 @@ test('committed Pages assets match the package manifest and shared UI tokens', a
     readFile(new URL('../docs/design/brand-assets.md', import.meta.url), 'utf8'),
   ]);
   const mapping = JSON.parse(mappingSource);
-  assert.equal(mapping.assets.length, 56);
+  assert.equal(mapping.assets.length, 59);
   assert.ok(mapping.assets.every(({ output }) => output.startsWith('docs/assets/moonwitness/')));
   const banner = mapping.assets.find(
     ({ source }) => source === 'packages/assets/brand/readme-banner.svg'

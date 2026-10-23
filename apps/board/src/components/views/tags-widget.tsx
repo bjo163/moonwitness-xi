@@ -97,7 +97,7 @@ export function TagsWidget({ model, recordId }: TagsWidgetProps) {
       // 1. Create the tag
       const createdTag = await client.model<TagItem>('base.tag').create({
         name: newTagName.trim(),
-        color: '#E6FF00',
+        color: 'var(--mw-yellow)',
       });
       // 2. Attach link
       await client.model('base.tag_link').create({
@@ -133,14 +133,14 @@ export function TagsWidget({ model, recordId }: TagsWidgetProps) {
           >
             <span className="size-2 border border-ink bg-lime" />
             <span>{tagName}</span>
-            <button
+            <Button
               type="button"
               onClick={() => handleRemoveLink(link.id)}
               className="ml-0.5 text-ink-faint hover:text-pink transition-colors"
               title="Remove tag"
             >
               <X className="size-3" />
-            </button>
+            </Button>
           </span>
         );
       })}
@@ -148,12 +148,12 @@ export function TagsWidget({ model, recordId }: TagsWidgetProps) {
       {/* Add Tag Popover */}
       <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
         <PopoverTrigger asChild>
-          <button
+          <Button
             type="button"
             className="inline-flex items-center gap-1 border-2 border-dashed border-ink/40 bg-card px-2 py-0.5 font-mono text-xs font-semibold text-ink-faint hover:border-ink hover:text-ink hover:bg-paper-raised transition-colors"
           >
             <Plus className="size-3" /> Tag
-          </button>
+          </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-56 p-3 space-y-3 font-sans">
           <div className="flex items-center gap-1.5 border-b border-ink/20 pb-2">
@@ -182,7 +182,7 @@ export function TagsWidget({ model, recordId }: TagsWidgetProps) {
               <p className="text-[11px] text-ink-faint text-center py-1">No other tags</p>
             ) : (
               availableTags.map((tag) => (
-                <button
+                <Button
                   key={tag.id}
                   type="button"
                   onClick={() => handleAttachTag(tag.id)}
@@ -190,7 +190,7 @@ export function TagsWidget({ model, recordId }: TagsWidgetProps) {
                 >
                   <span className="size-2 border border-ink bg-lime shrink-0" />
                   <span className="truncate font-bold">{tag.name}</span>
-                </button>
+                </Button>
               ))
             )}
           </div>

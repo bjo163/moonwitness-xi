@@ -21,7 +21,7 @@ test('superadmin can log in, open dashboard, and log out', async ({ page }) => {
   await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the board' }).click();
 
-  await expect(page).toHaveURL(/\/$/u);
+  await expect(page).toHaveURL(/\/board$/u);
   await expect(page.getByText('Welcome, superadmin!', { exact: false })).toBeVisible();
   await expect(page.getByRole('img', { name: 'Background job status distribution' })).toBeVisible();
   await expect(
@@ -73,10 +73,10 @@ test('shared select works with keyboard and profile feedback is announced', asyn
   await page.getByLabel('Login').fill('superadmin');
   await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the board' }).click();
-  await expect(page).toHaveURL(/\/$/u);
+  await expect(page).toHaveURL(/\/board$/u);
   await expect(page.getByText('Welcome, superadmin!', { exact: false })).toBeVisible();
 
-  await page.goto('/settings');
+  await page.goto('/board/settings');
   const language = page.getByRole('combobox').first();
   await language.focus();
   await page.keyboard.press('Enter');
@@ -85,7 +85,7 @@ test('shared select works with keyboard and profile feedback is announced', asyn
   await expect(page.getByRole('listbox')).toBeHidden();
   await expect(language).toBeFocused();
 
-  await page.goto('/profile');
+  await page.goto('/board/profile');
   await page.getByRole('button', { name: 'Save profile' }).click();
   await expect(page.getByText('Profile updated')).toBeVisible();
 });

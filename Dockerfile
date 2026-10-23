@@ -61,17 +61,20 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
 CMD ["node", "dist/server.js"]
 
 FROM build AS board-build
+ENV BOARD_API_TARGET=http://api:3000
 RUN pnpm --filter @moonwitness/board build \
-    && pnpm board:budget \
-    && rm -f apps/board/dist/.vite/manifest.json \
-    && rmdir apps/board/dist/.vite \
-    && mkdir -p /deploy/board \
-    && cp -r apps/board/dist /deploy/board/dist
+    && pnpm board:budget
 
-FROM nginx:1.30.5-alpine AS board-runtime
-RUN apk upgrade --no-cache
-COPY --from=board-build /deploy/board/dist /usr/share/nginx/html
-COPY deploy/nginx-board.conf /etc/nginx/conf.d/default.conf
+FROM node:22-bookworm-slim AS board-runtime
+ENV NODE_ENV=production HOSTNAME=0.0.0.0 PORT=8080
+WORKDIR /app
+COPY --from=board-build --chown=node:node /workspace/apps/board/.next/standalone ./
+COPY --from=board-build --chown=node:node /workspace/apps/board/.next/static ./apps/board/.next/static
+COPY --from=board-build --chown=node:node /workspace/apps/board/public ./apps/board/public
+USER node
 EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:8080/').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
+CMD ["node", "apps/board/server.js"]
 
 FROM runtime AS api

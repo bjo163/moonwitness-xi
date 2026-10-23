@@ -14,7 +14,7 @@ test('manifest describes all stable brand and icon exports with unique paths', (
   assert.equal(manifest.schemaVersion, 1);
   assert.equal(manifest.licenseManifest, 'licenses.json');
   assert.equal(assetByPath.size, manifest.assets.length);
-  assert.equal(manifest.assets.length, 56);
+  assert.equal(manifest.assets.length, 59);
 
   for (const kind of ['symbol', 'wordmark', 'lockup']) {
     for (const variant of ['light', 'dark', 'mono-light', 'mono-dark']) {
@@ -28,6 +28,11 @@ test('manifest describes all stable brand and icon exports with unique paths', (
     'brand/readme-banner.svg',
   ]) {
     assert.ok(assetByPath.has(requiredPath), `${requiredPath} is exported`);
+  }
+  for (const sound of ['ui-success.wav', 'ui-alert.wav', 'ui-signal.wav']) {
+    const asset = assetByPath.get(`sounds/${sound}`);
+    assert.equal(asset?.kind, 'sound', `${sound} is exported as a sound`);
+    assert.ok(asset.durationSeconds > 0 && asset.durationSeconds <= 3);
   }
   const iconNames = [
     'user',
@@ -177,6 +182,18 @@ test('Board, UI catalog, and docs portal consume the shared local font export', 
     assert.match(stylesheet, /@import ['"]@moonwitness\/assets\/fonts\.css['"]/u, consumerPath);
   }
 
-  const boardHtml = await readFile(resolve(packageRoot, '../../apps/board/index.html'), 'utf8');
-  assert.doesNotMatch(boardHtml, /fonts\.googleapis\.com|fonts\.gstatic\.com/u);
+  const boardLayout = await readFile(
+    resolve(packageRoot, '../../apps/board/src/app/layout.tsx'),
+    'utf8'
+  );
+  const boardGlobalStyles = await readFile(
+    resolve(packageRoot, '../../apps/board/src/app/global.css'),
+    'utf8'
+  );
+  assert.match(boardLayout, /import ['"]\.\/global\.css['"]/u);
+  assert.match(boardGlobalStyles, /@import ['"]\.\.\/index\.css['"]/u);
+  assert.doesNotMatch(
+    `${boardLayout}\n${boardGlobalStyles}`,
+    /fonts\.googleapis\.com|fonts\.gstatic\.com/u
+  );
 });

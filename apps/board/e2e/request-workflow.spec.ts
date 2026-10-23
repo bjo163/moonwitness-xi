@@ -30,7 +30,7 @@ test('requester submits a request that superadmin approves or rejects in Board',
   await page.getByLabel('Login').fill('superadmin');
   await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the board' }).click();
-  await expect(page).toHaveURL(/\/$/u);
+  await expect(page).toHaveURL(/\/board$/u);
 
   const adminSession = await page.evaluate(
     () => JSON.parse(localStorage.getItem('mw-board-session') ?? 'null') as BoardSession | null
@@ -120,7 +120,7 @@ test('requester submits a request that superadmin approves or rejects in Board',
   const rejectionRequest = (await rejectionRequestResponse.json()) as ApiRecord<CreatedRecord>;
   expect(rejectionRequest.data.create_uid).toBe(requesterProfile.data.id);
 
-  await page.goto(`/m/request.purchase/${createdRequest.data.id}`);
+  await page.goto(`/board/m/request.purchase/${createdRequest.data.id}`);
   const workflow = page.getByRole('region', { name: 'Approval workflow' });
   await expect(workflow).toBeVisible();
   await expect(
@@ -135,7 +135,7 @@ test('requester submits a request that superadmin approves or rejects in Board',
     'Please review this purchase request.'
   );
 
-  await page.goto(`/m/request.purchase/${rejectionRequest.data.id}`);
+  await page.goto(`/board/m/request.purchase/${rejectionRequest.data.id}`);
   const rejectionWorkflow = page.getByRole('region', { name: 'Approval workflow' });
   await rejectionWorkflow.getByRole('button', { name: 'Start Purchase request approval' }).click();
   await rejectionWorkflow.getByLabel('Review comment').fill('Please review this rejection case.');

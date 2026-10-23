@@ -21,7 +21,7 @@ test('record forms validate, edit relations, scope state by country, archive, re
   await page.getByLabel('Login').fill('superadmin');
   await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the board' }).click();
-  await expect(page).toHaveURL(/\/$/u);
+  await expect(page).toHaveURL(/\/board$/u);
 
   const session = await page.evaluate(
     () => JSON.parse(localStorage.getItem('mw-board-session') ?? 'null') as BoardSession | null
@@ -37,7 +37,7 @@ test('record forms validate, edit relations, scope state by country, archive, re
   };
   expect(addressViews.fields.find((field) => field.name === 'address_type')?.default).toBe('other');
 
-  await page.goto('/m/base.partner/new');
+  await page.goto('/board/m/base.partner/new');
   await expect(page.getByRole('heading', { name: 'New Partner' })).toBeVisible();
   await page.getByLabel('Name').fill('Temporary value');
   await page.getByLabel('Name').clear();
@@ -77,7 +77,7 @@ test('record forms validate, edit relations, scope state by country, archive, re
   });
   expect(duplicatePartner.status()).toBe(409);
 
-  await page.goto(`/m/base.partner/${partnerId}`);
+  await page.goto(`/board/m/base.partner/${partnerId}`);
   const tagName = `Board tag ${suffix}`;
   await page.getByRole('button', { name: 'Tag', exact: true }).click();
   await page.getByPlaceholder('New tag...').fill(tagName);
@@ -141,7 +141,7 @@ test('record forms validate, edit relations, scope state by country, archive, re
   await page.getByRole('option', { name: /California/u }).click();
 
   await page.getByRole('button', { name: 'Save Record' }).click();
-  await expect(page).toHaveURL(new RegExp(`/m/base\\.partner/${partnerId}$`, 'u'));
+  await expect(page).toHaveURL(new RegExp(`/board/m/base\\.partner/${partnerId}$`, 'u'));
   await expect(page.getByRole('cell', { name: `Primary ${suffix}` })).toBeVisible();
   const savedAddressList = await page.request.get('/api/base.partner_address', {
     headers: authorization,
@@ -202,11 +202,11 @@ test('record forms validate, edit relations, scope state by country, archive, re
   });
   expect(deniedDelete.status()).toBe(403);
 
-  await page.goto(`/m/base.partner/${partnerId}`);
+  await page.goto(`/board/m/base.partner/${partnerId}`);
   let addressRow = page.getByRole('row').filter({ hasText: `Primary ${suffix}` });
   await expect(addressRow).toBeVisible();
   await addressRow.getByTitle('Open record in full view').click();
-  await expect(page).toHaveURL(new RegExp(`/m/base\\.partner_address/${addressId}$`, 'u'));
+  await expect(page).toHaveURL(new RegExp(`/board/m/base\\.partner_address/${addressId}$`, 'u'));
   await page.getByLabel('Label').fill(`Primary Updated ${suffix}`);
   await page.getByRole('button', { name: 'Save Record' }).click();
   await expect(page.getByText('Record saved successfully!')).toBeVisible();
@@ -218,7 +218,7 @@ test('record forms validate, edit relations, scope state by country, archive, re
     `Primary Updated ${suffix}`
   );
 
-  await page.goto(`/m/base.partner/${partnerId}`);
+  await page.goto(`/board/m/base.partner/${partnerId}`);
   addressRow = page.getByRole('row').filter({ hasText: `Primary Updated ${suffix}` });
   await expect(addressRow).toBeVisible();
   page.once('dialog', (dialog) => void dialog.accept());
@@ -244,7 +244,7 @@ test('record forms validate, edit relations, scope state by country, archive, re
   expect(standaloneAddressResponse.status()).toBe(201);
   const standaloneAddress = (await standaloneAddressResponse.json()) as { data: CreatedRecord };
 
-  await page.goto(`/m/base.partner_address/${standaloneAddress.data.id}`);
+  await page.goto(`/board/m/base.partner_address/${standaloneAddress.data.id}`);
   page.once('dialog', (dialog) => void dialog.accept());
   await page.getByRole('button', { name: 'Archive', exact: true }).click();
   await expect(page).toHaveURL(/\/m\/base\.partner_address$/u);
@@ -257,7 +257,7 @@ test('record forms validate, edit relations, scope state by country, archive, re
   expect(archivedAddress.status()).toBe(200);
   expect(((await archivedAddress.json()) as { data: { active: boolean } }).data.active).toBe(false);
 
-  await page.goto(`/m/base.partner_address/${addressId}`);
+  await page.goto(`/board/m/base.partner_address/${addressId}`);
   await expect(page.getByRole('button', { name: 'Unarchive' })).toBeVisible();
   await page.getByRole('button', { name: 'Unarchive' }).click();
   await expect(page.getByText('Action executed successfully.')).toBeVisible();

@@ -12,11 +12,11 @@ const sizes = [
   { name: 'desktop-1440', width: 1440, height: 1000 },
 ] as const;
 const views = [
-  { name: 'dashboard', path: '/', heading: 'Welcome, superadmin!' },
-  { name: 'list', path: '/m/base.partner', heading: 'Partners' },
-  { name: 'form', path: '/m/base.partner/new', heading: 'New Partner' },
-  { name: 'profile', path: '/profile', heading: 'Profile' },
-  { name: 'settings', path: '/settings', heading: 'Settings' },
+  { name: 'dashboard', path: '/board', heading: 'Welcome, superadmin!' },
+  { name: 'list', path: '/board/m/base.partner', heading: 'Partners' },
+  { name: 'form', path: '/board/m/base.partner/new', heading: 'New Partner' },
+  { name: 'profile', path: '/board/profile', heading: 'Profile' },
+  { name: 'settings', path: '/board/settings', heading: 'Settings' },
 ] as const;
 const visualBaselines = new Set([
   'list/desktop-1440/light',
@@ -30,7 +30,7 @@ test('command shortcut stays inactive while typing in an editable control', asyn
   await page.getByLabel('Login').fill('superadmin');
   await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the board' }).click();
-  await expect(page).toHaveURL(/\/$/u);
+  await expect(page).toHaveURL(/\/board$/u);
 
   const search = page.getByRole('button', { name: /Search records, models, commands/u });
   await search.click();
@@ -54,7 +54,7 @@ test('mobile overlays keep accessible names, keyboard dismissal, focus return, a
   await page.getByLabel('Login').fill('superadmin');
   await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the board' }).click();
-  await expect(page).toHaveURL(/\/$/u);
+  await expect(page).toHaveURL(/\/board$/u);
 
   const modelNavigationTrigger = page.getByRole('button', { name: 'Open model navigation' });
   await modelNavigationTrigger.focus();
@@ -160,7 +160,7 @@ test('responsive protected screens fit and remain accessible in both themes', as
   await page.getByLabel('Login').fill('superadmin');
   await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the board' }).click();
-  await expect(page).toHaveURL(/\/$/u);
+  await expect(page).toHaveURL(/\/board$/u);
   await page.setViewportSize({ width: 1440, height: 1000 });
   for (const label of ['Organization Members', 'Notification Preferences']) {
     const menuItem = page.getByRole('link', { name: label, exact: true });

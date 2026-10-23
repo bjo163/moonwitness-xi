@@ -13,7 +13,7 @@ test('users can edit only their profile, persist preferences, and change passwor
   await page.getByLabel('Login').fill('superadmin');
   await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the board' }).click();
-  await expect(page).toHaveURL(/\/$/u);
+  await expect(page).toHaveURL(/\/board$/u);
   const adminSession = await page.evaluate(
     () =>
       JSON.parse(localStorage.getItem('mw-board-session') ?? 'null') as {
@@ -57,7 +57,7 @@ test('users can edit only their profile, persist preferences, and change passwor
   await page.getByLabel('Login').fill(login);
   await page.getByLabel('Password').fill(initialPassword);
   await page.getByRole('button', { name: 'Enter the board' }).click();
-  await expect(page).toHaveURL(/\/$/u);
+  await expect(page).toHaveURL(/\/board$/u);
   const ordinarySession = await page.evaluate(
     () =>
       JSON.parse(localStorage.getItem('mw-board-session') ?? 'null') as {
@@ -73,7 +73,7 @@ test('users can edit only their profile, persist preferences, and change passwor
   };
   expect(accountUserPayload.data.partner_id).toBe(partnerPayload.data.id);
 
-  await page.goto('/profile');
+  await page.goto('/board/profile');
   await expect(page.getByRole('heading', { name: 'Profile' })).toBeVisible();
   const updatedName = `Updated ${suffix}`;
   await page.getByLabel('Full name').fill(updatedName);
@@ -94,7 +94,7 @@ test('users can edit only their profile, persist preferences, and change passwor
     email: `updated-${suffix}@example.test`,
   });
 
-  await page.goto('/settings');
+  await page.goto('/board/settings');
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
   await page.getByLabel('Language').click();
   const languages = page.getByRole('listbox');
@@ -130,12 +130,12 @@ test('users can edit only their profile, persist preferences, and change passwor
       }).format(new Date(value)),
     { value: createdPartner!.create_date, locale: 'en-US', timeZone: 'Asia/Jakarta' }
   );
-  await page.goto(`/m/base.partner/${partnerPayload.data.id}`);
+  await page.goto(`/board/m/base.partner/${partnerPayload.data.id}`);
   await expect(page.getByText('Created At', { exact: true })).toBeVisible();
   await expect(page.getByText('Created At', { exact: true }).locator('..')).toContainText(
     localizedCreateTime
   );
-  await page.goto('/settings');
+  await page.goto('/board/settings');
   await expect(page.getByLabel('Current password')).toBeVisible();
 
   const wrongCurrentPassword = await page.request.post('/auth/me/password', {
@@ -148,7 +148,7 @@ test('users can edit only their profile, persist preferences, and change passwor
   await page.getByLabel('New password', { exact: true }).fill(updatedPassword);
   await page.getByLabel('Confirm new password').fill(`${updatedPassword}-mismatch`);
   await page.getByRole('button', { name: 'Change password' }).click();
-  await expect(page).toHaveURL(/\/settings$/u);
+  await expect(page).toHaveURL(/\/board\/settings$/u);
 
   await page.getByLabel('New password', { exact: true }).fill(updatedPassword);
   await page.getByLabel('Confirm new password').fill(updatedPassword);
@@ -166,6 +166,6 @@ test('users can edit only their profile, persist preferences, and change passwor
   await expect(page.getByRole('alert')).toContainText('Invalid credentials');
   await page.getByLabel('Password').fill(updatedPassword);
   await page.getByRole('button', { name: 'Enter the board' }).click();
-  await expect(page).toHaveURL(/\/$/u);
+  await expect(page).toHaveURL(/\/board$/u);
   await expect(page.getByText(`Welcome, ${login}!`, { exact: false })).toBeVisible();
 });

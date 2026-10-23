@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BookOpen, GitBranch, Search } from 'lucide-react';
@@ -8,6 +10,7 @@ import { scopedQueryKey } from '@/lib/query-scope';
 import { canReadResearch } from '@/lib/research-access';
 import { cn } from '@/lib/utils';
 import { Button } from '@moonwitness/ui/components/button';
+import { Input } from '@moonwitness/ui/components/input';
 import { Skeleton } from '@moonwitness/ui/components/skeleton';
 
 const sources = [
@@ -208,7 +211,7 @@ export function KnowledgePage() {
           <label className="sr-only" htmlFor="research-graph-query">
             Search graph records
           </label>
-          <input
+          <Input
             id="research-graph-query"
             value={graphSearchInput}
             onChange={(event) => setGraphSearchInput(event.target.value)}
@@ -262,7 +265,7 @@ export function KnowledgePage() {
           <label className="sr-only" htmlFor="relation-id">
             Research relation ID
           </label>
-          <input
+          <Input
             id="relation-id"
             value={relationInput}
             onChange={(event) => setRelationInput(event.target.value)}
@@ -342,29 +345,29 @@ function GraphSearchResults({
                 <p className="break-words font-medium text-ink">{result.title}</p>
                 <p className="break-words text-sm text-ink-soft">{result.summary}</p>
                 {result.kind === 'evidence' ? (
-                  <button
+                  <Button
                     type="button"
                     className="text-left text-sm font-medium underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime-700"
                     onClick={() => onOpenPassage(result.sourceId, result.locator)}
                   >
                     Open pinned passage {result.locator}
-                  </button>
+                  </Button>
                 ) : result.kind === 'relation' ? (
-                  <button
+                  <Button
                     type="button"
                     className="text-left text-sm font-medium underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime-700"
                     onClick={() => onExplainRelation(result.id)}
                   >
                     Explain relation
-                  </button>
+                  </Button>
                 ) : (
-                  <button
+                  <Button
                     type="button"
                     className="text-left text-sm font-medium underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime-700"
                     onClick={() => onFindAssertion(result.id)}
                   >
                     Find linked evidence
-                  </button>
+                  </Button>
                 )}
               </article>
             </li>
@@ -436,13 +439,13 @@ function RelationCard({
           <h3 className="font-display text-lg uppercase">Alternative hypotheses</h3>
           {explanation.alternatives.map((alternative) => (
             <div key={alternative.relation.id} className="border-l-4 border-ink/20 pl-4">
-              <button
+              <Button
                 type="button"
                 className="text-left font-medium underline decoration-ink/30 underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime-700"
                 onClick={() => onSelectRelation(alternative.relation.id)}
               >
                 {alternative.relation.predicate}
-              </button>
+              </Button>
               <p className="break-all text-sm text-ink-soft">
                 {alternative.relation.subject_id} → {alternative.relation.object_id}
               </p>
@@ -488,13 +491,13 @@ function EvidenceList({
                   {sourceId} · {row.evidence.assertion_id}
                 </p>
                 {isPinnedSourceId(sourceId) && (
-                  <button
+                  <Button
                     type="button"
                     className="mt-2 text-left text-xs font-medium underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime-700"
                     onClick={() => onSelectSource(sourceId, row.locator)}
                   >
                     Open pinned source passage {row.locator}
-                  </button>
+                  </Button>
                 )}
               </li>
             );

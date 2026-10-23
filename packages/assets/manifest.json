@@ -452,6 +452,33 @@
       "format": "svg",
       "width": 160,
       "height": 160
+    },
+    {
+      "path": "sounds/ui-success.wav",
+      "kind": "sound",
+      "variant": "ui",
+      "format": "wav",
+      "durationSeconds": 0.28,
+      "license": "ISC",
+      "source": "scripts/generate-sounds.mjs"
+    },
+    {
+      "path": "sounds/ui-alert.wav",
+      "kind": "sound",
+      "variant": "ui",
+      "format": "wav",
+      "durationSeconds": 0.28,
+      "license": "ISC",
+      "source": "scripts/generate-sounds.mjs"
+    },
+    {
+      "path": "sounds/ui-signal.wav",
+      "kind": "sound",
+      "variant": "ui",
+      "format": "wav",
+      "durationSeconds": 0.28,
+      "license": "ISC",
+      "source": "scripts/generate-sounds.mjs"
     }
   ]
 }

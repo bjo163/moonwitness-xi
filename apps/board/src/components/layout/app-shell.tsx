@@ -1,5 +1,9 @@
+'use client';
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import type { ReactNode } from 'react';
 import { motion } from 'motion/react';
 import type { ModelInfo } from '@moonwitness/client';
 import { ToastHost } from '@moonwitness/ui/components/toast';
@@ -56,6 +60,7 @@ import { ShortcutsDialog } from '@/components/manga/shortcuts-dialog';
 import { ActivityBell } from './activity-bell';
 import { NotificationBell } from './notification-bell';
 import { Sheet, SheetContent, SheetTrigger } from '@moonwitness/ui/components/sheet';
+import { SoundToggle } from '@moonwitness/ui/components/audio';
 
 function NavItem({
   to,
@@ -70,34 +75,31 @@ function NavItem({
   tilt: number;
   onNavigate?: () => void;
 }) {
+  const pathname = usePathname();
+  const active = pathname === to || (to !== '/board' && pathname?.startsWith(`${to}/`));
   return (
-    <NavLink
-      to={to}
-      end={to === '/'}
+    <Link
+      href={to}
       onClick={onNavigate}
       title={label}
-      className={({ isActive }) =>
-        cn(
-          'group relative flex min-w-0 items-center gap-3 px-3 py-2 font-display text-lg uppercase tracking-wide text-ink/70 transition-colors hover:text-ink',
-          isActive && 'text-on-accent hover:text-on-accent'
-        )
-      }
-    >
-      {({ isActive }) => (
-        <>
-          {isActive && (
-            <motion.span
-              layoutId="nav-active"
-              className="absolute inset-0 -z-0 border-2 border-ink bg-lime shadow-[3px_3px_0_0_var(--ink)]"
-              style={{ rotate: tilt }}
-              transition={{ type: 'spring', stiffness: 500, damping: 34 }}
-            />
-          )}
-          <Icon className="relative size-5" strokeWidth={2.4} />
-          <span className="relative min-w-0 whitespace-normal leading-tight">{label}</span>
-        </>
+      className={cn(
+        'group relative flex min-w-0 items-center gap-3 px-3 py-2 font-display text-lg uppercase tracking-wide text-ink/70 transition-colors hover:text-ink',
+        active && 'text-on-accent hover:text-on-accent'
       )}
-    </NavLink>
+    >
+      <>
+        {active && (
+          <motion.span
+            layoutId="nav-active"
+            className="absolute inset-0 -z-0 border-2 border-ink bg-lime shadow-[3px_3px_0_0_var(--ink)]"
+            style={{ rotate: tilt }}
+            transition={{ type: 'spring', stiffness: 500, damping: 34 }}
+          />
+        )}
+        <Icon className="relative size-5" strokeWidth={2.4} />
+        <span className="relative min-w-0 whitespace-normal leading-tight">{label}</span>
+      </>
+    </Link>
   );
 }
 
@@ -116,10 +118,16 @@ function ModelNavigation({
 }) {
   return (
     <nav aria-label="Models" className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
-      <NavItem to="/" label="Dashboard" icon={DashboardIcon} tilt={-1.5} onNavigate={onNavigate} />
+      <NavItem
+        to="/board"
+        label="Dashboard"
+        icon={DashboardIcon}
+        tilt={-1.5}
+        onNavigate={onNavigate}
+      />
       {canReadResearch && (
         <NavItem
-          to="/knowledge"
+          to="/board/knowledge"
           label="Knowledge explorer"
           icon={Network}
           tilt={-1.2}
@@ -128,7 +136,7 @@ function ModelNavigation({
       )}
       {canEditStories && (
         <NavItem
-          to="/stories/workbench"
+          to="/board/stories/workbench"
           label="Story workbench"
           icon={BookOpenCheck}
           tilt={1.1}
@@ -145,7 +153,7 @@ function ModelNavigation({
           {items.map((item, i) => (
             <NavItem
               key={item.model}
-              to={`/m/${item.model}`}
+              to={`/board/m/${item.model}`}
               label={item.menu.label ?? modelLabel(item.model)}
               icon={modelIcon(item.model)}
               tilt={i % 2 ? 1.2 : -1.5}
@@ -158,7 +166,7 @@ function ModelNavigation({
   );
 }
 
-export function AppShell() {
+export function AppShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const { theme, toggle } = useTheme();
   const { data: models, isLoading } = useModels();
@@ -183,7 +191,7 @@ export function AppShell() {
     updateDevelopmentMode(developmentMode);
   }, [developmentMode]);
 
-  const navigate = useNavigate();
+  const router = useRouter();
 
   // Query accessible companies for the tenant switcher
   const { data: companiesData } = useQuery({
@@ -270,7 +278,7 @@ export function AppShell() {
           model: 'base.activity',
           title: a.summary,
           type: 'activity',
-          targetUrl: `/m/${a.resource_model}/${a.resource_id}`,
+          targetUrl: `/board/m/${a.resource_model}/${a.resource_id}`,
         });
       }
       return items;
@@ -332,7 +340,7 @@ export function AppShell() {
     <div className="grid min-h-dvh grid-cols-1 lg:grid-cols-[16rem_minmax(0,1fr)]">
       <ToastHost theme={theme} />
       {/* Sidebar: scoped .dark tokens keep it ink-black with light ink in BOTH themes. */}
-      <aside className="dark sticky top-0 hidden h-dvh flex-col border-r-4 border-[#0d0d0d] bg-[#0d0d0d] text-ink lg:flex">
+      <aside className="dark sticky top-0 hidden h-dvh flex-col border-r-4 border-ink bg-[#0d0d0d] text-ink lg:flex">
         <div className="relative border-b-2 border-dashed border-ink/20 px-5 py-5">
           <Logo />
         </div>
@@ -343,7 +351,7 @@ export function AppShell() {
           canEditStories={canEditStories}
         />
         <div className="border-t-2 border-dashed border-ink/20 p-3">
-          <button
+          <Button
             type="button"
             onClick={toggleDevelopmentMode}
             aria-pressed={developmentMode}
@@ -351,12 +359,12 @@ export function AppShell() {
               'flex w-full items-center gap-3 border-2 px-3 py-2 text-left font-mono text-xs uppercase tracking-wider transition-colors',
               developmentMode
                 ? 'border-lime bg-lime text-on-accent font-bold'
-                : 'border-ink/30 text-ink-soft hover:border-ink hover:text-ink'
+                : 'border-ink/30 bg-transparent text-ink-soft hover:border-ink hover:text-ink'
             )}
           >
             <Code2 className="size-4" />
             {developmentMode ? 'Development Mode: On' : 'Development Mode'}
-          </button>
+          </Button>
         </div>
         <div className="flex items-center gap-2 border-t-2 border-dashed border-ink/20 px-5 py-4 font-mono text-[11px] uppercase tracking-widest text-ink-faint">
           <Doodle kind="bolt" className="size-4" /> +1 every day
@@ -378,7 +386,7 @@ export function AppShell() {
             </SheetTrigger>
             <SheetContent
               side="left"
-              className="dark w-[min(18rem,85vw)] gap-0 border-r-4 border-[#0d0d0d] bg-[#0d0d0d] p-0 text-ink"
+              className="dark w-[min(18rem,85vw)] gap-0 border-r-4 border-ink bg-[#0d0d0d] p-0 text-ink"
               aria-label="Model navigation"
             >
               <div className="border-b-2 border-dashed border-ink/20 px-5 py-5">
@@ -392,7 +400,7 @@ export function AppShell() {
                 onNavigate={() => setMobileNavOpen(false)}
               />
               <div className="border-t-2 border-dashed border-ink/20 p-3">
-                <button
+                <Button
                   type="button"
                   onClick={toggleDevelopmentMode}
                   aria-pressed={developmentMode}
@@ -400,12 +408,12 @@ export function AppShell() {
                     'flex w-full items-center gap-3 border-2 px-3 py-2 text-left font-mono text-xs uppercase tracking-wider transition-colors',
                     developmentMode
                       ? 'border-lime bg-lime text-on-accent font-bold'
-                      : 'border-ink/30 text-ink-soft hover:border-ink hover:text-ink'
+                      : 'border-ink/30 bg-transparent text-ink-soft hover:border-ink hover:text-ink'
                   )}
                 >
                   <Code2 className="size-4" />
                   {developmentMode ? 'Development Mode: On' : 'Development Mode'}
-                </button>
+                </Button>
               </div>
               <div className="flex items-center gap-2 border-t-2 border-dashed border-ink/20 px-5 py-4 font-mono text-[11px] uppercase tracking-widest text-ink-faint">
                 <Doodle kind="bolt" className="size-4" /> +1 every day
@@ -414,7 +422,7 @@ export function AppShell() {
           </Sheet>
 
           {/* Omnisearch trigger button */}
-          <button
+          <Button
             id="open-command-palette"
             ref={commandPaletteTriggerRef}
             onClick={() => setPaletteOpen(true)}
@@ -425,7 +433,7 @@ export function AppShell() {
             <kbd className="ml-auto hidden shrink-0 border border-ink px-1.5 font-mono text-[11px] text-ink sm:block">
               Ctrl K
             </kbd>
-          </button>
+          </Button>
 
           <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
             {/* Tenant / Company Switcher */}
@@ -482,6 +490,7 @@ export function AppShell() {
             {/* Activity Notification Center */}
             <ActivityBell />
             <NotificationBell />
+            <SoundToggle />
 
             {/* Keyboard Shortcuts Trigger */}
             <Button
@@ -533,14 +542,14 @@ export function AppShell() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <NavLink to="/profile" className="flex cursor-pointer items-center gap-2">
+                  <Link href="/board/profile" className="flex cursor-pointer items-center gap-2">
                     <MoonWitnessUserIcon className="size-4" /> Profile
-                  </NavLink>
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <NavLink to="/settings" className="flex cursor-pointer items-center gap-2">
+                  <Link href="/board/settings" className="flex cursor-pointer items-center gap-2">
                     <MoonWitnessSettingsIcon className="size-4" /> Settings
-                  </NavLink>
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem className="sm:hidden" onSelect={toggle}>
                   {theme === 'dark' ? <Sun /> : <Moon />}
@@ -556,7 +565,7 @@ export function AppShell() {
         </header>
 
         <main className="min-w-0 flex-1 px-4 py-6 pb-24 sm:px-6 sm:py-8 sm:pb-8 lg:px-10">
-          <Outlet key={activeCompanyId ?? 'default-company'} />
+          <div key={activeCompanyId ?? 'default-company'}>{children}</div>
         </main>
       </div>
 
@@ -596,7 +605,7 @@ export function AppShell() {
                     onSelect={() => {
                       setPaletteOpen(false);
                       setPaletteQuery('');
-                      navigate(item.targetUrl ?? `/m/${item.model}/${item.id}`);
+                      router.push(item.targetUrl ?? `/board/m/${item.model}/${item.id}`);
                     }}
                     className="flex items-center gap-2 cursor-pointer"
                   >
@@ -623,7 +632,7 @@ export function AppShell() {
                     onSelect={() => {
                       setPaletteOpen(false);
                       setPaletteQuery('');
-                      navigate(`/m/${item.model}`);
+                      router.push(`/board/m/${item.model}`);
                     }}
                   >
                     <Icon /> {item.menu.label ?? modelLabel(item.model)}

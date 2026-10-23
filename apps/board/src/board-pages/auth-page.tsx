@@ -1,10 +1,14 @@
-import { useState, type FormEvent } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router';
+'use client';
+
+import { useEffect, useState, type FormEvent } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'motion/react';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { ApiError } from '@moonwitness/client';
 import { useAuth } from '@/hooks/use-auth-context';
 import { Button } from '@moonwitness/ui/components/button';
+import { useSfx } from '@moonwitness/ui/components/audio';
 import { Input } from '@moonwitness/ui/components/input';
 import { Label } from '@moonwitness/ui/components/label';
 import { Doodle, InkUnderline, SpeechBubble, SpeedLines } from '@/components/manga/effects';
@@ -13,25 +17,31 @@ import { Logo } from '@/components/manga/logo';
 type Mode = 'login' | 'register';
 
 function safeReturnPath(value: unknown): string {
-  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//')) return '/';
+  if (typeof value !== 'string' || !value.startsWith('/board') || value.startsWith('//'))
+    return '/board';
   try {
     const target = new URL(value, window.location.origin);
-    if (target.origin !== window.location.origin) return '/';
+    if (target.origin !== window.location.origin || !target.pathname.startsWith('/board'))
+      return '/board';
     return `${target.pathname}${target.search}${target.hash}`;
   } catch {
-    return '/';
+    return '/board';
   }
 }
 
 export function AuthPage({ mode }: { mode: Mode }) {
   const { user, login, register } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
+  const { play } = useSfx();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const from = safeReturnPath((location.state as { from?: unknown } | null)?.from);
+  const from = safeReturnPath(searchParams?.get('returnTo'));
 
-  if (user) return <Navigate to={from} replace />;
+  useEffect(() => {
+    if (user) router.replace(from);
+  }, [from, router, user]);
+  if (user) return null;
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -50,7 +60,8 @@ export function AuthPage({ mode }: { mode: Mode }) {
           email: value('email'),
         });
       }
-      navigate(from, { replace: true });
+      play('success');
+      router.replace(from);
     } catch (err) {
       setError(
         err instanceof ApiError ? err.message : 'Cannot reach the server. Is the API running?'
@@ -169,16 +180,12 @@ export function AuthPage({ mode }: { mode: Mode }) {
           <p className="mt-6 text-sm text-ink-soft">
             {isLogin ? 'No account yet? ' : 'Already have one? '}
             <Button asChild variant="link" className="h-auto p-0 text-sm text-ink">
-              <a
+              <Link
                 id="auth-switch"
-                href={isLogin ? '/register' : '/login'}
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigate(isLogin ? '/register' : '/login', { state: location.state });
-                }}
+                href={`${isLogin ? '/register' : '/login'}?returnTo=${encodeURIComponent(from)}`}
               >
                 {isLogin ? 'Register' : 'Sign in'}
-              </a>
+              </Link>
             </Button>
           </p>
         </motion.div>

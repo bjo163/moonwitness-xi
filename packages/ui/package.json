@@ -129,6 +129,14 @@
       "types": "./dist/components/chart.d.ts",
       "import": "./dist/components/chart.js"
     },
+    "./components/effects": {
+      "types": "./dist/components/effects.d.ts",
+      "import": "./dist/components/effects.js"
+    },
+    "./components/audio": {
+      "types": "./dist/components/audio.d.ts",
+      "import": "./dist/components/audio.js"
+    },
     "./icons": {
       "types": "./dist/icons/index.d.ts",
       "import": "./dist/icons/index.js"

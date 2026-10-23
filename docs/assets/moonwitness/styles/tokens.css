@@ -10,6 +10,16 @@
   --mw-ink-faint: #6b695f;
   --mw-lime: #e6ff00;
   --mw-pink: #ff2e88;
+  --mw-signal-blue: #168de2;
+  --mw-night: #0d0d0d;
+  --mw-night-raised: #17171a;
+  --mw-night-blue: #092c49;
+  --mw-night-magenta: #421027;
+  --mw-paper-highlight: #e3dfd4;
+  --mw-paper-muted: #cbc7bd;
+  --mw-moon: #b6cad7;
+  --mw-yellow: #e6ff00;
+  --mw-magenta: #ff2e88;
   --mw-on-accent: #0d0d0d;
   --mw-on-pink: #0d0d0d;
   --mw-halftone-dot: rgb(13 13 13 / 13%);
@@ -76,6 +86,11 @@
   --mw-motion-fast: 120ms;
   --mw-motion-normal: 160ms;
   --mw-motion-ease: ease;
+  --mw-layer-base: 0;
+  --mw-layer-raised: 10;
+  --mw-layer-sticky: 20;
+  --mw-layer-overlay: 40;
+  --mw-layer-toast: 60;
 }
 
 .dark {

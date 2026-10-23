@@ -1,3 +1,4 @@
+import { Button } from '@moonwitness/ui/components/button';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Check, ChevronsUpDown, X } from 'lucide-react';
@@ -233,7 +234,7 @@ function Many2oneWidget({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button
+        <Button
           id={id}
           type="button"
           disabled={disabled}
@@ -254,7 +255,7 @@ function Many2oneWidget({
             />
           )}
           <ChevronsUpDown className={cn('size-4 shrink-0', !value && 'ml-auto')} />
-        </button>
+        </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
         <Command shouldFilter={false}>

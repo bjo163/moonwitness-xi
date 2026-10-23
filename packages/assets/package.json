@@ -9,6 +9,7 @@
     "fonts",
     "icons",
     "illustrations",
+    "sounds",
     "manifest.json",
     "licenses.json",
     "README.md"
@@ -19,6 +20,7 @@
     "./fonts.css": "./fonts.css",
     "./icons/*": "./icons/*",
     "./illustrations/*": "./illustrations/*",
+    "./sounds/*": "./sounds/*",
     "./manifest.json": "./manifest.json",
     "./licenses.json": "./licenses.json"
   }

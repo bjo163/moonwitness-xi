@@ -33,7 +33,7 @@ async function signIn(page: Page, login: string, password: string) {
   await page.getByLabel('Login').fill(login);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Enter the board' }).click();
-  await expect(page).toHaveURL(/\/$/u);
+  await expect(page).toHaveURL(/\/board$/u);
 }
 
 test('superadmin research access follows company context and source locators', async ({

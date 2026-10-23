@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell, Check, Inbox } from 'lucide-react';
 import { Button } from '@moonwitness/ui/components/button';
@@ -25,7 +25,7 @@ interface InboxResponse {
 
 export function NotificationBell() {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const queryKey = scopedQueryKey(['notification_inbox', user?.id]);
@@ -79,7 +79,7 @@ export function NotificationBell() {
             size="xs"
             onClick={() => {
               setOpen(false);
-              navigate('/m/notification.notification');
+              router.push('/board/m/notification.notification');
             }}
           >
             View all

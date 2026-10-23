@@ -56,7 +56,7 @@ test('superadmin searches live PostgreSQL knowledge and opens its pinned passage
   await page.getByLabel('Login').fill('superadmin');
   await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the board' }).click();
-  await expect(page).toHaveURL(/\/$/u);
+  await expect(page).toHaveURL(/\/board$/u);
 
   const companySwitcher = page.getByRole('button', {
     name: 'Switch company. Current scope: Global Scope',

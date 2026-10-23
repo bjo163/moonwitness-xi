@@ -20,12 +20,13 @@ const docsPlaywrightConfig = await readFile(
 const uiCatalogManifest = JSON.parse(
   await readFile(new URL('../apps/ui-catalog/package.json', import.meta.url), 'utf8')
 );
-const workflow = await readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
+const workflow = (
+  await readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8')
+).replace(/\r\n/gu, '\n');
 const quality = workflow.split('  quality:\n')[1]?.split('\n  automation:\n')[0] ?? '';
-const releaseWorkflow = await readFile(
-  new URL('../.github/workflows/release.yml', import.meta.url),
-  'utf8'
-);
+const releaseWorkflow = (
+  await readFile(new URL('../.github/workflows/release.yml', import.meta.url), 'utf8')
+).replace(/\r\n/gu, '\n');
 
 test('local and CI unit lanes run the offline knowledge CLI against the existing build', async () => {
   const runner = await readFile(new URL('./run-unit-tests.mjs', import.meta.url), 'utf8');

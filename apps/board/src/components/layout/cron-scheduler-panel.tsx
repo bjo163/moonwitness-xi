@@ -1,3 +1,12 @@
+import {
+  Table,
+  TableHead,
+  TableRow,
+  TableHeader,
+  TableBody,
+  TableCell,
+} from '@moonwitness/ui/components/table';
+import { Checkbox } from '@moonwitness/ui/components/checkbox';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -233,40 +242,42 @@ export function CronSchedulerPanel({ onOpenFailureTriage }: CronSchedulerPanelPr
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full font-mono text-xs text-left">
-              <thead className="border-b-2 border-ink bg-card text-ink font-bold uppercase">
-                <tr>
-                  <th className="p-3 border-r border-ink/20">Name & Code</th>
-                  <th className="p-3 border-r border-ink/20">Target Handler</th>
-                  <th className="p-3 border-r border-ink/20">Schedule</th>
-                  <th className="p-3 border-r border-ink/20">Timezone</th>
-                  <th className="p-3 border-r border-ink/20">Next Run</th>
-                  <th className="p-3 border-r border-ink/20">Status</th>
-                  <th className="p-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y-2 divide-ink/10 bg-paper">
+            <Table className="w-full font-mono text-xs text-left">
+              <TableHead className="border-b-2 border-ink bg-card text-ink font-bold uppercase">
+                <TableRow>
+                  <TableHeader className="p-3 border-r border-ink/20">Name & Code</TableHeader>
+                  <TableHeader className="p-3 border-r border-ink/20">Target Handler</TableHeader>
+                  <TableHeader className="p-3 border-r border-ink/20">Schedule</TableHeader>
+                  <TableHeader className="p-3 border-r border-ink/20">Timezone</TableHeader>
+                  <TableHeader className="p-3 border-r border-ink/20">Next Run</TableHeader>
+                  <TableHeader className="p-3 border-r border-ink/20">Status</TableHeader>
+                  <TableHeader className="p-3 text-right">Actions</TableHeader>
+                </TableRow>
+              </TableHead>
+              <TableBody className="divide-y-2 divide-ink/10 bg-paper">
                 {crons.map((cron) => (
-                  <tr key={cron.id} className="hover:bg-paper-raised/60">
-                    <td className="p-3 border-r border-ink/20 font-bold text-ink">
+                  <TableRow key={cron.id} className="hover:bg-paper-raised/60">
+                    <TableCell className="p-3 border-r border-ink/20 font-bold text-ink">
                       <div>{cron.name}</div>
                       <span className="text-[10px] text-ink-faint">{cron.code}</span>
-                    </td>
-                    <td className="p-3 border-r border-ink/20 text-ink-soft">
+                    </TableCell>
+                    <TableCell className="p-3 border-r border-ink/20 text-ink-soft">
                       <span className="border border-ink/40 bg-card px-1.5 py-0.5">
                         {cron.handler}
                       </span>
-                    </td>
-                    <td className="p-3 border-r border-ink/20">
+                    </TableCell>
+                    <TableCell className="p-3 border-r border-ink/20">
                       <code className="bg-lime/20 border border-ink/30 px-1.5 py-0.5 font-bold">
                         {cron.cron_expression}
                       </code>
-                    </td>
-                    <td className="p-3 border-r border-ink/20 text-ink-faint">{cron.timezone}</td>
-                    <td className="p-3 border-r border-ink/20 text-ink">
+                    </TableCell>
+                    <TableCell className="p-3 border-r border-ink/20 text-ink-faint">
+                      {cron.timezone}
+                    </TableCell>
+                    <TableCell className="p-3 border-r border-ink/20 text-ink">
                       {cron.next_run_at ? formatDateTime(cron.next_run_at) : '—'}
-                    </td>
-                    <td className="p-3 border-r border-ink/20">
+                    </TableCell>
+                    <TableCell className="p-3 border-r border-ink/20">
                       {cron.enabled ? (
                         <span className="border-2 border-ink bg-lime text-on-accent px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider shadow-[1px_1px_0_0_var(--ink)]">
                           Active
@@ -276,8 +287,8 @@ export function CronSchedulerPanel({ onOpenFailureTriage }: CronSchedulerPanelPr
                           Paused
                         </span>
                       )}
-                    </td>
-                    <td className="p-3 text-right">
+                    </TableCell>
+                    <TableCell className="p-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <Button
                           variant="outline"
@@ -310,11 +321,11 @@ export function CronSchedulerPanel({ onOpenFailureTriage }: CronSchedulerPanelPr
                           )}
                         </Button>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </div>
@@ -352,23 +363,27 @@ export function CronSchedulerPanel({ onOpenFailureTriage }: CronSchedulerPanelPr
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full font-mono text-xs text-left">
-              <thead className="border-b-2 border-ink bg-card text-ink font-bold uppercase">
-                <tr>
-                  <th className="p-3 border-r border-ink/20">Job ID</th>
-                  <th className="p-3 border-r border-ink/20">Handler</th>
-                  <th className="p-3 border-r border-ink/20">Status</th>
-                  <th className="p-3 border-r border-ink/20">Attempts</th>
-                  <th className="p-3 border-r border-ink/20">Lease Owner</th>
-                  <th className="p-3 text-right">Created</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y-2 divide-ink/10 bg-paper">
+            <Table className="w-full font-mono text-xs text-left">
+              <TableHead className="border-b-2 border-ink bg-card text-ink font-bold uppercase">
+                <TableRow>
+                  <TableHeader className="p-3 border-r border-ink/20">Job ID</TableHeader>
+                  <TableHeader className="p-3 border-r border-ink/20">Handler</TableHeader>
+                  <TableHeader className="p-3 border-r border-ink/20">Status</TableHeader>
+                  <TableHeader className="p-3 border-r border-ink/20">Attempts</TableHeader>
+                  <TableHeader className="p-3 border-r border-ink/20">Lease Owner</TableHeader>
+                  <TableHeader className="p-3 text-right">Created</TableHeader>
+                </TableRow>
+              </TableHead>
+              <TableBody className="divide-y-2 divide-ink/10 bg-paper">
                 {jobs.map((job) => (
-                  <tr key={job.id} className="hover:bg-paper-raised/60">
-                    <td className="p-3 border-r border-ink/20 font-bold text-ink">#{job.id}</td>
-                    <td className="p-3 border-r border-ink/20 text-ink">{job.handler}</td>
-                    <td className="p-3 border-r border-ink/20">
+                  <TableRow key={job.id} className="hover:bg-paper-raised/60">
+                    <TableCell className="p-3 border-r border-ink/20 font-bold text-ink">
+                      #{job.id}
+                    </TableCell>
+                    <TableCell className="p-3 border-r border-ink/20 text-ink">
+                      {job.handler}
+                    </TableCell>
+                    <TableCell className="p-3 border-r border-ink/20">
                       <span
                         className={cn(
                           'border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider',
@@ -383,20 +398,20 @@ export function CronSchedulerPanel({ onOpenFailureTriage }: CronSchedulerPanelPr
                       >
                         {job.status}
                       </span>
-                    </td>
-                    <td className="p-3 border-r border-ink/20 text-ink-soft">
+                    </TableCell>
+                    <TableCell className="p-3 border-r border-ink/20 text-ink-soft">
                       {job.attempts} / {job.max_attempts}
-                    </td>
-                    <td className="p-3 border-r border-ink/20 text-ink-faint">
+                    </TableCell>
+                    <TableCell className="p-3 border-r border-ink/20 text-ink-faint">
                       {job.lease_owner || '—'}
-                    </td>
-                    <td className="p-3 text-right text-ink-faint">
+                    </TableCell>
+                    <TableCell className="p-3 text-right text-ink-faint">
                       {job.create_date ? formatDateTime(job.create_date, 'time') : '—'}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </div>
@@ -484,8 +499,7 @@ export function CronSchedulerPanel({ onOpenFailureTriage }: CronSchedulerPanelPr
             </div>
 
             <div className="flex items-center gap-2 pt-2">
-              <input
-                type="checkbox"
+              <Checkbox
                 id="cron-enabled-check"
                 checked={cronEnabled}
                 onChange={(e) => setCronEnabled(e.target.checked)}

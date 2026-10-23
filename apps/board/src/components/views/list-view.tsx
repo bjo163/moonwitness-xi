@@ -1,3 +1,14 @@
+import {
+  Table as UiTable,
+  TableHead,
+  TableRow,
+  TableHeader,
+  TableBody,
+  TableCell,
+} from '@moonwitness/ui/components/table';
+import { Checkbox } from '@moonwitness/ui/components/checkbox';
+import { SelectField } from '@moonwitness/ui/components/select-field';
+import { Button } from '@moonwitness/ui/components/button';
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -27,7 +38,6 @@ import { formatDateTime } from '@/lib/date-format';
 import { serializeCsv } from '@/lib/csv-export';
 import { scopedQueryKey } from '@/lib/query-scope';
 import { useRecordMutations, useRecords } from '@/hooks/use-model';
-import { Button } from '@moonwitness/ui/components/button';
 import { Input } from '@moonwitness/ui/components/input';
 import { Skeleton } from '@moonwitness/ui/components/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@moonwitness/ui/components/popover';
@@ -500,7 +510,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
               {filters.map((filter, idx) => {
                 const active = activeFilterIndex === idx;
                 return (
-                  <button
+                  <Button
                     key={filter.label}
                     type="button"
                     data-active={active}
@@ -512,7 +522,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                     style={{ '--tilt': `${(idx % 3) - 1.2}deg` } as React.CSSProperties}
                   >
                     {filter.label}
-                  </button>
+                  </Button>
                 );
               })}
 
@@ -525,26 +535,26 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                   <span>
                     {cf.fieldLabel} {cf.operator} &quot;{cf.value}&quot;
                   </span>
-                  <button
+                  <Button
                     type="button"
                     onClick={() => setCustomFilters((prev) => prev.filter((f) => f.id !== cf.id))}
                     className="ml-1 hover:text-pink transition-colors"
                     title="Remove filter"
                   >
                     <X className="size-3" />
-                  </button>
+                  </Button>
                 </span>
               ))}
 
               {/* Add Custom Filter Popover */}
               <Popover open={filterBuilderOpen} onOpenChange={setFilterBuilderOpen}>
                 <PopoverTrigger asChild>
-                  <button
+                  <Button
                     type="button"
                     className="inline-flex items-center gap-1 border-2 border-dashed border-ink/40 bg-card px-2 py-0.5 font-mono text-xs font-semibold text-ink-faint hover:border-ink hover:text-ink hover:bg-paper-raised transition-colors"
                   >
                     <Plus className="size-3" /> Filter
-                  </button>
+                  </Button>
                 </PopoverTrigger>
                 <PopoverContent align="start" className="w-64 p-3 space-y-3 font-sans">
                   <div className="font-display text-xs uppercase tracking-wider text-ink border-b border-ink/20 pb-1.5 flex items-center justify-between">
@@ -555,7 +565,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                   <div className="space-y-2 font-mono text-xs">
                     <div>
                       <span className="block text-[10px] uppercase text-ink-faint mb-1">Field</span>
-                      <select
+                      <SelectField
                         value={builderField}
                         onChange={(e) => setBuilderField(e.target.value)}
                         className="w-full h-8 border-2 border-ink bg-paper px-2 text-xs text-ink outline-none"
@@ -567,14 +577,14 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                               {f.label} ({f.name})
                             </option>
                           ))}
-                      </select>
+                      </SelectField>
                     </div>
 
                     <div>
                       <span className="block text-[10px] uppercase text-ink-faint mb-1">
                         Condition
                       </span>
-                      <select
+                      <SelectField
                         value={builderOp}
                         onChange={(e) =>
                           setBuilderOp(e.target.value as '=' | '!=' | 'ilike' | '>' | '<')
@@ -586,7 +596,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                         <option value="!=">not equal</option>
                         <option value=">">greater than</option>
                         <option value="<">less than</option>
-                      </select>
+                      </SelectField>
                     </div>
 
                     <div>
@@ -637,19 +647,19 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                     {views.fields.find((f) => f.name === ar.field)?.label ?? ar.field} {ar.operator}{' '}
                     {ar.operator !== 'is_set' && ar.operator !== 'is_null' ? `"${ar.value}"` : ''}
                   </span>
-                  <button
+                  <Button
                     type="button"
                     onClick={() => setAdvancedRules((prev) => prev.filter((r) => r.id !== ar.id))}
                     className="ml-1 hover:text-pink transition-colors"
                     title="Remove filter"
                   >
                     <X className="size-3" />
-                  </button>
+                  </Button>
                 </span>
               ))}
 
               {/* Advanced Query Builder Trigger Button */}
-              <button
+              <Button
                 type="button"
                 onClick={() => setQueryBuilderOpen(true)}
                 className="inline-flex items-center gap-1 border-2 border-dashed border-ink/40 bg-card px-2 py-0.5 font-mono text-xs font-semibold text-ink-faint hover:border-ink hover:text-ink hover:bg-paper-raised transition-colors"
@@ -661,10 +671,10 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                     {advancedRules.length}
                   </span>
                 )}
-              </button>
+              </Button>
 
               {(customFilters.length > 0 || advancedRules.length > 0) && (
-                <button
+                <Button
                   type="button"
                   onClick={() => {
                     setCustomFilters([]);
@@ -673,14 +683,14 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                   className="font-mono text-[10px] uppercase text-ink-faint hover:text-pink underline"
                 >
                   Clear all
-                </button>
+                </Button>
               )}
             </div>
           )}
 
           {/* Triple View Toggle: Table, Grid, Pipeline */}
           <div className="flex items-center border-2 border-ink bg-card p-0.5 shadow-ink-sm">
-            <button
+            <Button
               type="button"
               onClick={() => setViewMode('table')}
               className={cn(
@@ -693,8 +703,8 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
             >
               <Table className="size-3.5" />
               <span className="hidden sm:inline">Table</span>
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={() => setViewMode('grid')}
               className={cn(
@@ -707,8 +717,8 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
             >
               <LayoutGrid className="size-3.5" />
               <span className="hidden sm:inline">Grid</span>
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={() => setViewMode('pipeline')}
               className={cn(
@@ -721,7 +731,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
             >
               <Columns3 className="size-3.5" />
               <span className="hidden sm:inline">Pipeline</span>
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -790,8 +800,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                   >
                     <div className="flex min-w-0 items-start justify-between gap-3">
                       <div className="flex min-w-0 items-start gap-2">
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           aria-label={`Select record #${row.id}`}
                           checked={selected}
                           onClick={(event) => event.stopPropagation()}
@@ -853,12 +862,11 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
             aria-label={`${views.title} records table`}
             tabIndex={0}
           >
-            <table className="hidden w-full border-collapse text-left text-sm sm:table">
-              <thead>
-                <tr className="border-b-2 border-ink bg-paper font-display uppercase tracking-wider text-ink">
-                  <th className="w-10 px-4 py-3 text-center">
-                    <input
-                      type="checkbox"
+            <UiTable className="hidden w-full min-w-[1200px] border-collapse text-left text-sm sm:table">
+              <TableHead>
+                <TableRow className="border-b-2 border-ink bg-paper font-display uppercase tracking-wider text-ink">
+                  <TableHeader className="w-10 px-4 py-3 text-center">
+                    <Checkbox
                       aria-label="Select all records on current page"
                       checked={areAllOnPageSelected}
                       ref={(el) => {
@@ -867,11 +875,11 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                       onChange={(e) => handleSelectAllCurrentPage(e.target.checked)}
                       className="size-4 cursor-pointer accent-lime border-2 border-ink rounded-none bg-paper"
                     />
-                  </th>
+                  </TableHeader>
                   {columns.map((col) => {
                     const isSorted = sortState?.col === col.name;
                     return (
-                      <th
+                      <TableHeader
                         key={col.name}
                         onClick={() => handleSort(col.name)}
                         className="cursor-pointer select-none px-4 py-3 text-xs transition-colors hover:bg-lime/25"
@@ -895,32 +903,32 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                             <ArrowUpDown className="size-3 text-ink-faint opacity-30 hover:opacity-100" />
                           )}
                         </div>
-                      </th>
+                      </TableHeader>
                     );
                   })}
-                  <th className="px-4 py-3 text-right text-xs">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y-2 divide-ink/10 font-sans">
+                  <TableHeader className="px-4 py-3 text-right text-xs">Action</TableHeader>
+                </TableRow>
+              </TableHead>
+              <TableBody className="divide-y-2 divide-ink/10 font-sans">
                 {isLoading ? (
                   Array.from({ length: 5 }, (_, i) => (
-                    <tr key={i}>
-                      <td className="w-10 px-4 py-3.5 text-center">
+                    <TableRow key={i}>
+                      <TableCell className="w-10 px-4 py-3.5 text-center">
                         <Skeleton className="mx-auto size-4 bg-ink/10" />
-                      </td>
+                      </TableCell>
                       {columns.map((col) => (
-                        <td key={col.name} className="px-4 py-3.5">
+                        <TableCell key={col.name} className="px-4 py-3.5">
                           <Skeleton className="h-5 w-24 bg-ink/10" />
-                        </td>
+                        </TableCell>
                       ))}
-                      <td className="px-4 py-3.5 text-right">
+                      <TableCell className="px-4 py-3.5 text-right">
                         <Skeleton className="ml-auto h-5 w-12 bg-ink/10" />
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))
                 ) : data?.records.length === 0 ? (
-                  <tr>
-                    <td colSpan={columns.length + 2} className="py-16 text-center">
+                  <TableRow>
+                    <TableCell colSpan={columns.length + 2} className="py-16 text-center">
                       <div className="mx-auto max-w-sm space-y-3">
                         <Doodle kind="sparkle" className="mx-auto size-8 text-lime" />
                         <p className="font-display text-xl uppercase">No records found</p>
@@ -940,33 +948,32 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                           </Button>
                         )}
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   data?.records.map((row) => (
-                    <tr
+                    <TableRow
                       key={row.id}
                       onClick={() => onOpenRecord(row.id)}
                       className="cursor-pointer transition-colors hover:bg-lime/25"
                     >
-                      <td
+                      <TableCell
                         className="w-10 px-4 py-3.5 text-center"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           aria-label={`Select record #${row.id}`}
                           checked={selectedIds.includes(row.id as number)}
                           onChange={() => toggleSelect(row.id as number)}
                           className="size-4 cursor-pointer accent-lime border-2 border-ink rounded-none bg-paper"
                         />
-                      </td>
+                      </TableCell>
                       {columns.map((col) => (
-                        <td key={col.name} className="px-4 py-3.5 text-ink">
+                        <TableCell key={col.name} className="px-4 py-3.5 text-ink">
                           <FieldCell field={col} row={row} />
-                        </td>
+                        </TableCell>
                       ))}
-                      <td className="px-4 py-3.5 text-right">
+                      <TableCell className="px-4 py-3.5 text-right">
                         <Button
                           variant="ghost"
                           size="xs"
@@ -978,12 +985,12 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                         >
                           Open →
                         </Button>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))
                 )}
-              </tbody>
-            </table>
+              </TableBody>
+            </UiTable>
           </div>
         </div>
       )}
@@ -1045,8 +1052,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                           className="flex items-center gap-2"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <input
-                            type="checkbox"
+                          <Checkbox
                             aria-label={`Select record #${row.id}`}
                             checked={isSelected}
                             onChange={() => toggleSelect(row.id as number)}
@@ -1413,7 +1419,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
               ) : (
                 <div className="max-h-48 overflow-y-auto space-y-1">
                   {availableTags.map((tag) => (
-                    <button
+                    <Button
                       key={tag.id}
                       type="button"
                       onClick={() => handleMassTag(tag.id)}
@@ -1421,10 +1427,10 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                     >
                       <span
                         className="size-2.5 border border-ink shrink-0"
-                        style={{ backgroundColor: tag.color || '#E6FF00' }}
+                        style={{ backgroundColor: tag.color || 'var(--mw-yellow)' }}
                       />
                       <span className="truncate">{tag.name}</span>
-                    </button>
+                    </Button>
                   ))}
                 </div>
               )}

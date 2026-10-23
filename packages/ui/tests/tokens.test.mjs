@@ -123,7 +123,10 @@ test('component CSS contains no global element or ID selectors', async () => {
     selectorGroup
       .split(',')
       .map((selector) => selector.trim())
-      .some((selector) => !selector.startsWith('.mw-ui-'))
+      .some(
+        (selector) =>
+          !selector.startsWith('.mw-ui-') && !/^(?:from|to|\d+(?:\.\d+)?%)$/u.test(selector)
+      )
   );
   assert.equal(
     invalidSelector,

@@ -1,4 +1,6 @@
-import { useNavigate, useParams, useSearchParams } from 'react-router';
+'use client';
+
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useViews } from '@/hooks/use-model';
 import { Skeleton } from '@moonwitness/ui/components/skeleton';
 import { Doodle } from '@/components/manga/effects';
@@ -7,17 +9,19 @@ import { ListView } from '@/components/views/list-view';
 import { FormView } from '@/components/views/form-view';
 
 export function ModelPage() {
-  const { model = '', id } = useParams<{ model: string; id?: string }>();
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const params = useParams<{ model: string; id?: string }>();
+  const model = params?.model ?? '';
+  const id = params?.id;
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const { data: views, isLoading, error } = useViews(model);
 
-  const isCreate = id === 'new' || searchParams.get('create') === '1';
+  const isCreate = id === 'new' || searchParams?.get('create') === '1';
   const isEdit = !isCreate && Boolean(id);
   const recordId = isEdit && id ? parseInt(id, 10) : undefined;
-  const relationParentModel = searchParams.get('relation_parent_model');
-  const relationParentIdValue = searchParams.get('relation_parent_id');
-  const relationParentField = searchParams.get('relation_field');
+  const relationParentModel = searchParams?.get('relation_parent_model');
+  const relationParentIdValue = searchParams?.get('relation_parent_id');
+  const relationParentField = searchParams?.get('relation_field');
   const parsedRelationParentId =
     relationParentIdValue && /^\d+$/u.test(relationParentIdValue)
       ? Number(relationParentIdValue)
@@ -42,7 +46,7 @@ export function ModelPage() {
     ? [
         {
           label: views.title,
-          to: id ? `/m/${model}` : undefined,
+          to: id ? `/board/m/${model}` : undefined,
         },
         ...(isCreate ? [{ label: 'New Record' }] : []),
         ...(isEdit ? [{ label: `#${id}` }] : []),
@@ -81,16 +85,17 @@ export function ModelPage() {
           views={views}
           initialValues={relationParent ? { [relationParent.field]: relationParent.id } : undefined}
           onBack={() =>
-            navigate(
-              relationParent ? `/m/${relationParent.model}/${relationParent.id}` : `/m/${model}`
+            router.push(
+              relationParent
+                ? `/board/m/${relationParent.model}/${relationParent.id}`
+                : `/board/m/${model}`
             )
           }
           onSaved={(newId) =>
-            navigate(
+            router.replace(
               relationParent
-                ? `/m/${relationParent.model}/${relationParent.id}`
-                : `/m/${model}/${newId}`,
-              { replace: true }
+                ? `/board/m/${relationParent.model}/${relationParent.id}`
+                : `/board/m/${model}/${newId}`
             )
           }
         />
@@ -99,14 +104,14 @@ export function ModelPage() {
           model={model}
           views={views}
           recordId={recordId}
-          onBack={() => navigate(`/m/${model}`)}
+          onBack={() => router.push(`/board/m/${model}`)}
         />
       ) : (
         <ListView
           model={model}
           views={views}
-          onOpenRecord={(recId) => navigate(`/m/${model}/${recId}`)}
-          onCreateRecord={() => navigate(`/m/${model}/new`)}
+          onOpenRecord={(recId) => router.push(`/board/m/${model}/${recId}`)}
+          onCreateRecord={() => router.push(`/board/m/${model}/new`)}
         />
       )}
     </div>

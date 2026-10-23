@@ -1,3 +1,8 @@
+'use client';
+
+import { Textarea } from '@moonwitness/ui/components/textarea';
+import { SelectField } from '@moonwitness/ui/components/select-field';
+import { Input } from '@moonwitness/ui/components/input';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, BookOpenCheck, Save } from 'lucide-react';
@@ -174,7 +179,7 @@ export function StoryWorkbenchPage() {
           <div className="flex flex-wrap items-end gap-3 border-y border-ink/15 py-3">
             <label className="font-mono text-xs uppercase tracking-wider text-ink-faint">
               <span className="mb-1 block">Inspect previous revision</span>
-              <input
+              <Input
                 aria-label="Previous revision number"
                 type="number"
                 min={1}
@@ -255,7 +260,7 @@ export function StoryWorkbenchPage() {
         <div className="flex flex-wrap items-end gap-3">
           <label className="min-w-48 flex-1 font-mono text-xs uppercase tracking-wider text-ink-faint">
             <span className="mb-1 block">Story page</span>
-            <select
+            <SelectField
               aria-label="Story page"
               value={selectedPage.page_id}
               onChange={(event) => {
@@ -269,7 +274,7 @@ export function StoryWorkbenchPage() {
                   Page {index + 1}
                 </option>
               ))}
-            </select>
+            </SelectField>
           </label>
           <Button type="button" onClick={addPage} disabled={!canEdit || pages.length >= 100}>
             Add page
@@ -302,7 +307,7 @@ export function StoryWorkbenchPage() {
         >
           Page text · exact whitespace is preserved
         </label>
-        <textarea
+        <Textarea
           id="story-page-text"
           value={value}
           onChange={(event) => {

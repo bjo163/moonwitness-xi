@@ -8,7 +8,7 @@ test('development mode reveals technical navigation without changing API access'
   await page.getByLabel('Login').fill('superadmin');
   await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the board' }).click();
-  await expect(page).toHaveURL(/\/$/u);
+  await expect(page).toHaveURL(/\/board$/u);
 
   const session = await page.evaluate(
     () =>
@@ -88,7 +88,7 @@ test('development mode reveals technical navigation without changing API access'
   await page.getByLabel('Login').fill(userLogin);
   await page.getByLabel('Password').fill(userPassword);
   await page.getByRole('button', { name: 'Enter the board' }).click();
-  await expect(page).toHaveURL(/\/$/u);
+  await expect(page).toHaveURL(/\/board$/u);
   await expect(page.getByRole('button', { name: 'Development Mode: On' }).first()).toBeVisible();
   await expect(page.getByRole('link', { name: 'Knowledge explorer' })).toHaveCount(0);
 
@@ -115,13 +115,13 @@ test('development mode reveals technical navigation without changing API access'
     page.getByRole('navigation', { name: 'Models' }).getByRole('link', { name: 'Users' })
   ).toHaveCount(0);
 
-  await page.goto('/knowledge');
+  await page.goto('/board/knowledge');
   await expect(page.getByRole('alert')).toContainText('cannot access research records');
 
   const forbiddenModelResponse = page.waitForResponse((response) =>
     response.url().includes('/api/base.user/views')
   );
-  await page.goto('/m/base.user');
+  await page.goto('/board/m/base.user');
   expect((await forbiddenModelResponse).status()).toBe(403);
   await expect(page.getByText(/you do not have permission to view it/i)).toBeVisible();
 

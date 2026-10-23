@@ -1,39 +1,56 @@
-# `@moonwitness/ui`
+# MoonWitness UI Bible
 
-MoonWitness design tokens, reusable React controls/charts and typed, tree-shakeable icons. The stylesheet has no runtime dependency. Consumers that import React components must provide React 18 or newer; CSS-only consumers do not need React.
+This document is the single shared UI rulebook for MoonWitness. `TOKENS.md` is its technical companion for token values, theme mapping, and contrast. Product copy and feature truth stay with each app; this package owns reusable presentation and interaction behavior.
 
-The control subpaths also require React 18 or newer. Radix-backed controls (`Button`, `Dialog`, `DropdownMenu`, `Label`, `Popover`, `Select`, `Sheet`, `Switch`, `Tabs`, and `Tooltip`) require the optional `radix-ui` 1.6+ peer when imported. `Command` requires the optional `cmdk` 1.1+ peer. Toast exports Sonner's `toast` API and a `ToastHost`; mount the host once in the app root and provide `sonner` 2+. Consumers importing only static tokens/assets do not need these runtimes.
+## Visual direction
 
-Common app-level controls (`Command`, `Label`, `Popover`, `Sheet`, `Switch`, and `Textarea`) are available as stable public subpaths. They provide presentation and accessibility primitives only; they do not own application navigation, API state, or business rules.
+The MoonWitness identity pairs an ink-dark editorial canvas with bright magenta, signal blue, and high-visibility yellow. Homepage references 1–2 guide expressive typography, irregular collage composition, tactile paper/halftone texture, and clear calls to action. Board references 3–4 guide compact panels, crisp section hierarchy, neon signal accents, and dense information layout. They do not define new product features.
 
-Composable, presentation-only building blocks are available as direct subpaths: `components/field`, `skeleton`, `empty-state`, `page-header`, `panel`, `toolbar`, `pagination`, and `table`. They do not fetch data or encode model/business rules. `Field` takes a labeled form control and connects its generated help/error IDs; `Pagination` is controlled with `page`, `pageCount`, and `onPageChange`.
+The existing crescent and wordmark in `@moonwitness/assets` remain the brand source. Use its SVG light, dark, monochrome, symbol, and lockup variants. UI icons come from the canonical SVG files in the same package; `scripts/generate-icons.mjs` creates the typed React wrappers. Do not redraw either source in an app. Use optimized raster artwork for complex scenes, but never rasterize labels, navigation, or important state.
 
-`components/chart` exports dependency-free responsive SVG `BarChart` and `LineChart` primitives. Data is passed in by the application; loading, error, and empty states are explicit props. Each chart provides SVG titles, a legend where applicable, and a visually hidden semantic table alternative. Pass `locale` or `renderValue` for application-specific number formatting. Date/time labels should be formatted by the caller with its explicit locale and timezone so the chart never guesses a user profile preference.
+Keep readable hierarchy ahead of texture. Text, focus, borders, and state labels must meet the contrast and keyboard rules in `TOKENS.md`. Decorations cannot block input or carry meaning by color, animation, or sound alone.
 
-Import an icon from its own subpath to keep unrelated icons out of the application bundle:
+## Component layers
 
-```tsx
-import { UserIcon } from '@moonwitness/ui/icons/user';
+Build upward only when reuse calls for it:
 
-<UserIcon size={20} title="User" />;
-```
+1. **Foundation** — semantic color, type, spacing, shape, layer, shadow, and motion tokens in `styles/tokens.css`.
+2. **Primitive** — one accessible behavior such as `Button`, `Input`, `Checkbox`, `SelectField`, `Textarea`, `Badge`, `Avatar`, and `Skeleton`.
+3. **Composition** — arrangements such as `Field`, `Panel`, `Toolbar`, `Table`, `Pagination`, `PageHeader`, `Dialog`, and `EmptyState`.
+4. **Pattern/effect** — reusable editorial texture, accent marker, signal orbit, loading progress, and sound preference/playback behavior.
 
-Icons are decorative and hidden from assistive technology by default. Pass `title` when the icon conveys information without adjacent text.
+Use the nearest existing public component. Add a component when at least two product surfaces can use it, or when a single surface needs a meaningful accessibility/behavior primitive that cannot be safely duplicated. Put app-specific navigation, data, auth, routes, and domain flows in the app. Avoid wrappers that only rename an element or folders created to satisfy an “atomic” label.
 
-## Stylesheet
+## Import and contribution rules
 
-Import the public token entry once, before component styles:
+Import components and icons only through exported public subpaths, for example `@moonwitness/ui/components/button`, `@moonwitness/ui/components/table`, or `@moonwitness/ui/icons/search`. Never import `packages/ui/dist` or another internal path. CSS is imported once by the app: tokens first, then component styles.
 
-```css
-@import '@moonwitness/ui/styles/tokens.css';
-```
+When adding a shared component:
 
-The stylesheet defines semantic custom properties on `:root` and switches their light/dark surface mappings under `.dark`. It does not set global element styles, load fonts over the network, or require Tailwind. Applications may map these variables to their styling framework without copying the token values.
+1. Confirm its behavior and accessibility contract, then document the public props.
+2. Implement it in `src/components/` with tokens and existing shared helpers.
+3. Add a public export in `package.json`; do not add a giant all-components barrel.
+4. Add or update the package-level behavior/contrast checks for the contract.
+5. Use it from Board/homepage and run `pnpm board:ui:check`.
 
-Semantic component rules are scoped to `.mw-ui-*` classes inside the `components` cascade layer. Import tokens before `components.css`; consumer utility styles outside that layer can override package defaults. Some Radix/command controls use Tailwind utility classes for state and transitions, so Tailwind v4 consumers must include the package's `dist` files as a source (for a local install, for example `@source "../node_modules/@moonwitness/ui/dist";`). Both CSS entry points are explicitly exported and declared as package side effects so bundlers retain them. The JavaScript surface has no aggregate component barrel: direct component and icon subpaths are the stable import contract. Internal `dist` paths are not public APIs.
+Board source must not use raw JSX `<button>`, `<input>`, `<select>`, or `<textarea>`. Use shared controls, including `Checkbox` for checkboxes and `Input` for file controls. The AST gate ignores text, comments, and capitalized component names. It also rejects internal `dist` imports. Run it manually with `pnpm board:ui:check`; the same command runs before push and in quality CI. Errors include the source line, shared replacement, and recheck command.
 
-### Compatibility and releases
+Tables preserve native table semantics. Use the shared table composition for tabular data and keep keyboard/sort behavior, mobile visibility, and horizontal overflow explicit. Form controls preserve labels, `disabled`, focus, validation, controlled values, exact textarea whitespace, and selection state.
 
-The package follows SemVer after stable `1.0.0`; while the version includes an `-rc` prerelease, consumers should pin the exact prerelease and expect API review before stable release. Adding an optional prop or a new subpath is additive. Removing/renaming exports, changing required props or accessibility semantics, changing CSS token meaning, or raising peer/runtime minimums is breaking and requires a major release after stable. Peer ranges are React `>=18`, optional `cmdk >=1.1.1`, `radix-ui >=1.6.7`, and `sonner >=2`; only importing the associated subpath requires its peer. Node `>=20` is the supported tooling/runtime baseline. Import maps/exports and types are verified by the package test suite and tarball smoke check.
+## Motion and effects
 
-See [the token guide](./TOKENS.md) for semantic rules, measured contrast, motion, and chart color use.
+Prefer CSS/SVG and tokenized transitions. Keep animation short and purposeful; honor `prefers-reduced-motion` in both CSS and JavaScript. Stop or avoid continuous work when an effect is off-screen. Load heavy visuals only where used. Do not add canvas/WebGL without a measured need and an explicit performance budget.
+
+Loading UI belongs only to a real pending request or operation. Use skeletons for known content shape and a labeled progress indicator for an active operation. Empty, error, success, and loading states always include visible text; effects only reinforce them. Do not animate indefinitely after work finishes.
+
+## Sound
+
+Use `SoundProvider`, `useSfx`, and `SoundToggle` from `components/audio`; never load audio files from individual Board components. The provider activates playback only after the first pointer or keyboard interaction, honors the locally saved mute choice, and creates audio lazily on use. The package asset catalog is limited to named short cues. Use sound only for selected success, important alert, or explicit media actions—never hover, scrolling, or every ordinary click. Text and visual status remain complete if audio is muted, blocked, or missing.
+
+Audio is optional enhancement. A playback failure must never prevent the related action. Keep cues quiet and short, and add provenance/license information in the assets package manifest whenever a file changes.
+
+## Product boundary
+
+`@moonwitness/ui` owns visual tokens, reusable components, accessibility mechanics, motion/effect primitives, icon wrappers, and sound controls. `@moonwitness/assets` owns the canonical SVG/media files, artwork, font provenance, licenses, and asset manifest. Neither package owns Board routes, authorization, API calls, persistence of product data, analytics meaning, or workflow rules.
+
+See [`TOKENS.md`](./TOKENS.md) for theme and contrast constraints.

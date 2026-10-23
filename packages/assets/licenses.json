@@ -68,5 +68,28 @@
     }
   ],
   "verifiedOn": "2026-10-16",
-  "notes": "Upstream SIL Open Font License 1.1 texts are included in fonts/OFL-Anton.txt, fonts/OFL-SpaceGrotesk.txt, and fonts/OFL-JetBrainsMono.txt. Font binaries are unmodified Google Fonts WOFF2 subsets; exact SHA-256 values are recorded above."
+  "notes": "Upstream SIL Open Font License 1.1 texts are included in fonts/OFL-Anton.txt, fonts/OFL-SpaceGrotesk.txt, and fonts/OFL-JetBrainsMono.txt. Font binaries are unmodified Google Fonts WOFF2 subsets; exact SHA-256 values are recorded above.",
+  "soundEffects": [
+    {
+      "path": "sounds/ui-success.wav",
+      "creator": "MoonWitness contributors",
+      "source": "packages/assets/scripts/generate-sounds.mjs",
+      "license": "ISC",
+      "modifications": "Original short synthesized interface cue; generated from PCM oscillators for this project."
+    },
+    {
+      "path": "sounds/ui-alert.wav",
+      "creator": "MoonWitness contributors",
+      "source": "packages/assets/scripts/generate-sounds.mjs",
+      "license": "ISC",
+      "modifications": "Original short synthesized interface cue; generated from PCM oscillators for this project."
+    },
+    {
+      "path": "sounds/ui-signal.wav",
+      "creator": "MoonWitness contributors",
+      "source": "packages/assets/scripts/generate-sounds.mjs",
+      "license": "ISC",
+      "modifications": "Original short synthesized interface cue; generated from PCM oscillators for this project."
+    }
+  ]
 }

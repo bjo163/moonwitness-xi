@@ -8,7 +8,7 @@ test('story workbench preserves page text while selecting and reordering pages',
   await page.getByLabel('Login').fill('superadmin');
   await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the board' }).click();
-  await expect(page).toHaveURL(/\/$/u);
+  await expect(page).toHaveURL(/\/board$/u);
 
   await page.getByRole('button', { name: 'Switch company. Current scope: Global Scope' }).click();
   await page.getByRole('menuitem', { name: 'MoonWitness' }).click();
@@ -63,7 +63,7 @@ test('story workbench keeps drafts and requires retry after an unavailable read'
   await page.getByLabel('Login').fill('superadmin');
   await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the board' }).click();
-  await expect(page).toHaveURL(/\/$/u);
+  await expect(page).toHaveURL(/\/board$/u);
 
   await page.getByRole('button', { name: 'Switch company. Current scope: Global Scope' }).click();
   await page.getByRole('menuitem', { name: 'MoonWitness' }).click();
@@ -133,7 +133,7 @@ test('story workbench reads immutable prior revisions without losing the latest 
   await page.getByLabel('Login').fill('superadmin');
   await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the board' }).click();
-  await expect(page).toHaveURL(/\/$/u);
+  await expect(page).toHaveURL(/\/board$/u);
 
   await page.getByRole('button', { name: 'Switch company. Current scope: Global Scope' }).click();
   await page.getByRole('menuitem', { name: 'MoonWitness' }).click();

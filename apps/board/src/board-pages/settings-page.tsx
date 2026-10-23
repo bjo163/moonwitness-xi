@@ -1,5 +1,7 @@
+'use client';
+
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router';
+import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, MonitorCog, Moon, Sun } from 'lucide-react';
 import { toast } from '@moonwitness/ui/components/toast';
@@ -45,7 +47,7 @@ const TIMEZONES = [
 
 export function SettingsPage() {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const router = useRouter();
   const [storedPreferences] = useState<BoardPreferences>(readPreferences);
   const [preferenceDraft, setPreferenceDraft] = useState<Partial<BoardPreferences>>({});
   const [saved, setSaved] = useState(false);
@@ -123,7 +125,7 @@ export function SettingsPage() {
       });
       await logout();
       toast.success('Password changed. Please sign in again with your new password.');
-      navigate('/login', { replace: true });
+      router.replace('/login');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not change password');
     } finally {
@@ -155,7 +157,7 @@ export function SettingsPage() {
             const Icon = theme === 'light' ? Sun : Moon;
             const selected = preferences.theme === theme;
             return (
-              <button
+              <Button
                 key={theme}
                 type="button"
                 aria-pressed={selected}
@@ -165,7 +167,7 @@ export function SettingsPage() {
                 <Icon className="size-5" />
                 <span className="font-display uppercase">{theme} theme</span>
                 {selected && <Check className="ml-auto size-4" />}
-              </button>
+              </Button>
             );
           })}
         </div>

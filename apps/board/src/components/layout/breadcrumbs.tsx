@@ -1,4 +1,4 @@
-import { Link } from 'react-router';
+import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 
 export interface BreadcrumbItem {
@@ -12,7 +12,7 @@ export function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
       aria-label="Breadcrumb"
       className="flex flex-wrap items-center gap-1.5 font-mono text-xs uppercase tracking-wider text-ink-faint"
     >
-      <Link to="/" className="transition-colors hover:text-ink hover:underline">
+      <Link href="/board" className="transition-colors hover:text-ink hover:underline">
         Dashboard
       </Link>
       {items.map((item, idx) => {
@@ -25,7 +25,7 @@ export function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
                 {item.label}
               </span>
             ) : (
-              <Link to={item.to} className="transition-colors hover:text-ink hover:underline">
+              <Link href={item.to} className="transition-colors hover:text-ink hover:underline">
                 {item.label}
               </Link>
             )}

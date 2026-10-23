@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, type FormEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Building2, Contact, Mail, ShieldCheck, UserRound } from 'lucide-react';

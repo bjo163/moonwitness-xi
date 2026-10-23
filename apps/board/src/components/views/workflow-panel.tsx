@@ -1,3 +1,4 @@
+import { Textarea } from '@moonwitness/ui/components/textarea';
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@moonwitness/ui/components/button';
@@ -204,7 +205,7 @@ export function WorkflowPanel({ model, recordId }: { model: string; recordId: nu
             <div className="space-y-3">
               <label className="grid gap-1 text-sm font-semibold">
                 Review comment
-                <textarea
+                <Textarea
                   value={comment}
                   onChange={(event) => setComment(event.target.value)}
                   maxLength={2000}

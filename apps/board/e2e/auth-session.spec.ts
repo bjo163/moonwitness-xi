@@ -37,7 +37,7 @@ async function loginSuperadmin(page: Page) {
   await page.getByLabel('Login').fill('superadmin');
   await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the board' }).click();
-  await expect(page).toHaveURL(/\/$/u);
+  await expect(page).toHaveURL(/\/board$/u);
   await expect(page.getByText('Welcome, superadmin!', { exact: false })).toBeVisible();
 }
 
@@ -51,7 +51,7 @@ test('reload restores session, concurrent requests share expired-token refresh, 
   expect(original).not.toBeNull();
 
   await page.reload();
-  await expect(page).toHaveURL(/\/$/u);
+  await expect(page).toHaveURL(/\/board$/u);
   await expect(page.getByText('Welcome, superadmin!', { exact: false })).toBeVisible();
 
   const expired = expiredAccessToken(original!.user);
@@ -69,7 +69,7 @@ test('reload restores session, concurrent requests share expired-token refresh, 
     if (new URL(request.url()).pathname === '/auth/refresh') refreshRequests += 1;
   });
   await page.reload();
-  await expect(page).toHaveURL(/\/$/u);
+  await expect(page).toHaveURL(/\/board$/u);
   await expect(page.getByText('Welcome, superadmin!', { exact: false })).toBeVisible();
   await expect
     .poll(async () =>
@@ -97,7 +97,7 @@ test('reload restores session, concurrent requests share expired-token refresh, 
     data: { refresh_token: rotated!.refresh_token },
   });
   expect(replay.status()).toBe(401);
-  await page.goto('/profile');
+  await page.goto('/board/profile');
   await expect(page).toHaveURL(/\/login$/u);
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
 });
@@ -143,7 +143,7 @@ test('disabled accounts cannot establish an authentication session', async ({ pa
 test('login returns to an internal page and rejects an external return target', async ({
   page,
 }) => {
-  await page.goto('/m/base.partner?source=session-test');
+  await page.goto('/board/m/base.partner?source=session-test');
   const applicationOrigin = new URL(page.url()).origin;
   await expect(page).toHaveURL(/\/login$/u);
   await page.getByLabel('Login').fill('superadmin');
@@ -171,7 +171,7 @@ test('login returns to an internal page and rejects an external return target', 
   await page.getByLabel('Login').fill('superadmin');
   await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the board' }).click();
-  await expect(page).toHaveURL(/\/$/u);
+  await expect(page).toHaveURL(/\/board$/u);
   expect(new URL(page.url()).origin).toBe(applicationOrigin);
   await expect(page.getByText('Welcome, superadmin!', { exact: false })).toBeVisible();
 });

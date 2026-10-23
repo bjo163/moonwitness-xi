@@ -2,6 +2,8 @@
 
 `@moonwitness/ui/styles/tokens.css` is the source of truth for shared visual values. Import it once, then map its `--mw-*` variables into framework utilities or component styles. Do not copy literal palette values into app-specific theme files.
 
+The identity palette is ink, paper, acid yellow (`--mw-yellow` / `--mw-lime` compatibility alias), magenta (`--mw-magenta` / `--mw-pink`), and signal blue (`--mw-signal-blue`). Use semantic surface/foreground and paired accent tokens for text; use the saturated blue and magenta for decorative signals, charts with labels, and non-text accents. Avoid spreading hex values into app CSS.
+
 ## Semantic colors
 
 Use `background`/`foreground` for the page, `surface`/`surface-foreground` for raised panels, `muted`/`muted-foreground` for secondary surfaces, and `border`, `input`, and `focus` for controls. `primary`, `accent`, and `destructive` include matching foreground tokens. Success, warning, and info each have a paired `on-*` foreground. Preserve these meanings when switching `.dark`; status must never change meaning with the theme.
@@ -13,6 +15,8 @@ The package test calculates WCAG relative luminance and contrast from the source
 Display, sans, and monospace stacks have system fallbacks and do not load remote fonts. A consuming site owns font licensing, self-hosting, and fallback verification. Use the provided font-size, line-height, spacing, radius, hard-shadow, and motion scales rather than introducing a parallel scale.
 
 The token stylesheet intentionally has no global element selectors, CSS framework dependency, font request, or application side effect. Theme selection remains owned by the consuming app through the `.dark` class and its persisted preference.
+
+Layer tokens are ordered `base < raised < sticky < overlay < toast`; an app should not invent competing z-index scales. The same rule applies to motion duration, spacing, and hard shadows.
 
 ## Charts and status
 

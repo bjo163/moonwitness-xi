@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Calendar,
@@ -31,7 +31,7 @@ export interface ActivityRecord {
 
 export function ActivityBell() {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'overdue' | 'today' | 'upcoming'>('all');
@@ -100,7 +100,7 @@ export function ActivityBell() {
 
   const handleOpenRecord = (resourceModel: string, resourceId: number) => {
     setOpen(false);
-    navigate(`/m/${resourceModel}/${resourceId}`);
+    router.push(`/board/m/${resourceModel}/${resourceId}`);
   };
 
   return (
@@ -143,7 +143,7 @@ export function ActivityBell() {
 
         {/* Filter Tabs */}
         <div className="flex border-b-2 border-ink bg-paper text-[11px] font-mono">
-          <button
+          <Button
             type="button"
             onClick={() => setActiveTab('all')}
             className={cn(
@@ -152,8 +152,8 @@ export function ActivityBell() {
             )}
           >
             All ({activities.length})
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={() => setActiveTab('overdue')}
             className={cn(
@@ -164,8 +164,8 @@ export function ActivityBell() {
             )}
           >
             Overdue ({overdue.length})
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={() => setActiveTab('today')}
             className={cn(
@@ -176,8 +176,8 @@ export function ActivityBell() {
             )}
           >
             Today ({dueToday.length})
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={() => setActiveTab('upcoming')}
             className={cn(
@@ -188,7 +188,7 @@ export function ActivityBell() {
             )}
           >
             Later ({upcoming.length})
-          </button>
+          </Button>
         </div>
 
         {/* Activity Items List */}
@@ -277,7 +277,7 @@ export function ActivityBell() {
             size="xs"
             onClick={() => {
               setOpen(false);
-              navigate('/m/base.activity');
+              router.push('/board/m/base.activity');
             }}
             className="w-full font-mono text-xs text-ink-soft hover:bg-lime hover:text-on-accent"
           >

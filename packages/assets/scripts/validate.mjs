@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const manifest = JSON.parse(await readFile(resolve(packageRoot, 'manifest.json'), 'utf8'));
+const licenses = JSON.parse(await readFile(resolve(packageRoot, 'licenses.json'), 'utf8'));
 const allowedTags = new Set([
   'svg',
   'title',
@@ -190,8 +191,8 @@ export function validateSvg(source, filePath) {
 if (argv[1] && resolve(argv[1]) === fileURLToPath(import.meta.url)) {
   const globalIds = new Set();
   let validatedSvgCount = 0;
+  const seenAssets = new Set();
   for (const asset of manifest.assets) {
-    if (asset.format !== 'svg') continue;
     if (
       isAbsolute(asset.path) ||
       asset.path.includes('\\') ||
@@ -199,10 +200,35 @@ if (argv[1] && resolve(argv[1]) === fileURLToPath(import.meta.url)) {
     ) {
       throw new Error(`Manifest path must stay inside the package: ${asset.path}`);
     }
+    if (seenAssets.has(asset.path)) throw new Error(`Duplicate manifest asset path: ${asset.path}`);
+    seenAssets.add(asset.path);
     const normalizedPath = asset.path.replaceAll('/', sep);
     const fullPath = resolve(packageRoot, normalizedPath);
     const file = await stat(fullPath);
-    if (!file.isFile()) throw new Error(`Manifest SVG is not a file: ${asset.path}`);
+    if (!file.isFile()) throw new Error(`Manifest asset is not a file: ${asset.path}`);
+    if (asset.kind === 'sound') {
+      const provenance = licenses.soundEffects?.find((item) => item.path === asset.path);
+      if (
+        !provenance ||
+        provenance.license !== asset.license ||
+        !provenance.source ||
+        !asset.source
+      ) {
+        throw new Error(
+          `${asset.path}: sound effect must have matching manifest/license provenance`
+        );
+      }
+      if (
+        !['wav', 'mp3', 'ogg'].includes(asset.format) ||
+        !(asset.durationSeconds > 0 && asset.durationSeconds <= 3)
+      ) {
+        throw new Error(
+          `${asset.path}: sound must use a supported format and be 3 seconds or shorter`
+        );
+      }
+      continue;
+    }
+    if (asset.format !== 'svg') continue;
     const source = await readFile(fullPath, 'utf8');
     const parsed = validateSvg(source, asset.path);
     if (parsed.viewBox !== `0 0 ${asset.width} ${asset.height}`) {
