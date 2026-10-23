@@ -37,6 +37,30 @@ function jsxAttributeName(name) {
   return name.replace(/-([a-z])/gu, (_match, letter) => letter.toUpperCase());
 }
 
+const COMMENT_PATTERN = /<!--[\s\S]*?-->/gu;
+const TITLE_PATTERN = /<title\b[^>]*>[\s\S]*?<\/title\s*>/giu;
+const COMMENT_MARKER_PATTERN = /<!--|-->|--!>/u;
+
+/**
+ * Removing a comment can splice its neighbours into a new marker, so one pass is not enough: the
+ * removals repeat to a fixed point and any marker that still resolves to HTML comment syntax fails
+ * the build instead of reaching the generated component.
+ */
+function stripMarkup(source, fileName) {
+  let remainder = source;
+  for (;;) {
+    const next = remainder.replace(COMMENT_PATTERN, '').replace(TITLE_PATTERN, '');
+    if (next === remainder) break;
+    remainder = next;
+  }
+  if (COMMENT_MARKER_PATTERN.test(remainder)) {
+    throw new Error(
+      `${fileName}: unclosed SVG comment marker; close or remove the comment before generating.`
+    );
+  }
+  return remainder.trim();
+}
+
 function parseAttributes(source, fileName) {
   const attributes = {};
   let remainder = source;
@@ -73,12 +97,10 @@ function renderNode(node) {
 }
 
 export function parseIconSvg(source, fileName = '<icon>') {
-  const svg = source
-    .replace(/^\uFEFF/u, '')
-    .replace(/<\?xml[^>]*\?>/giu, '')
-    .replace(/<!--[\s\S]*?-->/gu, '')
-    .replace(/<title\b[^>]*>[\s\S]*?<\/title\s*>/giu, '')
-    .trim();
+  const svg = stripMarkup(
+    source.replace(/^\uFEFF/u, '').replace(/<\?xml[^>]*\?>/giu, ''),
+    fileName
+  );
   const tokens = [...svg.matchAll(/<\/?[A-Za-z][\w:-]*\b[^>]*>/gu)];
   if (tokens.length === 0) {
     throw new Error(`${fileName}: expected one SVG root with supported vector shapes.`);

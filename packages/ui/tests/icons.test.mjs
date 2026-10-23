@@ -91,6 +91,37 @@ test('SVG generator rejects unsupported markup with a repairable source location
   );
 });
 
+test('SVG generator leaves no HTML comment marker behind, however it is smuggled', () => {
+  const root = '<svg viewBox="0 0 24 24">';
+  const shape = '<path d="M1 1" />';
+  assert.deepEqual(
+    parseIconSvg(`${root}<!-- designer note --><title>Icon</title>${shape}</svg>`, 'icons/ok.svg')
+      .children,
+    '<path d="M1 1" />',
+    'a well-formed comment and title must keep being removed'
+  );
+  assert.deepEqual(
+    parseIconSvg('<svg viewBox="0 0 24 24"><!<!--p-->--b--><path d="M1 1" /></svg>', 'icons/ok.svg')
+      .children,
+    '<path d="M1 1" />',
+    'the first removal must not leave a reassembled comment behind'
+  );
+  for (const [caseName, markup] of [
+    ['marker reassembled across a removal', `<!----><!--`],
+    ['marker that never closes', `<!--`],
+    ['incorrectly closed marker', `<!--x--!>`],
+    ['incorrectly closed marker with no opening marker', `--!>`],
+    ['marker nested in an opening tag', `${shape}<svg viewBox="0 0 1 1" data-x="<!----><!--">`],
+    ['marker inside an attribute value', `<path d="<!----><!--" />`],
+  ]) {
+    assert.throws(
+      () => parseIconSvg(`${root}${markup}</svg>`, 'icons/example.svg'),
+      /icons\/example\.svg: unclosed SVG comment marker/u,
+      caseName
+    );
+  }
+});
+
 test('component barrel exposes every typed icon by stable name', async () => {
   const barrel = await readFile(resolve(sourceRoot, 'index.ts'), 'utf8');
   for (const file of iconFiles) {
