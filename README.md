@@ -15,7 +15,7 @@ troubleshooting tersedia di [Developer guide](docs/guide/index.md).
 
 ## Generated workspace reference
 
-Monorepo version: `1.0.0-rc.1` · metadata fingerprint: `5e085fd7dbc61a8014d3fe5f87ec2601104fe7d865bab4f61d670f91e33ebe8d`.
+Monorepo version: `1.0.0-rc.1` · metadata fingerprint: `376a4a9d114d23ae0ea61a11317398d3fab645d6b28e9d09e56593ad1703f2e7`.
 
 | App/package                     | Kind    | Version      | Workspace scripts                                                                                                                                                                    |
 | ------------------------------- | ------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -23,7 +23,7 @@ Monorepo version: `1.0.0-rc.1` · metadata fingerprint: `5e085fd7dbc61a8014d3fe5
 | `@moonwitness/board`            | App     | `1.0.0-rc.1` | `build`, `dev`, `lint`, `preview`, `start`, `typecheck`                                                                                                                              |
 | `@moonwitness/docs`             | App     | `1.0.0-rc.1` | `dev`, `portal:build`, `portal:build:built`, `preview`, `test`, `typecheck`                                                                                                          |
 | `@moonwitness/ui-catalog`       | App     | `1.0.0-rc.1` | `build`, `build:built`, `dev`, `preview`, `test`                                                                                                                                     |
-| `@moonwitness/assets`           | Package | `1.0.0-rc.1` | —                                                                                                                                                                                    |
+| `@moonwitness/assets`           | Package | `1.0.0-rc.1` | `artwork:prepare`, `brand:prepare`, `fonts:prepare`                                                                                                                                  |
 | `@moonwitness/auth`             | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/client`           | Package | `1.0.0-rc.1` | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/corpus`           | Package | `1.0.0-rc.1` | `build`, `test`, `typecheck`                                                                                                                                                         |

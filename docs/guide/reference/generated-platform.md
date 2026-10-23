@@ -1,6 +1,6 @@
 # Generated platform reference
 
-Source fingerprint: `5e085fd7dbc61a8014d3fe5f87ec2601104fe7d865bab4f61d670f91e33ebe8d`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
+Source fingerprint: `376a4a9d114d23ae0ea61a11317398d3fab645d6b28e9d09e56593ad1703f2e7`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
 
 ## Workspace packages and apps
 
@@ -10,7 +10,7 @@ Source fingerprint: `5e085fd7dbc61a8014d3fe5f87ec2601104fe7d865bab4f61d670f91e33
 | `@moonwitness/board`            | App     | 1.0.0-rc.1 | `build`, `dev`, `lint`, `preview`, `start`, `typecheck`                                                                                                                              |
 | `@moonwitness/docs`             | App     | 1.0.0-rc.1 | `dev`, `portal:build`, `portal:build:built`, `preview`, `test`, `typecheck`                                                                                                          |
 | `@moonwitness/ui-catalog`       | App     | 1.0.0-rc.1 | `build`, `build:built`, `dev`, `preview`, `test`                                                                                                                                     |
-| `@moonwitness/assets`           | Package | 1.0.0-rc.1 | —                                                                                                                                                                                    |
+| `@moonwitness/assets`           | Package | 1.0.0-rc.1 | `artwork:prepare`, `brand:prepare`, `fonts:prepare`                                                                                                                                  |
 | `@moonwitness/auth`             | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/client`           | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/corpus`           | Package | 1.0.0-rc.1 | `build`, `test`, `typecheck`                                                                                                                                                         |
