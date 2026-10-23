@@ -189,7 +189,7 @@ Gunakan Road Rage sebagai brush display, Anton untuk judul condensed dan KPI, Sp
 
 ### Ikon interaksi
 
-- [x] Inventaris semua icon yang digunakan Home, Board, dan auth. Bukti scan: 20 consumer dan 79 nama komponen dari `lucide-react`, dicatat pada `docs/design/icons.md`; kandidat pemetaan semantic harus tetap diverifikasi di call site saat migrasi.
+- [x] Inventaris semua icon yang digunakan Home, Board, dan auth. Bukti scan: 19 consumer tersisa dan 79 nama komponen dari `lucide-react`, dicatat pada `docs/design/icons.md`; tiga icon workbench sudah dimigrasikan.
 - [ ] Satukan nama semantic yang memiliki arti aksi sama.
 - [ ] Pertahankan grid canonical `24×24` dengan bobot tegas yang konsisten.
 - [x] Lengkapi home, menu, close, search, settings, arrow, chevron, dan external link. Bukti visual 16–32 px: `docs/design/assets/icon-contact-sheet-current.png`.
@@ -199,7 +199,16 @@ Gunakan Road Rage sebagai brush display, Anton untuk judul condensed dan KPI, Sp
 - [ ] Uji versi stroke/filled dan ukuran optiknya.
 - [ ] Uji icon pada 16, 20, 24, dan 32 px, termasuk focus dan disabled.
 - [x] Generate React wrappers typed dari sumber SVG canonical. Bukti: `pnpm test:ui` lulus; 50 ikon typed terbangun dari inventory.
-- [ ] Migrasikan pemakaian icon library langsung di app ke canonical public UI icons.
+- Selesaikan migrasi icon langsung sebelum menutup pekerjaan ini; setelah semua kelompok di bawah lulus pemeriksaan visual, tambahkan gate yang melarang import `lucide-react` dari app.
+- [x] Migrasikan icon story workbench ke `KnowledgeIcon`, `WarningIcon`, dan `SaveIcon`; periksa desktop, tablet, mobile, serta ejaan. Bukti: baseline `workbench-filled-{desktop-1440,tablet-1024,mobile-390}`.
+- [ ] Migrasikan icon pada auth page ke public UI icons dan komponen loading shared.
+- [ ] Migrasikan icon shell, navigasi, pencarian, breadcrumbs, dan shortcut dialog.
+- [ ] Migrasikan icon Knowledge, profile, settings, dan WhatsApp.
+- [ ] Migrasikan icon list, form, fields, tags, dan relation widgets.
+- [ ] Migrasikan icon activity bell, notification bell, dan cron/job panels.
+- [ ] Migrasikan icon import wizard, query builder, dan chatter.
+- [ ] Tambahkan/gunakan canonical SVG untuk semantic icon yang belum tersedia; catat sumber dan provenance.
+- [ ] Tambahkan gate `lucide-react` setelah seluruh consumer app sudah bermigrasi.
 - [ ] Hapus duplikasi setelah consumer bermigrasi.
 
 ### Material dan decorative vector

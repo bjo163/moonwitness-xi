@@ -6,7 +6,9 @@ import { Input } from '@moonwitness/ui/components/input';
 import Image from 'next/image';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, BookOpenCheck, Save } from 'lucide-react';
+import { KnowledgeIcon } from '@moonwitness/ui/icons/knowledge';
+import { SaveIcon } from '@moonwitness/ui/icons/save';
+import { WarningIcon } from '@moonwitness/ui/icons/warning';
 import {
   NotFoundError,
   type StoryPageDocument,
@@ -161,7 +163,7 @@ export function StoryWorkbenchPage() {
         <div className="dashboard-masthead-shade" aria-hidden="true" />
         <div className="dashboard-masthead-copy">
           <div className="dashboard-masthead-kicker">
-            <BookOpenCheck aria-hidden="true" className="size-4" />
+            <KnowledgeIcon aria-hidden="true" className="size-4" />
             MoonWitness / Internal editorial
           </div>
           <h1 className="dashboard-masthead-title">Story workbench</h1>
@@ -265,7 +267,7 @@ export function StoryWorkbenchPage() {
               role="note"
               className="flex gap-3 border-2 border-amber-700/50 bg-amber-100/50 p-3 text-sm text-ink dark:bg-amber-950/20"
             >
-              <AlertTriangle aria-hidden="true" className="size-5 shrink-0" />
+              <WarningIcon aria-hidden="true" className="size-5 shrink-0" />
               <p>
                 INTERNAL only. Keep this example synthetic. Public rendering, story publishing, and
                 media uploads are unavailable. If a no-face style is requested, record it as
@@ -338,7 +340,7 @@ export function StoryWorkbenchPage() {
             </p>
             <div className="flex flex-wrap items-center gap-3">
               <Button type="button" onClick={() => void saveRevision()} disabled={!canSave}>
-                <Save aria-hidden="true" className="mr-2 size-4" />
+                <SaveIcon aria-hidden="true" className="mr-2 size-4" />
                 {saving ? 'Saving…' : `Save revision ${nextVersion}`}
               </Button>
               {notice && (
