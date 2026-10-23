@@ -2,6 +2,7 @@ import { useState, type ComponentType, type ReactNode, type SVGProps } from 'rea
 import {
   ActivityIcon,
   AddIcon,
+  ArrowRightIcon,
   AttachmentIcon,
   CalendarIcon,
   CompanyIcon,
@@ -20,7 +21,11 @@ import { BarChart, LineChart } from '@moonwitness/ui/components/chart';
 import { Checkbox } from '@moonwitness/ui/components/checkbox';
 import { Button } from '@moonwitness/ui/components/button';
 import { ArtworkFrame } from '@moonwitness/ui/components/artwork-frame';
+import homeHeroDesktop from '@moonwitness/assets/illustrations/home-hero-desktop.webp';
 import homeHeroMobile from '@moonwitness/assets/illustrations/home-hero-mobile.webp';
+import lockupDark from '@moonwitness/assets/brand/moonwitness-lockup-dark.svg';
+import lockupLight from '@moonwitness/assets/brand/moonwitness-lockup-light.svg';
+import symbolDark from '@moonwitness/assets/brand/moonwitness-symbol-dark.svg';
 import { MetricTile } from '@moonwitness/ui/components/metric-tile';
 import { PaperNote } from '@moonwitness/ui/components/paper-note';
 import { SectionRibbon } from '@moonwitness/ui/components/section-ribbon';
@@ -77,6 +82,10 @@ import {
 
 const sections = [
   { id: 'foundations', label: 'Foundations' },
+  { id: 'brand', label: 'Brand' },
+  { id: 'typography', label: 'Typography' },
+  { id: 'materials', label: 'Materials' },
+  { id: 'editorial-proof', label: 'Editorial proof' },
   { id: 'actions', label: 'Actions & feedback' },
   { id: 'forms', label: 'Forms' },
   { id: 'overlays', label: 'Overlays' },
@@ -171,9 +180,7 @@ export function Catalog() {
         </a>
         <aside className="catalog-sidebar" aria-label="Catalog navigation">
           <a className="catalog-brand" href="#top" aria-label="MoonWitness UI catalog home">
-            <span className="catalog-brand-mark" aria-hidden="true">
-              MW
-            </span>
+            <img className="catalog-brand-symbol" src={symbolDark} alt="" />
             <span>
               <strong>MOONWITNESS</strong>
               <small>UI CATALOG</small>
@@ -293,6 +300,130 @@ export function Catalog() {
                   <ArtworkFrame shape="portrait" caption="Example artwork">
                     <img src={homeHeroMobile} alt="Illustrative night city artwork" />
                   </ArtworkFrame>
+                </div>
+              </Example>
+            </Section>
+
+            <Section
+              id="brand"
+              title="Brand system"
+              description="These lockups come from the canonical vector master in @moonwitness/assets. Use the crown symbol for compact rails and keep the full MoonWitness wordmark wherever it fits."
+            >
+              <Example
+                title="Canonical lockups"
+                description="The same editable master produces contrast-safe light and dark variants. The wordmark remains a vector path, not an image of text."
+              >
+                <div className="brand-variant-grid">
+                  <figure className="brand-variant brand-variant-paper">
+                    <img
+                      src={lockupLight}
+                      alt="MoonWitness crown and wordmark, dark ink on paper"
+                    />
+                    <figcaption>Paper surface · full lockup</figcaption>
+                  </figure>
+                  <figure className="brand-variant brand-variant-ink">
+                    <img src={lockupDark} alt="MoonWitness crown and wordmark, paper ink on dark" />
+                    <figcaption>Ink surface · full lockup</figcaption>
+                  </figure>
+                  <figure className="brand-variant brand-variant-paper brand-variant-symbol">
+                    <img src={symbolDark} alt="MoonWitness crown symbol" />
+                    <figcaption>Compact rail · crown symbol</figcaption>
+                  </figure>
+                </div>
+              </Example>
+            </Section>
+
+            <Section
+              id="typography"
+              title="Typography"
+              description="Expressive brush lettering is reserved for short headlines. Condensed display, readable UI text, and mono metadata keep data and controls clear."
+            >
+              <Example
+                title="Four type roles"
+                description="The specimens use local package fonts and semantic typography tokens."
+              >
+                <div className="type-specimen-list">
+                  <div className="type-specimen type-specimen-brush">
+                    <span>Brush display · short headlines</span>
+                    <strong>FOLLOW THE SIGNAL</strong>
+                  </div>
+                  <div className="type-specimen type-specimen-condensed">
+                    <span>Condensed display · section titles and metrics</span>
+                    <strong>02 STORIES IN PROGRESS</strong>
+                  </div>
+                  <div className="type-specimen type-specimen-body">
+                    <span>Space Grotesk · product copy and controls</span>
+                    <strong>Different people. Shared context.</strong>
+                  </div>
+                  <div className="type-specimen type-specimen-mono">
+                    <span>JetBrains Mono · identifiers and metadata</span>
+                    <strong>MW:STORY:EDITORIAL-001 · 14:32 UTC</strong>
+                  </div>
+                </div>
+              </Example>
+            </Section>
+
+            <Section
+              id="materials"
+              title="Materials & effects"
+              description="Paper, ink, torn frames, brush ribbons, and halftone texture are layered around content. They stay decorative and never replace labels, state, or focus."
+            >
+              <Example
+                title="Editorial materials"
+                description="Use stronger material in editorial moments and keep work surfaces calm and readable."
+              >
+                <SectionRibbon title="A signal worth keeping" number="01" accent="magenta" />
+                <div className="material-specimen-grid">
+                  <Panel
+                    className="material-panel"
+                    title="Paper dossier"
+                    description="The torn frame is shared UI; content remains selectable HTML."
+                    surface="paper"
+                    frame="torn"
+                    density="compact"
+                    headingLevel={3}
+                  >
+                    <p>People. Places. Stories.</p>
+                  </Panel>
+                  <PaperNote accent="yellow">Same moon. Different people.</PaperNote>
+                  <div className="material-halftone" aria-hidden="true" />
+                </div>
+              </Example>
+            </Section>
+
+            <Section
+              id="editorial-proof"
+              title="Homepage hero proof"
+              description="A responsive composition specimen built from the same shared button, paper note, headline typography, and canonical hero artwork used by the public homepage."
+            >
+              <Example
+                title="Editorial hero · specimen"
+                description="Review the left-side text safe area, visual focal point, readable overlay, and CTA placement before changing production composition."
+              >
+                <div className="catalog-hero-proof">
+                  <picture>
+                    <source media="(max-width: 600px)" srcSet={homeHeroMobile} />
+                    <img src={homeHeroDesktop} alt="" />
+                  </picture>
+                  <div className="catalog-hero-proof-shade" aria-hidden="true" />
+                  <div className="catalog-hero-proof-copy">
+                    <p className="catalog-hero-proof-kicker">PEOPLE · PLACES · STORIES</p>
+                    <h3>
+                      MOON<span>WITNESS</span>
+                    </h3>
+                    <p className="catalog-hero-proof-ribbon">Follow the signal</p>
+                    <p className="catalog-hero-proof-body">
+                      Different people. Shared context. A clearer view of the work that connects us.
+                    </p>
+                    <Button treatment="brush" size="sm">
+                      Explore stories <ArrowRightIcon aria-hidden="true" />
+                    </Button>
+                  </div>
+                  <PaperNote className="catalog-hero-proof-note" accent="yellow">
+                    Same moon.
+                    <br />
+                    Different people.
+                  </PaperNote>
                 </div>
               </Example>
             </Section>

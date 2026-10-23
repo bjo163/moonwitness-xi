@@ -318,21 +318,21 @@ Accent `magenta`, `cyan`, dan `yellow` bersifat dekoratif; accent tidak mengubah
 
 ## H. UI Catalog dan visual proof
 
-- [ ] Tambahkan section catalog Brand.
-- [ ] Tambahkan section Typography.
-- [ ] Tambahkan section Materials dan Effects.
+- [x] Tambahkan section catalog Brand dengan lockup dan crown canonical. Bukti visual: `docs/design/ui-catalog/editorial-proof-desktop.png` dan `editorial-proof-mobile.png`.
+- [x] Tambahkan section Typography. Bukti: specimen brush, condensed, sans, dan mono pada catalog.
+- [x] Tambahkan section Materials dan Effects. Bukti: torn Panel, PaperNote, serta halftone dari token shared.
 - [ ] Tambahkan contact sheet Icon/Decoration.
 - [x] Tambahkan specimen Editorial.
 - [ ] Tambahkan specimen Board Dashboard.
 - [ ] Tambahkan specimen Story Workbench.
-- [ ] Ganti brand lokal buatan katalog dengan asset canonical.
-- [ ] Buat hero proof berdasarkan gambar 2.
+- [x] Ganti brand lokal buatan katalog dengan asset canonical; tidak ada monogram teks buatan lokal. Bukti: sidebar menggunakan crown SVG canonical.
+- [x] Buat hero proof berdasarkan gambar 2 dengan artwork canonical, headline HTML, PaperNote, CTA shared, dan crop mobile yang ditinjau visual. Bukti desktop/mobile: `docs/design/ui-catalog/editorial-proof-desktop.png` dan `editorial-proof-mobile.png`.
 - [ ] Buat dashboard proof berdasarkan gambar 4.
 - [x] Buat workbench proof berdasarkan gambar 3 menggunakan halaman produksi dan data fixture internal yang deterministik. Bukti: baseline populated desktop/mobile pada `apps/board/e2e/visual-audit.spec.ts-snapshots/`.
 - [ ] Masukkan detail sticker/orbit dari gambar 1.
-- [ ] Gunakan komponen shared yang sama dengan halaman produksi.
+- [x] Gunakan komponen shared yang sama dengan halaman produksi pada hero proof (Button dan PaperNote); artwork dan lockup diambil dari `@moonwitness/assets`.
 - [ ] Gunakan data fixture deterministik berlabel “contoh desain”.
-- [ ] Pertahankan pemeriksaan layout/token katalog yang sudah ada.
+- [x] Pertahankan pemeriksaan layout/token katalog yang sudah ada; kontrak layout katalog dan pemeriksaan theme tetap lulus.
 - [ ] Tambahkan screenshot visual regression untuk specimen utama.
 - [ ] Bandingkan specimen dengan referensi pada `1672×941`.
 - [ ] Periksa silhouette, proporsi artwork, lettering, material, density, dan detail kecil.

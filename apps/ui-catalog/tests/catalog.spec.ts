@@ -1,6 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { EOL } from 'node:os';
 
 test('static catalog loads under the repository Pages subpath with its shared UI assets', async ({
   page,
@@ -42,6 +41,49 @@ test('theme toggle changes the shared token map without hiding readable labels',
   await expect(page.getByText('Success', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Use light theme' }).click();
   await expect(page.locator('html')).not.toHaveClass(/dark/u);
+});
+
+test('brand, typography, and homepage proof use canonical assets and correct spelling', async ({
+  page,
+}, testInfo) => {
+  await page.goto('./#brand');
+  const logoImages = page.locator('.brand-variant img');
+  await expect(logoImages).toHaveCount(3);
+  for (const image of await logoImages.all()) {
+    await expect(image).toBeVisible();
+    expect(
+      await image.evaluate(
+        (element: HTMLImageElement) => element.complete && element.naturalWidth > 0
+      )
+    ).toBe(true);
+  }
+
+  await expect(page.getByRole('heading', { name: 'Brand system' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Typography' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Materials & effects' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Homepage hero proof' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'MOONWITNESS', exact: true })).toBeVisible();
+
+  const heroImage = page.locator('.catalog-hero-proof picture img');
+  await expect(heroImage).toBeVisible();
+  expect(
+    await heroImage.evaluate(
+      (element: HTMLImageElement) => element.complete && element.naturalWidth > 0
+    )
+  ).toBe(true);
+
+  for (const viewport of [
+    { name: 'desktop', width: 1672, height: 941 },
+    { name: 'mobile', width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto('./#editorial-proof');
+    await page.locator('.catalog-hero-proof').scrollIntoViewIfNeeded();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
+    ).toBe(false);
+    await page.screenshot({ path: testInfo.outputPath(`editorial-proof-${viewport.name}.png`) });
+  }
 });
 
 test('dialog and tabs support keyboard interaction and restore focus', async ({ page }) => {
@@ -144,10 +186,7 @@ test('representative visual layout and token contract stays stable @visual', asy
     };
   });
 
-  const snapshotText = JSON.stringify({ desktop, darkTokens, mobile }, null, 2).replace(
-    /\n/gu,
-    EOL
-  );
+  const snapshotText = JSON.stringify({ desktop, darkTokens, mobile }, null, 2);
   await expect(snapshotText).toMatchSnapshot('layout-contract.txt');
 });
 
