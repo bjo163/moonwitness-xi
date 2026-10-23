@@ -34,6 +34,11 @@ on:
         required: false
         default: 0
         type: number
+      batch_continuation_count:
+        description: Internal bounded continuation counter for an oversized issue sync batch
+        required: false
+        default: 0
+        type: number
 
 permissions:
   contents: read
@@ -157,25 +162,27 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "$GITHUB_EVENT_NAME" == 'push' ]]; then
-            TASK_IDS="$CHANGED_TASK_IDS"
+            SELECTION_TASK_IDS="$CHANGED_TASK_IDS"
           elif [[ "$BACKFILL_NEXT_BATCH" == 'true' || "$GITHUB_EVENT_NAME" == 'schedule' ]]; then
-            TASK_IDS="$BACKFILL_TASK_IDS"
+            SELECTION_TASK_IDS="$BACKFILL_TASK_IDS"
+          else
+            SELECTION_TASK_IDS="$TASK_IDS"
           fi
-          if [[ -z "$TASK_IDS" ]]; then
+          if [[ -z "$SELECTION_TASK_IDS" ]]; then
             echo 'Applying roadmap issues requires explicit task IDs.' >&2
             exit 2
           fi
+          batch_file=.roadmap-issue-batches.json
+          snapshot_file=.roadmap-lifecycle-snapshot.json
+          trap 'rm -f "$batch_file" "$snapshot_file"' EXIT
+          export ISSUE_SYNC_TASK_IDS="$SELECTION_TASK_IDS"
+          node scripts/roadmap/issue-sync-continuation.mjs prepare
+          TASK_IDS="$(jq -r '.applyTaskIds | join(",")' "$batch_file")"
           git fetch origin dev main --tags --no-recurse-submodules
           if [[ "$(git rev-parse HEAD)" != "$SOURCE_SHA" || "$(git rev-parse refs/remotes/origin/dev)" != "$SOURCE_SHA" ]]; then
             LATEST_DEV_SHA="$(git rev-parse refs/remotes/origin/dev)" node scripts/roadmap/resume-stale-issue-sync.mjs
             exit 0
           fi
-          if (( $(awk -F, '{print NF}' <<< "$TASK_IDS") > 5 )); then
-            echo 'Issue sync apply is limited to five task IDs per run.' >&2
-            exit 2
-          fi
-          snapshot_file=.roadmap-lifecycle-snapshot.json
-          trap 'rm -f "$snapshot_file"' EXIT
           export SOURCE_SHA
           node scripts/roadmap/collect-lifecycle-snapshot-cli.mjs
           if [[ ! -s "$snapshot_file" ]]; then
@@ -194,6 +201,7 @@ jobs:
             exit 0
           fi
           node scripts/roadmap/sync-issues.mjs --quiet --apply --task-ids "$TASK_IDS" --lifecycle-snapshot "$snapshot_file"
+          node scripts/roadmap/issue-sync-continuation.mjs dispatch
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GH_TOKEN: ${{ github.token }}
@@ -206,3 +214,4 @@ jobs:
           BACKFILL_TASK_IDS: ${{ needs.plan.outputs.backfill_task_ids }}
           BACKFILL_NEXT_BATCH: ${{ inputs.backfill_next_batch }}
           STALE_SYNC_RETRY_COUNT: ${{ inputs.stale_sync_retry_count || 0 }}
+          BATCH_CONTINUATION_COUNT: ${{ inputs.batch_continuation_count || 0 }}

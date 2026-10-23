@@ -140,7 +140,15 @@ test('issue sync workflow bounds changed-task and backlog writes to an exact dev
     /event_name == 'schedule' && github\.ref == 'refs\/heads\/main' && needs\.plan\.outputs\.backfill_task_ids/u
   );
   assert.match(applyJob, /"\$\(git rev-parse refs\/remotes\/origin\/dev\)" != "\$SOURCE_SHA"/u);
-  assert.match(applyJob, /Issue sync apply is limited to five task IDs/u);
+  // The five-task bound is enforced by the tested selector, and the workflow may only apply its batch.
+  assert.match(applyJob, /node scripts\/roadmap\/issue-sync-continuation\.mjs prepare/u);
+  assert.match(applyJob, /TASK_IDS="\$\(jq -r '\.applyTaskIds/u);
+  assert.doesNotMatch(applyJob, /--apply --task-ids "\$SELECTION_TASK_IDS"/u);
+  assert.match(applyJob, /node scripts\/roadmap\/issue-sync-continuation\.mjs dispatch/u);
+  assert.match(
+    applyJob,
+    /BATCH_CONTINUATION_COUNT: \$\{\{ inputs\.batch_continuation_count \|\| 0 \}\}/u
+  );
   assert.match(applyJob, /issues: write/u);
   assert.match(applyJob, /checks: read/u);
   assert.match(applyJob, /group: roadmap-issue-sync/u);
