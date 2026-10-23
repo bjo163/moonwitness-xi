@@ -513,19 +513,12 @@ func (s *Service) processJob(ctx context.Context, job Job) {
 		}
 	}()
 	defer close(heartbeatDone)
-	var payload struct {
-		Content       string `json:"content"`
-		MediaKey      string `json:"media_key"`
-		MediaMIMEType string `json:"media_mime_type"`
-		MediaFileName string `json:"media_file_name"`
-	}
-	if len(job.Payload) > 0 {
-		if err := json.Unmarshal(job.Payload, &payload); err != nil {
-			result.Status = retryOrDead(job)
-			result.Error = "Invalid queued WhatsApp message"
-			_ = s.api.jobResult(jobCtx, result)
-			return
-		}
+	payload, err := parseOutboundPayload(job.Payload)
+	if err != nil {
+		result.Status = retryOrDead(job)
+		result.Error = "Invalid queued WhatsApp message"
+		_ = s.api.jobResult(jobCtx, result)
+		return
 	}
 	if payload.Content == "" {
 		payload.Content = job.Message.Content
@@ -547,6 +540,32 @@ func (s *Service) processJob(ctx context.Context, job Job) {
 		result.Error = truncate(err.Error(), 255)
 	}
 	_ = s.api.jobResult(jobCtx, result)
+}
+
+type outboundPayload struct {
+	Content       string `json:"content"`
+	MediaKey      string `json:"media_key"`
+	MediaMIMEType string `json:"media_mime_type"`
+	MediaFileName string `json:"media_file_name"`
+}
+
+func parseOutboundPayload(raw json.RawMessage) (outboundPayload, error) {
+	var payload outboundPayload
+	trimmed := strings.TrimSpace(string(raw))
+	if trimmed == "" || trimmed == "null" {
+		return payload, nil
+	}
+	if strings.HasPrefix(trimmed, `"`) {
+		var encoded string
+		if err := json.Unmarshal(raw, &encoded); err != nil {
+			return payload, err
+		}
+		raw = json.RawMessage(encoded)
+	}
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return payload, err
+	}
+	return payload, nil
 }
 
 func (s *Service) buildOutbound(ctx context.Context, client Client, target types.JID, text, mediaKey, mimeType, filename string) (*waE2E.Message, error) {

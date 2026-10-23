@@ -12,6 +12,7 @@ services:
       WHATSAPP_API_URL: http://host.docker.internal:${API_PORT:-3000}
       WHATSAPP_PORT: 3100
       WHATSAPP_INTERNAL_TOKEN: ${WHATSAPP_INTERNAL_TOKEN:-moonwitness-local-whatsapp-internal-token-v1-unsafe}
+      WHATSAPP_SESSION_KEY: ${WHATSAPP_SESSION_KEY:-moonwitness-local-whatsapp-session-key-v1-unsafe}
       WHATSAPP_DATABASE_URL: ${WHATSAPP_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/moonwitness_db}
       WHATSAPP_DATABASE_SCHEMA: ${WHATSAPP_DATABASE_SCHEMA:-whatsapp_session}
     extra_hosts:

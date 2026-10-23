@@ -17,7 +17,9 @@ The worker reads `.env` from the repository root when it is started by pnpm. `WH
 defaults to `DATABASE_URL`; `WHATSAPP_DATABASE_SCHEMA` defaults to `whatsapp_session`. In development,
 the worker explicitly defaults `sslmode=disable` only for known local PostgreSQL hosts when the URL
 does not specify an SSL mode; explicit SSL settings and all production URLs are preserved.
-`WHATSAPP_INTERNAL_TOKEN` has a development-only fallback. Production requires a configured token.
+`WHATSAPP_INTERNAL_TOKEN` and `WHATSAPP_SESSION_KEY` have development-only fallbacks. Production
+requires both configured secrets; the session key must be a dedicated high-entropy value of at least
+32 bytes.
 
 ## Pairing and session storage
 
@@ -27,13 +29,24 @@ encrypted Baileys `auth_state` remains until the new device connects successfull
 clears that legacy credential. The connected whatsmeow device is saved in PostgreSQL and should
 reconnect after a service restart without another scan.
 
-whatsmeow's PostgreSQL SQL store persists device keys in the `whatsapp_session` schema. The old
-`WHATSAPP_SESSION_KEY` variable is no longer used: upstream SQL storage does not offer transparent
-application-level encryption. Production must use a PostgreSQL provider/storage layer with encryption
-at rest and encrypted backups, and set `WHATSAPP_DATABASE_ENCRYPTED_AT_REST=true` to acknowledge that
-requirement. The app can validate the acknowledgment, but cannot independently verify provider or
-backup encryption. Local development storage is not encrypted by this flag. Protect `DATABASE_URL`
-and access to the schema like account credentials.
+whatsmeow's PostgreSQL SQL store persists device keys in the `whatsapp_session` schema. The worker
+encrypts session and cryptographic key bytea fields with AES-256-GCM before they reach PostgreSQL;
+the nonce is random per value and authentication failures stop startup/read operations. The key is
+derived from `WHATSAPP_SESSION_KEY`, kept outside the database, and must be retained to restore a
+backup. Existing plaintext whatsmeow key fields are encrypted during startup before the worker
+resumes the device. Lookup identifiers needed for SQL equality/primary keys remain unencrypted.
+
+This application encryption protects whatsmeow device/session material inside database dumps; it
+does not encrypt the rest of the application database. Production must still use PostgreSQL storage
+encryption and encrypted backups, and set `WHATSAPP_DATABASE_ENCRYPTED_AT_REST=true` only after
+confirming both controls with the provider/operator. The app can validate the acknowledgment but
+cannot independently verify provider or backup encryption. Protect `WHATSAPP_SESSION_KEY` separately
+from database backups; losing it makes encrypted WhatsApp session material unrecoverable. Local
+development uses an intentionally unsafe fallback unless a local key is provided.
+
+The worker upgrades the SQLStore schema before adjusting fixed-length checks to allow the authenticated
+ciphertext envelope. If an upgrade fails, it refuses to start. Keep `WHATSAPP_SESSION_KEY` stable;
+key rotation requires an explicit re-encryption migration and is not automatic.
 
 Never run two WhatsApp workers against the same session store. A PostgreSQL advisory lock prevents
 two processes from owning one company account at the same time. Use a direct PostgreSQL connection

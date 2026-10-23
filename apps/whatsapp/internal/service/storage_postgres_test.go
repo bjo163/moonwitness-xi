@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
@@ -40,7 +41,8 @@ func TestPostgresWhatsmeowSessionSchemaSurvivesReload(t *testing.T) {
 		t.Skip("WHATSAPP_TEST_DATABASE_URL must point to a fresh PostgreSQL database; whatsmeow migration version detection is not schema-scoped")
 	}
 	schema := fmt.Sprintf("wa_test_%d", time.Now().UnixNano())
-	storage, err := OpenStorage(ctx, dsn, schema)
+	sessionKey := "postgres-integration-test-session-key-32-bytes"
+	storage, err := OpenStorage(ctx, dsn, schema, sessionKey)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,8 +70,33 @@ func TestPostgresWhatsmeowSessionSchemaSurvivesReload(t *testing.T) {
 	if err := device.Save(ctx); err != nil {
 		t.Fatal(err)
 	}
+	var rawNoiseKey []byte
+	if err := storage.DB.QueryRowContext(ctx, `SELECT noise_key FROM `+pq.QuoteIdentifier(schema)+`.whatsmeow_device LIMIT 1`).Scan(&rawNoiseKey); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.HasPrefix(rawNoiseKey, []byte(sessionEnvelope)) || bytes.Equal(rawNoiseKey, device.NoiseKey.Priv[:]) {
+		t.Fatal("whatsmeow private key was not encrypted in PostgreSQL")
+	}
 	if err := storage.saveDeviceMapping(ctx, 77, jid); err != nil {
 		t.Fatal(err)
+	}
+	// Simulate an existing plaintext SQLStore row and verify startup migrates it
+	// to the encrypted envelope before the worker resumes the saved device.
+	if _, err := storage.DB.ExecContext(ctx, `UPDATE `+pq.QuoteIdentifier(schema)+`.whatsmeow_device SET noise_key=$1`, device.NoiseKey.Priv[:]); err != nil {
+		t.Fatal(err)
+	}
+	if err := storage.Close(); err != nil {
+		t.Fatal(err)
+	}
+	storage, err = OpenStorage(ctx, dsn, schema, sessionKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := storage.DB.QueryRowContext(ctx, `SELECT noise_key FROM `+pq.QuoteIdentifier(schema)+`.whatsmeow_device LIMIT 1`).Scan(&rawNoiseKey); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.HasPrefix(rawNoiseKey, []byte(sessionEnvelope)) {
+		t.Fatal("legacy plaintext session key was not encrypted during startup migration")
 	}
 	reloaded, err := storage.device(ctx, 77)
 	if err != nil {
@@ -77,6 +104,9 @@ func TestPostgresWhatsmeowSessionSchemaSurvivesReload(t *testing.T) {
 	}
 	if reloaded.GetJID().ADString() != jid.ADString() {
 		t.Fatalf("reloaded device %s, want %s", reloaded.GetJID(), jid)
+	}
+	if !bytes.Equal(reloaded.NoiseKey.Priv[:], device.NoiseKey.Priv[:]) {
+		t.Fatal("whatsmeow private key did not round-trip through encrypted storage")
 	}
 	var count int
 	if err := storage.DB.QueryRowContext(ctx, `SELECT count(*) FROM information_schema.tables WHERE table_schema=$1 AND table_name LIKE 'whatsmeow_%'`, schema).Scan(&count); err != nil {

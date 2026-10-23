@@ -187,6 +187,24 @@ func TestRetryLimitAndDeterministicSendID(t *testing.T) {
 	}
 }
 
+func TestParseOutboundPayloadAcceptsObjectAndJSONEncodedString(t *testing.T) {
+	for _, raw := range []json.RawMessage{
+		json.RawMessage(`{"content":"hello","media_key":"media-1"}`),
+		json.RawMessage(`"{\"content\":\"hello\",\"media_key\":\"media-1\"}"`),
+	} {
+		payload, err := parseOutboundPayload(raw)
+		if err != nil || payload.Content != "hello" || payload.MediaKey != "media-1" {
+			t.Fatalf("parseOutboundPayload(%s) = %+v, %v", raw, payload, err)
+		}
+	}
+}
+
+func TestParseOutboundPayloadRejectsMalformedPayload(t *testing.T) {
+	if _, err := parseOutboundPayload(json.RawMessage(`"{broken"`)); err == nil {
+		t.Fatal("expected malformed encoded payload to fail")
+	}
+}
+
 func TestMediaAndPrivateChatClassification(t *testing.T) {
 	if !validChatJID("123@s.whatsapp.net") || !validChatJID("123-456@g.us") || !validChatJID("123@lid") || validChatJID("status@broadcast") {
 		t.Fatal("unexpected private/group JID filtering")

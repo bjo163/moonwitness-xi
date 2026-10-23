@@ -19,7 +19,7 @@ func main() {
 		os.Exit(1)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	storage, err := service.OpenStorage(ctx, cfg.DatabaseURL, cfg.Schema)
+	storage, err := service.OpenStorage(ctx, cfg.DatabaseURL, cfg.Schema, cfg.SessionKey)
 	cancel()
 	if err != nil {
 		slog.Error("Could not initialize WhatsApp PostgreSQL store", "error", err)

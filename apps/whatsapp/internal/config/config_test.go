@@ -7,12 +7,12 @@ import (
 )
 
 func TestLoadDevelopmentDefaultsAndPostgres(t *testing.T) {
-	setConfigEnv(t, map[string]string{"NODE_ENV": "development", "WHATSAPP_INTERNAL_TOKEN": "", "DATABASE_URL": "postgresql://local:pass@127.0.0.1:5432/testdb", "WHATSAPP_DATABASE_URL": "", "WHATSAPP_API_URL": "", "WHATSAPP_DATABASE_SCHEMA": "", "WHATSAPP_PORT": ""})
+	setConfigEnv(t, map[string]string{"NODE_ENV": "development", "WHATSAPP_INTERNAL_TOKEN": "", "WHATSAPP_SESSION_KEY": "", "DATABASE_URL": "postgresql://local:pass@127.0.0.1:5432/testdb", "WHATSAPP_DATABASE_URL": "", "WHATSAPP_API_URL": "", "WHATSAPP_DATABASE_SCHEMA": "", "WHATSAPP_PORT": ""})
 	cfg, err := Load()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Token != devToken || cfg.Port != 3100 || cfg.Schema != "whatsapp_session" {
+	if cfg.Token != devToken || cfg.SessionKey != devSessionKey || cfg.Port != 3100 || cfg.Schema != "whatsapp_session" {
 		t.Fatalf("unexpected development config: %+v", cfg)
 	}
 	if !strings.Contains(cfg.DatabaseURL, "sslmode=disable") {
@@ -21,7 +21,7 @@ func TestLoadDevelopmentDefaultsAndPostgres(t *testing.T) {
 }
 
 func TestLoadPreservesExplicitDatabaseSSLMode(t *testing.T) {
-	setConfigEnv(t, map[string]string{"NODE_ENV": "development", "WHATSAPP_INTERNAL_TOKEN": "", "DATABASE_URL": "postgresql://local:pass@127.0.0.1:5432/testdb?sslmode=verify-full", "WHATSAPP_DATABASE_URL": "", "WHATSAPP_API_URL": "", "WHATSAPP_DATABASE_SCHEMA": "", "WHATSAPP_PORT": ""})
+	setConfigEnv(t, map[string]string{"NODE_ENV": "development", "WHATSAPP_INTERNAL_TOKEN": "", "WHATSAPP_SESSION_KEY": "", "DATABASE_URL": "postgresql://local:pass@127.0.0.1:5432/testdb?sslmode=verify-full", "WHATSAPP_DATABASE_URL": "", "WHATSAPP_API_URL": "", "WHATSAPP_DATABASE_SCHEMA": "", "WHATSAPP_PORT": ""})
 	cfg, err := Load()
 	if err != nil {
 		t.Fatal(err)
@@ -32,7 +32,7 @@ func TestLoadPreservesExplicitDatabaseSSLMode(t *testing.T) {
 }
 
 func TestLoadProductionRequiresInternalTokenAndDatabaseEncryption(t *testing.T) {
-	setConfigEnv(t, map[string]string{"NODE_ENV": "production", "WHATSAPP_INTERNAL_TOKEN": "", "WHATSAPP_DATABASE_ENCRYPTED_AT_REST": "", "DATABASE_URL": "postgres://local:pass@127.0.0.1:5432/testdb", "WHATSAPP_API_URL": "", "WHATSAPP_DATABASE_SCHEMA": "", "WHATSAPP_PORT": ""})
+	setConfigEnv(t, map[string]string{"NODE_ENV": "production", "WHATSAPP_INTERNAL_TOKEN": "", "WHATSAPP_SESSION_KEY": "", "WHATSAPP_DATABASE_ENCRYPTED_AT_REST": "", "DATABASE_URL": "postgres://local:pass@127.0.0.1:5432/testdb", "WHATSAPP_API_URL": "", "WHATSAPP_DATABASE_SCHEMA": "", "WHATSAPP_PORT": ""})
 	if _, err := Load(); err == nil {
 		t.Fatal("expected production token validation error")
 	}
@@ -41,13 +41,24 @@ func TestLoadProductionRequiresInternalTokenAndDatabaseEncryption(t *testing.T) 
 		t.Fatal("expected production encryption acknowledgement error")
 	}
 	_ = os.Setenv("WHATSAPP_DATABASE_ENCRYPTED_AT_REST", "true")
+	if _, err := Load(); err == nil {
+		t.Fatal("expected production session key validation error")
+	}
+	_ = os.Setenv("WHATSAPP_SESSION_KEY", "a-production-session-key-that-is-at-least-32-bytes")
 	if _, err := Load(); err != nil {
 		t.Fatalf("encrypted production config was rejected: %v", err)
 	}
 }
 
+func TestLoadRejectsShortSessionKey(t *testing.T) {
+	setConfigEnv(t, map[string]string{"NODE_ENV": "development", "WHATSAPP_SESSION_KEY": "short", "DATABASE_URL": "postgresql://local:pass@127.0.0.1:5432/testdb"})
+	if _, err := Load(); err == nil {
+		t.Fatal("expected short session key validation error")
+	}
+}
+
 func TestLoadRejectsNonPostgresAndInvalidSchema(t *testing.T) {
-	setConfigEnv(t, map[string]string{"NODE_ENV": "development", "WHATSAPP_INTERNAL_TOKEN": "", "DATABASE_URL": "sqlite:///tmp/db", "WHATSAPP_API_URL": "", "WHATSAPP_DATABASE_SCHEMA": "", "WHATSAPP_PORT": ""})
+	setConfigEnv(t, map[string]string{"NODE_ENV": "development", "WHATSAPP_INTERNAL_TOKEN": "", "WHATSAPP_SESSION_KEY": "", "DATABASE_URL": "sqlite:///tmp/db", "WHATSAPP_API_URL": "", "WHATSAPP_DATABASE_SCHEMA": "", "WHATSAPP_PORT": ""})
 	if _, err := Load(); err == nil {
 		t.Fatal("expected postgres URL validation error")
 	}
@@ -60,7 +71,7 @@ func TestLoadRejectsNonPostgresAndInvalidSchema(t *testing.T) {
 
 func setConfigEnv(t *testing.T, values map[string]string) {
 	t.Helper()
-	keys := []string{"NODE_ENV", "WHATSAPP_INTERNAL_TOKEN", "WHATSAPP_DATABASE_ENCRYPTED_AT_REST", "DATABASE_URL", "WHATSAPP_DATABASE_URL", "WHATSAPP_API_URL", "WHATSAPP_DATABASE_SCHEMA", "WHATSAPP_PORT"}
+	keys := []string{"NODE_ENV", "WHATSAPP_INTERNAL_TOKEN", "WHATSAPP_SESSION_KEY", "WHATSAPP_DATABASE_ENCRYPTED_AT_REST", "DATABASE_URL", "WHATSAPP_DATABASE_URL", "WHATSAPP_API_URL", "WHATSAPP_DATABASE_SCHEMA", "WHATSAPP_PORT"}
 	for _, key := range keys {
 		old, ok := os.LookupEnv(key)
 		if ok {

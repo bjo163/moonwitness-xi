@@ -10,7 +10,7 @@ Replace the TypeScript Baileys transport in `apps/whatsapp` with a Go service us
 - Keep the API as the only Board-facing/authenticated boundary. Continue using internal HTTP for account control, QR/status, inbound events, delivery receipts, and outbox claims/results.
 - Use whatsmeow's PostgreSQL SQL store for device identity and Signal/session material. Add an explicit account-to-device mapping and a single-process lease so two workers cannot own one linked device.
 - Existing Baileys auth material cannot be imported as a whatsmeow device. Keep it untouched until the new device is paired and verified; then offer a deliberate cleanup path. A new QR scan is expected.
-- `WHATSAPP_SESSION_KEY` currently encrypts Baileys auth JSON. whatsmeow's built-in SQL store writes its own key records to PostgreSQL and does not consume this key. Before production cutover, verify the deployment's PostgreSQL storage/backups are encrypted at rest. If application-level encryption remains mandatory, implement and test an encrypted whatsmeow store before removing the old protection.
+- Wrap whatsmeow SQLStore with AES-256-GCM at the SQL driver boundary. Encrypt secret bytea fields before PostgreSQL writes, retain only lookup/index bytes required for SQL equality, migrate existing plaintext values on startup, and require a stable `WHATSAPP_SESSION_KEY` in production. Database and backup encryption remain required for other application data.
 - Preserve current per-message text/media and private/group behavior. Status/Story is a separate experimental follow-up and is not silently enabled by this transport migration.
 
 ## Separate follow-up: WhatsApp Status/Story
@@ -48,8 +48,9 @@ Replace the TypeScript Baileys transport in `apps/whatsapp` with a Go service us
 - [x] Load existing devices by mapping on restart; create a new device only on explicit connect.
 - [x] Keep encrypted Baileys `auth_state` unchanged during migration; never interpret it as a whatsmeow session.
 - [x] Add PostgreSQL integration coverage for SQL schema creation, device persistence, and reload using an isolated schema.
+- [x] Encrypt whatsmeow device/session key material in PostgreSQL using AES-256-GCM and a configured session key; migrate existing plaintext rows on startup and verify ciphertext in a fresh PostgreSQL integration database.
 - [ ] Verify the production PostgreSQL provider and backups actually encrypt this session schema at rest; the app only checks an operator acknowledgment flag.
-- [ ] Keep SQLStore integration tests on a fresh dedicated PostgreSQL database. The pinned upstream migration helper checks `whatsmeow_version` globally by table name, so a random schema in a database with another whatsmeow schema is not isolated; the test now detects that condition and skips before making changes.
+- [x] Guard SQLStore integration tests against a shared database. The pinned upstream migration helper checks `whatsmeow_version` globally by table name, so tests use a fresh dedicated PostgreSQL database and skip safely if one is not supplied.
 
 ### 3. QR and connection lifecycle
 
@@ -100,13 +101,12 @@ Replace the TypeScript Baileys transport in `apps/whatsapp` with a Go service us
 
 - Go formatter check, repeated unit tests, `go vet`, and Linux `go test -race`: passed.
 - WhatsApp API route tests: 13 passed.
-- PostgreSQL SQLStore integration previously passed against a randomly named temporary schema and confirmed device reload. A fresh rerun against the current shared dev database was safely skipped because that database already contains `whatsmeow_version`; a fresh dedicated test database is required for a new run.
+- PostgreSQL SQLStore integration passed against a temporary dedicated database: SQL schema creation, encrypted private key at rest, legacy plaintext migration, device reload, and key round-trip were verified. The test skips safely against a shared database with existing whatsmeow tables.
 - Board WhatsApp E2E: 2 passed against a separate `moonwitness_e2e` database.
 - API, Board, and WhatsApp workspace builds: passed.
 - Development and production Compose configuration checks: passed when layered on the base Compose file.
 - `whatsapp-runtime` Docker image build: passed; the runtime image is non-root and contains the Go binary.
-- Live WhatsApp pairing and provider encryption verification remain open gates. Historical chat import is intentionally excluded from v1 by the decision above.
-- The current shared development database is not a safe target for a fresh SQLStore migration test. The guard checks for an existing whatsmeow version table and skips before creating a schema or touching the active session.
+- Live WhatsApp pairing and provider/backups encryption verification remain open gates. Historical chat import is intentionally excluded from v1 by the decision above.
 
 ### Follow-up validation (2026-10-24)
 

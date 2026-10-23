@@ -13,6 +13,7 @@ import (
 )
 
 const devToken = "moonwitness-local-whatsapp-internal-token-v1-unsafe"
+const devSessionKey = "moonwitness-local-whatsapp-session-key-v1-unsafe"
 
 var schemaPattern = regexp.MustCompile(`^[a-z_][a-z0-9_]{0,62}$`)
 
@@ -20,6 +21,7 @@ type Config struct {
 	Environment             string
 	APIURL                  string
 	Token                   string
+	SessionKey              string
 	DatabaseURL             string
 	DatabaseEncryptedAtRest bool
 	Schema                  string
@@ -48,6 +50,13 @@ func Load() (Config, error) {
 	}
 	if len(token) < 32 {
 		return Config{}, fmt.Errorf("WHATSAPP_INTERNAL_TOKEN must contain at least 32 characters")
+	}
+	sessionKey := strings.TrimSpace(os.Getenv("WHATSAPP_SESSION_KEY"))
+	if sessionKey == "" && environment != "production" {
+		sessionKey = devSessionKey
+	}
+	if len([]byte(sessionKey)) < 32 {
+		return Config{}, fmt.Errorf("WHATSAPP_SESSION_KEY must contain at least 32 bytes; production must set a dedicated secret")
 	}
 	databaseURL := strings.TrimSpace(os.Getenv("WHATSAPP_DATABASE_URL"))
 	if databaseURL == "" {
@@ -80,7 +89,7 @@ func Load() (Config, error) {
 	if err != nil || port < 1 || port > 65535 {
 		return Config{}, fmt.Errorf("WHATSAPP_PORT must be a valid TCP port")
 	}
-	return Config{Environment: environment, APIURL: apiURL, Token: token, DatabaseURL: databaseURL, DatabaseEncryptedAtRest: encryptedAtRest, Schema: schema, Port: port}, nil
+	return Config{Environment: environment, APIURL: apiURL, Token: token, SessionKey: sessionKey, DatabaseURL: databaseURL, DatabaseEncryptedAtRest: encryptedAtRest, Schema: schema, Port: port}, nil
 }
 
 func isLocalPostgres(host string) bool {
