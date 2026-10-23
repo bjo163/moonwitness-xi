@@ -303,6 +303,16 @@ test('superadmin research access follows company context and source locators', a
         } else {
           await page.getByRole('button', { name: 'Toggle theme' }).click();
         }
+        // Button colors flip instantly while their background-color transitions,
+        // so axe can sample a light surface with dark text mid-theme-change.
+        await page.evaluate(() =>
+          Promise.all(
+            document
+              .getAnimations()
+              .filter((animation) => animation instanceof CSSTransition)
+              .map((animation) => animation.finished.catch(() => undefined))
+          )
+        );
       }
       await expect(page.getByRole('heading', { name: 'Knowledge explorer' })).toBeVisible();
       const label = `knowledge/${size.name}/${theme}`;
