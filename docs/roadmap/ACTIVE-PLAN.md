@@ -1,8 +1,14 @@
 # Jalur rilis aktif
 
-Diperbarui 2026-10-18. Goal penuh: 213 task (148 M-series + 65 K-series); tidak ada task atau acceptance yang dihapus. Gunakan `pnpm roadmap:progress -- --format json` untuk jumlah terkini, bukan snapshot angka dalam dokumen.
+Diperbarui 2026-10-23. Goal penuh: 213 task (148 M-series + 65 K-series); tidak ada task atau acceptance yang dihapus. Gunakan `pnpm roadmap:progress -- --format json` untuk jumlah terkini, bukan snapshot angka dalam dokumen.
 
-## Checkpoint kerja saat ini — 2026-10-18
+## Checkpoint kerja saat ini — 2026-10-23
+
+- Cross-check 44 issue terbuka terhadap `dev` tercatat pada [evidence/issue-audit-2026-10-23.md](evidence/issue-audit-2026-10-23.md): tidak ada issue yang bisa ditutup hari ini, 20 punya delta yang dapat dikerjakan lokal, dan 24 menunggu aksi pemilik.
+- Lane merah yang dapat direproduksi lokal sudah ditutup: LF checkout dan cakupan lint pada `c758ba0`, drift Prettier pada `8c5c1fe`, referensi generated pada `296bd8b`.
+- Basis `main` belum berubah (`9c9d5a3`) dan PR #51 tetap gerbang tunggal promosi; klaim checkpoint 2026-10-18 di bawah menggambarkan SPA Vite untuk M3.11 dan tidak lagi berlaku untuk Board Next.js.
+
+## Checkpoint sebelumnya — 2026-10-18
 
 - Pada checkpoint aplikasi `3bcb213b33de2ad188473a9edaee2d75591b2b9b`, remote `main` masih `9c9d5a326d566ed43f46e9db88d4b161ba3e4a0c`. Batch itu menambahkan pembacaan revision cerita lama secara read-only sambil mempertahankan draft latest, serta menggabungkan penguatan privasi K5-002. Hosted Gitleaks [39060071802](https://github.com/bjo163/moonwitness-xi/actions/runs/39060071802) dan kedua job CodeQL [39060071826](https://github.com/bjo163/moonwitness-xi/actions/runs/39060071826) lulus. CI [39060071840](https://github.com/bjo163/moonwitness-xi/actions/runs/39060071840) berjalan pada UI, browser, integration, containers, quality, dan automation ketika checkpoint diperbarui; commit dokumentasi `c09158b` kemudian memicu verifikasi baru. Tidak ada promosi `main`, stable release, atau deployment aplikasi.
 - Roadmap issue sync exact-source [39060068584](https://github.com/bjo163/moonwitness-xi/actions/runs/39060068584) lulus pada `3bcb213`: plan dan apply sukses; issue [#79](https://github.com/bjo163/moonwitness-xi/issues/79) K5-002 dan [#96](https://github.com/bjo163/moonwitness-xi/issues/96) K8-002 kini mengikat source tersebut, tanpa issue dibuat atau ditutup. Progress artifact [39060068609](https://github.com/bjo163/moonwitness-xi/actions/runs/39060068609) sukses. Promotion report run [39060068601](https://github.com/bjo163/moonwitness-xi/actions/runs/39060068601) memperbarui PR #51 dan tetap meminta fresh CODEOWNER approval. Dokumentasi Pages [39060068597](https://github.com/bjo163/moonwitness-xi/actions/runs/39060068597) masih menguji portal saat diperiksa. Tidak ada promosi `main`, stable release, atau deployment aplikasi.
