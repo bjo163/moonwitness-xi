@@ -23,6 +23,7 @@ import { Button } from '@moonwitness/ui/components/button';
 import { ArtworkFrame } from '@moonwitness/ui/components/artwork-frame';
 import homeHeroDesktop from '@moonwitness/assets/illustrations/home-hero-desktop.webp';
 import homeHeroMobile from '@moonwitness/assets/illustrations/home-hero-mobile.webp';
+import boardMasthead from '@moonwitness/assets/illustrations/board-masthead.webp';
 import lockupDark from '@moonwitness/assets/brand/moonwitness-lockup-dark.svg';
 import lockupLight from '@moonwitness/assets/brand/moonwitness-lockup-light.svg';
 import symbolDark from '@moonwitness/assets/brand/moonwitness-symbol-dark.svg';
@@ -82,6 +83,7 @@ import {
 
 const sections = [
   { id: 'foundations', label: 'Foundations' },
+  { id: 'board-proof', label: 'Board dashboard proof' },
   { id: 'brand', label: 'Brand' },
   { id: 'typography', label: 'Typography' },
   { id: 'materials', label: 'Materials' },
@@ -300,6 +302,162 @@ export function Catalog() {
                   <ArtworkFrame shape="portrait" caption="Example artwork">
                     <img src={homeHeroMobile} alt="Illustrative night city artwork" />
                   </ArtworkFrame>
+                </div>
+              </Example>
+            </Section>
+
+            <Section
+              id="board-proof"
+              title="Board dashboard proof"
+              description="A dashboard composition inspired by the command-center reference. Values and records below are illustrative design samples, not live MoonWitness data."
+            >
+              <Example
+                title="Command center · sample layout"
+                description="Review the masthead, dense navigation, KPI rhythm, operational panels, and responsive collapse using shared package components."
+              >
+                <div className="catalog-board-proof">
+                  <aside className="catalog-board-rail" aria-label="Sample dashboard navigation">
+                    <div className="catalog-board-identity">
+                      <img src={symbolDark} alt="" />
+                      <span>
+                        MOONWITNESS<small>COMMAND CENTER</small>
+                      </span>
+                    </div>
+                    <div className="catalog-board-rail-menu" aria-hidden="true">
+                      <span className="is-active">
+                        <ActivityIcon /> Overview
+                      </span>
+                      <span>
+                        <ModelIcon /> Stories
+                      </span>
+                      <span>
+                        <CompanyIcon /> Companies
+                      </span>
+                      <span>
+                        <UserIcon /> People
+                      </span>
+                      <span>
+                        <SettingsIcon /> Settings
+                      </span>
+                    </div>
+                    <p className="catalog-board-rail-note">
+                      DESIGN SAMPLE
+                      <br />
+                      NOT LIVE DATA
+                    </p>
+                  </aside>
+                  <div className="catalog-board-main">
+                    <header className="catalog-board-masthead">
+                      <img src={boardMasthead} alt="" />
+                      <div>
+                        <p>MOONWITNESS NETWORK · SAMPLE VIEW</p>
+                        <h3>
+                          SHADOW <span>COMMAND CENTER</span>
+                        </h3>
+                        <strong>Stories observed. People amplified. Worlds connected.</strong>
+                      </div>
+                    </header>
+                    <div className="catalog-board-sample-label">
+                      <Badge variant="primary">Contoh desain</Badge>
+                      <span>All values are illustrative and do not represent production data.</span>
+                    </div>
+                    <div className="catalog-board-metrics">
+                      <MetricTile
+                        label="Partners"
+                        value="24"
+                        detail="Sample records"
+                        accent="magenta"
+                        icon={<CompanyIcon />}
+                      />
+                      <MetricTile
+                        label="Active users"
+                        value="18"
+                        detail="Sample accounts"
+                        accent="cyan"
+                        icon={<UserIcon />}
+                      />
+                      <MetricTile
+                        label="Companies"
+                        value="12"
+                        detail="Sample records"
+                        accent="yellow"
+                        icon={<ModelIcon />}
+                      />
+                      <MetricTile
+                        label="Planned activities"
+                        value="07"
+                        detail="Sample schedule"
+                        accent="green"
+                        icon={<CalendarIcon />}
+                      />
+                    </div>
+                    <div className="catalog-board-panels">
+                      <Panel
+                        className="catalog-board-work-panel"
+                        title="Planned activities"
+                        description="Illustrative schedule entries"
+                        surface="ink"
+                        frame="torn"
+                        density="compact"
+                        headingLevel={4}
+                        actions={
+                          <Button variant="outline" size="xs">
+                            View sample
+                          </Button>
+                        }
+                      >
+                        <ul className="catalog-board-activity-list">
+                          <li>
+                            <span className="catalog-board-dot" /> <span>Review field notes</span>
+                            <Badge>Today</Badge>
+                          </li>
+                          <li>
+                            <span className="catalog-board-dot" />{' '}
+                            <span>Prepare story outline</span>
+                            <Badge>Tomorrow</Badge>
+                          </li>
+                          <li>
+                            <span className="catalog-board-dot" />{' '}
+                            <span>Check source references</span>
+                            <Badge>Friday</Badge>
+                          </li>
+                        </ul>
+                      </Panel>
+                      <Panel
+                        className="catalog-board-work-panel"
+                        title="Recent activity"
+                        description="Illustrative system events"
+                        surface="ink"
+                        frame="torn"
+                        density="compact"
+                        headingLevel={4}
+                      >
+                        <ul className="catalog-board-event-list">
+                          <li>
+                            <ActivityIcon aria-hidden="true" />
+                            <span>
+                              <strong>Draft updated</strong>
+                              <small>Sample story · 12 min ago</small>
+                            </span>
+                          </li>
+                          <li>
+                            <AttachmentIcon aria-hidden="true" />
+                            <span>
+                              <strong>Reference added</strong>
+                              <small>Sample record · 38 min ago</small>
+                            </span>
+                          </li>
+                          <li>
+                            <SecurityIcon aria-hidden="true" />
+                            <span>
+                              <strong>Access reviewed</strong>
+                              <small>Sample workspace · 1 hr ago</small>
+                            </span>
+                          </li>
+                        </ul>
+                      </Panel>
+                    </div>
+                  </div>
                 </div>
               </Example>
             </Section>

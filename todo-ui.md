@@ -323,19 +323,19 @@ Accent `magenta`, `cyan`, dan `yellow` bersifat dekoratif; accent tidak mengubah
 - [x] Tambahkan section Materials dan Effects. Bukti: torn Panel, PaperNote, serta halftone dari token shared.
 - [ ] Tambahkan contact sheet Icon/Decoration.
 - [x] Tambahkan specimen Editorial.
-- [ ] Tambahkan specimen Board Dashboard.
+- [x] Tambahkan specimen Board Dashboard dengan shell, masthead, KPI, planned activity, dan recent activity. Bukti visual desktop/mobile: `docs/design/ui-catalog/board-proof-desktop.png` dan `board-proof-mobile.png`.
 - [ ] Tambahkan specimen Story Workbench.
 - [x] Ganti brand lokal buatan katalog dengan asset canonical; tidak ada monogram teks buatan lokal. Bukti: sidebar menggunakan crown SVG canonical.
 - [x] Buat hero proof berdasarkan gambar 2 dengan artwork canonical, headline HTML, PaperNote, CTA shared, dan crop mobile yang ditinjau visual. Bukti desktop/mobile: `docs/design/ui-catalog/editorial-proof-desktop.png` dan `editorial-proof-mobile.png`.
-- [ ] Buat dashboard proof berdasarkan gambar 4.
+- [x] Buat dashboard proof berdasarkan gambar 4 menggunakan masthead serta komponen canonical/shared. Bukti visual desktop/mobile: `docs/design/ui-catalog/board-proof-desktop.png` dan `board-proof-mobile.png`.
 - [x] Buat workbench proof berdasarkan gambar 3 menggunakan halaman produksi dan data fixture internal yang deterministik. Bukti: baseline populated desktop/mobile pada `apps/board/e2e/visual-audit.spec.ts-snapshots/`.
 - [ ] Masukkan detail sticker/orbit dari gambar 1.
 - [x] Gunakan komponen shared yang sama dengan halaman produksi pada hero proof (Button dan PaperNote); artwork dan lockup diambil dari `@moonwitness/assets`.
-- [ ] Gunakan data fixture deterministik berlabel “contoh desain”.
+- [x] Gunakan data fixture deterministik berlabel “contoh desain”; semua angka dan aktivitas pada dashboard proof menyebut sample data dan bukan data produksi.
 - [x] Pertahankan pemeriksaan layout/token katalog yang sudah ada; kontrak layout katalog dan pemeriksaan theme tetap lulus.
 - [ ] Tambahkan screenshot visual regression untuk specimen utama.
-- [ ] Bandingkan specimen dengan referensi pada `1672×941`.
-- [ ] Periksa silhouette, proporsi artwork, lettering, material, density, dan detail kecil.
+- [x] Bandingkan specimen dengan referensi pada `1672×941`; review juga komposisi mobile `390×844`. Bukti: screenshot UI Catalog desktop/mobile.
+- [x] Periksa silhouette, proporsi artwork, lettering, material, density, dan detail kecil pada dashboard proof. Bukti visual: `docs/design/ui-catalog/board-proof-desktop.png` dan `board-proof-mobile.png`.
 - [ ] Perbaiki gap utama sebelum merombak semua route.
 - [ ] Simpan screenshot specimen yang diterima sebagai baseline regression.
 

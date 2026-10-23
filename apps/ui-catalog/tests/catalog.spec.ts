@@ -86,6 +86,55 @@ test('brand, typography, and homepage proof use canonical assets and correct spe
   }
 });
 
+test('dashboard proof uses canonical masthead and labels all fixture content as sample data', async ({
+  page,
+}, testInfo) => {
+  await page.goto('./#board-proof');
+  await expect(page.getByRole('heading', { name: 'Board dashboard proof' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'SHADOW COMMAND CENTER' })).toBeVisible();
+  await expect(page.getByText('Contoh desain', { exact: true })).toBeVisible();
+  await expect(
+    page.getByText('All values are illustrative and do not represent production data.')
+  ).toBeVisible();
+
+  for (const label of ['Partners', 'Active users', 'Companies', 'Planned activities']) {
+    await expect(
+      page.locator('.catalog-board-metrics').getByText(label, { exact: true })
+    ).toBeVisible();
+  }
+
+  const masthead = page.locator('.catalog-board-masthead > img');
+  await expect(masthead).toBeVisible();
+  expect(
+    await masthead.evaluate(
+      (element: HTMLImageElement) => element.complete && element.naturalWidth > 0
+    )
+  ).toBe(true);
+
+  for (const viewport of [
+    { name: 'desktop', width: 1672, height: 941 },
+    { name: 'mobile', width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto('./#board-proof');
+    await page.locator('.catalog-board-proof').scrollIntoViewIfNeeded();
+    await page.locator('.catalog-board-proof').evaluate((element) => {
+      window.scrollBy(0, element.getBoundingClientRect().top - 88);
+    });
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
+    ).toBe(false);
+    if (viewport.name === 'mobile') {
+      await page.locator('.catalog-topbar').evaluate((element: HTMLElement) => {
+        element.style.position = 'static';
+      });
+    }
+    await page
+      .locator('.catalog-board-proof')
+      .screenshot({ path: testInfo.outputPath(`board-proof-${viewport.name}.png`) });
+  }
+});
+
 test('dialog and tabs support keyboard interaction and restore focus', async ({ page }) => {
   await page.goto('./#overlays');
   const dialogTrigger = page.getByRole('button', { name: 'Open dialog' });
