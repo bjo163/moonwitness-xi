@@ -33,8 +33,8 @@ Checklist ini menjadi rencana kerja untuk mendekatkan Home, Board, dan workbench
 - [x] Ambil screenshot homepage pada ukuran referensi `1672×941`. Bukti: Playwright baseline `apps/board/e2e/visual-audit.spec.ts-snapshots/home-reference-1672-chromium-win32.png`.
 - [x] Ambil screenshot homepage desktop `1440×900`. Bukti: `test-results/visual-audit/home-desktop-1440.png`.
 - [x] Ambil screenshot homepage mobile `390×844`. Bukti: Playwright baseline `apps/board/e2e/visual-audit.spec.ts-snapshots/home-mobile-390-chromium-win32.png`.
-- [ ] Ambil screenshot Board untuk role pengguna biasa.
-- [x] Ambil screenshot Board untuk role admin. Bukti: `test-results/visual-audit/dashboard-desktop-1440-dark.png` (fixture E2E admin).
+- [x] Ambil screenshot Board untuk role pengguna biasa; periksa panel, angka, dan ejaan secara visual. Bukti: snapshot E2E deterministik `apps/board/e2e/visual-audit.spec.ts-snapshots/board-dashboard-user-desktop-1440-chromium-win32.png`.
+- [x] Ambil screenshot Board untuk role admin. Bukti: snapshot E2E deterministik `apps/board/e2e/visual-audit.spec.ts-snapshots/board-dashboard-admin-desktop-1440-chromium-win32.png`.
 - [x] Ambil screenshot workbench dengan dokumen berisi; periksa ejaan brand, judul, label, hash, dan teks preview secara visual. Bukti: baseline `workbench-filled-desktop-1440`, `workbench-filled-tablet-1024`, dan `workbench-filled-mobile-390` di `apps/board/e2e/visual-audit.spec.ts-snapshots/`.
 - [x] Ambil screenshot workbench saat story belum tersimpan; periksa copy langkah menyimpan revisi pertama. Bukti: baseline `workbench-empty-desktop-1440` dan `workbench-empty-mobile-390` di `apps/board/e2e/visual-audit.spec.ts-snapshots/`.
 - [x] Ambil screenshot workbench saat API gagal; periksa pesan retry, tombol save nonaktif, ejaan, dan keterbacaan. Bukti: baseline `workbench-error-desktop-1440` dan `workbench-error-mobile-390` di `apps/board/e2e/visual-audit.spec.ts-snapshots/`.
@@ -537,7 +537,7 @@ Pertahankan satu command manual/otomatis: **`pnpm board:ui:check`**.
 
 - [ ] Pertahankan layout/token snapshot katalog yang sudah tersedia.
 - [x] Tambahkan screenshot baseline untuk Home dan login. Bukti: baseline Home 390/1672 dan screenshot login dalam visual audit.
-- [ ] Tambahkan screenshot baseline dashboard user/admin.
+- [x] Tambahkan screenshot baseline dashboard user/admin. Bukti: baseline Playwright admin dan user di `apps/board/e2e/visual-audit.spec.ts-snapshots/`; user menampilkan `Upcoming Planned Activities`, admin menampilkan panel audit dan telemetry. Kedua baseline diperiksa visual termasuk ejaan `MoonWitness`/`MOONWITNESS`.
 - [x] Tambahkan screenshot baseline workbench kosong dan populated desktop/mobile; ejaan brand/copy, pemuatan artwork, overflow, accessibility, dan hash contoh diperiksa secara visual. Bukti: baseline `workbench-desktop-1440`, `workbench-mobile-390`, `workbench-filled-desktop-1440`, dan `workbench-filled-mobile-390` di `apps/board/e2e/visual-audit.spec.ts-snapshots/`.
 - [ ] Tambahkan specimen tabel, form, overlay, dan state utama.
 - [ ] Gunakan data, waktu, font, dan dekorasi deterministik.

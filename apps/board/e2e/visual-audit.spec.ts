@@ -67,6 +67,71 @@ test('dashboard KPI cards show current values without fabricated trend percentag
     path: path.join(auditDirectory, 'dashboard-kpi-no-trend-desktop-1440.png'),
     fullPage: true,
   });
+  await expect(page).toHaveScreenshot('board-dashboard-admin-desktop-1440.png', {
+    animations: 'disabled',
+    caret: 'hide',
+    fullPage: true,
+  });
+});
+
+test('ordinary-user dashboard has a verified visual baseline', async ({ page }) => {
+  await mkdir(auditDirectory, { recursive: true });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/login');
+  await page.getByLabel('Login').fill('superadmin');
+  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await expect(page).toHaveURL(/board$/u);
+
+  const administratorSession = await page.evaluate(
+    () =>
+      JSON.parse(localStorage.getItem('mw-board-session') ?? 'null') as {
+        access_token: string;
+      } | null
+  );
+  expect(administratorSession).not.toBeNull();
+
+  const login = 'visual-user';
+  const password = 'visual-user-only';
+  const partnerResponse = await page.request.post('/api/base.partner', {
+    headers: { authorization: `Bearer ${administratorSession!.access_token}` },
+    data: { name: 'Visual Audit User' },
+  });
+  expect(partnerResponse.status()).toBe(201);
+  const partner = (await partnerResponse.json()) as { data: { id: number } };
+  const userResponse = await page.request.post('/api/base.user', {
+    headers: { authorization: `Bearer ${administratorSession!.access_token}` },
+    data: {
+      login,
+      password,
+      role: 'user',
+      partner_id: partner.data.id,
+      active: true,
+    },
+  });
+  expect(userResponse.status()).toBe(201);
+
+  await page.getByRole('button', { name: 'superadmin' }).click();
+  await page.getByRole('menuitem', { name: 'Sign out' }).click();
+  await expect.poll(() => new URL(page.url()).pathname).toBe('/login');
+  await page.getByLabel('Login').fill(login);
+  await page.getByLabel('Password').fill(password);
+  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await expect(page).toHaveURL(/board$/u);
+  await expect(page.getByRole('heading', { name: 'Command center' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Upcoming Planned Activities' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'System Audit Ledger Events' })).toHaveCount(0);
+  await expectNoHorizontalOverflow(page, 'dashboard/user/desktop-1440');
+  await expectNoA11yViolations(page, 'dashboard/user/desktop-1440');
+  await page.screenshot({
+    path: path.join(auditDirectory, 'dashboard-user-desktop-1440.png'),
+    fullPage: true,
+  });
+  await expect(page).toHaveScreenshot('board-dashboard-user-desktop-1440.png', {
+    animations: 'disabled',
+    caret: 'hide',
+    fullPage: true,
+  });
 });
 
 test('mobile overlays keep accessible names, keyboard dismissal, focus return, and WCAG contrast', async ({
