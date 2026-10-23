@@ -247,6 +247,16 @@ test('responsive screen audit: login across mobile, tablet, and desktop', async 
       '1'
     );
     await expect(page.locator('main .mw-ui-speech-bubble')).toHaveCSS('opacity', '1');
+    await expect
+      .poll(
+        () =>
+          page
+            .getByRole('img', { name: 'MoonWitness' })
+            .evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0),
+        { message: `MoonWitness logo should be decoded before the ${size.name} screenshot` }
+      )
+      .toBe(true);
+    await page.evaluate(() => document.fonts.ready);
     await expectNoHorizontalOverflow(page, `login/${size.name}`);
     await page.screenshot({
       path: path.join(auditDirectory, `login-${size.name}-light${browserSuffix(testInfo)}.png`),
@@ -254,7 +264,7 @@ test('responsive screen audit: login across mobile, tablet, and desktop', async 
     });
     await expectNoA11yViolations(page, `login/${size.name}`);
     if (size.name === 'mobile-375') {
-      await page.getByLabel('Login').focus();
+      await page.getByRole('textbox', { name: 'Login' }).focus();
       await page.keyboard.press('Tab');
       await expect(page.getByLabel('Password')).toBeFocused();
       await page.keyboard.press('Tab');

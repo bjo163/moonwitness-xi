@@ -4,7 +4,6 @@ import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'motion/react';
-import { ArrowRight, Loader2 } from 'lucide-react';
 import { ApiError } from '@moonwitness/client';
 import { useAuth } from '@/hooks/use-auth-context';
 import { Button } from '@moonwitness/ui/components/button';
@@ -18,7 +17,9 @@ import {
   InkUnderline,
   SpeechBubble,
   SpeedLines,
+  LoadingSpinner,
 } from '@moonwitness/ui/components/effects';
+import { ArrowRightIcon } from '@moonwitness/ui/icons';
 import { Logo } from '@/components/manga/logo';
 
 type Mode = 'login' | 'register';
@@ -194,8 +195,14 @@ export function AuthPage({ mode }: { mode: Mode }) {
             )}
 
             <Button id="auth-submit" type="submit" size="lg" className="w-full" disabled={busy}>
-              {busy ? <Loader2 className="animate-spin" /> : <ArrowRight />}
-              {isLogin ? 'Enter the board' : 'Create account'}
+              {busy ? <LoadingSpinner /> : <ArrowRightIcon aria-hidden="true" />}
+              {busy
+                ? isLogin
+                  ? 'Signing in…'
+                  : 'Creating account…'
+                : isLogin
+                  ? 'Enter the board'
+                  : 'Create account'}
             </Button>
           </form>
 

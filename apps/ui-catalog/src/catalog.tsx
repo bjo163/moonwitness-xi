@@ -77,6 +77,7 @@ import { SoundProvider, SoundToggle, useSfx } from '@moonwitness/ui/components/a
 import {
   InkUnderline,
   LoadingProgress,
+  LoadingSpinner,
   SignalOrbit,
   SpeechBubble,
   SpeedLines,
@@ -608,6 +609,12 @@ function CatalogContent() {
                   <div className="catalog-motion-progress">
                     <span>Loading preview…</span>
                     <LoadingProgress label="Loading preview" />
+                  </div>
+                  <div className="catalog-motion-progress">
+                    <span>Submitting action</span>
+                    <Button size="sm" disabled aria-busy="true">
+                      <LoadingSpinner /> Signing in…
+                    </Button>
                   </div>
                 </div>
               </Example>

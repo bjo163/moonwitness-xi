@@ -43,6 +43,11 @@ export function LoadingProgress({
   );
 }
 
+/** Compact inline indicator for buttons while their associated action is pending. */
+export function LoadingSpinner({ className }: { className?: string }) {
+  return <span aria-hidden="true" className={cn('mw-ui-loading-spinner', className)} />;
+}
+
 /** Deterministic PRNG so the ink pattern is identical on every render (no layout jitter). */
 function mulberry32(seed: number) {
   return () => {

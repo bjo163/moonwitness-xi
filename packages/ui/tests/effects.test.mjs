@@ -6,6 +6,7 @@ import {
   Doodle,
   InkFrame,
   InkUnderline,
+  LoadingSpinner,
   SpeedLines,
   SpeechBubble,
 } from '../dist/components/effects.js';
@@ -31,6 +32,13 @@ test('ink effects render as decorative shared primitives', () => {
   assert.match(html, /class="mw-ui-doodle"/u);
   assert.match(html, /class="mw-ui-speech-bubble"/u);
   assert.match(html, /class="mw-ui-ink-frame"/u);
+  assert.match(html, /aria-hidden="true"/u);
+});
+
+test('loading spinner is compact and decorative while button text carries the action status', () => {
+  const html = renderToStaticMarkup(React.createElement(LoadingSpinner));
+
+  assert.match(html, /class="mw-ui-loading-spinner"/u);
   assert.match(html, /aria-hidden="true"/u);
 });
 

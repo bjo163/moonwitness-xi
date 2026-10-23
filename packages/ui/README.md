@@ -44,7 +44,7 @@ Build upward only where repeated behavior requires it:
 1. **Foundation** — semantic color, typography, spacing, shape, depth, layer, and motion tokens in `styles/tokens.css`.
 2. **Primitive** — one accessible behavior: `Button`, `Input`, `Checkbox`, `SelectField`, `Textarea`, `Badge`, `Avatar`, `Switch`, and `Skeleton`.
 3. **Composition** — reusable arrangements: `Field`, `Panel`, `Toolbar`, `Table`, `Pagination`, `PageHeader`, `Dialog`, and `EmptyState`.
-4. **Pattern/effect** — reusable editorial frame, ribbon, note, artwork frame, signal motif, progress state, and sound behavior.
+4. **Pattern/effect** — reusable editorial frame, ribbon, note, artwork frame, signal motif, progress state, compact `LoadingSpinner`, and sound behavior. Use the spinner only while its associated action is pending; keep an accessible action label on the control and honor reduced motion.
 
 `@moonwitness/ui` owns presentation and reusable interaction mechanics. `@moonwitness/assets` owns source and generated media, fonts, sounds, inventory, and provenance. Neither package owns app routes, auth, API access, permission, persisted product data, analytics meaning, or workflow rules. A component belongs in the shared package when multiple surfaces need it, or one surface needs an accessibility primitive that cannot safely be duplicated.
 

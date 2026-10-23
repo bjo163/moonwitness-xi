@@ -201,7 +201,7 @@ Gunakan Road Rage sebagai brush display, Anton untuk judul condensed dan KPI, Sp
 - [x] Generate React wrappers typed dari sumber SVG canonical. Bukti: `pnpm test:ui` lulus; 50 ikon typed terbangun dari inventory.
 - Selesaikan migrasi icon langsung sebelum menutup pekerjaan ini; setelah semua kelompok di bawah lulus pemeriksaan visual, tambahkan gate yang melarang import `lucide-react` dari app.
 - [x] Migrasikan icon story workbench ke `KnowledgeIcon`, `WarningIcon`, dan `SaveIcon`; periksa desktop, tablet, mobile, serta ejaan. Bukti: baseline `workbench-filled-{desktop-1440,tablet-1024,mobile-390}`.
-- [ ] Migrasikan icon pada auth page ke public UI icons dan komponen loading shared.
+- [x] Migrasikan ikon auth ke `ArrowRightIcon` public UI dan `LoadingSpinner` shared; label tombol menunjukkan submit aktif. Bukti: screenshot desktop/mobile di `docs/design/ui-catalog/auth-login-{desktop-1440,mobile-375}.png`; visual audit responsif dan keyboard lulus; ejaan `MOONWITNESS` diperiksa.
 - [ ] Migrasikan icon shell, navigasi, pencarian, breadcrumbs, dan shortcut dialog.
 - [ ] Migrasikan icon Knowledge, profile, settings, dan WhatsApp.
 - [ ] Migrasikan icon list, form, fields, tags, dan relation widgets.

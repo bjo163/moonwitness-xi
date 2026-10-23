@@ -414,15 +414,16 @@ test('reduced motion removes decorative animation and keeps loading status visib
   const speechBubble = motionGrid.getByText('Story saved');
   const progress = page.getByRole('status', { name: 'Loading preview' });
   const progressBar = progress.locator('span').first();
+  const loadingSpinner = motionGrid.locator('.mw-ui-loading-spinner');
 
-  for (const element of [speedLines, underline, speechBubble, progressBar]) {
+  for (const element of [speedLines, underline, speechBubble, progressBar, loadingSpinner]) {
     await expect
       .poll(() => element.evaluate((node) => getComputedStyle(node).animationName))
       .not.toBe('none');
   }
 
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  for (const element of [speedLines, underline, speechBubble, progressBar]) {
+  for (const element of [speedLines, underline, speechBubble, progressBar, loadingSpinner]) {
     await expect
       .poll(() => element.evaluate((node) => getComputedStyle(node).animationName))
       .toBe('none');

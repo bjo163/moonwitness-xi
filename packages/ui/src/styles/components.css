@@ -1047,6 +1047,16 @@
     background: var(--mw-pink);
     animation: mw-ui-progress 1.4s ease-in-out infinite;
   }
+  .mw-ui-loading-spinner {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    flex: none;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: mw-ui-spin 0.8s linear infinite;
+  }
   .mw-ui-sr-only {
     position: absolute;
     width: 1px;
@@ -1066,9 +1076,15 @@
       transform: translateX(280%);
     }
   }
+  @keyframes mw-ui-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
     .mw-ui-signal-orbit > span[aria-hidden='true'],
-    .mw-ui-loading-progress > span:first-child {
+    .mw-ui-loading-progress > span:first-child,
+    .mw-ui-loading-spinner {
       animation: none;
     }
     .mw-ui-loading-progress > span:first-child {
