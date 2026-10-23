@@ -39,10 +39,49 @@ test('the newest exact-SHA main ci-gate is required before any release decision'
   assert.match(decide, /sort_by\(\.created_at, \.run_attempt\) \| last/u);
   assert.match(decide, /"\$EVENT_RUN_ID" != "\$run_id"/u);
   assert.match(decide, /\.name == "ci-gate" and \.conclusion == "success"/u);
+  assert.match(decide, /test "\$\(git rev-parse HEAD\)" = "\$SOURCE_SHA"/u);
+  assert.match(decide, /if: steps\.source\.outputs\.stale != 'true'\n\s+id: gate/u);
   assert.ok(
     decide.indexOf('Verify the exact main ci-gate for the source SHA') <
       decide.indexOf('Decide the next idempotent release action')
   );
+});
+
+test('the dev and remote-state snapshot is verified before the orchestrator decides', () => {
+  assert.match(decide, /dev_sha="\$\(git ls-remote origin refs\/heads\/dev \| cut -f1\)"/u);
+  assert.match(decide, /\[\[ "\$dev_sha" =~ \^\[a-f0-9\]\{40\}\$ \]\]/u);
+  assert.match(decide, /git fetch --no-tags origin refs\/heads\/dev:refs\/remotes\/origin\/dev/u);
+  assert.match(decide, /test "\$\(git rev-parse refs\/remotes\/origin\/dev\)" = "\$dev_sha"/u);
+  assert.match(decide, /git ls-remote --tags origin > "\$RUNNER_TEMP\/remote-tags\.txt"/u);
+  assert.match(decide, /--slurp "repos\/\$GH_REPO\/releases\?per_page=100"/u);
+  assert.match(decide, /echo "dev-sha=\$dev_sha" >> "\$GITHUB_OUTPUT"/u);
+  // Every state read must stay behind both staleness flags, and the decision must consume them.
+  assert.match(
+    decide,
+    /if: steps\.source\.outputs\.stale != 'true' && steps\.gate\.outputs\.stale != 'true'\n\s+id: state/u
+  );
+  assert.match(
+    decide,
+    /if: steps\.source\.outputs\.stale != 'true' && steps\.gate\.outputs\.stale != 'true'\n\s+id: decision/u
+  );
+  assert.ok(
+    decide.indexOf('Collect remote tags, dev state, and published releases') <
+      decide.indexOf('Decide the next idempotent release action')
+  );
+});
+
+test('stable confirmation reaches the orchestrator only from the deliberate dispatch input', () => {
+  assert.match(header, /confirm_version:/u);
+  assert.match(decide, /CONFIRM_VERSION: \$\{\{ inputs\.confirm_version \|\| '' \}\}/u);
+  assert.match(decide, /args\+=\(--confirm-version "\$CONFIRM_VERSION"\)/u);
+  assert.match(decide, /CHANNEL="\$INPUT_CHANNEL"/u);
+  assert.match(
+    decide,
+    /if \[\[ -n "\$INPUT_SHA" \]\]; then source="\$INPUT_SHA"; else source="\$DISPATCH_SHA"; fi/u
+  );
+  // The automatic path never reads a caller channel and never offers stable or hotfix.
+  assert.match(decide, /echo "manual-required=true" >> "\$GITHUB_OUTPUT"/u);
+  assert.equal((source.match(/--confirm-version/gu) || []).length, 1);
 });
 
 test('automation advances only release candidates and reserves stable publication for dispatch', () => {
