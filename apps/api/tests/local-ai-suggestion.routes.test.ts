@@ -1,6 +1,12 @@
 import Fastify from 'fastify';
 import { createHash } from 'node:crypto';
 import rateLimit from '@fastify/rate-limit';
+import {
+  createLocalAiRuntime,
+  readLocalAiConfig,
+  type LocalAiFetch,
+  type LocalAiResult,
+} from '@moonwitness/local-ai';
 import { readQuranPassageSnapshot, readTextualWitnessPassageSnapshot } from '@moonwitness/corpus';
 import { installAddons } from '@moonwitness/orm';
 import { manifest as baseManifest } from '@moonwitness/orm-base';
@@ -685,4 +691,147 @@ describe('local AI suggestion generation route authorization boundary', () => {
     });
     expect(revoked.statusCode).toBe(403);
   });
+
+  /**
+   * Outage certification for K7-006. These cases replace the decorated runtime with the real
+   * `createLocalAiRuntime` and a recorded transport, so the chain under test is route → suggestion
+   * adapter → configured runtime → transport, not a stub returning the shape the route expects. The
+   * route reads `fastify.localAi.generate` per request, so the swap happens after the shared setup.
+   */
+  type OutageCall = {
+    readonly url: string;
+    readonly method: unknown;
+    readonly redirect: unknown;
+    readonly bounded: boolean;
+  };
+
+  const loopbackEndpoint = 'http://127.0.0.1:41234';
+  const outageDetail = [
+    'timeout',
+    'provider_unreachable',
+    'invalid_response',
+    'DOWN-FOR-MAINTENANCE',
+    '127.0.0.1',
+    '41234',
+  ];
+
+  function installRuntime(generate: (request: { prompt: string }) => Promise<LocalAiResult>) {
+    (app as unknown as { localAi: { generate: typeof generate } }).localAi = { generate };
+  }
+
+  function transportFor(respond: () => Promise<Response>, calls: OutageCall[]): LocalAiFetch {
+    return (async (input: unknown, init?: Record<string, unknown>) => {
+      calls.push({
+        url: String(input),
+        method: init?.method,
+        redirect: init?.redirect,
+        bounded: init?.signal !== undefined,
+      });
+      return respond();
+    }) as unknown as LocalAiFetch;
+  }
+
+  function localRuntimeFor(respond: () => Promise<Response>, calls: OutageCall[]) {
+    return createLocalAiRuntime(
+      readLocalAiConfig({ AI_MODE: 'local', LOCAL_AI_ENDPOINT: loopbackEndpoint }),
+      transportFor(respond, calls)
+    );
+  }
+
+  const timeoutRespond = () =>
+    Promise.reject(
+      Object.assign(new Error('model did not answer in time'), { name: 'TimeoutError' })
+    );
+  const unreachableRespond = () => Promise.resolve(new Response('', { status: 503 }));
+  const invalidRespond = () =>
+    Promise.resolve(
+      new Response(JSON.stringify({ note: 'DOWN-FOR-MAINTENANCE' }), { status: 200 })
+    );
+
+  it('certifies each model-outage mode as a bounded 503 that stores nothing and leaks no provider detail', async () => {
+    await publishEvidence();
+    const outageCases = [
+      { mode: 'disabled', respond: undefined },
+      { mode: 'timeout', respond: timeoutRespond },
+      { mode: 'provider_unreachable', respond: unreachableRespond },
+      { mode: 'invalid_response', respond: invalidRespond },
+    ];
+    for (const entry of outageCases) {
+      const calls: OutageCall[] = [];
+      const runtime =
+        entry.respond === undefined
+          ? createLocalAiRuntime({ mode: 'disabled', timeoutMs: 250 }, async () =>
+              Promise.reject(new Error('the disabled runtime must not reach a transport'))
+            )
+          : localRuntimeFor(entry.respond, calls);
+      installRuntime((request) => runtime.generate(request));
+      const response = await generateDown();
+      expect([entry.mode, response.statusCode]).toEqual([entry.mode, 503]);
+      expect([entry.mode, response.json()]).toEqual([
+        entry.mode,
+        { success: false, error: 'Local suggestion generation is unavailable' },
+      ]);
+      expect([entry.mode, response.headers['cache-control']]).toEqual([
+        entry.mode,
+        'private, no-store',
+      ]);
+      for (const detail of outageDetail) {
+        expect([entry.mode, response.body.includes(detail)]).toEqual([entry.mode, false]);
+      }
+      expect([entry.mode, await db('knowledge_research_suggestion_versions')]).toEqual([
+        entry.mode,
+        [],
+      ]);
+      expect([entry.mode, calls.length]).toEqual([entry.mode, entry.mode === 'disabled' ? 0 : 1]);
+      expect(calls.every((call) => call.url === `${loopbackEndpoint}/v1/generate`)).toBe(true);
+    }
+  });
+
+  it('keeps an outage request on the configured loopback endpoint inside the configured timeout', async () => {
+    await publishEvidence();
+    const calls: OutageCall[] = [];
+    installRuntime((request) => localRuntimeFor(unreachableRespond, calls).generate(request));
+    expect((await generateDown()).statusCode).toBe(503);
+    expect(calls).toEqual([
+      {
+        url: `${loopbackEndpoint}/v1/generate`,
+        method: 'POST',
+        redirect: 'error',
+        bounded: true,
+      },
+    ]);
+    expect(() =>
+      createLocalAiRuntime(
+        { mode: 'local', endpoint: new URL('http://model.example.com'), timeoutMs: 250 },
+        async () => Promise.reject(new Error('a refused endpoint must not reach a transport'))
+      )
+    ).toThrow(/loopback endpoints only/u);
+    expect(() =>
+      readLocalAiConfig({ AI_MODE: 'local', LOCAL_AI_ENDPOINT: 'http://model.example.com:8080/v1' })
+    ).toThrow(/localhost, 127\.0\.0\.1, or ::1 only/u);
+  });
+
+  it('keeps the generation rate limit armed while the model is down', async () => {
+    await publishEvidence();
+    const calls: OutageCall[] = [];
+    const runtime = localRuntimeFor(timeoutRespond, calls);
+    installRuntime((request) => runtime.generate(request));
+    const statuses: number[] = [];
+    for (let index = 0; index < 11; index += 1) {
+      statuses.push((await generateDown()).statusCode);
+    }
+    expect(statuses.slice(0, 10)).toEqual(Array.from({ length: 10 }, () => 503));
+    expect(statuses[10]).toBe(429);
+    expect(calls).toHaveLength(10);
+    expect(await db('knowledge_research_suggestion_versions')).toHaveLength(0);
+  });
+
+  async function generateDown() {
+    return app.inject({
+      method: 'POST',
+      url: '/api/research/suggestions/generate',
+      headers: { authorization: 'Bearer test' },
+      payload: { kind: 'term', evidence_ids: [evidenceId] },
+    });
+  }
 });
