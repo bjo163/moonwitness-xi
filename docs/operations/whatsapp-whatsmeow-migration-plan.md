@@ -91,11 +91,11 @@ Replace the TypeScript Baileys transport in `apps/whatsapp` with a Go service us
 - [x] Complete the targeted Board WhatsApp E2E run against isolated `moonwitness_e2e` PostgreSQL (2/2 passed).
 - [x] Build `whatsapp-runtime` Docker target after vendoring Go modules so builder does not need Go proxy TLS access.
 - [x] Run `pnpm dev`; API, Board, and WhatsApp health checks passed and the fresh whatsmeow QR is visible on the authenticated Board page.
-- [ ] Pair the new whatsmeow device by scanning a fresh QR, then verify service restart restores the session without another QR.
-- [ ] Verify live text and media send only to the previously authorized test destination; test inbound via mock if no separate sender is available.
+- [ ] Scan a fresh whatsmeow QR. The already-paired whatsmeow session was verified to survive service restart without another QR, but a fresh QR scan has not been repeated in this turn.
+- [x] Verify live text and image send only to the previously authorized test destination; inbound processing remains covered by mock tests because a second sender is unavailable.
 - [x] Verify Board inbox, status progression, retry, and company-scope paths with mocked browser flows and authenticated API route tests.
 - [ ] Keep Baileys session data until all checks pass; document/perform cleanup only after successful cutover.
-- [ ] Review diff for unrelated changes, commit the migration, and push using the repository's allowed branch/ref policy.
+- [x] Review the WhatsApp diff, commit the migration, and push to the repository's allowed `dev` ref.
 
 ### Verification record (2026-10-24)
 
@@ -107,6 +107,14 @@ Replace the TypeScript Baileys transport in `apps/whatsapp` with a Go service us
 - Development and production Compose configuration checks: passed when layered on the base Compose file.
 - `whatsapp-runtime` Docker image build: passed; the runtime image is non-root and contains the Go binary.
 - Live WhatsApp pairing and provider/backups encryption verification remain open gates. Historical chat import is intentionally excluded from v1 by the decision above.
+
+### Live cutover validation (2026-10-24)
+
+- A text message was queued from Board, initially exposed a worker payload-format mismatch, and was delivered after the worker learned to accept both object and JSON-string outbox payloads.
+- Fixed a startup migration loop: plaintext backfill now reads raw PostgreSQL bytes so encrypted ciphertext is skipped instead of being decrypted and re-encrypted on every startup.
+- Sent a small PNG through Board to the previously authorized test number. The outbox reached `sent`, and the Board media endpoint returned the image for rendering after the conversation refreshed.
+- Restarted the API, Board, and WhatsApp service through root `pnpm dev`; API `/readyz`, WhatsApp `/health`, the connected account, inbox, and sent text/image were verified afterward.
+- Remaining cutover gates: scan a fresh pairing QR, verify provider and backup encryption from operator/provider evidence, and retain Baileys data until those gates pass.
 
 ### Follow-up validation (2026-10-24)
 
