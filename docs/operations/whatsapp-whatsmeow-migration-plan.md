@@ -69,7 +69,7 @@ Replace the TypeScript Baileys transport in `apps/whatsapp` with a Go service us
 - [x] Process delivery/read receipts without downgrading message state.
 - [x] Preserve idempotency through deterministic outbound IDs and API-side inbound event deduplication.
 - [x] Add mock-driven Go tests for text/media, group/private JIDs, retries, receipts, and oversized media.
-- [ ] Decide whether to backfill older chat history; v1 currently stores messages received after pairing and does not import historical chats.
+- [x] Decide history scope: do not backfill older chats in v1. whatsmeow can emit `events.HistorySync`, but safe import needs separate pagination, deduplication, media limits, retention, and company-scope handling; the Board inbox starts from messages received after pairing.
 
 ### 5. Workspace, Docker, and operations
 
@@ -88,7 +88,7 @@ Replace the TypeScript Baileys transport in `apps/whatsapp` with a Go service us
 - [x] Run Go race detector in Linux against the vendored module set.
 - [x] Complete the targeted Board WhatsApp E2E run against isolated `moonwitness_e2e` PostgreSQL (2/2 passed).
 - [x] Build `whatsapp-runtime` Docker target after vendoring Go modules so builder does not need Go proxy TLS access.
-- [ ] Run `pnpm dev`; confirm API/Board/Go service health and fresh QR display from this migration.
+- [ ] Run `pnpm dev`; confirm API/Board/Go service health and fresh QR display from this migration. Startup was observed healthy, but QR is not yet displayed in Board pending browser sign-in/pairing.
 - [ ] Pair the new whatsmeow device by scanning a fresh QR, then verify service restart restores the session without another QR.
 - [ ] Verify live text and media send only to the previously authorized test destination; test inbound via mock if no separate sender is available.
 - [x] Verify Board inbox, status progression, retry, and company-scope paths with mocked browser flows and authenticated API route tests.
@@ -104,7 +104,16 @@ Replace the TypeScript Baileys transport in `apps/whatsapp` with a Go service us
 - API, Board, and WhatsApp workspace builds: passed.
 - Development and production Compose configuration checks: passed when layered on the base Compose file.
 - `whatsapp-runtime` Docker image build: passed; the runtime image is non-root and contains the Go binary.
-- Live WhatsApp pairing, live message send/receive, provider encryption verification, and historical chat import remain open gates listed above.
+- Live WhatsApp pairing and provider encryption verification remain open gates. Historical chat import is intentionally excluded from v1 by the decision above.
+
+### Follow-up validation (2026-10-24)
+
+- Found and fixed the root `pnpm dev` launcher defect: the WhatsApp `run` action had been invoking `go ./cmd/whatsapp` instead of `go run ./cmd/whatsapp`.
+- Local PostgreSQL's lib/pq connection default attempted SSL against a local server without TLS. Development now defaults SSL off only for known local PostgreSQL hosts when no `sslmode` was explicitly set; remote/production URLs and explicit SSL modes are unchanged.
+- Root `pnpm dev` now builds the UI package before launching the apps, avoiding stale `packages/ui/dist` exports on a clean checkout.
+- Go tests, `go vet`, WhatsApp API route tests (13), and the targeted Board login E2E (1) passed after the fixes.
+- A real `pnpm dev` startup exposed healthy API `/readyz`, Board (HTTP 200 after the UI build), and WhatsApp `/health`. The test WhatsApp account was placed into QR state through the authenticated API; manual QR scan and post-pair verification still require the user.
+- Local browser sign-in could not be confirmed in this session; the Playwright login E2E passed and direct API sign-in returned HTTP 200. QR pairing remains a user handoff step.
 
 ## Completion criteria
 

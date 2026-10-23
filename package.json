@@ -4,7 +4,7 @@
   "version": "1.0.0-rc.1",
   "type": "module",
   "scripts": {
-    "dev": "pnpm --filter @moonwitness/api --filter @moonwitness/board --filter @moonwitness/whatsapp --parallel dev",
+    "dev": "pnpm --filter @moonwitness/ui build && pnpm --filter @moonwitness/api --filter @moonwitness/board --filter @moonwitness/whatsapp --parallel dev",
     "dev:api": "pnpm --filter @moonwitness/api dev",
     "dev:board": "pnpm --filter @moonwitness/board dev",
     "dev:whatsapp": "pnpm --filter @moonwitness/whatsapp dev",

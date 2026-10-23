@@ -60,6 +60,14 @@ func Load() (Config, error) {
 	if err != nil || (parsedDB.Scheme != "postgres" && parsedDB.Scheme != "postgresql") || parsedDB.Host == "" {
 		return Config{}, fmt.Errorf("WhatsApp session database must use a PostgreSQL URL")
 	}
+	if environment == "development" && isLocalPostgres(parsedDB.Hostname()) {
+		query := parsedDB.Query()
+		if query.Get("sslmode") == "" {
+			query.Set("sslmode", "disable")
+			parsedDB.RawQuery = query.Encode()
+			databaseURL = parsedDB.String()
+		}
+	}
 	encryptedAtRest := strings.EqualFold(strings.TrimSpace(os.Getenv("WHATSAPP_DATABASE_ENCRYPTED_AT_REST")), "true")
 	if environment == "production" && !encryptedAtRest {
 		return Config{}, fmt.Errorf("WHATSAPP_DATABASE_ENCRYPTED_AT_REST=true is required; whatsmeow stores session keys in PostgreSQL")
@@ -73,6 +81,15 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("WHATSAPP_PORT must be a valid TCP port")
 	}
 	return Config{Environment: environment, APIURL: apiURL, Token: token, DatabaseURL: databaseURL, DatabaseEncryptedAtRest: encryptedAtRest, Schema: schema, Port: port}, nil
+}
+
+func isLocalPostgres(host string) bool {
+	switch strings.ToLower(strings.Trim(host, "[]")) {
+	case "localhost", "127.0.0.1", "::1", "postgres", "moonwitness_postgres":
+		return true
+	default:
+		return false
+	}
 }
 
 func value(key, fallback string) string {

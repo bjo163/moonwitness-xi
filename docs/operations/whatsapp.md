@@ -14,7 +14,9 @@ and WhatsApp together. `pnpm --filter @moonwitness/whatsapp test` runs Go unit t
 alongside the workspace.
 
 The worker reads `.env` from the repository root when it is started by pnpm. `WHATSAPP_DATABASE_URL`
-defaults to `DATABASE_URL`; `WHATSAPP_DATABASE_SCHEMA` defaults to `whatsapp_session`.
+defaults to `DATABASE_URL`; `WHATSAPP_DATABASE_SCHEMA` defaults to `whatsapp_session`. In development,
+the worker explicitly defaults `sslmode=disable` only for known local PostgreSQL hosts when the URL
+does not specify an SSL mode; explicit SSL settings and all production URLs are preserved.
 `WHATSAPP_INTERNAL_TOKEN` has a development-only fallback. Production requires a configured token.
 
 ## Pairing and session storage

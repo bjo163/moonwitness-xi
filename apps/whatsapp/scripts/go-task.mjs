@@ -34,6 +34,8 @@ if (action === 'build') {
   const { mkdirSync } = await import('node:fs');
   mkdirSync(dist, { recursive: true });
   args = ['build', '-trimpath', '-o', path.join(dist, `whatsapp${suffix}`), './cmd/whatsapp'];
+} else if (action === 'run') {
+  args = ['run', ...args];
 } else if (!['run', 'test', 'vet', 'fmt-check'].includes(action)) {
   process.stderr.write('Usage: go-task.mjs <build|run|test|vet|fmt-check> [go args...]\n');
   process.exit(2);

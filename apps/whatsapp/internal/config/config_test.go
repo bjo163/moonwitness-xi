@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -13,6 +14,20 @@ func TestLoadDevelopmentDefaultsAndPostgres(t *testing.T) {
 	}
 	if cfg.Token != devToken || cfg.Port != 3100 || cfg.Schema != "whatsapp_session" {
 		t.Fatalf("unexpected development config: %+v", cfg)
+	}
+	if !strings.Contains(cfg.DatabaseURL, "sslmode=disable") {
+		t.Fatalf("expected development localhost PostgreSQL to disable SSL explicitly: %s", cfg.DatabaseURL)
+	}
+}
+
+func TestLoadPreservesExplicitDatabaseSSLMode(t *testing.T) {
+	setConfigEnv(t, map[string]string{"NODE_ENV": "development", "WHATSAPP_INTERNAL_TOKEN": "", "DATABASE_URL": "postgresql://local:pass@127.0.0.1:5432/testdb?sslmode=verify-full", "WHATSAPP_DATABASE_URL": "", "WHATSAPP_API_URL": "", "WHATSAPP_DATABASE_SCHEMA": "", "WHATSAPP_PORT": ""})
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(cfg.DatabaseURL, "sslmode=verify-full") {
+		t.Fatalf("explicit PostgreSQL SSL mode must be preserved: %s", cfg.DatabaseURL)
 	}
 }
 
