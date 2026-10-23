@@ -6,6 +6,7 @@ import process from 'node:process';
 import { performance } from 'node:perf_hooks';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
+import { resolvePackageManager } from './package-manager.mjs';
 
 const maintenanceUrl = process.env.POSTGRES_TEST_URL;
 if (!maintenanceUrl) {
@@ -216,10 +217,15 @@ function runPostgresTool(command, args, options = {}) {
 }
 
 function run(command, args, options = {}) {
-  const result = spawnSync(command, args, {
+  const resolved =
+    command === 'pnpm' && process.platform === 'win32'
+      ? resolvePackageManager()
+      : { command, prefixArgs: [], shell: false };
+  if (!resolved) throw new Error(`Could not resolve executable: ${command}`);
+  const result = spawnSync(resolved.command, [...resolved.prefixArgs, ...args], {
     encoding: 'utf8',
     stdio: ['pipe', 'pipe', 'pipe'],
-    ...(command === 'pnpm' && process.platform === 'win32' ? { shell: true } : {}),
+    shell: resolved.shell,
     ...options,
   });
   if (result.error || result.status !== 0) {
