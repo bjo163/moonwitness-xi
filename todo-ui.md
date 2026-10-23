@@ -413,7 +413,7 @@ Urutan: header → hero manga → tiga panel editorial → band koneksi → film
 
 - [x] Gunakan MetricTile untuk Partners, Active Users, Companies, dan Planned Activities. Bukti visual: `test-results/visual-audit/dashboard-desktop-1440-dark.png`.
 - [x] Gunakan angka condensed, icon canonical, caption, dan torn frame. Bukti: `@moonwitness/ui` MetricTile dan screenshot dashboard admin.
-- [ ] Jangan mengarang tren persen tanpa data historis.
+- [x] Jangan mengarang tren persen tanpa data historis. UI Bible melarang tren tanpa perbandingan historis; E2E dashboard membuktikan empat KPI hanya menampilkan nilai/keterangan. Bukti visual/ejaan: `test-results/visual-audit/dashboard-kpi-no-trend-desktop-1440.png`.
 - [ ] Tampilkan skeleton hanya saat request berjalan.
 - [ ] Tampilkan error dan retry berdasarkan request nyata.
 - [ ] Susun desktop dengan grid 12 kolom dan ukuran panel asimetris.

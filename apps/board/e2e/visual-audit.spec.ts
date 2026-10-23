@@ -46,6 +46,29 @@ test('command shortcut stays inactive while typing in an editable control', asyn
   await expect(page.getByRole('dialog', { name: 'Command Palette' })).toBeHidden();
 });
 
+test('dashboard KPI cards show current values without fabricated trend percentages', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/login');
+  await page.getByLabel('Login').fill('superadmin');
+  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await expect(page).toHaveURL(/\/board$/u);
+  await expect(page.getByRole('heading', { name: 'Command center' })).toBeVisible();
+
+  const metricTiles = page.locator('.dashboard-metric-link .mw-ui-metric-tile');
+  await expect(metricTiles).toHaveCount(4);
+  const metricCopy = await metricTiles.allInnerTexts();
+  expect(metricCopy.join(' ')).not.toContain('%');
+
+  await expectNoA11yViolations(page, 'dashboard/kpi-no-fabricated-trends');
+  await page.screenshot({
+    path: path.join(auditDirectory, 'dashboard-kpi-no-trend-desktop-1440.png'),
+    fullPage: true,
+  });
+});
+
 test('mobile overlays keep accessible names, keyboard dismissal, focus return, and WCAG contrast', async ({
   page,
 }) => {
@@ -540,6 +563,10 @@ test('responsive protected screens fit and remain accessible in both themes', as
           await expect(
             page.getByRole('img', { name: 'Background job status distribution' })
           ).toBeVisible();
+          const metricDetails = await page
+            .locator('.dashboard-metric-link .mw-ui-metric-tile-detail')
+            .allInnerTexts();
+          expect(metricDetails.join(' ')).not.toMatch(/[+-]\s?\d+(?:\.\d+)?%/u);
         }
         const visualKey = `${view.name}/${size.name}/${theme}`;
         if (visualBaselines.has(visualKey) && testInfo.project.name === 'chromium') {

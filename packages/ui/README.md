@@ -84,7 +84,7 @@ Use `SoundProvider`, `useSfx`, and `SoundToggle` from the audio public subpath. 
 
 Before calling a visual change complete, compare an implementation screenshot with the supplied reference at the same viewport. Check, in order: overall silhouette and density; hero/artwork scale and focal point; type scale and wrapping; paper/ink material; section spacing; then icons, captions, badges, arrows, notes, focus and responsive details. Record remaining visible gaps and review them again after corrections. A green build, a neon palette, or added noise alone does not establish visual similarity. Do not report a numeric “similarity score” for AI mockups.
 
-Use real product copy and data on production pages. The mockups are visual direction, not evidence that public stories, crew directories, a publishing pipeline, audience metrics, or live location maps exist. Fictional examples are allowed only in the UI Catalog and must say “contoh desain”.
+Use real product copy and data on production pages. Dashboard percentage trends require historical comparison data; otherwise show the current value and its label without an invented change. The mockups are visual direction, not evidence that public stories, crew directories, a publishing pipeline, audience metrics, or live location maps exist. Fictional examples are allowed only in the UI Catalog and must say “contoh desain”.
 
 ## Checks
 
