@@ -6,4 +6,5 @@ allowBuilds:
   esbuild: true
 overrides:
   fast-jwt: 6.3.4
+  ip-address: ^10.7.4
   typescript: ~5.7.3
