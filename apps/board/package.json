@@ -7,8 +7,8 @@
   "scripts": {
     "dev": "node ../../scripts/copy-board-public-assets.mjs && next dev -p 5173",
     "build": "node ../../scripts/copy-board-public-assets.mjs && next build",
-    "start": "node ../../scripts/prepare-board-standalone.mjs && node .next/standalone/apps/board/server.js",
-    "start:built": "node .next/standalone/apps/board/server.js",
+    "start": "node ../../scripts/prepare-board-standalone.mjs && node ../../scripts/start-board.mjs",
+    "start:built": "node ../../scripts/prepare-board-standalone.mjs && node ../../scripts/start-board.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint",
     "preview": "node ../../scripts/prepare-board-standalone.mjs && node .next/standalone/apps/board/server.js"

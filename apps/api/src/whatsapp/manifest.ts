@@ -1,15 +1,28 @@
 import { defineAddon, defineView, ref, seed } from '@moonwitness/orm';
 import { ModelAccess } from '@moonwitness/orm-base';
-import { WhatsappAccount, WhatsappConversation, WhatsappJob, WhatsappMessage } from './models.js';
+import {
+  WhatsappAccount,
+  WhatsappConversation,
+  WhatsappEvent,
+  WhatsappJob,
+  WhatsappMessage,
+} from './models.js';
 
-const models = [WhatsappAccount, WhatsappConversation, WhatsappMessage, WhatsappJob] as const;
+const models = [
+  WhatsappAccount,
+  WhatsappConversation,
+  WhatsappMessage,
+  WhatsappJob,
+  WhatsappEvent,
+] as const;
 export const whatsappManifest = defineAddon({
-  name: 'whatsapp',
-  version: '1.0.0',
+  // Preserve the installed addon identity and seed IDs used by earlier builds.
+  name: 'orm-whatsapp',
+  version: '1.1.0',
   depends: ['base', 'jobs'],
   models: [...models],
   data: models.flatMap((model) => [
-    seed(ModelAccess, `whatsapp.access_user_read_${model.modelName.replaceAll('.', '_')}`, {
+    seed(ModelAccess, `orm-whatsapp.access_user_read_${model.modelName.replaceAll('.', '_')}`, {
       group: ref('base.group_user'),
       model_name: model.modelName,
       read: true,
@@ -17,7 +30,7 @@ export const whatsappManifest = defineAddon({
       write: false,
       unlink: false,
     }),
-    seed(ModelAccess, `whatsapp.access_superadmin_${model.modelName.replaceAll('.', '_')}`, {
+    seed(ModelAccess, `orm-whatsapp.access_superadmin_${model.modelName.replaceAll('.', '_')}`, {
       group: ref('base.group_superadmin'),
       model_name: model.modelName,
       read: true,

@@ -56,6 +56,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=api-deploy --chown=node:node /deploy/api ./
+RUN mkdir -p /var/lib/moonwitness/attachments && chown node:node /var/lib/moonwitness/attachments
 COPY --from=build --chown=node:node /workspace/corpus ./corpus
 ENV MOONWITNESS_CORPUS_ROOT=/app/corpus
 USER node
@@ -89,7 +90,8 @@ WORKDIR /app
 COPY --from=whatsapp-deploy --chown=node:node /deploy/whatsapp ./
 USER node
 EXPOSE 3100
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 CMD node -e "fetch('http://127.0.0.1:3100/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:3100/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
 CMD ["node", "dist/main.js"]
 
 FROM runtime AS api

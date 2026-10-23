@@ -1013,8 +1013,8 @@ export const genericRoutes: FastifyPluginAsync<GenericRoutesOptions> = async (fa
           .send({ success: false, error: 'Relation graph exceeds maximum depth' });
       if (!userGraphAllowed(req.auth?.role, req.params.model, req.query.with))
         return reply.code(403).send({ success: false, error: 'Forbidden relation graph' });
-      if (req.auth?.role === 'user') {
-        const scope = await userReadScope(req, req.params.model);
+      const scope = await userReadScope(req, req.params.model);
+      if (req.auth?.role === 'user' || scope.length > 0) {
         const [record] = await Model.search_read([...scope, ['id', '=', id]], {
           limit: 1,
           withGraphFetched: relationExpression(req.query.with),

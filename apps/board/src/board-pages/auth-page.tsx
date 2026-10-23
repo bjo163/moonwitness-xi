@@ -128,12 +128,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
       <section className="relative flex items-center justify-center p-6 sm:p-12">
         <Doodle kind="star" className="absolute right-10 top-10 size-8 rotate-12" />
         <Doodle kind="sparkle" className="absolute bottom-16 left-10 size-7 text-pink" />
-        <motion.div
-          initial={{ y: 24, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.35, ease: 'easeOut' }}
-          className="w-full max-w-md"
-        >
+        <div className="w-full max-w-md">
           <div className="mb-8 lg:hidden">
             <Logo surface="light" />
           </div>
@@ -145,7 +140,12 @@ export function AuthPage({ mode }: { mode: Mode }) {
           </h1>
           <InkUnderline className="mt-1 w-40" />
 
-          <form onSubmit={onSubmit} className="ink-panel mt-8 space-y-5 p-6" noValidate={false}>
+          <form
+            method="post"
+            onSubmit={onSubmit}
+            className="ink-panel mt-8 space-y-5 p-6"
+            noValidate={false}
+          >
             {!isLogin && (
               <div className="space-y-2">
                 <Label htmlFor="name">Full name</Label>
@@ -210,7 +210,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
               </Link>
             </Button>
           </p>
-        </motion.div>
+        </div>
       </section>
     </main>
   );

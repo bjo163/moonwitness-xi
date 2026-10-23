@@ -101,6 +101,97 @@ describe('Row-Level Security & Multi-Tenancy Record Rules', () => {
     ]);
   });
 
+  it('keeps WhatsApp scoped for superadmin through dedicated, generic REST and JSON-RPC APIs', async () => {
+    const login = await app.inject({
+      method: 'POST',
+      url: '/auth/login',
+      payload: { login: 'superadmin', password: ADMIN_PASSWORD },
+    });
+    const headers = { authorization: `Bearer ${login.json().data.access_token}` };
+    const company = await Company.query().findOne({ name: 'MoonWitness' }).throwIfNotFound();
+    const foreign = await Company.query().insert({ name: 'WhatsApp foreign tenant' });
+    const [ownAccount] = await app
+      .db('whatsapp_accounts')
+      .insert({
+        company_id: company.id,
+        status: 'connected',
+        auth_state: 'private-session-fixture',
+      })
+      .returning('id');
+    const [foreignAccount] = await app
+      .db('whatsapp_accounts')
+      .insert({
+        company_id: foreign.id,
+        status: 'connected',
+        auth_state: 'foreign-session-fixture',
+      })
+      .returning('id');
+    const list = await app.inject({ method: 'GET', url: '/api/whatsapp.account', headers });
+    expect(list.statusCode).toBe(200);
+    expect(list.json().data.map((row: { id: number }) => row.id)).toEqual([ownAccount.id]);
+    expect(JSON.stringify(list.json())).not.toContain('private-session-fixture');
+    expect(
+      (
+        await app.inject({
+          method: 'GET',
+          url: `/api/whatsapp.account/${foreignAccount.id}`,
+          headers,
+        })
+      ).statusCode
+    ).toBe(404);
+    expect(
+      (
+        await app.inject({
+          method: 'GET',
+          url: '/whatsapp/account',
+          headers: { ...headers, 'x-company-id': String(foreign.id) },
+        })
+      ).statusCode
+    ).toBe(403);
+    expect(
+      (
+        await app.inject({
+          method: 'POST',
+          url: '/api/whatsapp.account',
+          headers,
+          payload: { company_id: foreign.id },
+        })
+      ).statusCode
+    ).toBe(403);
+    const rpc = await app.inject({
+      method: 'POST',
+      url: '/jsonrpc',
+      headers,
+      payload: {
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'call',
+        params: {
+          service: 'object',
+          method: 'execute_kw',
+          args: ['whatsapp.account', 'search_read', [[]]],
+        },
+      },
+    });
+    expect(rpc.json().result.map((row: { id: number }) => row.id)).toEqual([ownAccount.id]);
+    const denied = await app.inject({
+      method: 'POST',
+      url: '/jsonrpc',
+      headers,
+      payload: {
+        jsonrpc: '2.0',
+        id: 2,
+        method: 'call',
+        params: {
+          service: 'object',
+          method: 'execute_kw',
+          args: ['whatsapp.account', 'write', [[ownAccount.id], { company_id: foreign.id }]],
+        },
+      },
+    });
+    expect(denied.json().error).toBeDefined();
+  });
+
   it('multi-tenant requests resolve company from X-Company-Id header', async () => {
     const loginRes = await app.inject({
       method: 'POST',

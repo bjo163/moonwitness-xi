@@ -1,5 +1,6 @@
 services:
   whatsapp:
+    profiles: ['whatsapp']
     build:
       context: .
       target: whatsapp-runtime

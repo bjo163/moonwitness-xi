@@ -88,6 +88,7 @@ function run(args, label) {
 
 run(['run', 'test:unit-runner-policy'], 'Unit runner CI ownership policy');
 run(['build'], 'Build');
+run(['--filter', '@moonwitness/whatsapp', 'test'], 'WhatsApp worker');
 run(['exec', 'node', '--test', 'scripts/roadmap/addon-conformance.test.mjs'], 'Addon conformance');
 for (const check of getUnitRunnerCheckPlan({
   githubActions: process.env.GITHUB_ACTIONS === 'true',

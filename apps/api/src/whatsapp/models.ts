@@ -78,3 +78,18 @@ export const WhatsappJob = defineModel('whatsapp.job', {
     last_error: fields.string(),
   },
 });
+
+export const WhatsappEvent = defineModel('whatsapp.event', {
+  table: 'whatsapp_events',
+  unique: [['account', 'external_id']],
+  fields: {
+    company: fields.belongsTo(Company, { required: true }),
+    account: fields.belongsTo(WhatsappAccount, { required: true }),
+    external_id: fields.string({ required: true }),
+    payload: fields.text({ required: true, hidden: true, sensitive: true }),
+    status: fields.enum(['pending', 'done', 'dead'], { required: true, default: 'pending' }),
+    available_at: fields.string({ required: true, default: '' }),
+    attempts: fields.integer({ required: true, default: 0 }),
+    last_error: fields.string(),
+  },
+});

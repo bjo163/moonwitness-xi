@@ -1,6 +1,6 @@
 # Generated API route reference
 
-Extracted from literal Fastify route declarations. Source fingerprint: `7205187deed9f728c777e18078634c9d4454a410bc53087f09b9d2bbd91f0c0a`. Generic handler request payloads are not inferred where the source does not declare a static schema.
+Extracted from literal Fastify route declarations. Source fingerprint: `d4063a247cf89e0b62600ee8d672c669443a4143def7eefbfadf4c8309bdd7fe`. Generic handler request payloads are not inferred where the source does not declare a static schema.
 
 | Method | Path                                              |
 | ------ | ------------------------------------------------- |
@@ -60,9 +60,11 @@ Extracted from literal Fastify route declarations. Source fingerprint: `7205187d
 | GET    | `/health`                                         |
 | GET    | `/internal/whatsapp/accounts`                     |
 | POST   | `/internal/whatsapp/connection-control`           |
+| POST   | `/internal/whatsapp/events/process`               |
 | POST   | `/internal/whatsapp/incoming`                     |
 | POST   | `/internal/whatsapp/job-result`                   |
 | POST   | `/internal/whatsapp/jobs/claim`                   |
+| POST   | `/internal/whatsapp/jobs/heartbeat`               |
 | GET    | `/internal/whatsapp/media/:id`                    |
 | POST   | `/internal/whatsapp/message-status`               |
 | POST   | `/internal/whatsapp/status`                       |
@@ -77,10 +79,12 @@ Extracted from literal Fastify route declarations. Source fingerprint: `7205187d
 | GET    | `/whatsapp/account`                               |
 | POST   | `/whatsapp/connect`                               |
 | GET    | `/whatsapp/conversations`                         |
+| POST   | `/whatsapp/conversations`                         |
 | GET    | `/whatsapp/conversations/:id/messages`            |
 | POST   | `/whatsapp/conversations/:id/messages`            |
 | POST   | `/whatsapp/disconnect`                            |
 | GET    | `/whatsapp/media/:id`                             |
+| POST   | `/whatsapp/messages/:id/retry`                    |
 | GET    | `/workflows/definitions`                          |
 | GET    | `/workflows/instances`                            |
 | POST   | `/workflows/instances`                            |

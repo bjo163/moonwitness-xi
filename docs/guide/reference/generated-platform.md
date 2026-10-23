@@ -1,6 +1,6 @@
 # Generated platform reference
 
-Source fingerprint: `7205187deed9f728c777e18078634c9d4454a410bc53087f09b9d2bbd91f0c0a`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
+Source fingerprint: `d4063a247cf89e0b62600ee8d672c669443a4143def7eefbfadf4c8309bdd7fe`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
 
 ## Workspace packages and apps
 
@@ -10,7 +10,7 @@ Source fingerprint: `7205187deed9f728c777e18078634c9d4454a410bc53087f09b9d2bbd91
 | `@moonwitness/board`            | App     | 1.0.0-rc.1 | `build`, `dev`, `lint`, `preview`, `start`, `start:built`, `typecheck`                                                                                                                              |
 | `@moonwitness/docs`             | App     | 1.0.0-rc.1 | `dev`, `portal:build`, `portal:build:built`, `preview`, `test`, `typecheck`                                                                                                                         |
 | `@moonwitness/ui-catalog`       | App     | 1.0.0-rc.1 | `build`, `build:built`, `dev`, `preview`, `test`                                                                                                                                                    |
-| `@moonwitness/whatsapp`         | App     | 1.0.0-rc.1 | `build`, `dev`, `start`, `start:built`, `typecheck`                                                                                                                                                 |
+| `@moonwitness/whatsapp`         | App     | 1.0.0-rc.1 | `build`, `dev`, `start`, `start:built`, `test`, `typecheck`                                                                                                                                         |
 | `@moonwitness/assets`           | Package | 1.0.0-rc.1 | `artwork:prepare`, `brand:prepare`, `fonts:prepare`                                                                                                                                                 |
 | `@moonwitness/auth`             | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                                     |
 | `@moonwitness/client`           | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                                     |
@@ -43,6 +43,8 @@ Source fingerprint: `7205187deed9f728c777e18078634c9d4454a410bc53087f09b9d2bbd91
 | `API_PORT`                   | integer        | Yes                       | No                       |
 | `ATTACHMENT_STORAGE_DIR`     | string         | Yes                       | No                       |
 | `AUTH_LOGIN_RATE_MAX`        | integer        | Yes                       | No                       |
+| `BOARD_HOST`                 | string         | Yes                       | No                       |
+| `BOARD_PORT`                 | integer        | Yes                       | No                       |
 | `DATABASE_URL`               | url            | Yes                       | Yes                      |
 | `DB_ACQUIRE_TIMEOUT_MS`      | integer        | Yes                       | No                       |
 | `DB_POOL_MAX`                | integer        | Yes                       | No                       |
@@ -209,6 +211,7 @@ Value categories are inferred from variable names and example syntax; requiredne
 - `pnpm test:unit:built`
 - `pnpm test:unit:ci`
 - `pnpm test:versioned-docs`
+- `pnpm test:whatsapp`
 - `pnpm test:workflow-trust`
 - `pnpm test:workspace-version-policy`
 - `pnpm typecheck`

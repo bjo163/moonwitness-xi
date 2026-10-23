@@ -1,0 +1,65 @@
+# Optional full development stack. `docker compose up -d` continues to start PostgreSQL alone.
+services:
+  api:
+    build:
+      context: .
+      target: build
+    command: ['pnpm', '--filter', '@moonwitness/api', 'dev']
+    environment:
+      NODE_ENV: development
+      API_HOST: 0.0.0.0
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/moonwitness_db
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-}
+      WHATSAPP_INTERNAL_TOKEN: ${WHATSAPP_INTERNAL_TOKEN:-}
+      ATTACHMENT_STORAGE_DIR: /var/lib/moonwitness/attachments
+    ports: ['127.0.0.1:3000:3000']
+    volumes: [whatsapp_dev_attachments:/var/lib/moonwitness/attachments]
+    depends_on: [postgres]
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:3000/readyz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 6
+  board:
+    build:
+      context: .
+      target: build
+    command: ['pnpm', '--filter', '@moonwitness/board', 'dev']
+    environment:
+      BOARD_API_TARGET: http://api:3000
+    ports: ['127.0.0.1:5173:5173']
+    depends_on:
+      api: { condition: service_healthy }
+  whatsapp:
+    build:
+      context: .
+      target: build
+    command: ['pnpm', '--filter', '@moonwitness/whatsapp', 'dev']
+    environment:
+      NODE_ENV: development
+      WHATSAPP_API_URL: http://api:3000
+      WHATSAPP_INTERNAL_TOKEN: ${WHATSAPP_INTERNAL_TOKEN:-}
+      WHATSAPP_SESSION_KEY: ${WHATSAPP_SESSION_KEY:-}
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:3100/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    depends_on:
+      api: { condition: service_healthy }
+volumes:
+  whatsapp_dev_attachments:

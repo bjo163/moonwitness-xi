@@ -52,6 +52,8 @@ export function canAccess(
 ): boolean {
   if (INTERNAL_PREFIXES.some((prefix) => modelName.startsWith(prefix))) return false;
   if (NON_GENERIC_MODELS.has(modelName)) return false;
+  // WhatsApp mutations must pass the dedicated company-scoped queue/control routes.
+  if (modelName.startsWith('whatsapp.') && op !== 'read') return false;
   if (modelName === 'base.audit_log') return ADMIN_ROLES.has(role ?? '') && op === 'read';
   if (role !== undefined && ADMIN_ROLES.has(role)) return true;
   if (role === 'user') {

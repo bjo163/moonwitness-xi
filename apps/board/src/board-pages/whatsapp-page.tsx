@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Paperclip, Send, Smartphone, Users, Wifi, WifiOff } from 'lucide-react';
 import { toast } from '@moonwitness/ui/components/toast';
@@ -50,9 +50,9 @@ const statusLabel: Record<string, string> = {
 export function WhatsappPage() {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<number | null>(null);
-  const [draft, setDraft] = useState('');
-  const [file, setFile] = useState<File | null>(null);
-  const [qrImage, setQrImage] = useState<string | null>(null);
+  const [newPhone, setNewPhone] = useState('');
+  const [startingChat, setStartingChat] = useState(false);
+  const [qr, setQr] = useState<{ code: string; image: string } | null>(null);
   const accountQuery = useQuery({
     queryKey: scopedQueryKey(['whatsapp', 'account']),
     queryFn: async () => (await client.request<{ data: Account }>('/whatsapp/account')).data,
@@ -65,33 +65,31 @@ export function WhatsappPage() {
     enabled: accountQuery.data?.status === 'connected',
     refetchInterval: 5000,
   });
-  const currentConversationId = conversationsQuery.data?.some((item) => item.id === selected)
-    ? selected
-    : conversationsQuery.data?.[0]?.id;
+  const activeConversation =
+    conversationsQuery.data?.find((item) => item.id === selected) ?? conversationsQuery.data?.[0];
   const messagesQuery = useQuery({
-    queryKey: scopedQueryKey(['whatsapp', 'messages', currentConversationId]),
+    queryKey: scopedQueryKey(['whatsapp', 'messages', activeConversation?.id]),
     queryFn: async () =>
       (
         await client.request<{ data: Message[] }>(
-          `/whatsapp/conversations/${currentConversationId}/messages`
+          `/whatsapp/conversations/${activeConversation!.id}/messages`
         )
       ).data,
-    enabled: Boolean(currentConversationId),
+    enabled: accountQuery.data?.status === 'connected' && Boolean(activeConversation),
     refetchInterval: 2500,
   });
 
   useEffect(() => {
     let cancelled = false;
-    if (!accountQuery.data?.qr_code) return;
+    const code = accountQuery.data?.qr_code;
+    if (!code) return;
     void import('qrcode')
-      .then(({ default: QRCode }) =>
-        QRCode.toDataURL(accountQuery.data!.qr_code!, { width: 256, margin: 1 })
-      )
+      .then(({ default: QRCode }) => QRCode.toDataURL(code, { width: 256, margin: 1 }))
       .then((image) => {
-        if (!cancelled) setQrImage(image);
+        if (!cancelled) setQr({ code, image });
       })
       .catch(() => {
-        if (!cancelled) setQrImage(null);
+        if (!cancelled) setQr(null);
       });
     return () => {
       cancelled = true;
@@ -114,58 +112,42 @@ export function WhatsappPage() {
       toast.error(error instanceof Error ? error.message : 'Could not disconnect WhatsApp');
     }
   };
-  const send = async (event: FormEvent) => {
+  const startChat = async (event: FormEvent) => {
     event.preventDefault();
-    const activeConversation = conversationsQuery.data?.find(
-      (item) => item.id === currentConversationId
-    );
-    if (!activeConversation || (!draft.trim() && !file)) return;
-    if (file && file.size > 8 * 1024 * 1024) {
-      toast.error('File must be 8 MB or smaller');
-      return;
-    }
+    if (startingChat) return;
+    setStartingChat(true);
     try {
-      const media_base64 = file
-        ? await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '');
-            reader.onerror = () => reject(new Error('Could not read file'));
-            reader.readAsDataURL(file);
-          })
-        : undefined;
-      await client.request(`/whatsapp/conversations/${activeConversation.id}/messages`, {
+      const response = await client.request<{ data: Conversation }>('/whatsapp/conversations', {
         method: 'POST',
-        body: {
-          content: draft.trim(),
-          ...(file
-            ? {
-                media_base64,
-                media_mime_type: file.type || 'application/octet-stream',
-                media_file_name: file.name,
-              }
-            : {}),
-        },
+        body: { phone: newPhone.trim() },
       });
-      setDraft('');
-      setFile(null);
-      await queryClient.invalidateQueries({ queryKey: scopedQueryKey(['whatsapp']) });
+      setNewPhone('');
+      await queryClient.invalidateQueries({
+        queryKey: scopedQueryKey(['whatsapp', 'conversations']),
+      });
+      setSelected(response.data.id);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Message could not be queued');
+      toast.error(error instanceof Error ? error.message : 'Could not start conversation');
+    } finally {
+      setStartingChat(false);
     }
   };
 
-  const activeConversation = conversationsQuery.data?.find(
-    (item) => item.id === currentConversationId
-  );
   const account = accountQuery.data;
   const status = account?.status ?? 'disconnected';
   const connected = status === 'connected';
   const statusIcon = connected ? <Wifi className="size-4" /> : <WifiOff className="size-4" />;
-  const messageList = useMemo(() => messagesQuery.data ?? [], [messagesQuery.data]);
+  const messageList = messagesQuery.data ?? [];
+  const qrImage = qr?.code === account?.qr_code ? qr?.image : null;
 
   return (
     <main className="mx-auto flex min-h-full w-full max-w-7xl flex-col gap-5 p-4 md:p-8">
       <Breadcrumbs items={[{ label: 'WhatsApp' }]} />
+      {(accountQuery.isError || conversationsQuery.isError || messagesQuery.isError) && (
+        <p role="alert" className="border-2 border-ink bg-pink p-3 text-sm">
+          Could not load WhatsApp data. Retrying automatically.
+        </p>
+      )}
       <header className="flex flex-wrap items-center justify-between gap-4 border-2 border-ink bg-paper p-5 shadow-[4px_4px_0_0_var(--ink)]">
         <div>
           <p className="font-mono text-xs uppercase tracking-[0.2em] text-ink-faint">
@@ -179,9 +161,9 @@ export function WhatsappPage() {
           </p>
           {account?.last_error && <p className="mt-2 text-sm text-red-700">{account.last_error}</p>}
         </div>
-        {connected ? (
+        {['connected', 'connecting', 'qr', 'reconnecting'].includes(status) ? (
           <Button type="button" variant="outline" onClick={disconnect}>
-            Disconnect
+            {connected ? 'Disconnect' : 'Cancel connection'}
           </Button>
         ) : (
           <Button
@@ -203,9 +185,6 @@ export function WhatsappPage() {
           ) : (
             <Skeleton className="mt-4 size-64" />
           )}
-          <p className="mt-2 max-w-xl break-all font-mono text-xs text-ink-faint">
-            {account?.qr_code}
-          </p>
         </section>
       )}
       {connected && (
@@ -213,6 +192,19 @@ export function WhatsappPage() {
           <aside className="border-b-2 border-ink md:border-b-0 md:border-r-2">
             <div className="border-b-2 border-ink p-4">
               <h2 className="font-display text-lg uppercase">Conversations</h2>
+              <form onSubmit={startChat} className="mt-3 flex gap-2">
+                <Input
+                  aria-label="Phone number with country code"
+                  placeholder="6281234567890"
+                  value={newPhone}
+                  onChange={(event) => setNewPhone(event.target.value)}
+                  disabled={startingChat}
+                  inputMode="tel"
+                />
+                <Button type="submit" disabled={startingChat || !newPhone.trim()}>
+                  New chat
+                </Button>
+              </form>
             </div>
             {conversationsQuery.isLoading ? (
               <div className="space-y-2 p-4">
@@ -256,7 +248,7 @@ export function WhatsappPage() {
               )}
             </div>
             <div className="flex flex-1 flex-col-reverse gap-3 overflow-y-auto p-4">
-              {[...messageList].reverse().map((message) => (
+              {messageList.map((message) => (
                 <article
                   key={message.id}
                   className={`max-w-[85%] border-2 border-ink p-3 ${message.direction === 'outbound' ? 'ml-auto bg-pink/30' : 'mr-auto bg-white'}`}
@@ -276,48 +268,14 @@ export function WhatsappPage() {
                   <p className="mt-2 text-right font-mono text-[10px] text-ink-faint">
                     {message.status}
                   </p>
+                  {message.direction === 'outbound' && message.status === 'failed' && (
+                    <RetryMessage messageId={message.id} />
+                  )}
                 </article>
               ))}
             </div>
             {activeConversation && (
-              <form onSubmit={send} className="flex flex-col gap-2 border-t-2 border-ink p-3">
-                <div className="flex items-center gap-2">
-                  <label
-                    className="cursor-pointer rounded border-2 border-ink p-2 hover:bg-pink/20"
-                    title="Attach media"
-                  >
-                    <Paperclip className="size-4" />
-                    <Input
-                      type="file"
-                      className="sr-only"
-                      accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx"
-                      onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-                    />
-                  </label>
-                  <Input
-                    value={draft}
-                    onChange={(event) => setDraft(event.target.value)}
-                    placeholder="Write a message…"
-                    maxLength={8000}
-                  />
-                  <Button type="submit" disabled={!draft.trim() && !file} aria-label="Send message">
-                    <Send className="size-4" />
-                  </Button>
-                </div>
-                {file && (
-                  <p className="text-xs">
-                    Attached: {file.name}{' '}
-                    <Button
-                      type="button"
-                      variant="link"
-                      className="h-auto p-0 underline"
-                      onClick={() => setFile(null)}
-                    >
-                      Remove
-                    </Button>
-                  </p>
-                )}
-              </form>
+              <MessageComposer key={activeConversation.id} conversationId={activeConversation.id} />
             )}
           </div>
         </section>
@@ -335,8 +293,134 @@ export function WhatsappPage() {
   );
 }
 
+function RetryMessage({ messageId }: { messageId: number }) {
+  const queryClient = useQueryClient();
+  const [retrying, setRetrying] = useState(false);
+  const retry = async () => {
+    setRetrying(true);
+    try {
+      await client.request(`/whatsapp/messages/${messageId}/retry`, { method: 'POST', body: {} });
+      await queryClient.invalidateQueries({ queryKey: scopedQueryKey(['whatsapp']) });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not retry message');
+    } finally {
+      setRetrying(false);
+    }
+  };
+  return (
+    <Button type="button" variant="outline" disabled={retrying} onClick={retry}>
+      Retry message
+    </Button>
+  );
+}
+
+function MessageComposer({ conversationId }: { conversationId: number }) {
+  const queryClient = useQueryClient();
+  const [draft, setDraft] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [sending, setSending] = useState(false);
+  const sendLock = useRef(false);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const send = async (event: FormEvent) => {
+    event.preventDefault();
+    if (sendLock.current || (!draft.trim() && !file)) return;
+    if (file && file.size > 8 * 1024 * 1024) {
+      toast.error('File must be 8 MB or smaller');
+      return;
+    }
+    sendLock.current = true;
+    setSending(true);
+    try {
+      const media_base64 = file
+        ? await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '');
+            reader.onerror = () => reject(new Error('Could not read file'));
+            reader.readAsDataURL(file);
+          })
+        : undefined;
+      await client.request(`/whatsapp/conversations/${conversationId}/messages`, {
+        method: 'POST',
+        body: {
+          content: draft.trim(),
+          ...(file
+            ? {
+                media_base64,
+                media_mime_type: file.type || 'application/octet-stream',
+                media_file_name: file.name,
+              }
+            : {}),
+        },
+      });
+      setDraft('');
+      setFile(null);
+      if (fileInput.current) fileInput.current.value = '';
+      await queryClient.invalidateQueries({ queryKey: scopedQueryKey(['whatsapp']) });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Message could not be queued');
+    } finally {
+      sendLock.current = false;
+      setSending(false);
+    }
+  };
+
+  return (
+    <form onSubmit={send} className="flex flex-col gap-2 border-t-2 border-ink p-3">
+      <div className="flex items-center gap-2">
+        <label
+          className="cursor-pointer rounded border-2 border-ink p-2 hover:bg-pink/20"
+          title="Attach media"
+        >
+          <span className="sr-only">Attach media</span>
+          <Paperclip className="size-4" />
+          <Input
+            type="file"
+            ref={fileInput}
+            disabled={sending}
+            aria-label="Attach media"
+            className="sr-only"
+            accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx"
+            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+          />
+        </label>
+        <Input
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder="Write a message…"
+          maxLength={8000}
+          disabled={sending}
+        />
+        <Button
+          type="submit"
+          disabled={sending || (!draft.trim() && !file)}
+          aria-label="Send message"
+        >
+          <Send className="size-4" />
+        </Button>
+      </div>
+      {file && (
+        <p className="text-xs">
+          Attached: {file.name}{' '}
+          <Button
+            type="button"
+            variant="link"
+            className="h-auto p-0 underline"
+            onClick={() => {
+              setFile(null);
+              if (fileInput.current) fileInput.current.value = '';
+            }}
+          >
+            Remove
+          </Button>
+        </p>
+      )}
+    </form>
+  );
+}
+
 function MediaPreview({ message }: { message: Message }) {
   const [url, setUrl] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
   useEffect(() => {
     let active = true;
     let objectUrl: string | null = null;
@@ -348,12 +432,20 @@ function MediaPreview({ message }: { message: Message }) {
           setUrl(objectUrl);
         }
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (active) setFailed(true);
+      });
     return () => {
       active = false;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [message.id]);
+  if (failed)
+    return (
+      <p role="status" className="mt-2 text-xs text-ink-faint">
+        Attachment could not be loaded.
+      </p>
+    );
   if (!url) return <p className="mt-2 text-xs text-ink-faint">Loading attachment…</p>;
   if (message.media_mime_type?.startsWith('image/'))
     return (
