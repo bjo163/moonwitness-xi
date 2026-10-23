@@ -8,7 +8,22 @@ test('public homepage renders its message, canonical metadata, and workspace act
 
   await expect(page).toHaveTitle(/Real people\. Unfiltered worlds\./u);
   await expect(page.getByRole('heading', { level: 1, name: 'MoonWitness' })).toBeVisible();
-  await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
+  const mainNavigation = page.getByRole('navigation', { name: 'Main navigation' });
+  await expect(mainNavigation).toBeVisible();
+  await expect(mainNavigation.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '#home');
+  await expect(mainNavigation.getByRole('link', { name: 'Home' })).toHaveAttribute(
+    'aria-current',
+    'location'
+  );
+  for (const link of await mainNavigation.getByRole('link').all()) {
+    const target = (await link.getAttribute('href'))!.slice(1);
+    await expect(page.locator(`#${target}`), `navigation target #${target}`).toHaveCount(1);
+  }
+  await page.locator('#about').evaluate((element) => element.scrollIntoView({ block: 'start' }));
+  await expect(mainNavigation.getByRole('link', { name: 'About' })).toHaveAttribute(
+    'aria-current',
+    'location'
+  );
   await expect(page.getByRole('link', { name: /Sign in to your workspace/u })).toHaveAttribute(
     'href',
     '/login'
@@ -89,6 +104,7 @@ test('homepage adapts to a narrow mobile viewport without horizontal overflow', 
     .locator('[data-slot="sheet-overlay"]')
     .evaluate((element) => getComputedStyle(element).backgroundColor);
   expect(overlayColor).not.toBe('rgba(0, 0, 0, 0)');
+  await expect(mobileNav.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '#home');
   await expect(mobileNav.getByRole('link', { name: 'People' })).toHaveAttribute('href', '#people');
   await expect(mobileNav.getByRole('link', { name: 'Knowledge' })).toHaveAttribute(
     'href',

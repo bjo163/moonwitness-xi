@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@moonwitness/ui/components/button';
@@ -16,6 +17,7 @@ import { SoundToggle } from '@moonwitness/ui/components/audio';
 import { ArrowRightIcon, MenuIcon } from '@moonwitness/ui/icons';
 
 const homeLinks = [
+  { label: 'Home', href: '#home' },
   { label: 'People', href: '#people' },
   { label: 'Knowledge', href: '#knowledge' },
   { label: 'Stories', href: '#stories' },
@@ -23,6 +25,53 @@ const homeLinks = [
 ] as const;
 
 export function HomeHeader() {
+  const [activeSection, setActiveSection] = useState('home');
+
+  useEffect(() => {
+    let frame = 0;
+    const updateActiveSection = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const active = [...homeLinks]
+          .map(({ href }) => document.getElementById(href.slice(1)))
+          .filter((section): section is HTMLElement => section !== null)
+          .filter((section) => section.getBoundingClientRect().top <= 140)
+          .at(-1);
+        setActiveSection(active?.id ?? 'home');
+      });
+    };
+
+    window.addEventListener('scroll', updateActiveSection, { passive: true });
+    window.addEventListener('resize', updateActiveSection);
+    updateActiveSection();
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', updateActiveSection);
+      window.removeEventListener('resize', updateActiveSection);
+    };
+  }, []);
+
+  const renderLinks = (mobile = false) =>
+    homeLinks.map((item) => {
+      const link = (
+        <a
+          href={item.href}
+          key={item.href}
+          aria-current={activeSection === item.href.slice(1) ? 'location' : undefined}
+        >
+          {item.label}
+        </a>
+      );
+
+      return mobile ? (
+        <SheetClose asChild key={item.href}>
+          {link}
+        </SheetClose>
+      ) : (
+        link
+      );
+    });
+
   return (
     <header className="home-header">
       <Link href="/" className="home-mark" aria-label="MoonWitness home">
@@ -36,11 +85,7 @@ export function HomeHeader() {
         />
       </Link>
       <nav className="home-nav" aria-label="Main navigation">
-        {homeLinks.map((item) => (
-          <a href={item.href} key={item.href}>
-            {item.label}
-          </a>
-        ))}
+        {renderLinks()}
       </nav>
       <div className="home-header-actions">
         <div className="home-desktop-sound">
@@ -71,11 +116,7 @@ export function HomeHeader() {
               <SheetDescription>People, knowledge, stories, and the workspace.</SheetDescription>
             </SheetHeader>
             <nav className="home-mobile-nav" aria-label="Mobile navigation">
-              {homeLinks.map((item) => (
-                <SheetClose asChild key={item.href}>
-                  <a href={item.href}>{item.label}</a>
-                </SheetClose>
-              ))}
+              {renderLinks(true)}
             </nav>
             <div className="home-mobile-sheet-actions">
               <SoundToggle />

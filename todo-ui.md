@@ -350,8 +350,8 @@ Urutan: header → hero manga → tiga panel editorial → band koneksi → film
 ### Header dan hero
 
 - [x] Ganti lockup menjadi crown + brush wordmark. Bukti screenshot desktop/mobile: `docs/design/ui-catalog/homepage-filmstrip-desktop-1672.png`, `homepage-filmstrip-mobile-390.png`; ejaan visual terbaca `MOONWITNESS`.
-- [ ] Terapkan masthead gelap, garis/tepi tinta, dan underline active.
-- [ ] Gunakan navigasi ke section yang benar-benar ada.
+- [x] Terapkan masthead gelap, garis/tepi tinta, dan underline active. Bukti visual/ejaan desktop dan menu mobile: `docs/design/ui-catalog/homepage-nav-desktop-1672.png` dan `homepage-nav-mobile-menu-390x844.png`.
+- [x] Gunakan navigasi ke section yang benar-benar ada. Link Home, People, Knowledge, Stories, dan About memiliki target nyata; status aktif berubah saat scroll. Bukti: `apps/board/e2e/public-home.spec.ts` dan `docs/design/ui-catalog/homepage-nav-desktop-1672.png`.
 - [x] Gunakan shared Button untuk CTA login. Bukti: CTA `Enter the board` memakai `Button` + Next `Link` di `apps/board/src/app/page.tsx`.
 - [x] Tampilkan SoundToggle dengan label yang jelas. Bukti visual `homepage-filmstrip-desktop-1672.png`; accessible name diperiksa pada homepage.
 - [x] Tampilkan search/language hanya jika kontrol punya aksi nyata. Home tidak menampilkan kontrol search atau language yang belum berfungsi.

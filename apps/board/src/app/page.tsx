@@ -106,7 +106,7 @@ export default function HomePage() {
     <main className="home-page">
       <HomeHeader />
 
-      <section className="home-hero" aria-labelledby="home-title">
+      <section className="home-hero" id="home" aria-labelledby="home-title">
         <picture className="home-hero-art">
           <source media="(max-width: 600px)" srcSet="/illustrations/home-hero-mobile.webp" />
           <img
@@ -119,7 +119,7 @@ export default function HomePage() {
         <div className="home-hero-shade" aria-hidden="true" />
         <div className="home-hero-copy">
           <span className="home-kicker">People. Places. Stories. Another side of reality.</span>
-          <h1 id="home-title" className="home-title">
+          <h1 id="home-title" className="home-title" aria-label="MoonWitness">
             MOON<span>WITNESS</span>
           </h1>
           <p className="home-hero-ribbon">Follow the signal</p>

@@ -56,8 +56,12 @@
   transition: transform 120ms ease;
 }
 .home-nav a:hover::after,
-.home-nav a:focus-visible::after {
+.home-nav a:focus-visible::after,
+.home-nav a[aria-current='location']::after {
   transform: scaleX(1);
+}
+.home-nav a[aria-current='location'] {
+  color: var(--mw-magenta);
 }
 .home-header-actions {
   display: flex;
@@ -97,9 +101,10 @@
   padding: 0.45rem 0.25rem;
 }
 .home-mobile-nav a:hover,
-.home-mobile-nav a:focus-visible {
+.home-mobile-nav a:focus-visible,
+.home-mobile-nav a[aria-current='location'] {
   background: var(--mw-magenta);
-  color: var(--mw-paper);
+  color: var(--mw-ink);
 }
 .home-mobile-sheet-actions {
   display: grid;
