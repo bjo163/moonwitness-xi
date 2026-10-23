@@ -644,7 +644,12 @@ export function AppShell({ children }: { children: ReactNode }) {
                     }}
                   >
                     <Icon /> {item.menu.label ?? modelLabel(item.model)}
-                    <span className="ml-auto font-mono text-xs text-ink-faint">{item.model}</span>
+                    <span
+                      className="ml-auto max-w-[45%] truncate font-mono text-xs text-ink-faint"
+                      title={item.model}
+                    >
+                      {item.model}
+                    </span>
                   </CommandItem>
                 );
               })}

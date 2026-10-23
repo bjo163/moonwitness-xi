@@ -523,7 +523,7 @@ Pertahankan satu command manual/otomatis: **`pnpm board:ui:check`**.
 
 - [x] Uji pasangan warna dan focus contrast. Bukti: `pnpm test:ui` dan visual audit Axe lulus.
 - [x] Uji keyboard-only dan accessible names. Bukti: `pnpm test:ui` dan `pnpm test:e2e:visual` lulus.
-- [ ] Uji Dialog/Sheet focus trap, Escape, dan return focus.
+- [x] Uji Dialog/Sheet focus trap, Escape, dan return focus. Bukti: `mobile overlays keep accessible names, keyboard dismissal, focus return, and WCAG contrast` menguji tab-loop dua arah pada dialog Model navigation dan command palette, Escape, serta fokus kembali ke trigger; screenshot command palette mobile diperiksa di `test-results/visual-audit/command-palette-mobile-375.png`.
 - [ ] Uji Button as Link dan disabled behavior.
 - [ ] Uji controlled/disabled/error/loading states.
 - [ ] Uji Table sort, selection, pagination, dan overflow.

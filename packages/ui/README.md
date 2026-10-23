@@ -55,6 +55,8 @@ When adding a component: first record its behavior and accessibility contract; b
 
 ## Accessibility, responsive behavior, and states
 
+Dialog centering must be defined in one place. `DialogContent` already applies Tailwind's individual `translate` utilities; shared CSS must not apply a second `transform: translate(...)`, which compounds the offset and can move mobile dialogs outside the viewport. Verify dialog bounds at narrow widths and preserve visible truncation for long metadata inside command items.
+
 - Body text, data, and control labels stay high contrast. Normal text pairs meet WCAG AA (4.5:1); focus and non-text boundaries target at least 3:1 against adjacent surfaces. Saturated pink, cyan, and yellow are accents; use their paired dark foreground for text.
 - `SectionRibbon` declares `surface="paper|ink"`; its accent number chooses a theme- and surface-readable color rather than relying on the bright accent over every background.
 - Every keyboard-operable control has a visible `:focus-visible` treatment that remains above rough frames and texture. Headings retain semantic order; decorative art is ignored by screen readers.

@@ -72,6 +72,7 @@ test('dashboard KPI cards show current values without fabricated trend percentag
 test('mobile overlays keep accessible names, keyboard dismissal, focus return, and WCAG contrast', async ({
   page,
 }) => {
+  await mkdir(auditDirectory, { recursive: true });
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('/login');
@@ -86,6 +87,17 @@ test('mobile overlays keep accessible names, keyboard dismissal, focus return, a
   const modelNavigation = page.getByRole('dialog', { name: 'Model navigation' });
   await expect(modelNavigation).toBeVisible();
   await expectNoA11yViolations(page, 'mobile/model-navigation-open');
+  const dialogControls = modelNavigation.locator(
+    'button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  );
+  const firstDialogControl = dialogControls.first();
+  const lastDialogControl = dialogControls.last();
+  await lastDialogControl.focus();
+  await page.keyboard.press('Tab');
+  await expect(firstDialogControl).toBeFocused();
+  await firstDialogControl.focus();
+  await page.keyboard.press('Shift+Tab');
+  await expect(lastDialogControl).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(modelNavigation).toBeHidden();
   await expect(modelNavigationTrigger).toBeFocused();
@@ -97,7 +109,18 @@ test('mobile overlays keep accessible names, keyboard dismissal, focus return, a
   const commandPalette = page.getByRole('dialog', { name: 'Command Palette' });
   await expect(commandPalette).toBeVisible();
   await expect(commandPalette.getByPlaceholder(/Search models or records/u)).toBeFocused();
+  await expect(page.locator('[data-slot="dialog-overlay"]')).toHaveCSS('opacity', '1');
+  await expect(commandPalette).toHaveCSS('opacity', '1');
+  expect(await page.evaluate(() => window.scrollX)).toBe(0);
+  const commandPaletteBounds = await commandPalette.boundingBox();
+  expect(commandPaletteBounds).not.toBeNull();
+  expect(commandPaletteBounds!.x).toBeGreaterThanOrEqual(0);
+  expect(commandPaletteBounds!.x + commandPaletteBounds!.width).toBeLessThanOrEqual(375);
   await expectNoA11yViolations(page, 'mobile/command-palette-open');
+  await page.screenshot({
+    path: path.join(auditDirectory, 'command-palette-mobile-375.png'),
+    fullPage: false,
+  });
   await page.keyboard.press('Escape');
   await expect(commandPalette).toBeHidden();
   await expect(commandPaletteTrigger).toBeFocused();
