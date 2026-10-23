@@ -29,7 +29,16 @@ export const viewport: Viewport = { themeColor: '#0d0d0d', colorScheme: 'light d
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          // Restored from the pre-Next entry document: apply the saved theme
+          // before first paint so a reload never flashes the light palette.
+          dangerouslySetInnerHTML={{
+            __html: `try{var t=localStorage.getItem('mw-theme');var d=t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);}catch(e){}`,
+          }}
+        />
+      </head>
       <body>
         <SoundProvider>{children}</SoundProvider>
       </body>

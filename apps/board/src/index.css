@@ -145,7 +145,7 @@
 
   /* Paper sticker label, rotation set per instance via --tilt. */
   .sticker {
-    @apply inline-flex items-center gap-1.5 border-2 border-ink bg-paper-raised px-2.5 py-0.5 text-sm font-semibold;
+    @apply inline-flex items-center gap-1.5 border-2 border-ink bg-paper-raised px-2.5 py-0.5 text-sm font-semibold text-ink;
     transform: rotate(var(--tilt, -1.5deg));
     box-shadow: 2px 2px 0 0 var(--ink);
     transition:

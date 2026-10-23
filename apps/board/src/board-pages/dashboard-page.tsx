@@ -330,7 +330,7 @@ export function DashboardPage() {
                 'px-4 py-1.5 font-display text-sm uppercase tracking-wider transition-colors',
                 adminSubView === 'telemetry'
                   ? 'border-2 border-ink bg-lime text-on-accent font-bold shadow-[2px_2px_0_0_var(--ink)]'
-                  : 'text-ink-soft hover:text-ink hover:bg-paper-raised'
+                  : 'bg-card text-ink-soft hover:text-ink hover:bg-paper-raised'
               )}
             >
               Overview & Telemetry
@@ -343,7 +343,7 @@ export function DashboardPage() {
                 'px-4 py-1.5 font-display text-sm uppercase tracking-wider transition-colors',
                 adminSubView === 'crons'
                   ? 'border-2 border-ink bg-lime text-on-accent font-bold shadow-[2px_2px_0_0_var(--ink)]'
-                  : 'text-ink-soft hover:text-ink hover:bg-paper-raised'
+                  : 'bg-card text-ink-soft hover:text-ink hover:bg-paper-raised'
               )}
             >
               Cron Scheduler & Queue

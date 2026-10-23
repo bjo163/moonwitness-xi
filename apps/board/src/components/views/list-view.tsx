@@ -697,7 +697,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                 'flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase transition-all',
                 viewMode === 'table'
                   ? 'border border-ink bg-lime text-on-accent shadow-[1.5px_1.5px_0_0_var(--ink)]'
-                  : 'text-ink-soft hover:text-ink'
+                  : 'bg-card text-ink-soft hover:text-ink'
               )}
               title="Table View"
             >
@@ -711,7 +711,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                 'flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase transition-all',
                 viewMode === 'grid'
                   ? 'border border-ink bg-lime text-on-accent shadow-[1.5px_1.5px_0_0_var(--ink)]'
-                  : 'text-ink-soft hover:text-ink'
+                  : 'bg-card text-ink-soft hover:text-ink'
               )}
               title="Cards Grid View"
             >
@@ -725,7 +725,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                 'flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase transition-all',
                 viewMode === 'pipeline'
                   ? 'border border-ink bg-lime text-on-accent shadow-[1.5px_1.5px_0_0_var(--ink)]'
-                  : 'text-ink-soft hover:text-ink'
+                  : 'bg-card text-ink-soft hover:text-ink'
               )}
               title="Kanban Pipeline Stages"
             >
