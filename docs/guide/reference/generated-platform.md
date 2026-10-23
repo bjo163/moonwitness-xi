@@ -1,6 +1,6 @@
 # Generated platform reference
 
-Source fingerprint: `1c30353b3be8c167fdab2b88ee07e45b967ffba11769a204a3125a91eb3082a0`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
+Source fingerprint: `e1cb6f5e44193b196170719b964a8e54e4d62631f97366897dea5351b8bfe15e`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
 
 ## Workspace packages and apps
 
@@ -10,6 +10,7 @@ Source fingerprint: `1c30353b3be8c167fdab2b88ee07e45b967ffba11769a204a3125a91eb3
 | `@moonwitness/board`            | App     | 1.0.0-rc.1 | `build`, `dev`, `lint`, `preview`, `start`, `typecheck`                                                                                                                              |
 | `@moonwitness/docs`             | App     | 1.0.0-rc.1 | `dev`, `portal:build`, `portal:build:built`, `preview`, `test`, `typecheck`                                                                                                          |
 | `@moonwitness/ui-catalog`       | App     | 1.0.0-rc.1 | `build`, `build:built`, `dev`, `preview`, `test`                                                                                                                                     |
+| `@moonwitness/whatsapp`         | App     | 1.0.0-rc.1 | `build`, `dev`, `start`, `typecheck`                                                                                                                                                 |
 | `@moonwitness/assets`           | Package | 1.0.0-rc.1 | `artwork:prepare`, `brand:prepare`, `fonts:prepare`                                                                                                                                  |
 | `@moonwitness/auth`             | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
 | `@moonwitness/client`           | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                      |
@@ -70,6 +71,10 @@ Source fingerprint: `1c30353b3be8c167fdab2b88ee07e45b967ffba11769a204a3125a91eb3
 | `REFRESH_TOKEN_TTL_SECONDS`  | secret         | Yes                       | Yes                      |
 | `RESTORE_DRILL_SCHEMA`       | string         | No                        | No                       |
 | `SUPERADMIN_PASSWORD`        | secret         | Yes                       | Yes                      |
+| `WHATSAPP_API_URL`           | string         | Yes                       | No                       |
+| `WHATSAPP_INTERNAL_TOKEN`    | secret         | Yes                       | Yes                      |
+| `WHATSAPP_PORT`              | integer        | Yes                       | No                       |
+| `WHATSAPP_SESSION_KEY`       | secret         | Yes                       | Yes                      |
 | `WORKER_HEALTH_HOST`         | string         | Yes                       | No                       |
 
 The generator reads only `.env.example` and the names referenced by the typed config source. It never reads `.env` and does not emit values or defaults.
@@ -106,6 +111,7 @@ Value categories are inferred from variable names and example syntax; requiredne
 - `pnpm dev`
 - `pnpm dev:api`
 - `pnpm dev:board`
+- `pnpm dev:whatsapp`
 - `pnpm docs:build`
 - `pnpm docs:build:built`
 - `pnpm docs:change:classify`

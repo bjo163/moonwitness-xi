@@ -46,6 +46,12 @@
       "scripts": ["build", "build:built", "dev", "preview", "test"]
     },
     {
+      "name": "@moonwitness/whatsapp",
+      "version": "1.0.0-rc.1",
+      "directory": "apps/whatsapp",
+      "scripts": ["build", "dev", "start", "typecheck"]
+    },
+    {
       "name": "@moonwitness/assets",
       "version": "1.0.0-rc.1",
       "directory": "packages/assets",
@@ -209,6 +215,12 @@
       "preview": "vite preview",
       "test": "playwright test"
     },
+    "@moonwitness/whatsapp": {
+      "build": "tsc",
+      "dev": "tsx watch src/main.ts",
+      "start": "node dist/main.js",
+      "typecheck": "tsc --noEmit"
+    },
     "@moonwitness/assets": {
       "artwork:prepare": "node scripts/prepare-artwork.mjs",
       "brand:prepare": "node scripts/prepare-brand-master.mjs",
@@ -323,6 +335,7 @@
       "dev": "pnpm --filter @moonwitness/api --filter @moonwitness/board --parallel dev",
       "dev:api": "pnpm --filter @moonwitness/api dev",
       "dev:board": "pnpm --filter @moonwitness/board dev",
+      "dev:whatsapp": "pnpm --filter @moonwitness/whatsapp dev",
       "docs:build": "pnpm docs:check && node scripts/docs/build-guide.mjs && pnpm --filter @moonwitness/docs portal:build",
       "docs:build:built": "pnpm docs:check:built && node scripts/docs/build-guide.mjs && pnpm --filter @moonwitness/docs portal:build:built",
       "docs:change:classify": "node scripts/classify-docs-change.mjs",
@@ -627,6 +640,30 @@
     },
     {
       "name": "SUPERADMIN_PASSWORD",
+      "configuredInExample": true,
+      "secret": true,
+      "valueType": "secret"
+    },
+    {
+      "name": "WHATSAPP_API_URL",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "string"
+    },
+    {
+      "name": "WHATSAPP_INTERNAL_TOKEN",
+      "configuredInExample": true,
+      "secret": true,
+      "valueType": "secret"
+    },
+    {
+      "name": "WHATSAPP_PORT",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "integer"
+    },
+    {
+      "name": "WHATSAPP_SESSION_KEY",
       "configuredInExample": true,
       "secret": true,
       "valueType": "secret"
@@ -6291,5 +6328,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "1c30353b3be8c167fdab2b88ee07e45b967ffba11769a204a3125a91eb3082a0"
+  "generatedFromSha256": "e1cb6f5e44193b196170719b964a8e54e4d62631f97366897dea5351b8bfe15e"
 }
