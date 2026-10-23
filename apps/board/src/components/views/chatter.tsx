@@ -30,7 +30,7 @@ import { scopedQueryKey } from '@/lib/query-scope';
 import { useAuth } from '@/hooks/use-auth-context';
 import { Textarea } from '@moonwitness/ui/components/textarea';
 import { Label } from '@moonwitness/ui/components/label';
-import { Doodle } from '@/components/manga/effects';
+import { Doodle } from '@moonwitness/ui/components/effects';
 import { cn } from '@/lib/utils';
 
 interface ChatterProps {

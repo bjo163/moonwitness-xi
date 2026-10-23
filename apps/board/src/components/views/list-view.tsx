@@ -41,7 +41,7 @@ import { useRecordMutations, useRecords } from '@/hooks/use-model';
 import { Input } from '@moonwitness/ui/components/input';
 import { Skeleton } from '@moonwitness/ui/components/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@moonwitness/ui/components/popover';
-import { Doodle, SpeedLines } from '@/components/manga/effects';
+import { AccentMarker, Doodle, SpeedLines } from '@moonwitness/ui/components/effects';
 import { cn } from '@/lib/utils';
 import { FieldCell } from './fields';
 import { relationKey } from './field-utils';
@@ -448,7 +448,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
         <div>
           <div className="flex items-center gap-3">
             <h1 className="ink-title text-4xl sm:text-5xl">
-              <span className="marker">{views.title}</span>
+              <AccentMarker>{views.title}</AccentMarker>
             </h1>
             <Doodle kind="star" className="size-6 text-pink" />
           </div>

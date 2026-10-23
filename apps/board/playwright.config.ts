@@ -96,6 +96,7 @@ export default defineConfig({
         ...env,
         API_PORT: apiPort,
         BOARD_API_TARGET: `http://127.0.0.1:${apiPort}`,
+        NEXT_PUBLIC_SITE_URL: baseURL,
         MW_BOARD_DIST_DIR: '.next-e2e',
       },
     },

@@ -17,7 +17,7 @@ Build upward only when reuse calls for it:
 1. **Foundation** — semantic color, type, spacing, shape, layer, shadow, and motion tokens in `styles/tokens.css`.
 2. **Primitive** — one accessible behavior such as `Button`, `Input`, `Checkbox`, `SelectField`, `Textarea`, `Badge`, `Avatar`, and `Skeleton`.
 3. **Composition** — arrangements such as `Field`, `Panel`, `Toolbar`, `Table`, `Pagination`, `PageHeader`, `Dialog`, and `EmptyState`.
-4. **Pattern/effect** — reusable editorial texture, accent marker, signal orbit, loading progress, and sound preference/playback behavior.
+4. **Pattern/effect** — reusable editorial texture, accent marker, signal orbit, ink speed lines, doodles, ink underline/frame, speech bubble, loading progress, and sound preference/playback behavior. These live in `components/effects` so apps consume the same ink language instead of maintaining local copies.
 
 Use the nearest existing public component. Add a component when at least two product surfaces can use it, or when a single surface needs a meaningful accessibility/behavior primitive that cannot be safely duplicated. Put app-specific navigation, data, auth, routes, and domain flows in the app. Avoid wrappers that only rename an element or folders created to satisfy an “atomic” label.
 

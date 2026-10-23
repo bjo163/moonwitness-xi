@@ -10,14 +10,15 @@ import {
   type ReactNode,
 } from 'react';
 import { Button } from './button.js';
+import {
+  persistSoundPreference,
+  playCatalogSound,
+  readSoundPreference,
+  type SfxName,
+} from '../lib/audio-runtime.js';
 
-export type SfxName = 'success' | 'alert' | 'signal';
-const catalog: Record<SfxName, string> = {
-  success: '/sounds/ui-success.wav',
-  alert: '/sounds/ui-alert.wav',
-  signal: '/sounds/ui-signal.wav',
-};
-const preferenceKey = 'mw-ui-sound-enabled';
+export type { SfxName } from '../lib/audio-runtime.js';
+
 type SfxContextValue = {
   enabled: boolean;
   ready: boolean;
@@ -30,7 +31,11 @@ export function SoundProvider({ children }: { children: ReactNode }) {
   const [enabled, setEnabledState] = useState(true);
   const [ready, setReady] = useState(false);
   useEffect(() => {
-    setEnabledState(window.localStorage.getItem(preferenceKey) !== 'false');
+    try {
+      setEnabledState(readSoundPreference(window.localStorage));
+    } catch {
+      setEnabledState(true);
+    }
     const activate = () => setReady(true);
     window.addEventListener('pointerdown', activate, { once: true, passive: true });
     window.addEventListener('keydown', activate, { once: true });
@@ -42,7 +47,7 @@ export function SoundProvider({ children }: { children: ReactNode }) {
   const setEnabled = useCallback((value: boolean) => {
     setEnabledState(value);
     try {
-      window.localStorage.setItem(preferenceKey, String(value));
+      persistSoundPreference(window.localStorage, value);
     } catch {
       /* Storage may be unavailable. */
     }
@@ -50,14 +55,7 @@ export function SoundProvider({ children }: { children: ReactNode }) {
   const play = useCallback(
     (name: SfxName) => {
       if (!enabled || !ready || typeof window === 'undefined') return;
-      try {
-        const audio = new Audio(catalog[name]);
-        audio.preload = 'none';
-        audio.volume = 0.32;
-        void audio.play().catch(() => undefined);
-      } catch {
-        /* Missing audio never interrupts the action. */
-      }
+      playCatalogSound(name, enabled, ready, (source) => new Audio(source));
     },
     [enabled, ready]
   );

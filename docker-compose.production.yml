@@ -3,16 +3,16 @@ services:
     build:
       context: .
       target: board-runtime
+      args:
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:5173}
     image: moonwitness-board:production
     restart: unless-stopped
     init: true
     read_only: true
     tmpfs:
-      - /tmp:size=16m,noexec,nosuid
-      - /var/cache/nginx:size=16m
-      - /var/run:size=1m
+      - /tmp:size=32m,noexec,nosuid
+      - /app/apps/board/.next/cache:size=64m,noexec,nosuid,uid=1000,gid=1000,mode=0755
     cap_drop: [ALL]
-    cap_add: [CHOWN, SETUID, SETGID]
     security_opt:
       - no-new-privileges:true
     ports:
@@ -21,7 +21,11 @@ services:
       api:
         condition: service_healthy
     healthcheck:
-      test: [CMD, wget, --quiet, --tries=1, --spider, http://127.0.0.1:8080/]
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:8080/').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
       interval: 30s
       timeout: 5s
       start_period: 10s

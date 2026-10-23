@@ -3,10 +3,10 @@
 import { useState, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TooltipProvider } from '@moonwitness/ui/components/tooltip';
-import { SoundProvider } from '@moonwitness/ui/components/audio';
+import { MotionConfig } from 'motion/react';
 import { AuthProvider } from '@/hooks/use-auth';
 
-export function AppProviders({ children }: { children: ReactNode }) {
+export function BoardProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -15,11 +15,11 @@ export function AppProviders({ children }: { children: ReactNode }) {
   );
   return (
     <QueryClientProvider client={queryClient}>
-      <SoundProvider>
+      <MotionConfig reducedMotion="user">
         <TooltipProvider>
           <AuthProvider>{children}</AuthProvider>
         </TooltipProvider>
-      </SoundProvider>
+      </MotionConfig>
     </QueryClientProvider>
   );
 }

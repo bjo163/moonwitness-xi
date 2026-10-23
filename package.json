@@ -18,7 +18,7 @@
     "test:unit": "pnpm build && pnpm test:unit:built",
     "test:unit:ci": "node scripts/run-unit-tests.mjs",
     "test:board-csv": "node --experimental-strip-types --test scripts/board/csv-export.test.mjs",
-    "board:ui:check": "node scripts/check-board-shared-ui.mjs",
+    "board:ui:check": "node --test scripts/check-board-shared-ui.test.mjs && node scripts/check-board-shared-ui.mjs",
     "hooks:install": "node scripts/setup-git-hooks.mjs",
     "test:integration": "node scripts/run-postgres-tests.mjs",
     "test:integration:built": "node scripts/run-postgres-tests.mjs --built",

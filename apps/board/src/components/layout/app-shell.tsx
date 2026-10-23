@@ -55,7 +55,7 @@ import {
   DropdownMenuTrigger,
 } from '@moonwitness/ui/components/dropdown-menu';
 import { Logo } from '@/components/manga/logo';
-import { Doodle } from '@/components/manga/effects';
+import { Doodle } from '@moonwitness/ui/components/effects';
 import { ShortcutsDialog } from '@/components/manga/shortcuts-dialog';
 import { ActivityBell } from './activity-bell';
 import { NotificationBell } from './notification-bell';
@@ -340,9 +340,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="grid min-h-dvh grid-cols-1 lg:grid-cols-[16rem_minmax(0,1fr)]">
       <ToastHost theme={theme} />
       {/* Sidebar: scoped .dark tokens keep it ink-black with light ink in BOTH themes. */}
-      <aside className="dark sticky top-0 hidden h-dvh flex-col border-r-4 border-ink bg-[#0d0d0d] text-ink lg:flex">
+      <aside className="dark sticky top-0 hidden h-dvh flex-col border-r-4 border-ink bg-night text-ink lg:flex">
         <div className="relative border-b-2 border-dashed border-ink/20 px-5 py-5">
-          <Logo />
+          <Logo surface="dark" />
         </div>
         <ModelNavigation
           groups={visibleGroups}
@@ -386,11 +386,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             </SheetTrigger>
             <SheetContent
               side="left"
-              className="dark w-[min(18rem,85vw)] gap-0 border-r-4 border-ink bg-[#0d0d0d] p-0 text-ink"
+              className="dark w-[min(18rem,85vw)] gap-0 border-r-4 border-ink bg-night p-0 text-ink"
               aria-label="Model navigation"
             >
               <div className="border-b-2 border-dashed border-ink/20 px-5 py-5">
-                <Logo />
+                <Logo surface="dark" />
               </div>
               <ModelNavigation
                 groups={visibleGroups}

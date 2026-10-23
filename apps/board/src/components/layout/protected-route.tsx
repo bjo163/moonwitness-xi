@@ -1,21 +1,28 @@
 'use client';
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
 import { AppShell } from '@/components/layout/app-shell';
 import { useAuth } from '@/hooks/use-auth-context';
 
+const subscribeToNothing = () => () => {};
+const getClientMountedSnapshot = () => true;
+const getServerMountedSnapshot = () => false;
+
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    subscribeToNothing,
+    getClientMountedSnapshot,
+    getServerMountedSnapshot
+  );
   const pathname = usePathname();
   const search = useSearchParams();
   const router = useRouter();
   const safePathname = pathname ?? '/board';
   const query = search?.toString();
   const from = `${safePathname}${query ? `?${query}` : ''}`;
-  useEffect(() => setMounted(true), []);
   useEffect(() => {
     if (mounted && !user) router.replace(`/login?returnTo=${encodeURIComponent(from)}`);
   }, [from, mounted, router, user]);

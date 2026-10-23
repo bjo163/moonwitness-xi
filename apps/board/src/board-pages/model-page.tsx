@@ -3,7 +3,7 @@
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useViews } from '@/hooks/use-model';
 import { Skeleton } from '@moonwitness/ui/components/skeleton';
-import { Doodle } from '@/components/manga/effects';
+import { Doodle } from '@moonwitness/ui/components/effects';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 import { ListView } from '@/components/views/list-view';
 import { FormView } from '@/components/views/form-view';

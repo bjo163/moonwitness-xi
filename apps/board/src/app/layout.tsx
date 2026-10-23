@@ -1,10 +1,12 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import './global.css';
-import { AppProviders } from '../providers';
+import { SoundProvider } from '@moonwitness/ui/components/audio';
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:5173';
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'http://localhost:5173';
 
+// Next.js route metadata must be exported from the route file alongside its component.
+// oxlint-disable-next-line react/only-export-components
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: { default: 'MoonWitness — Real people. Unfiltered worlds.', template: '%s · MoonWitness' },
@@ -21,13 +23,15 @@ export const metadata: Metadata = {
   icons: { icon: '/favicon.svg' },
 };
 
+// Next.js viewport metadata is also required to be exported from the root layout.
+// oxlint-disable-next-line react/only-export-components
 export const viewport: Viewport = { themeColor: '#0d0d0d', colorScheme: 'light dark' };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <AppProviders>{children}</AppProviders>
+        <SoundProvider>{children}</SoundProvider>
       </body>
     </html>
   );

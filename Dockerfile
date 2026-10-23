@@ -61,7 +61,9 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
 CMD ["node", "dist/server.js"]
 
 FROM build AS board-build
-ENV BOARD_API_TARGET=http://api:3000
+ARG NEXT_PUBLIC_SITE_URL
+ENV BOARD_API_TARGET=http://api:3000 \
+    NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
 RUN pnpm --filter @moonwitness/board build \
     && pnpm board:budget
 

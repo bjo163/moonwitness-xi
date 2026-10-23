@@ -32,7 +32,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@moonwitness/ui/components/dialog';
-import { Doodle } from '@/components/manga/effects';
+import { Doodle } from '@moonwitness/ui/components/effects';
 import { cn } from '@/lib/utils';
 
 export interface CronItem {

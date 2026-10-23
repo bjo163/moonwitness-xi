@@ -11,17 +11,39 @@ import { Button } from '@moonwitness/ui/components/button';
 import { useSfx } from '@moonwitness/ui/components/audio';
 import { Input } from '@moonwitness/ui/components/input';
 import { Label } from '@moonwitness/ui/components/label';
-import { Doodle, InkUnderline, SpeechBubble, SpeedLines } from '@/components/manga/effects';
+import {
+  AccentMarker,
+  Doodle,
+  EditorialTexture,
+  InkUnderline,
+  SpeechBubble,
+  SpeedLines,
+} from '@moonwitness/ui/components/effects';
 import { Logo } from '@/components/manga/logo';
 
 type Mode = 'login' | 'register';
 
 function safeReturnPath(value: unknown): string {
-  if (typeof value !== 'string' || !value.startsWith('/board') || value.startsWith('//'))
+  const hasControlCharacter =
+    typeof value === 'string' &&
+    [...value].some((character) => {
+      const code = character.charCodeAt(0);
+      return code <= 0x1f || code === 0x7f;
+    });
+  if (
+    typeof value !== 'string' ||
+    !(value === '/board' || value.startsWith('/board/')) ||
+    value.startsWith('//') ||
+    value.includes('\\') ||
+    hasControlCharacter
+  )
     return '/board';
   try {
-    const target = new URL(value, window.location.origin);
-    if (target.origin !== window.location.origin || !target.pathname.startsWith('/board'))
+    const target = new URL(value, 'https://moonwitness.invalid');
+    if (
+      target.origin !== 'https://moonwitness.invalid' ||
+      !(target.pathname === '/board' || target.pathname.startsWith('/board/'))
+    )
       return '/board';
     return `${target.pathname}${target.search}${target.hash}`;
   } catch {
@@ -75,11 +97,11 @@ export function AuthPage({ mode }: { mode: Mode }) {
   return (
     <main className="grid min-h-dvh lg:grid-cols-[1.15fr_1fr]">
       {/* Left: comic splash panel */}
-      <section className="dark relative hidden overflow-hidden border-r-4 border-[#0d0d0d] bg-paper text-ink lg:block">
+      <section className="dark relative hidden overflow-hidden border-r-4 border-night bg-paper text-ink lg:block">
         <SpeedLines className="opacity-25" origin={[0.5, 0.55]} inner={0.12} count={90} />
-        <div className="halftone absolute inset-0 opacity-40" />
+        <EditorialTexture className="absolute inset-0 opacity-40" />
         <div className="relative flex h-full flex-col justify-between p-12">
-          <Logo />
+          <Logo surface="dark" />
           <div>
             <motion.h2
               initial={{ y: 40, opacity: 0, rotate: -3 }}
@@ -113,13 +135,13 @@ export function AuthPage({ mode }: { mode: Mode }) {
           className="w-full max-w-md"
         >
           <div className="mb-8 lg:hidden">
-            <Logo />
+            <Logo surface="light" />
           </div>
           <SpeechBubble className="mb-5">
             {isLogin ? 'Welcome back!' : 'New here? Nice.'}
           </SpeechBubble>
           <h1 className="ink-title text-6xl">
-            <span className="marker">{isLogin ? 'Sign in' : 'Join'}</span>
+            <AccentMarker>{isLogin ? 'Sign in' : 'Join'}</AccentMarker>
           </h1>
           <InkUnderline className="mt-1 w-40" />
 

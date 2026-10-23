@@ -13,23 +13,8 @@ const replacements = {
   textarea: 'Textarea from @moonwitness/ui/components/textarea',
 };
 
-async function sourceFiles(directory) {
-  const entries = await readdir(directory, { withFileTypes: true });
-  return (
-    await Promise.all(
-      entries.map(async (entry) => {
-        const file = path.join(directory, entry.name);
-        if (entry.isDirectory()) return sourceFiles(file);
-        return entry.isFile() && /\.[jt]sx?$/u.test(entry.name) ? [file] : [];
-      })
-    )
-  ).flat();
-}
-
-const violations = [];
-for (const file of await sourceFiles(sourceRoot)) {
-  const relative = path.relative(root, file).split(path.sep).join('/');
-  const source = await readFile(file, 'utf8');
+export function findBoardUiViolations(source, file = 'apps/board/src/fixture.tsx') {
+  const violations = [];
   const parsed = ts.createSourceFile(
     file,
     source,
@@ -39,7 +24,7 @@ for (const file of await sourceFiles(sourceRoot)) {
   );
   const report = (node, rule, detail) => {
     const { line } = parsed.getLineAndCharacterOfPosition(node.getStart(parsed));
-    violations.push(`${relative}:${line + 1}: ${rule}${detail ? ` (${detail})` : ''}`);
+    violations.push(`${file}:${line + 1}: ${rule}${detail ? ` (${detail})` : ''}`);
   };
   const visit = (node) => {
     if (
@@ -88,17 +73,44 @@ for (const file of await sourceFiles(sourceRoot)) {
     ts.forEachChild(node, visit);
   };
   visit(parsed);
+  return violations;
 }
 
-if (violations.length) {
-  console.error(`Board shared UI check failed with ${violations.length} violation(s):`);
-  for (const violation of violations) console.error(`  ${violation}`);
-  console.error(
-    'Fix: replace native controls with shared UI components and import only public package subpaths. Recheck with `pnpm board:ui:check`.'
+async function sourceFiles(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  return (
+    await Promise.all(
+      entries.map(async (entry) => {
+        const file = path.join(directory, entry.name);
+        if (entry.isDirectory()) return sourceFiles(file);
+        return entry.isFile() && /\.[jt]sx?$/u.test(entry.name) ? [file] : [];
+      })
+    )
+  ).flat();
+}
+
+async function main() {
+  const violations = [];
+  for (const file of await sourceFiles(sourceRoot)) {
+    const relative = path.relative(root, file).split(path.sep).join('/');
+    violations.push(...findBoardUiViolations(await readFile(file, 'utf8'), relative));
+  }
+
+  if (violations.length) {
+    console.error(`Board shared UI check failed with ${violations.length} violation(s):`);
+    for (const violation of violations) console.error(`  ${violation}`);
+    console.error(
+      'Fix: replace native controls with shared UI components and import only public package subpaths. Recheck with `pnpm board:ui:check`.'
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  console.log(
+    'Board shared UI check passed: no native controls or internal UI package imports found.'
   );
-  process.exit(1);
 }
 
-console.log(
-  'Board shared UI check passed: no native controls or internal UI package imports found.'
-);
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  await main();
+}

@@ -2,7 +2,7 @@
 
 `@moonwitness/ui/styles/tokens.css` is the source of truth for shared visual values. Import it once, then map its `--mw-*` variables into framework utilities or component styles. Do not copy literal palette values into app-specific theme files.
 
-The identity palette is ink, paper, acid yellow (`--mw-yellow` / `--mw-lime` compatibility alias), magenta (`--mw-magenta` / `--mw-pink`), and signal blue (`--mw-signal-blue`). Use semantic surface/foreground and paired accent tokens for text; use the saturated blue and magenta for decorative signals, charts with labels, and non-text accents. Avoid spreading hex values into app CSS.
+The identity palette is ink, paper, acid yellow (`--mw-yellow` / `--mw-lime` compatibility alias), magenta (`--mw-magenta` / `--mw-pink`), signal blue (`--mw-signal-blue`), and the dark editorial surfaces (`--mw-night`, `--mw-night-raised`, `--mw-night-blue`, and `--mw-night-magenta`). `--mw-night-outline` and `--mw-backdrop` are translucent decorative boundaries. Use semantic surface/foreground and paired accent tokens for text; use saturated blue and magenta for decorative signals, charts with labels, and non-text accents. Avoid spreading hex values into app CSS.
 
 ## Semantic colors
 

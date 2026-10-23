@@ -60,6 +60,7 @@
   --color-pink: var(--pink);
   --color-on-pink: var(--on-pink);
   --color-on-accent: var(--on-accent);
+  --color-night: var(--mw-night);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -136,21 +137,6 @@
     @apply font-display uppercase leading-none tracking-wide;
   }
 
-  /* Highlighter swipe behind text; slightly skewed like a real marker stroke. */
-  .marker {
-    position: relative;
-    isolation: isolate;
-  }
-  .marker::before {
-    content: '';
-    position: absolute;
-    inset: 18% -0.35em 8% -0.25em;
-    z-index: -1;
-    background: var(--lime);
-    transform: skew(-8deg) rotate(-1deg);
-    border-radius: 2px 6px 3px 8px;
-  }
-
   /* Hand-inked panel: thick border + hard offset shadow. */
   .ink-panel {
     @apply bg-card border-2 border-ink;
@@ -193,32 +179,12 @@
 }
 
 @layer utilities {
-  .halftone {
-    background-image: radial-gradient(var(--halftone-dot) 1.1px, transparent 1.3px);
-    background-size: 6px 6px;
-  }
   .crosshatch {
     background-image: repeating-linear-gradient(
       -45deg,
       var(--halftone-dot) 0 1px,
       transparent 1px 5px
     );
-  }
-}
-
-.speedlines-pulse {
-  transform-origin: 22% 50%;
-  animation: speedlines 3.2s ease-in-out infinite;
-}
-@keyframes speedlines {
-  0%,
-  100% {
-    opacity: 0.9;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.65;
-    transform: scale(1.025);
   }
 }
 

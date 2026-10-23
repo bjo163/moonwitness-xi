@@ -2,10 +2,32 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { SoundToggle } from '@moonwitness/ui/components/audio';
 
+// Next.js route metadata must be exported from the route file alongside its component.
+// oxlint-disable-next-line react/only-export-components
 export const metadata: Metadata = {
   title: 'Real people. Unfiltered worlds.',
   description: 'A shared workspace for people, stories, knowledge, and the signals between them.',
   alternates: { canonical: '/' },
+  openGraph: {
+    type: 'website',
+    siteName: 'MoonWitness',
+    title: 'Real people. Unfiltered worlds.',
+    description: 'A shared workspace for people, stories, knowledge, and the signals between them.',
+    images: [
+      {
+        url: '/brand/social-card.png',
+        width: 1200,
+        height: 630,
+        alt: 'MoonWitness — real people and connected stories',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Real people. Unfiltered worlds.',
+    description: 'A shared workspace for people, stories, knowledge, and the signals between them.',
+    images: ['/brand/social-card.png'],
+  },
 };
 
 export default function HomePage() {
@@ -13,7 +35,13 @@ export default function HomePage() {
     <main className="home-page">
       <header className="home-header">
         <Link href="/" className="home-mark" aria-label="MoonWitness home">
-          <img src="/brand/moonwitness-symbol-light.svg" alt="" /> MOONWITNESS
+          <img
+            src="/brand/moonwitness-lockup-dark.svg"
+            alt=""
+            className="home-lockup"
+            width="500"
+            height="80"
+          />
         </Link>
         <nav className="home-nav" aria-label="Main navigation">
           <a href="#stories">Stories</a>
@@ -51,7 +79,9 @@ export default function HomePage() {
           className="home-art"
           role="img"
           aria-label="Illustrated night city beneath a bright moon"
-        />
+        >
+          <span className="home-art-skyline" />
+        </div>
       </section>
       <div className="home-band">
         Real people. <strong>Connected knowledge.</strong> A wider perspective.

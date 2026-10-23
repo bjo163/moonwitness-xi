@@ -5,11 +5,14 @@ const proxyPrefixes = [
   '/api/:path*',
   '/auth/:path*',
   '/jsonrpc/:path*',
+  '/health',
   '/health/:path*',
   '/livez',
   '/readyz',
   '/metrics',
+  '/notifications',
   '/notifications/:path*',
+  '/workflows',
   '/workflows/:path*',
 ];
 

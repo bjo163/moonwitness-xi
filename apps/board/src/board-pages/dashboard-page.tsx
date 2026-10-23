@@ -28,7 +28,7 @@ import { useAuth } from '@/hooks/use-auth-context';
 import { useModels } from '@/hooks/use-model';
 import { modelIcon, modelLabel } from '@/lib/models';
 import { DEVELOPMENT_MODE_EVENT, readDevelopmentMode } from '@/lib/navigation';
-import { Doodle, SpeedLines } from '@/components/manga/effects';
+import { AccentMarker, Doodle, SpeedLines } from '@moonwitness/ui/components/effects';
 import { Button } from '@moonwitness/ui/components/button';
 import {
   Dialog,
@@ -289,7 +289,7 @@ export function DashboardPage() {
             <Sparkles className="size-3.5" /> MoonWitness Mission Control
           </div>
           <h1 className="ink-title text-3xl leading-tight sm:text-6xl sm:leading-none">
-            Welcome, <span className="marker">{user?.login}</span>!
+            Welcome, <AccentMarker>{user?.login}</AccentMarker>!
           </h1>
           <p className="text-base sm:text-lg text-ink-soft">
             Role: <span className="font-mono font-bold uppercase text-ink">{user?.role}</span>.
