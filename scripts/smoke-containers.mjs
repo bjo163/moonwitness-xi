@@ -203,10 +203,8 @@ export async function runContainerSmoke({
     COMPOSE_PROJECT_NAME: projectName,
     DATABASE_URL: 'postgresql://postgres:postgres@postgres:5432/moonwitness_smoke',
     JWT_SECRET: 'ci-only-secret-that-is-at-least-32-characters-long',
-    // Compose interpolates these for every invocation, and the smoke stack never starts the
-    // WhatsApp service; pinning non-secret values here also keeps a real session key out of it.
+    // Compose interpolates these for every invocation; the smoke stack never starts WhatsApp.
     WHATSAPP_INTERNAL_TOKEN: 'ci-only-whatsapp-token-that-is-at-least-32-characters-long',
-    WHATSAPP_SESSION_KEY: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
     SUPERADMIN_PASSWORD: 'ci-smoke-superadmin-password',
     API_PORT: String(apiPort),
     BOARD_PORT: String(boardPort),

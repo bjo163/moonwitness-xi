@@ -348,7 +348,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       return reply.code(401).send({ success: false });
     return {
       success: true,
-      data: await app.db('whatsapp_accounts').select('id', 'company_id', 'status', 'auth_state'),
+      data: await app.db('whatsapp_accounts').select('id', 'company_id', 'status'),
     };
   });
   app.post<{ Body: unknown }>('/internal/whatsapp/connection-control', async (req, reply) => {

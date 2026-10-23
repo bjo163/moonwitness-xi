@@ -12,7 +12,8 @@ services:
       WHATSAPP_API_URL: http://host.docker.internal:${API_PORT:-3000}
       WHATSAPP_PORT: 3100
       WHATSAPP_INTERNAL_TOKEN: ${WHATSAPP_INTERNAL_TOKEN:-moonwitness-local-whatsapp-internal-token-v1-unsafe}
-      WHATSAPP_SESSION_KEY: ${WHATSAPP_SESSION_KEY:-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
+      WHATSAPP_DATABASE_URL: ${WHATSAPP_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/moonwitness_db}
+      WHATSAPP_DATABASE_SCHEMA: ${WHATSAPP_DATABASE_SCHEMA:-whatsapp_session}
     extra_hosts:
       - host.docker.internal:host-gateway
     ports:
@@ -29,6 +30,9 @@ services:
       timeout: 5s
       start_period: 15s
       retries: 3
+    depends_on:
+      postgres:
+        condition: service_healthy
   postgres:
     image: postgres:16-alpine
     container_name: moonwitness_postgres
@@ -41,6 +45,11 @@ services:
       - '127.0.0.1:5432:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U postgres -d moonwitness_db]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
   pgdata:

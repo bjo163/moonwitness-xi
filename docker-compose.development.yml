@@ -47,7 +47,8 @@ services:
       NODE_ENV: development
       WHATSAPP_API_URL: http://api:3000
       WHATSAPP_INTERNAL_TOKEN: ${WHATSAPP_INTERNAL_TOKEN:-}
-      WHATSAPP_SESSION_KEY: ${WHATSAPP_SESSION_KEY:-}
+      WHATSAPP_DATABASE_URL: ${WHATSAPP_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/moonwitness_db}
+      WHATSAPP_DATABASE_SCHEMA: ${WHATSAPP_DATABASE_SCHEMA:-whatsapp_session}
     healthcheck:
       test:
         [

@@ -1,91 +1,64 @@
 # WhatsApp service
 
-The Board's WhatsApp inbox uses the Baileys Web client in `apps/whatsapp`. It is a separate
-process from the API and communicates with the API using a private token. Outbound messages are
-stored with a PostgreSQL-backed job before the worker sends them. Session credentials are
-AES-GCM encrypted with `WHATSAPP_SESSION_KEY`; uploaded media uses the API attachment store.
+The WhatsApp service runs as a separate Go process at `apps/whatsapp` using
+[whatsmeow](https://github.com/tulir/whatsmeow). The Board continues to use the authenticated API;
+the Go service uses the internal token and PostgreSQL outbox/event endpoints. The API remains the
+owner of company scope, inbox data, message history, attachment storage, and retry policy.
 
-## Local setup
+## Local development
 
-Run `docker compose up -d` for PostgreSQL, then `pnpm dev`. API (:3000), Board (:5173), and
-WhatsApp (:3100) start together. `pnpm dev:whatsapp` starts only the WhatsApp worker.
+Install Go 1.26 or newer (the whatsmeow module may select its pinned toolchain automatically),
+Node.js 22, pnpm, and the repository PostgreSQL database. Then run `pnpm dev`; it starts API, Board,
+and WhatsApp together. `pnpm --filter @moonwitness/whatsapp test` runs Go unit tests,
+`pnpm --filter @moonwitness/whatsapp typecheck` runs `go vet`, and `pnpm build` builds the service
+alongside the workspace.
 
-Local development supplies shared defaults for `WHATSAPP_INTERNAL_TOKEN` and
-`WHATSAPP_SESSION_KEY` when they are empty. To keep a session private and portable between
-machines, add two independent persistent secrets to `.env`:
+The worker reads `.env` from the repository root when it is started by pnpm. `WHATSAPP_DATABASE_URL`
+defaults to `DATABASE_URL`; `WHATSAPP_DATABASE_SCHEMA` defaults to `whatsapp_session`.
+`WHATSAPP_INTERNAL_TOKEN` has a development-only fallback. Production requires a configured token.
 
-```powershell
-node -e "const c=require('node:crypto'); console.log('WHATSAPP_INTERNAL_TOKEN='+c.randomBytes(48).toString('base64url')); console.log('WHATSAPP_SESSION_KEY='+c.randomBytes(32).toString('base64'))"
-```
+## Pairing and session storage
 
-The Board is available at `http://localhost:5173/board/whatsapp`. Choose **Connect WhatsApp** and
-scan the QR code from Linked devices on the phone. Use **New chat** with an international phone
-number or select an existing private/group conversation. Attachments are limited to 8 MB.
-Failed messages can be retried with **Retry message** after reconnecting.
+Connect the company account from Board and scan the new QR. Baileys authentication data cannot be
+imported into whatsmeow, so this migration requires pairing whatsmeow as a linked device. The old
+encrypted Baileys `auth_state` remains until the new device connects successfully, then the service
+clears that legacy credential. The connected whatsmeow device is saved in PostgreSQL and should
+reconnect after a service restart without another scan.
 
-`pnpm build` followed by `pnpm start` also starts all three services. The standalone Board uses
-port 5173 by default; `BOARD_PORT` (or `PORT`) and `BOARD_HOST` override its listener. API uses
-`API_PORT` and WhatsApp uses `WHATSAPP_PORT`; keep all ports distinct. Board's API proxy target
-is captured at build time through `BOARD_API_TARGET`. `WHATSAPP_API_URL` configures the worker.
-Do not run dev and start simultaneously on the same default ports.
+whatsmeow's PostgreSQL SQL store persists device keys in the `whatsapp_session` schema. The old
+`WHATSAPP_SESSION_KEY` variable is no longer used: upstream SQL storage does not offer transparent
+application-level encryption. Production must use a PostgreSQL provider/storage layer with encryption
+at rest and encrypted backups, and set `WHATSAPP_DATABASE_ENCRYPTED_AT_REST=true` to acknowledge that
+requirement. The app can validate the acknowledgment, but cannot independently verify provider or
+backup encryption. Local development storage is not encrypted by this flag. Protect `DATABASE_URL`
+and access to the schema like account credentials.
 
-For the optional full Docker development stack, run
-`docker compose --profile whatsapp -f docker-compose.yml -f docker-compose.development.yml up --build` instead
-of the host `pnpm dev` processes.
-The base Compose WhatsApp service is optional under profile `whatsapp`, so plain
-`docker compose up -d` starts only PostgreSQL and cannot compete with the host worker.
+Never run two WhatsApp workers against the same session store. A PostgreSQL advisory lock prevents
+two processes from owning one company account at the same time. Use a direct PostgreSQL connection
+for the worker; transaction-pooling proxies do not reliably preserve session advisory locks.
 
-Keep the session key backed up. A wrong encryption key preserves the encrypted session and
-shows an error; restore the correct key before reconnecting. WhatsApp logout clears invalid
-credentials and requires scanning another QR. **Disconnect** pauses the local connection and
-preserves the session; reconnect resumes it without deliberately logging out the phone.
+## Runtime behavior
 
-## Production
+- One linked device per company; account, inbox, and messages remain company scoped by the API.
+- HTTP internal routes carry connection state, QR, incoming events, receipts, and media. PostgreSQL
+  outbox jobs carry sends with lease heartbeat, attempt fencing, and retries.
+- Private and group text/media messages use the existing API attachment limit and message statuses.
+- `pnpm start` runs the service through Go; `pnpm start:built` runs the built executable.
+- Docker Compose and the production WhatsApp image build a non-root Go runtime. The worker shares the
+  configured PostgreSQL service/database and uses the dedicated session schema.
 
-Set `WHATSAPP_INTERNAL_TOKEN` and `WHATSAPP_SESSION_KEY` in the production environment before
-starting `docker-compose.production.yml`. The API and WhatsApp service must receive the same
-internal token. The named `whatsapp_attachments` volume stores message media. PostgreSQL stores
-account state, encrypted Baileys credentials, conversations, messages, and queued sends.
-Production has no default secrets. Run one WhatsApp worker per database: multiple replicas
-must not open competing Baileys sockets for the same company account.
+## WhatsApp Status/Story
 
-The inbox supports one linked WhatsApp account per company, private and group chats, text, and
-image, video, audio, and document attachments up to 8 MB.
+Status/Story is not included in the Board inbox migration. whatsmeow lists status sending as
+experimental; a successful `SendMessage` call alone is not proof that a status was published.
+Receiving statuses and viewer receipts also need separate validation. The migration plan tracks a
+mock-first capability check; publishing a live status needs explicit approval because WhatsApp may
+share it with the linked account's configured audience.
 
-## Delivery and recovery
+## Checks
 
-Outbound messages and jobs are committed in one transaction. Jobs use row locks with
-`SKIP LOCKED`, attempt fencing, a heartbeat and a 60-second lease. An expired claim is retried
-with the same WhatsApp message ID. Automatic retries back off and stop at eight attempts;
-manual retry preserves that message ID too. WhatsApp remains an external system, so this is
-at-least-once delivery with stable deduplication IDs, not a guarantee of exactly-once delivery.
-
-Incoming callbacks first persist a unique event in `whatsapp_events`, then the worker asks the
-API to materialize it into messages and conversations. Storage/database failures roll back,
-back off and eventually mark the event dead. Accepted events survive restarts. Events waiting
-for an unreachable API are retried in worker memory; killing the worker before API acceptance
-can lose them unless WhatsApp replays them. Monitor `pendingIncoming` and `pendingSessions` in
-the health response. Do not shut down the worker during an API outage if those counts are nonzero.
-
-Private and group messages, wrapped messages and history batches share the same ingestion
-path. History keeps its timestamp and does not increase unread counts. Media that cannot be
-downloaded or exceeds the limit leaves an explicit attachment notice. The UI polls account,
-conversation and message state through authenticated, company-scoped API routes. Generic model
-API mutation is disabled for WhatsApp models, including for administrators.
-
-Health returns 503 before API connectivity is established or after 30 seconds without a
-successful API poll. A healthy worker with zero accounts means no company has requested a connection.
-
-## Verification
-
-- `pnpm test:whatsapp`: mocked Baileys worker and API/queue tests on SQLite.
-- PostgreSQL: set `WHATSAPP_TEST_POSTGRES=true`, then run
-  `pnpm --filter @moonwitness/api exec vitest run tests/whatsapp.routes.test.ts`. Tests use
-  `WHATSAPP_TEST_DATABASE_URL` or repository `.env`'s `DATABASE_URL`, create a unique schema, and
-  remove only that schema after completion.
-- Board: `pnpm --filter @moonwitness/board exec playwright test e2e/whatsapp.spec.ts --project=chromium`.
-  Set `POSTGRES_TEST_URL` to a dedicated E2E database. The test runner starts isolated API/Board
-  processes and sends WhatsApp operations to mocks; it never sends to actual contacts.
-
-See [verification evidence](../testing/whatsapp-verification.md) for the completed checks and
-the boundary between live and mocked delivery tests.
+- `pnpm test:whatsapp` runs the Go worker tests and API route tests.
+- `go test ./...` and `go vet ./...` run in `apps/whatsapp`.
+- The workspace unit runner includes Go tests; the PostgreSQL integration suite verifies session
+  schema and mapping using an isolated schema.
+- The browser suite keeps coverage for QR, inbox, retry, text, and attachment interactions.

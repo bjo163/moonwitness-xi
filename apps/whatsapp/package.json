@@ -3,25 +3,12 @@
   "private": true,
   "version": "1.0.0-rc.1",
   "type": "module",
-  "files": [
-    "dist"
-  ],
   "scripts": {
-    "build": "tsc",
-    "dev": "tsx watch src/main.ts",
-    "start": "node dist/main.js",
-    "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/*.test.ts",
-    "start:built": "node dist/main.js"
-  },
-  "dependencies": {
-    "@whiskeysockets/baileys": "6.7.24",
-    "dotenv": "^18.0.5",
-    "fastify": "^5.12.6"
-  },
-  "devDependencies": {
-    "@types/node": "^26.6.4",
-    "tsx": "^4.23.15",
-    "typescript": "~5.7.3"
+    "build": "node scripts/go-task.mjs build",
+    "dev": "node scripts/go-task.mjs run ./cmd/whatsapp",
+    "start": "node scripts/go-task.mjs run ./cmd/whatsapp",
+    "typecheck": "node scripts/go-task.mjs vet",
+    "test": "node scripts/go-task.mjs test",
+    "start:built": "node scripts/start-built.mjs"
   }
 }
