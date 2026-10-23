@@ -462,7 +462,7 @@ Urutan: header → hero manga → tiga panel editorial → band koneksi → film
 
 ### Route lain
 
-- [x] Simpan dan tautkan mockup login “Enter the Shadow” sebagai referensi visual auth khusus di `docs/Moonwitness_ Enter the Shadow-Login.png`; tinjau visual wordmark sebagai `MOONWITNESS`. Gunakan gambar sebagai acuan, bukan spesifikasi fitur baru.
+- [x] Simpan dan tautkan mockup login “Enter the Shadow” sebagai referensi visual auth khusus di `docs/Moonwitness_ Enter the Shadow-Login.png`; tinjau visual wordmark sebagai `MOONWITNESS`. Gunakan gambar sebagai acuan, bukan spesifikasi fitur baru; normalisasikan kapitalisasi semua teks brand di aplikasi menjadi `MoonWitness`/`MOONWITNESS`.
 - [ ] Catat bahwa komposisi login memakai artwork malam-bulan-kota di sisi kanan dan panel form gelap di kiri.
 - [ ] Catat bahwa mahkota dan wordmark memakai sumber brand canonical, bukan lettering logo yang dirender sebagai teks.
 - [ ] Catat bahwa headline, label, helper text, status, dan tombol tetap berupa HTML yang dapat diakses.
@@ -495,6 +495,7 @@ Urutan: header → hero manga → tiga panel editorial → band koneksi → film
 - [ ] Periksa secara visual ejaan `MoonWitness`, `Enter the Shadow`, `Follow the Signal`, dan `Authorized crew only`; koreksi copy/asset jika ada huruf tertukar atau terpotong.
 - [ ] Pastikan kontras, fokus keyboard, label/nama aksesibel, zoom 200%, dan `prefers-reduced-motion` pada seluruh auth state.
 - [ ] Tautkan bukti screenshot yang sudah diperiksa pada checklist sebelum menandai desain login selesai.
+- [ ] Setelah komposisi disetujui, dokumentasikan pola visual auth, penggunaan logo, dan batas komponen form login di packages/ui/README.md sebagai UI Bible.
 - [ ] Terapkan shared Toolbar/Table/Panel ke model list dan detail.
 - [ ] Pertahankan sorting keyboard, pagination, select-all, dan indeterminate.
 - [ ] Pertahankan filter, relational control, file input, dan row propagation.
