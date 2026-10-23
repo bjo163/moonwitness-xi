@@ -46,6 +46,19 @@ test('public homepage renders its message, canonical metadata, and workspace act
   expect(accessibility.violations).toEqual([]);
 });
 
+test('homepage keeps its message and actions visible if hero artwork fails', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.home-hero-art-image').evaluate((image: HTMLImageElement) => {
+    image.src = '/missing-home-hero-art.webp';
+  });
+
+  await expect(page.getByTestId('home-hero-fallback')).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'MoonWitness' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Explore MoonWitness/u })).toBeVisible();
+  const accessibility = await new AxeBuilder({ page }).analyze();
+  expect(accessibility.violations).toEqual([]);
+});
+
 test('legacy Board routes redirect to canonical paths and preserve query strings', async ({
   request,
 }) => {

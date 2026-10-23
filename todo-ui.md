@@ -364,7 +364,7 @@ Urutan: header → hero manga → tiga panel editorial → band koneksi → film
 - [x] Tambahkan satu CTA utama dan action sekunder bila perlu. Bukti: CTA register utama dan login sekunder di screenshot homepage.
 - [x] Tambahkan note, sticker, crown/star/orbit pada area dekoratif. Bukti: paper note dan brand mark pada screenshot.
 - [x] Pastikan artwork tidak menutupi teks, fokus, atau CTA. Bukti: screenshot desktop/mobile serta axe homepage.
-- [ ] Sediakan fallback saat hero gagal dimuat.
+- [x] Sediakan fallback saat hero gagal dimuat; copy dan CTA tetap ada. Bukti visual/ejaan: `docs/design/ui-catalog/homepage-hero-fallback-desktop-1672.png`; simulasi kegagalan gambar dan axe di `apps/board/e2e/public-home.spec.ts`.
 - [x] Prioritaskan pemuatan hero saja. Hero memakai `fetchPriority="high"`; lockup header eager-load tanpa priority.
 
 ### Panel, band, filmstrip, dan footer

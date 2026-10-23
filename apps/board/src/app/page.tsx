@@ -6,6 +6,7 @@ import { PaperNote } from '@moonwitness/ui/components/paper-note';
 import { SectionRibbon } from '@moonwitness/ui/components/section-ribbon';
 import { ArrowRightIcon, GlobeIcon, MoonIcon } from '@moonwitness/ui/icons';
 import { HomeHeader } from '../components/home/home-header';
+import { HomeHeroArt } from '../components/home/home-hero-art';
 import { HorizontalFilmstrip } from '../components/home/horizontal-filmstrip';
 
 // Next.js route metadata must be exported from the route file alongside its component.
@@ -107,15 +108,7 @@ export default function HomePage() {
       <HomeHeader />
 
       <section className="home-hero" id="home" aria-labelledby="home-title">
-        <picture className="home-hero-art">
-          <source media="(max-width: 600px)" srcSet="/illustrations/home-hero-mobile.webp" />
-          <img
-            className="home-hero-art-image"
-            src="/illustrations/home-hero-desktop.webp"
-            alt=""
-            fetchPriority="high"
-          />
-        </picture>
+        <HomeHeroArt />
         <div className="home-hero-shade" aria-hidden="true" />
         <div className="home-hero-copy">
           <span className="home-kicker">People. Places. Stories. Another side of reality.</span>

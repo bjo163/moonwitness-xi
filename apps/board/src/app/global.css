@@ -138,6 +138,24 @@
   z-index: -2;
   inset: 0;
   display: block;
+  background:
+    radial-gradient(
+      circle at 74% 30%,
+      var(--mw-paper) 0 7%,
+      color-mix(in srgb, var(--mw-signal-blue) 20%, var(--mw-paper)) 7.2% 10%,
+      transparent 10.2%
+    ),
+    radial-gradient(
+      ellipse at 74% 36%,
+      color-mix(in srgb, var(--mw-signal-blue) 72%, transparent),
+      transparent 34%
+    ),
+    radial-gradient(
+      ellipse at 42% 100%,
+      color-mix(in srgb, var(--mw-magenta) 50%, transparent),
+      transparent 43%
+    ),
+    linear-gradient(180deg, transparent 0 65%, var(--mw-ink) 65%), var(--mw-night-raised);
 }
 .home-hero-art-image {
   display: block;
@@ -145,6 +163,48 @@
   height: 100%;
   object-fit: cover;
   object-position: center 43%;
+}
+.home-hero-fallback {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: transparent;
+}
+.home-hero-fallback::before {
+  position: absolute;
+  inset: 30% 0 18%;
+  background:
+    linear-gradient(color-mix(in srgb, var(--mw-night) 60%, var(--mw-signal-blue)), var(--mw-ink))
+      3% 100% / 8% 42%,
+    linear-gradient(color-mix(in srgb, var(--mw-night) 60%, var(--mw-signal-blue)), var(--mw-ink))
+      15% 100% / 10% 58%,
+    linear-gradient(color-mix(in srgb, var(--mw-night) 60%, var(--mw-signal-blue)), var(--mw-ink))
+      31% 100% / 12% 35%,
+    linear-gradient(color-mix(in srgb, var(--mw-night) 60%, var(--mw-signal-blue)), var(--mw-ink))
+      48% 100% / 9% 52%,
+    linear-gradient(color-mix(in srgb, var(--mw-night) 60%, var(--mw-signal-blue)), var(--mw-ink))
+      62% 100% / 11% 31%,
+    linear-gradient(color-mix(in srgb, var(--mw-night) 60%, var(--mw-signal-blue)), var(--mw-ink))
+      81% 100% / 12% 48%,
+    linear-gradient(color-mix(in srgb, var(--mw-night) 60%, var(--mw-signal-blue)), var(--mw-ink))
+      96% 100% / 8% 38%;
+  background-repeat: no-repeat;
+  content: '';
+}
+.home-hero-fallback::after {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(var(--mw-paper) 1px, transparent 1.5px),
+    radial-gradient(var(--mw-signal-blue) 1px, transparent 1.5px);
+  background-position:
+    0 0,
+    19px 23px;
+  background-size:
+    47px 43px,
+    61px 59px;
+  content: '';
+  opacity: 0.65;
 }
 .home-hero-shade {
   position: absolute;
@@ -159,6 +219,14 @@
       transparent 100%
     ),
     linear-gradient(0deg, rgb(13 13 13 / 72%), transparent 42%);
+}
+.home-hero:has(.home-hero-fallback) .home-hero-shade {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--mw-ink) 72%, transparent) 0%,
+    color-mix(in srgb, var(--mw-ink) 38%, transparent) 44%,
+    transparent 78%
+  );
 }
 .home-hero-copy {
   width: min(58rem, 68%);
