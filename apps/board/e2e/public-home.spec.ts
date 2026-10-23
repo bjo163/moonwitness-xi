@@ -75,4 +75,24 @@ test('homepage adapts to a narrow mobile viewport without horizontal overflow', 
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth
   );
   expect(hasHorizontalOverflow).toBe(false);
+
+  const filmstrip = page.getByRole('region', {
+    name: 'How MoonWitness connects people, knowledge, and story work',
+  });
+  await expect(filmstrip).toHaveAttribute('tabindex', '0');
+  await expect(page.locator('.home-step-card')).toHaveCount(4);
+  await expect(page.getByRole('heading', { name: 'Share with care' })).toBeVisible();
+  const instructionsId = await filmstrip.getAttribute('aria-describedby');
+  expect(instructionsId).toBeTruthy();
+  await expect(page.locator(`[id="${instructionsId}"]`)).toHaveText(
+    /left and right arrow keys.*Home and End/iu
+  );
+  await filmstrip.evaluate((element) => {
+    element.scrollLeft = 0;
+  });
+  await filmstrip.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(() => filmstrip.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  await page.keyboard.press('Home');
+  await expect.poll(() => filmstrip.evaluate((element) => element.scrollLeft)).toBeLessThan(10);
 });

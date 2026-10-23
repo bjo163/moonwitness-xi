@@ -56,6 +56,7 @@ When adding a component: first record its behavior and accessibility contract; b
 - Every keyboard-operable control has a visible `:focus-visible` treatment that remains above rough frames and texture. Headings retain semantic order; decorative art is ignored by screen readers.
 - Status uses text and shape as well as color. Charts keep labels, markers or an accessible table.
 - Desktop composition may be dense; mobile must be deliberately reordered. Navigation collapses into an operable menu/sheet, side inspectors become sheets or accordions, card rows stack, and tables own their horizontal scroll region. At 200% zoom content must remain reachable without whole-page horizontal overflow.
+- A horizontally scrolling editorial filmstrip has a named, keyboard-focusable region, visible focus, Arrow Left/Right movement, and Home/End navigation. Include concise screen reader instructions; keep the scroll inside the strip, and use instant movement when reduced motion is requested.
 - Controls retain a stable hit area behind brush-shaped visuals. Do not let torn edges create inaccessible click targets.
 - Distinguish loading, refreshing, empty, zero, unavailable, and failed data. Loading UI appears only while a real operation is pending, always describes it in text, and stops when it settles. Keep user work and a retry action after recoverable failure.
 

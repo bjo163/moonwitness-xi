@@ -347,35 +347,35 @@ Urutan: header → hero manga → tiga panel editorial → band koneksi → film
 
 ### Header dan hero
 
-- [ ] Ganti lockup menjadi crown + brush wordmark.
+- [x] Ganti lockup menjadi crown + brush wordmark. Bukti screenshot desktop/mobile: `docs/design/ui-catalog/homepage-filmstrip-desktop-1672.png`, `homepage-filmstrip-mobile-390.png`; ejaan visual terbaca `MOONWITNESS`.
 - [ ] Terapkan masthead gelap, garis/tepi tinta, dan underline active.
 - [ ] Gunakan navigasi ke section yang benar-benar ada.
-- [ ] Gunakan shared Button untuk CTA login.
-- [ ] Tampilkan SoundToggle dengan label yang jelas.
-- [ ] Tampilkan search/language hanya jika kontrol punya aksi nyata.
+- [x] Gunakan shared Button untuk CTA login. Bukti: CTA `Enter the board` memakai `Button` + Next `Link` di `apps/board/src/app/page.tsx`.
+- [x] Tampilkan SoundToggle dengan label yang jelas. Bukti visual `homepage-filmstrip-desktop-1672.png`; accessible name diperiksa pada homepage.
+- [x] Tampilkan search/language hanya jika kontrol punya aksi nyata. Home tidak menampilkan kontrol search atau language yang belum berfungsi.
 - [ ] Jadikan navigasi mobile sebagai menu accessible.
-- [ ] Ganti hero geometris dua kolom dengan panorama collage.
-- [ ] Letakkan karakter besar di tengah/kanan dan beri negative space untuk copy.
-- [ ] Render headline dan copy sebagai HTML yang dapat diakses/searchable.
-- [ ] Tambahkan ribbon kuning di bawah headline.
-- [ ] Tempatkan deskripsi di blok tinta dengan kontras cukup.
-- [ ] Tambahkan satu CTA utama dan action sekunder bila perlu.
-- [ ] Tambahkan note, sticker, crown/star/orbit pada area dekoratif.
-- [ ] Pastikan artwork tidak menutupi teks, fokus, atau CTA.
+- [x] Ganti hero geometris dua kolom dengan panorama collage. Bukti: `docs/design/ui-catalog/homepage-filmstrip-desktop-1672.png`.
+- [x] Letakkan karakter besar di tengah/kanan dan beri negative space untuk copy. Bukti: screenshot desktop dan mobile di UI Catalog.
+- [x] Render headline dan copy sebagai HTML yang dapat diakses/searchable. Bukti: h1 `MOONWITNESS` terdeteksi pada Playwright dan terbaca di screenshot.
+- [x] Tambahkan ribbon kuning di bawah headline. Bukti: screenshot desktop/mobile homepage.
+- [x] Tempatkan deskripsi di blok tinta dengan kontras cukup. Bukti: screenshot dan axe homepage tanpa pelanggaran.
+- [x] Tambahkan satu CTA utama dan action sekunder bila perlu. Bukti: CTA register utama dan login sekunder di screenshot homepage.
+- [x] Tambahkan note, sticker, crown/star/orbit pada area dekoratif. Bukti: paper note dan brand mark pada screenshot.
+- [x] Pastikan artwork tidak menutupi teks, fokus, atau CTA. Bukti: screenshot desktop/mobile serta axe homepage.
 - [ ] Sediakan fallback saat hero gagal dimuat.
-- [ ] Prioritaskan pemuatan hero saja.
+- [x] Prioritaskan pemuatan hero saja. Hero memakai `fetchPriority="high"`; lockup header eager-load tanpa priority.
 
 ### Panel, band, filmstrip, dan footer
 
-- [ ] Buat panel People/Records dengan artwork pertama.
-- [ ] Buat panel Knowledge dengan artwork kedua.
-- [ ] Buat panel Stories berdasarkan capability internal yang tersedia.
-- [ ] Tambahkan ribbon, eyebrow, heading, caption, arrow, dan CTA tiap panel.
-- [ ] Gunakan body font yang terbaca untuk deskripsi panel.
+- [x] Buat panel People/Records dengan artwork pertama. Bukti: screenshot desktop/mobile homepage.
+- [x] Buat panel Knowledge dengan artwork kedua. Bukti: screenshot desktop/mobile homepage.
+- [x] Buat panel Stories berdasarkan capability internal yang tersedia. Copy menjelaskan Story Workbench yang ada; bukti screenshot homepage.
+- [x] Tambahkan ribbon, eyebrow, heading, caption, arrow, dan CTA tiap panel. Bukti: triptych pada screenshot desktop/mobile.
+- [x] Gunakan body font yang terbaca untuk deskripsi panel. Bukti visual di screenshot; teks body memakai font UI.
 - [ ] Buat band orbit/map sebagai motif hubungan konseptual.
 - [ ] Jangan tampilkan jumlah crew, negara, atau signal tanpa data.
-- [ ] Buat filmstrip sebagai urutan cara kerja, bukan arsip/timeline fiktif.
-- [ ] Gunakan thumbnail dekoratif dan caption penjelasan yang jujur.
+- [x] Buat filmstrip sebagai urutan cara kerja, bukan arsip/timeline fiktif. Bukti: `docs/design/ui-catalog/homepage-filmstrip-desktop-1672.png`.
+- [x] Gunakan thumbnail dekoratif dan caption penjelasan yang jujur. Bukti: empat tahap CONNECT/UNDERSTAND/SHAPE/REVIEW di screenshot desktop dan mobile.
 - [ ] Buat pita CTA bawah dengan link login/register yang berfungsi.
 - [ ] Jangan menambahkan video play/durasi tanpa media.
 - [ ] Jangan menambahkan newsletter form tanpa backend pengiriman.
@@ -383,13 +383,13 @@ Urutan: header → hero manga → tiga panel editorial → band koneksi → film
 
 ### Mobile
 
-- [ ] Gunakan hero crop khusus mobile.
-- [ ] Susun panel menjadi satu kolom dengan ukuran tap cukup.
-- [ ] Gunakan satu CTA utama yang menonjol.
-- [ ] Kurangi ornament density tanpa menghilangkan identitas.
-- [ ] Pastikan wordmark dan headline tidak terpotong.
-- [ ] Pastikan filmstrip bisa digeser dengan akses keyboard bila overflow.
-- [ ] Pastikan tidak ada horizontal page overflow.
+- [x] Gunakan hero crop khusus mobile. Bukti: `docs/design/ui-catalog/homepage-filmstrip-mobile-390.png`.
+- [x] Susun panel menjadi satu kolom dengan ukuran tap cukup. Bukti: screenshot mobile homepage.
+- [x] Gunakan satu CTA utama yang menonjol. Bukti: screenshot mobile homepage.
+- [x] Kurangi ornament density tanpa menghilangkan identitas. Bukti: screenshot mobile homepage.
+- [x] Pastikan wordmark dan headline tidak terpotong; ejaan visual tepat `MOONWITNESS`. Bukti: screenshot mobile homepage.
+- [x] Pastikan filmstrip bisa digeser dengan akses keyboard bila overflow. Bukti: keyboard smoke ArrowRight/Home, serta screenshot kartu terakhir `docs/design/ui-catalog/homepage-filmstrip-mobile-end-390.png`.
+- [x] Pastikan tidak ada horizontal page overflow. Bukti: browser smoke pada 1672 px dan 390 px.
 
 **Syarat selesai:** komposisi, artwork, lettering, material, dan detail Homepage mendekati gambar 2 dengan isi produk yang benar.
 
@@ -548,7 +548,7 @@ Pertahankan satu command manual/otomatis: **`pnpm board:ui:check`**.
 
 ### Produk dan performa
 
-- [ ] Uji homepage public, metadata, dan CTA.
+- [x] Uji homepage public, metadata, dan CTA. Bukti: `apps/board/e2e/public-home.spec.ts` lulus pada homepage smoke (4/4).
 - [ ] Uji login, return path lokal, dan penolakan redirect eksternal.
 - [ ] Uji route protection dan legacy redirect/query string.
 - [ ] Uji model/detail deep links.

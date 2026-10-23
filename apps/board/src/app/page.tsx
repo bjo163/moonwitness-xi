@@ -6,6 +6,7 @@ import { PaperNote } from '@moonwitness/ui/components/paper-note';
 import { SectionRibbon } from '@moonwitness/ui/components/section-ribbon';
 import { SoundToggle } from '@moonwitness/ui/components/audio';
 import { ArrowRightIcon, GlobeIcon, MoonIcon } from '@moonwitness/ui/icons';
+import { HorizontalFilmstrip } from '../components/home/horizontal-filmstrip';
 
 // Next.js route metadata must be exported from the route file alongside its component.
 // oxlint-disable-next-line react/only-export-components
@@ -65,6 +66,41 @@ const editorialCards = [
   },
 ] as const;
 
+const processSteps = [
+  {
+    number: '01',
+    label: 'CONNECT',
+    title: 'People and records',
+    body: 'Keep partner and organization context connected.',
+    artwork: '/illustrations/editorial-people.webp',
+    crop: 'people',
+  },
+  {
+    number: '02',
+    label: 'UNDERSTAND',
+    title: 'Knowledge in context',
+    body: 'Bring working knowledge alongside the record.',
+    artwork: '/illustrations/editorial-knowledge.webp',
+    crop: 'knowledge',
+  },
+  {
+    number: '03',
+    label: 'SHAPE',
+    title: 'Story workbench',
+    body: 'Organize narrative work around connected information.',
+    artwork: '/illustrations/editorial-stories.webp',
+    crop: 'stories',
+  },
+  {
+    number: '04',
+    label: 'REVIEW',
+    title: 'Share with care',
+    body: 'Keep visibility and actions shaped by team access.',
+    artwork: '/illustrations/story-workbench-masthead.webp',
+    crop: 'review',
+  },
+] as const;
+
 export default function HomePage() {
   return (
     <main className="home-page">
@@ -76,7 +112,7 @@ export default function HomePage() {
             className="home-lockup"
             width={500}
             height={80}
-            priority
+            loading="eager"
           />
         </Link>
         <nav className="home-nav" aria-label="Main navigation">
@@ -210,23 +246,30 @@ export default function HomePage() {
 
       <section className="home-steps" aria-label="How the workspace connects">
         <SectionRibbon title="Follow the signal" number="04" surface="ink" accent="yellow" />
-        <div className="home-step-grid">
-          <div>
-            <span>01 / CONNECT</span>
-            <h3>People and records</h3>
-            <p>Keep the details together.</p>
+        <HorizontalFilmstrip
+          className="home-step-strip"
+          aria-label="How MoonWitness connects people, knowledge, and story work"
+        >
+          <div className="home-step-grid">
+            {processSteps.map((step, index) => (
+              <article className={`home-step-card crop-${step.crop}`} key={step.number}>
+                <div className="home-step-art" aria-hidden="true">
+                  <Image src={step.artwork} alt="" fill sizes="(max-width: 600px) 78vw, 25vw" />
+                </div>
+                <div className="home-step-copy">
+                  <span>
+                    {step.number} / {step.label}
+                  </span>
+                  <h3>{step.title}</h3>
+                  <p>{step.body}</p>
+                </div>
+                {index < processSteps.length - 1 ? (
+                  <ArrowRightIcon className="home-step-arrow" aria-hidden="true" />
+                ) : null}
+              </article>
+            ))}
           </div>
-          <div>
-            <span>02 / UNDERSTAND</span>
-            <h3>Knowledge in context</h3>
-            <p>See what informs the work.</p>
-          </div>
-          <div>
-            <span>03 / TELL</span>
-            <h3>Stories with meaning</h3>
-            <p>Shape a clearer narrative.</p>
-          </div>
-        </div>
+        </HorizontalFilmstrip>
       </section>
 
       <section className="home-join-band" aria-label="Join MoonWitness">
