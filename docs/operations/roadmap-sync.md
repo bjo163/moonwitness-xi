@@ -4,7 +4,7 @@ This runbook covers the read-only roadmap issue audit and bounded manual recover
 
 ## Run a read-only audit
 
-The `Roadmap issue sync` workflow defines push, weekly schedule, and manual plan triggers and runs `scripts/roadmap/audit-issues.mjs` before lifecycle collection and the issue plan. Push-triggered hosted runs have been observed; schedule activation still depends on the workflow being available from the repository default branch. The plan job has `issues: read`; it removes the temporary report when it exits. The summary reports counts for missing, duplicate, orphan, stale-source, stale-milestone, broken generated-link, malformed-block, and metadata drift. The report deliberately excludes issue bodies, comments, assignees, and human notes.
+The `Roadmap issue sync` workflow defines push, daily schedule, and manual plan triggers and runs `scripts/roadmap/audit-issues.mjs` before lifecycle collection and the issue plan. Push-triggered hosted runs have been observed. The workflow is also present on the default branch (`roadmap-issue-plan.yml`, blob `687d4707e6ef9d3f46dead451cf809fcd1eb3e39` on `main`) with `schedule: - cron: '13 9 * * *'`, so scheduled runs are eligible from `main`; the `main` copy trails `dev` until the promotion PR merges, and an individual scheduled run result still needs an authenticated Actions read. The plan job has `issues: read`; it removes the temporary report when it exits. The summary reports counts for missing, duplicate, orphan, stale-source, stale-milestone, broken generated-link, malformed-block, and metadata drift. The report deliberately excludes issue bodies, comments, assignees, and human notes.
 
 For a local run, use a read-only token for private repositories. Public repositories can use anonymous reads:
 
