@@ -189,7 +189,7 @@ Gunakan Road Rage sebagai brush display, Anton untuk judul condensed dan KPI, Sp
 
 ### Ikon interaksi
 
-- [ ] Inventaris semua icon yang digunakan Home, Board, dan auth.
+- [x] Inventaris semua icon yang digunakan Home, Board, dan auth. Bukti scan: 20 consumer dan 79 nama komponen dari `lucide-react`, dicatat pada `docs/design/icons.md`; kandidat pemetaan semantic harus tetap diverifikasi di call site saat migrasi.
 - [ ] Satukan nama semantic yang memiliki arti aksi sama.
 - [ ] Pertahankan grid canonical `24×24` dengan bobot tegas yang konsisten.
 - [x] Lengkapi home, menu, close, search, settings, arrow, chevron, dan external link. Bukti visual 16–32 px: `docs/design/assets/icon-contact-sheet-current.png`.
