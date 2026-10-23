@@ -9,7 +9,7 @@ test('public homepage renders its message, canonical metadata, and workspace act
   await expect(page).toHaveTitle(/Real people\. Unfiltered worlds\./u);
   await expect(page.getByRole('heading', { level: 1, name: 'MoonWitness' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
-  await expect(page.getByRole('link', { name: /Open your workspace/u })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: /Sign in to your workspace/u })).toHaveAttribute(
     'href',
     '/login'
   );
