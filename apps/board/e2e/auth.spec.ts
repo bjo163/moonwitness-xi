@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import { E2E_SUPERADMIN_PASSWORD, loginPageUrl } from './constants.js';
 
 test('login form renders and rejects invalid credentials', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/login');
   await expect(page.getByRole('heading', { name: 'Enter the Shadow' })).toBeVisible();
   await expect(page.getByLabel('Email or Username')).toBeVisible();
@@ -17,6 +18,10 @@ test('login form renders and rejects invalid credentials', async ({ page }) => {
 
   await expect(page.getByRole('alert').filter({ hasText: 'Invalid credentials' })).toBeVisible();
   await expect(page).toHaveURL(loginPageUrl);
+  await page.screenshot({
+    path: '../../docs/design/ui-catalog/auth-login-error-mobile-390.png',
+    fullPage: true,
+  });
 });
 
 test('login submit shows the shared spinner and keeps an explicit busy label', async ({ page }) => {
