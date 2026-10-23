@@ -365,6 +365,88 @@ test('story workbench editor and preview stay readable with a populated story', 
   }
 });
 
+test('empty and unavailable story workbench states explain the next action', async ({
+  page,
+}, testInfo) => {
+  let state: 'empty' | 'error' = 'empty';
+  await page.route('**/api/research/stories/**', async (route) => {
+    if (route.request().method() !== 'GET') return route.continue();
+    const unavailable = state === 'error';
+    await route.fulfill({
+      status: unavailable ? 503 : 404,
+      json: { error: unavailable ? 'Service temporarily unavailable' : 'No saved story' },
+    });
+  });
+
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/login');
+  await page.getByLabel('Login').fill('superadmin');
+  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await expect(page).toHaveURL(/\/board$/u);
+  await page.getByRole('button', { name: 'Switch company. Current scope: Global Scope' }).click();
+  await page.getByRole('menuitem', { name: 'MoonWitness' }).click();
+  await page.getByRole('link', { name: 'Story workbench' }).click();
+  await expect(
+    page.getByRole('button', { name: 'Switch company. Current scope: MoonWitness' })
+  ).toBeVisible();
+
+  for (const scenario of [
+    {
+      name: 'empty',
+      message:
+        'No saved sample is available in this company yet. Saving creates its first revision.',
+    },
+    {
+      name: 'error',
+      message: 'Could not confirm the saved story state. Your draft is kept; retry before saving.',
+    },
+  ]) {
+    if (scenario.name === 'error') {
+      state = 'error';
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      await page.getByRole('button', { name: 'Retry loading story' }).click();
+    }
+    for (const size of [
+      { name: 'desktop-1440', width: 1440, height: 1000 },
+      { name: 'mobile-390', width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize({ width: size.width, height: size.height });
+      await expect(
+        page.getByRole('heading', { name: 'Story workbench', exact: true })
+      ).toBeVisible();
+      await expect(
+        page.getByText('MoonWitness / Internal editorial', { exact: true })
+      ).toBeVisible();
+      await expect(page.getByText(scenario.message, { exact: true })).toBeVisible();
+      const saveButton = page.getByRole('button', { name: 'Save revision 1' });
+      if (scenario.name === 'empty') {
+        await expect(saveButton).toBeEnabled();
+      } else {
+        await expect(saveButton).toBeDisabled();
+        await expect(page.getByRole('button', { name: 'Retry loading story' })).toBeEnabled();
+      }
+      await expect(page.getByRole('button', { name: 'Retry loading story' })).toBeVisible();
+      await expectNoHorizontalOverflow(page, `workbench-${scenario.name}/${size.name}`);
+      await expectNoA11yViolations(page, `workbench-${scenario.name}/${size.name}`);
+      await page.screenshot({
+        path: path.join(
+          auditDirectory,
+          `workbench-${scenario.name}-${size.name}${browserSuffix(testInfo)}.png`
+        ),
+        fullPage: true,
+      });
+      if (testInfo.project.name === 'chromium') {
+        await expect(page).toHaveScreenshot(`workbench-${scenario.name}-${size.name}.png`, {
+          animations: 'disabled',
+          caret: 'hide',
+          fullPage: true,
+        });
+      }
+    }
+  }
+});
+
 test('responsive protected screens fit and remain accessible in both themes', async ({
   page,
 }, testInfo) => {

@@ -36,7 +36,8 @@ Checklist ini menjadi rencana kerja untuk mendekatkan Home, Board, dan workbench
 - [ ] Ambil screenshot Board untuk role pengguna biasa.
 - [x] Ambil screenshot Board untuk role admin. Bukti: `test-results/visual-audit/dashboard-desktop-1440-dark.png` (fixture E2E admin).
 - [x] Ambil screenshot workbench dengan dokumen berisi; periksa ejaan brand, judul, label, hash, dan teks preview secara visual. Bukti: baseline `workbench-filled-desktop-1440`, `workbench-filled-tablet-1024`, dan `workbench-filled-mobile-390` di `apps/board/e2e/visual-audit.spec.ts-snapshots/`.
-- [ ] Ambil screenshot workbench saat kosong dan saat ada error.
+- [x] Ambil screenshot workbench saat story belum tersimpan; periksa copy langkah menyimpan revisi pertama. Bukti: baseline `workbench-empty-desktop-1440` dan `workbench-empty-mobile-390` di `apps/board/e2e/visual-audit.spec.ts-snapshots/`.
+- [x] Ambil screenshot workbench saat API gagal; periksa pesan retry, tombol save nonaktif, ejaan, dan keterbacaan. Bukti: baseline `workbench-error-desktop-1440` dan `workbench-error-mobile-390` di `apps/board/e2e/visual-audit.spec.ts-snapshots/`.
 - [ ] Inventarisasi halaman login, registrasi, Knowledge, profil, dan settings.
 - [ ] Inventarisasi halaman daftar/detail model, dialog, menu, sheet, toast, dan tabel.
 - [ ] Catat consumer logo, icon, token warna, efek, serta CSS lokal yang akan dimigrasikan.
