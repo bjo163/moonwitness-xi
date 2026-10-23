@@ -40,7 +40,28 @@ test('public homepage renders its message, canonical metadata, and workspace act
     'content',
     `${origin}/brand/social-card.png`
   );
+  await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
+    'content',
+    'summary_large_image'
+  );
+  const socialCard = await page.request.get(`${origin}/brand/social-card.png`);
+  expect(socialCard.ok()).toBe(true);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /index/u);
+
+  const homepageCopy = await page.locator('main').innerText();
+  expect(homepageCopy).not.toMatch(/\b\d[\d,]*\s+(?:crew members|countries|signals)\b/iu);
+  await expect(
+    page.locator('.home-join-band').getByRole('link', { name: /Join MoonWitness/u })
+  ).toHaveAttribute('href', '/register');
+  await expect(page.locator('.home-footer').getByRole('link', { name: 'Sign in' })).toHaveAttribute(
+    'href',
+    '/login'
+  );
+  await expect(
+    page.locator('.home-footer').getByRole('link', { name: 'Create an account' })
+  ).toHaveAttribute('href', '/register');
+  await expect(page.locator('main video')).toHaveCount(0);
+  await expect(page.locator('main form')).toHaveCount(0);
 
   const accessibility = await new AxeBuilder({ page }).analyze();
   expect(accessibility.violations).toEqual([]);

@@ -304,6 +304,7 @@
   text-transform: uppercase;
 }
 .home-band {
+  position: relative;
   display: flex;
   min-height: 3.25rem;
   flex-wrap: wrap;
@@ -315,6 +316,49 @@
   padding: 0.8rem 1rem;
   font: 400 clamp(1.1rem, 2vw, 1.75rem)/1 var(--mw-font-brush);
   text-transform: uppercase;
+}
+.home-band-copy {
+  position: relative;
+  z-index: 1;
+}
+.home-band-orbit {
+  position: absolute;
+  z-index: 0;
+  inset: 0 1rem;
+  overflow: hidden;
+  opacity: 0.52;
+  pointer-events: none;
+}
+.home-band-orbit > span[aria-hidden='true'] {
+  inset: 20% 3%;
+  transform: rotate(-2deg);
+}
+.home-band-node {
+  position: absolute;
+  width: 0.55rem;
+  height: 0.55rem;
+  border: 2px solid var(--mw-night);
+  border-radius: 50%;
+  background: var(--mw-yellow);
+  box-shadow: 0 0 0 2px var(--mw-signal-blue);
+}
+.home-band-node-one {
+  top: 24%;
+  left: 12%;
+}
+.home-band-node-two {
+  right: 23%;
+  bottom: 20%;
+  background: var(--mw-magenta);
+}
+.home-band-node-three {
+  top: 17%;
+  right: 8%;
+}
+.home-band-node-four {
+  bottom: 16%;
+  left: 34%;
+  background: var(--mw-magenta);
 }
 .home-band strong {
   color: var(--mw-magenta);

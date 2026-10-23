@@ -374,14 +374,14 @@ Urutan: header → hero manga → tiga panel editorial → band koneksi → film
 - [x] Buat panel Stories berdasarkan capability internal yang tersedia. Copy menjelaskan Story Workbench yang ada; bukti screenshot homepage.
 - [x] Tambahkan ribbon, eyebrow, heading, caption, arrow, dan CTA tiap panel. Bukti: triptych pada screenshot desktop/mobile.
 - [x] Gunakan body font yang terbaca untuk deskripsi panel. Bukti visual di screenshot; teks body memakai font UI.
-- [ ] Buat band orbit/map sebagai motif hubungan konseptual.
-- [ ] Jangan tampilkan jumlah crew, negara, atau signal tanpa data.
+- [x] Buat band orbit sebagai motif hubungan konseptual dari shared `SignalOrbit`; dekorasi tidak menyatakan data lokasi/live. Bukti visual/ejaan desktop dan mobile: `docs/design/ui-catalog/homepage-orbit-band-desktop-1672.png`, `homepage-orbit-band-mobile-390.png`, dan homepage E2E/axe.
+- [x] Jangan tampilkan jumlah crew, negara, atau signal tanpa data. Guard copy homepage di `apps/board/e2e/public-home.spec.ts` menolak statistik semacam itu.
 - [x] Buat filmstrip sebagai urutan cara kerja, bukan arsip/timeline fiktif. Bukti: `docs/design/ui-catalog/homepage-filmstrip-desktop-1672.png`.
 - [x] Gunakan thumbnail dekoratif dan caption penjelasan yang jujur. Bukti: empat tahap CONNECT/UNDERSTAND/SHAPE/REVIEW di screenshot desktop dan mobile.
-- [ ] Buat pita CTA bawah dengan link login/register yang berfungsi.
-- [ ] Jangan menambahkan video play/durasi tanpa media.
-- [ ] Jangan menambahkan newsletter form tanpa backend pengiriman.
-- [ ] Pertahankan metadata, canonical URL, dan social card.
+- [x] Buat pita CTA bawah dengan link login/register yang berfungsi. CTA register dan link footer diuji di `apps/board/e2e/public-home.spec.ts`.
+- [x] Jangan menambahkan video play/durasi tanpa media. E2E memastikan homepage tidak menyisipkan elemen video tanpa media.
+- [x] Jangan menambahkan newsletter form tanpa backend pengiriman. E2E memastikan homepage tidak menampilkan form tanpa layanan.
+- [x] Pertahankan metadata, canonical URL, dan social card. Canonical, OG, Twitter card, file social card, dan robots diuji di `apps/board/e2e/public-home.spec.ts`.
 
 ### Mobile
 

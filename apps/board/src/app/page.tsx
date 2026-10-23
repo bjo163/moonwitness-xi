@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { Button } from '@moonwitness/ui/components/button';
 import { PaperNote } from '@moonwitness/ui/components/paper-note';
 import { SectionRibbon } from '@moonwitness/ui/components/section-ribbon';
+import { SignalOrbit } from '@moonwitness/ui/components/effects';
 import { ArrowRightIcon, GlobeIcon, MoonIcon } from '@moonwitness/ui/icons';
 import { HomeHeader } from '../components/home/home-header';
 import { HomeHeroArt } from '../components/home/home-hero-art';
@@ -142,8 +143,16 @@ export default function HomePage() {
       </section>
 
       <div className="home-band">
-        <span>Real people.</span> <strong>Connected knowledge.</strong>{' '}
-        <span>A wider perspective.</span>
+        <SignalOrbit className="home-band-orbit" aria-hidden="true">
+          <span className="home-band-node home-band-node-one" />
+          <span className="home-band-node home-band-node-two" />
+          <span className="home-band-node home-band-node-three" />
+          <span className="home-band-node home-band-node-four" />
+        </SignalOrbit>
+        <div className="home-band-copy">
+          <span>Real people.</span> <strong>Connected knowledge.</strong>{' '}
+          <span>A wider perspective.</span>
+        </div>
       </div>
 
       <section className="home-editorial" aria-label="Explore MoonWitness">
