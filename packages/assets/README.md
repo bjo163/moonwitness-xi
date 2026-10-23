@@ -4,7 +4,7 @@ Framework-independent visual assets for MoonWitness. The package has no runtime 
 
 ## Generate and export
 
-The published package contains generated assets, the manifest, license provenance, and usage documentation. In the MoonWitness repository, maintainers can run `pnpm assets:generate` to regenerate SVG files, Road Rage's display subset, responsive artwork crops, original short interface cues, and the manifest; `pnpm assets:render` to render brand, artwork, icon, and illustration proofs with repository Playwright Chromium; and `pnpm assets:validate` to check SVG integrity and sound provenance before packaging. `sharp` and `subset-font` are build-only tools, not runtime dependencies.
+The published package contains generated assets, the manifest, license provenance, and usage documentation. In the MoonWitness repository, maintainers can run `pnpm assets:generate` to regenerate SVG files, Road Rage's display subset, responsive artwork crops, original short interface cues, and the manifest; `pnpm assets:render` to render brand, artwork, icon, and illustration proofs with repository Playwright Chromium; `pnpm assets:validate` to check SVG integrity and sound provenance; and `pnpm assets:check:bounds` to verify rendered SVG geometry against each `viewBox`. The social-card orbit rings are the only intentional bleed and are explicitly listed in that check. `sharp` and `subset-font` are build-only tools, not runtime dependencies.
 
 Consumers can import a static asset through a package export, for example:
 

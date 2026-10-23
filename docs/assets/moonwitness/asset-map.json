@@ -4,7 +4,7 @@
   "generatedFrom": "packages/assets/manifest.json and packages/ui/src/styles/tokens.css",
   "sources": {
     "assetManifest": "manifest.json",
-    "assetManifestSha256": "8269c27b05e1d3349f5378ee4880bb70767e20d49b09d43e1d377f02e763aae6",
+    "assetManifestSha256": "431a1865a7943df24b8d562c89ffe1b41592defbefdf1e5eece55b0ef0df36b7",
     "tokens": "packages/ui/src/styles/tokens.css",
     "tokensSha256": "c95c112b247fa59ec5f9cc5b6aa62a54fb9e5c44956bc41701330a76e76b9060"
   },
@@ -16,7 +16,7 @@
       "format": "png",
       "width": 192,
       "height": 192,
-      "sha256": "fb894f3b8a12a5bb8e86e33dfd8d5ad521f406e5f9c774224dbad3293657f002"
+      "sha256": "f406f4e91475f5c5d74fa34ad8a7207d39ba9a688f76ec0a25a190078c216225"
     },
     {
       "source": "packages/assets/brand/app-icon-512.png",
@@ -25,7 +25,7 @@
       "format": "png",
       "width": 512,
       "height": 512,
-      "sha256": "b501326c5ea48cab58943fdfb1d168dd34ae459e950a061ebc099de35dff8c36"
+      "sha256": "f78cddb74190ece6c3c791fb57b1b49a0d92702581f58bd5d1740438cc323333"
     },
     {
       "source": "packages/assets/brand/favicon.svg",
@@ -34,7 +34,7 @@
       "format": "svg",
       "width": 64,
       "height": 64,
-      "sha256": "4edb6590b516e1141cdcf7830ef346424a5f570ad880e95a3065bacda3f02a60"
+      "sha256": "1269068c961e8f1f63ecd47817ac572362414d8a1a9e2bd31008813b09d9eac2"
     },
     {
       "source": "packages/assets/brand/moonwitness-lockup-dark.svg",
@@ -43,7 +43,7 @@
       "format": "svg",
       "width": 520,
       "height": 80,
-      "sha256": "8bc81fc60546a216f1fa42515a054dd7916e6b4243563ff91dc688ee0ae3b37a"
+      "sha256": "8f5146abce5a15c67807c96700e227d02e62cab08038f58b789aa0d3c1535a9a"
     },
     {
       "source": "packages/assets/brand/moonwitness-lockup-light.svg",
@@ -52,7 +52,7 @@
       "format": "svg",
       "width": 520,
       "height": 80,
-      "sha256": "2d611cb7c7481ad10091eb6af2cfade0984f419a77dacc6d163db269190e84f8"
+      "sha256": "9b64ccb176b9bce520c031fd65f026ca14f212dec5feb6956951dfbfc55583c4"
     },
     {
       "source": "packages/assets/brand/moonwitness-lockup-mono-dark.svg",
@@ -61,7 +61,7 @@
       "format": "svg",
       "width": 520,
       "height": 80,
-      "sha256": "e94fc69db8cc95d903561a780b60c763d2cacfb5266b1fba1dc072218243f226"
+      "sha256": "eedc16f49b197b959a6e69bbbae42a91bfcc51d5fa3cad378c34bd9f76eb54a3"
     },
     {
       "source": "packages/assets/brand/moonwitness-lockup-mono-light.svg",
@@ -70,7 +70,7 @@
       "format": "svg",
       "width": 520,
       "height": 80,
-      "sha256": "89b70f2910ca2aa8a52cc45cf99b7c9d997b6eb43b4128319fd9458053c81edc"
+      "sha256": "dd4d10077ad0ae7515e94ed2bdb31ab96073b93d9927171cd20bc6efddff1016"
     },
     {
       "source": "packages/assets/brand/moonwitness-symbol-dark.svg",
@@ -79,7 +79,7 @@
       "format": "svg",
       "width": 64,
       "height": 64,
-      "sha256": "70ddd57f12f17d27218ba0c4036b8240e0fbf3ac02e1917bad3585e9cc09a50d"
+      "sha256": "79e9761a9cfbe4c50f6ab06da099228fa7b4bab20329acd7c5e75c0533a22eb6"
     },
     {
       "source": "packages/assets/brand/moonwitness-symbol-light.svg",
@@ -88,7 +88,7 @@
       "format": "svg",
       "width": 64,
       "height": 64,
-      "sha256": "70ddd57f12f17d27218ba0c4036b8240e0fbf3ac02e1917bad3585e9cc09a50d"
+      "sha256": "79e9761a9cfbe4c50f6ab06da099228fa7b4bab20329acd7c5e75c0533a22eb6"
     },
     {
       "source": "packages/assets/brand/moonwitness-symbol-mono-dark.svg",
@@ -97,7 +97,7 @@
       "format": "svg",
       "width": 64,
       "height": 64,
-      "sha256": "a80b0f5ae6d7b769f53aea885478cfe0bf3f378ff7a2bc7b00230f12ea2976fd"
+      "sha256": "45b026a6ba287f13c4ffa16d73d0ed1fc38cc529e2a992dbced177bc14dde307"
     },
     {
       "source": "packages/assets/brand/moonwitness-symbol-mono-light.svg",
@@ -106,43 +106,43 @@
       "format": "svg",
       "width": 64,
       "height": 64,
-      "sha256": "4a0b128b3298bafa661f67990f18d44f270f05e432e012d62c7501c08ef07a65"
+      "sha256": "6b628394bff48eced2ffa8da9d0b38bb09f67b6e9eb37004c352708a69b814c5"
     },
     {
       "source": "packages/assets/brand/moonwitness-wordmark-dark.svg",
       "output": "docs/assets/moonwitness/brand/moonwitness-wordmark-dark.svg",
       "kind": "wordmark",
       "format": "svg",
-      "width": 440,
+      "width": 500,
       "height": 80,
-      "sha256": "dc5e58b585036424b139c378b05ee1ce1b68cfe3a0e733f6b39413f91ac95939"
+      "sha256": "0d45cb7758fd0ea10fb5491c8000fa772773d40eccf16df3b464bda90f6be6d2"
     },
     {
       "source": "packages/assets/brand/moonwitness-wordmark-light.svg",
       "output": "docs/assets/moonwitness/brand/moonwitness-wordmark-light.svg",
       "kind": "wordmark",
       "format": "svg",
-      "width": 440,
+      "width": 500,
       "height": 80,
-      "sha256": "b790ba21d13938a37b0bf9027aeb2642a2f1b956a87ea4d59c73c518f85d2f21"
+      "sha256": "12ae6b97604ccb2759ca718832918939afe92fcf8fee11538b8990f4ff3fe724"
     },
     {
       "source": "packages/assets/brand/moonwitness-wordmark-mono-dark.svg",
       "output": "docs/assets/moonwitness/brand/moonwitness-wordmark-mono-dark.svg",
       "kind": "wordmark",
       "format": "svg",
-      "width": 440,
+      "width": 500,
       "height": 80,
-      "sha256": "46c964ea0f5112a3997e6db4cc58ece18c502a3d0e0aad05620bd9c93b94d859"
+      "sha256": "d13b178f623f7ec65441c4a4f26b09b933ffe47b86eff40d60e4c3fe708314bd"
     },
     {
       "source": "packages/assets/brand/moonwitness-wordmark-mono-light.svg",
       "output": "docs/assets/moonwitness/brand/moonwitness-wordmark-mono-light.svg",
       "kind": "wordmark",
       "format": "svg",
-      "width": 440,
+      "width": 500,
       "height": 80,
-      "sha256": "b790ba21d13938a37b0bf9027aeb2642a2f1b956a87ea4d59c73c518f85d2f21"
+      "sha256": "12ae6b97604ccb2759ca718832918939afe92fcf8fee11538b8990f4ff3fe724"
     },
     {
       "source": "packages/assets/brand/readme-banner.svg",
@@ -151,7 +151,7 @@
       "format": "svg",
       "width": 1280,
       "height": 320,
-      "sha256": "6022024e28fa2a97ba2fd43cf786d500aebc86f3805017cc423a743ab341803b"
+      "sha256": "149d84c0c6c3024a9c247281312d20f9a4671c621f0d57ea35b37fb77cadde66"
     },
     {
       "source": "packages/assets/brand/social-card.png",
@@ -160,7 +160,7 @@
       "format": "png",
       "width": 1200,
       "height": 630,
-      "sha256": "b64de3f4aa6d4747d234071be966da4ab910dedac735af4028d9fd0577e54760"
+      "sha256": "e4c7b49eabcee78f267583d9af30cb319da2de35d18dba8928ef29ceaa874df2"
     },
     {
       "source": "packages/assets/brand/social-card.svg",
@@ -169,7 +169,7 @@
       "format": "svg",
       "width": 1200,
       "height": 630,
-      "sha256": "aef10579d5a47d4040dc5a911347019ff305e0f22367c4188f7bc5ff0eb95a5e"
+      "sha256": "ec40ffcd5cd1f022dc2786fbbaf1ba30b1340d27fadbd14603dcd5b204f65b3b"
     },
     {
       "source": "packages/assets/fonts/RoadRage-latin.woff2",
@@ -284,7 +284,7 @@
       "format": "svg",
       "width": 24,
       "height": 24,
-      "sha256": "6a140ee59887559084361f99eef380d2ebe20e4f890efd3277e20fc08b59d967"
+      "sha256": "c2428e5f569b4a0ea95a5119367f467fefe4cf5190536edb9a2eca8c92254596"
     },
     {
       "source": "packages/assets/icons/delete.svg",

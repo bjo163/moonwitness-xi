@@ -99,7 +99,7 @@
       "kind": "wordmark",
       "variant": "dark",
       "format": "svg",
-      "width": 440,
+      "width": 500,
       "height": 80
     },
     {
@@ -107,7 +107,7 @@
       "kind": "wordmark",
       "variant": "light",
       "format": "svg",
-      "width": 440,
+      "width": 500,
       "height": 80
     },
     {
@@ -115,7 +115,7 @@
       "kind": "wordmark",
       "variant": "mono-dark",
       "format": "svg",
-      "width": 440,
+      "width": 500,
       "height": 80
     },
     {
@@ -123,7 +123,7 @@
       "kind": "wordmark",
       "variant": "mono-light",
       "format": "svg",
-      "width": 440,
+      "width": 500,
       "height": 80
     },
     {
@@ -156,7 +156,7 @@
       "kind": "source",
       "variant": "canonical-crown-brush-wordmark",
       "format": "svg",
-      "width": 570,
+      "width": 500,
       "height": 80,
       "source": "Original vector master maintained by MoonWitness contributors"
     },

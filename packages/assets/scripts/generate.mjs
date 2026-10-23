@@ -22,7 +22,8 @@ function masterGroup(id, color, transform = '') {
   if (!match) throw new Error(`Canonical brand master is missing the ${id} group`);
   const sourceTransform = match[1].match(/\btransform="([^"]+)"/u)?.[1];
   const source = `<g${sourceTransform ? ` transform="${sourceTransform}"` : ''}>${match[2]}</g>`;
-  return `<g${transform ? ` transform="${transform}"` : ''} fill="${color}">${source}</g>`;
+  const dataAttribute = id === 'wordmark' ? ' data-brand-wordmark="true"' : '';
+  return `<g${dataAttribute}${transform ? ` transform="${transform}"` : ''} fill="${color}">${source}</g>`;
 }
 
 const palettes = {
@@ -83,7 +84,7 @@ const icons = [
     name: 'company',
     title: 'Company',
     paths:
-      '<path d="M3.5 20V8.5l6.5-3V20m0-9 10.5-4V20H3.5Zm0 0h17"/><path d="M6.5 10.5v1m0 3v1m6-2v1m0 3v1m4.5-8v1m0 3v1m0 3v1"/>',
+      '<path d="M3.5 20V8.5L10 5.5V20Z M10 11L20.5 7V20H10Z M3.5 20H20.5"/><path d="M6.5 10.5v1m0 3v1m6-2v1m0 3v1m4.5-8v1m0 3v1m0 3v1"/>',
   },
   {
     name: 'team',
@@ -331,19 +332,19 @@ for (const [variant, palette] of Object.entries(palettes)) {
     variant,
     width: 64,
     height: 64,
-    svg: svgDocument('0 0 64 64', 'MoonWitness lunar orbit symbol', mark(palette), 64, 64),
+    svg: svgDocument('0 0 64 64', 'MoonWitness crown symbol', mark(palette), 64, 64),
   });
   generated.push({
     path: `brand/${wordmarkName}`,
     kind: 'wordmark',
     variant,
-    width: 440,
+    width: 500,
     height: 80,
     svg: svgDocument(
-      '0 0 440 80',
+      '0 0 500 80',
       'MoonWitness brush wordmark',
-      wordmark(palette, 'translate(-76 0) skewX(5)'),
-      440,
+      wordmark(palette, 'translate(-68 0) skewX(5)'),
+      500,
       80
     ),
   });
@@ -384,11 +385,11 @@ const socialCard = svgDocument(
   '0 0 1200 630',
   'MoonWitness — one board for every model',
   `<rect width="1200" height="630" fill="${light.paper}"/>
-  <circle cx="1040" cy="312" r="228" fill="none" stroke="#0d0d0d" stroke-width="2" opacity=".16"/>
+  <circle id="mw-brand-social-card-orbit-outer" cx="1040" cy="312" r="228" fill="none" stroke="#0d0d0d" stroke-width="2" opacity=".16"/>
   <circle cx="1040" cy="312" r="176" fill="none" stroke="#0d0d0d" stroke-width="1.5" opacity=".12"/>
   <path d="M800 455c96-134 219-203 361-213M824 500c115-66 242-84 343-47" fill="none" stroke="#0d0d0d" stroke-width="2" opacity=".12"/>
   <g transform="translate(72 58) scale(.72)">${mark(light)}</g>
-  <g transform="translate(132 68) scale(.58)">${wordmark(light, 'translate(-76 0)')}</g>
+  <g transform="translate(132 68) scale(.58)">${wordmark(light, 'translate(-68 0)')}</g>
   <rect x="74" y="194" width="580" height="104" rx="4" fill="${light.accent}" transform="rotate(-1.2 74 194)"/>
   <text x="92" y="270" fill="${light.ink}" font-family="Arial Black, Arial, sans-serif" font-size="76" font-weight="900" letter-spacing="-2">ONE BOARD.</text>
   <text x="78" y="375" fill="${light.ink}" font-family="Arial Black, Arial, sans-serif" font-size="75" font-weight="900" letter-spacing="-2">EVERY MODEL.</text>
@@ -416,7 +417,7 @@ const readmeBanner = svgDocument(
   <path d="M0 252C232 186 365 295 601 221S1007 121 1280 201" fill="none" stroke="#0d0d0d" stroke-width="2" opacity=".12"/>
   <path d="M0 278C256 214 421 319 640 257S1032 157 1280 228" fill="none" stroke="#0d0d0d" stroke-width="1.5" opacity=".1"/>
   <g transform="translate(76 92)">${mark(light)}</g>
-  <g transform="translate(154 96) scale(.7)">${wordmark(light, 'translate(-76 0)')}</g>
+  <g transform="translate(154 96) scale(.7)">${wordmark(light, 'translate(-68 0)')}</g>
   <rect x="78" y="186" width="500" height="64" rx="3" fill="${light.accent}" transform="rotate(-.7 78 186)"/>
   <text x="92" y="232" fill="${light.ink}" font-family="Arial Black, Arial, sans-serif" font-size="37" font-weight="900">EVERY MODEL. ONE BOARD.</text>
   <text x="820" y="116" fill="#3a3a36" font-family="Arial, Helvetica, sans-serif" font-size="22">Composable business software</text>

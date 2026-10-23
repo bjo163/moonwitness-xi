@@ -21,7 +21,7 @@ Canonical interface icons live in `@moonwitness/assets/icons` on a 24×24 grid a
 
 Complex manga scenes and collage art are optimized raster assets. Keep editable high-quality masters and provenance in the assets package; export WebP crops for desktop, mobile, and masthead use. Every image has an intentional focal crop and is marked decorative or given accurate alt text. Never generate embedded UI copy, statistics, logos, or fake product controls into artwork.
 
-Material assets include torn edges, ink frames, paper notes, tape, halftone, speckle, and hand-drawn arrows. Keep texture on a decorative layer with `pointer-events: none`; it must not lower text contrast, cover a focus ring, or make a control's click target irregular. Prefer deterministic SVG/CSS pattern assets and restrained opacity over repeated expensive filters.
+Material assets include torn edges, ink frames, paper notes, tape, halftone, speckle, and hand-drawn arrows. Keep texture on a decorative layer with `pointer-events: none`; it must not lower text contrast, cover a focus ring, or make a control's click target irregular. Prefer deterministic SVG/CSS pattern assets and restrained opacity over repeated expensive filters. Rendered brand marks, interface icons, and other SVG content must remain inside their `viewBox`; intentional decorative bleed must be named and documented, as with the orbit rings on the social card.
 
 ## Decoration intensity
 

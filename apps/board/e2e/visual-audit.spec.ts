@@ -167,7 +167,15 @@ test('homepage spelling, responsive layout, and reference screenshots', async ({
   for (const size of homeSizes) {
     await page.setViewportSize({ width: size.width, height: size.height });
     await page.goto('/');
+    const brandLockup = page.locator('.home-lockup');
     await expect(page.getByRole('link', { name: 'MoonWitness home' })).toBeVisible();
+    await expect(brandLockup).toBeVisible();
+    await expect
+      .poll(() => brandLockup.evaluate((image: HTMLImageElement) => image.complete))
+      .toBe(true);
+    expect(await brandLockup.evaluate((image: HTMLImageElement) => image.naturalWidth > 0)).toBe(
+      true
+    );
     await expect(page.getByRole('heading', { name: 'MOONWITNESS', exact: true })).toBeVisible();
     await expect(
       page.getByText('People. Places. Stories. Another side of reality.', { exact: true })

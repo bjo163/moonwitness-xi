@@ -321,6 +321,8 @@ jobs:
         run: node packages/ui/scripts/verify-package.mjs
       - name: Validate source SVG assets and static documentation exports
         run: pnpm test:assets:source
+      - name: Check rendered SVG bounds against their viewBoxes
+        run: pnpm assets:check:bounds
       - name: Enforce tested JavaScript and CSS bundle budgets
         run: pnpm test:ui-budget
       - name: Test UI catalog interactions, WCAG, and visual contract

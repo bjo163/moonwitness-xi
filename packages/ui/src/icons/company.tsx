@@ -23,7 +23,7 @@ export function CompanyIcon({ size = 24, title, ...props }: CompanyIconProps) {
       {...props}
     >
       {title ? <title id={titleId}>{title}</title> : null}
-      <path d="M3.5 20V8.5l6.5-3V20m0-9 10.5-4V20H3.5Zm0 0h17" />
+      <path d="M3.5 20V8.5L10 5.5V20Z M10 11L20.5 7V20H10Z M3.5 20H20.5" />
       <path d="M6.5 10.5v1m0 3v1m6-2v1m0 3v1m4.5-8v1m0 3v1m0 3v1" />
     </svg>
   );

@@ -84,7 +84,6 @@ Bukti Bible: `packages/ui/README.md`, token/kontras: `packages/ui/TOKENS.md`; su
 
 ## C. Amankan asset inventory dan generator
 
-- [ ] Petakan output yang dimiliki masing-masing generator saat ini.
 - [x] Petakan output yang dimiliki masing-masing generator saat ini. Bukti: ownership mapping dan tes pada `packages/assets/scripts/manifest-ownership.mjs`.
 - [x] Ubah generator brand agar tidak menghapus entry milik generator lain. Bukti: `packages/assets/scripts/manifest-ownership.mjs`, tes ownership lulus.
 - [x] Ubah generator ilustrasi agar tidak menghapus aset manual/artwork baru. Bukti: `packages/assets/tests/manifest-ownership.test.mjs`.
@@ -109,7 +108,7 @@ Bukti Bible: `packages/ui/README.md`, token/kontras: `packages/ui/TOKENS.md`; su
 - [x] Bandingkan render canonical SVG dengan React wrapper. Bukti: tes membandingkan semua root presentation attributes pada 50 wrappers hasil render React.
 - [x] Pastikan mask/clip ID aman saat SVG digunakan berulang. Bukti: generator menolak ID/mask/clip yang berpotensi bentrok dan memberikan arahan flatten path.
 - [x] Pertahankan validasi SVG tanpa script, external reference, atau konten executable. Bukti: `pnpm test:assets` memvalidasi semua 82 SVG.
-- [ ] Pastikan `viewBox` dan batas path mencegah bentuk terpotong.
+- [x] Pastikan geometri SVG canonical tidak terpotong oleh `viewBox`; audit Chromium mencakup semua 82 SVG dan mengecualikan hanya orbit luar social-card yang dinamai eksplisit. Bukti: `pnpm assets:check:bounds`, `packages/assets/scripts/check-svg-bounds.mjs`, serta render visual `docs/design/assets/brand-contact-sheet-current.png` / `icon-contact-sheet-current.png`.
 - [x] Pastikan semua public export mempunyai file dalam hasil paket. Bukti: `pnpm test:ui` memeriksa package tarball dan subpath.
 
 **Syarat selesai:** generator tidak membuang aset baru dan output wrapper mempertahankan bentuk sumber.
@@ -171,8 +170,8 @@ Gunakan Road Rage sebagai brush display, Anton untuk judul condensed dan KPI, Sp
 
 - [x] Buat master crown dengan tiga puncak asimetris dan bentuk tegas.
 - [x] Pastikan crown tetap terbaca pada ukuran kecil. Bukti visual 16/24/32 px: `docs/design/assets/brand-identity-contact-sheet.png`.
-- [x] Buat wordmark `MOONWITNESS` manual sebagai vector paths. Bukti semua varian, ejaan dan bentuk: `docs/design/assets/brand-contact-sheet-current.png`.
-- [x] Pastikan tulisan brand tampil sebagai `MoonWitness`/`MOONWITNESS` di Home dan shell Board. Bukti visual: homepage/dashboard screenshots; assertion ejaan di `apps/board/e2e/visual-audit.spec.ts`.
+- [x] Buat wordmark `MOONWITNESS` manual sebagai vector paths. Bukti visual semua varian dan ejaan yang dikoreksi: `docs/design/assets/brand-contact-sheet-current.png`.
+- [x] Pastikan tulisan brand tampil sebagai `MoonWitness`/`MOONWITNESS` di Home dan shell Board. Bukti visual homepage `test-results/visual-audit/home-reference-1672.png`, workbench `test-results/playwright-visual/visual-audit-story-workben-c7f43-y-readable-across-viewports-chromium/workbench-desktop-1440-actual.png`, dan daftar Board `test-results/playwright-visual/visual-audit-responsive-pr-de65b-n-accessible-in-both-themes-chromium/board-list-desktop-1440-light-actual.png`; assertion ejaan/responsive di `apps/board/e2e/visual-audit.spec.ts`.
 - [x] Bentuk ujung huruf tajam dengan distress tinta terkendali. Bukti: `docs/design/assets/brand-contact-sheet-current.png`.
 - [x] Simpan source master editable dan output generated. Bukti: `packages/assets/brand/source/moonwitness-master.svg`.
 - [x] Buat lockup horizontal crown + wordmark. Bukti: `docs/design/assets/brand-identity-contact-sheet.png`.

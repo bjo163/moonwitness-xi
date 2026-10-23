@@ -27,6 +27,7 @@
     "assets:generate:illustrations": "node packages/assets/scripts/generate-illustrations.mjs && node scripts/export-doc-assets.mjs",
     "assets:export:docs": "node scripts/export-doc-assets.mjs",
     "assets:check:docs": "node scripts/export-doc-assets.mjs --check",
+    "assets:check:bounds": "node packages/assets/scripts/check-svg-bounds.mjs",
     "assets:render": "node packages/assets/scripts/render-social.mjs",
     "assets:validate": "node packages/assets/scripts/validate.mjs",
     "test:assets:source": "pnpm assets:validate && node --test packages/assets/tests/*.test.mjs scripts/export-doc-assets.test.mjs",
