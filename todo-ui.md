@@ -525,7 +525,7 @@ Pertahankan satu command manual/otomatis: **`pnpm board:ui:check`**.
 - [x] Uji keyboard-only dan accessible names. Bukti: `pnpm test:ui` dan `pnpm test:e2e:visual` lulus.
 - [x] Uji Dialog/Sheet focus trap, Escape, dan return focus. Bukti: `mobile overlays keep accessible names, keyboard dismissal, focus return, and WCAG contrast` menguji tab-loop dua arah pada dialog Model navigation dan command palette, Escape, serta fokus kembali ke trigger; screenshot command palette mobile diperiksa di `test-results/visual-audit/command-palette-mobile-375.png`.
 - [x] Uji Button as Link dan disabled behavior. Bukti: package test mengecek semantik `aria-disabled`/tabindex; UI Catalog E2E membuktikan link enabled menavigasi, link disabled mempertahankan URL, dan keduanya memakai Button shared.
-- [ ] Uji controlled/disabled/error/loading states.
+- [x] Uji controlled/disabled/error/loading states. Bukti: `apps/ui-catalog/tests/catalog.spec.ts` menguji input dan checkbox controlled, tombol disabled, field validation dengan `aria-invalid`/`aria-describedby`, skeleton `aria-busy`, serta chart loading/error; screenshot states diperiksa visual di `test-results/ui-catalog/catalog-shared-controls-ex-32dea-lidation-and-loading-states/`.
 - [x] Uji Table sort, selection, pagination, dan overflow. Bukti: UI Catalog E2E menguji sort keyboard, seleksi semua/baris, pagination terkendali, region overflow bernama/focusable dengan Arrow Left/Right dan Home/End, serta body tanpa overflow; screenshot mobile diperiksa di `test-results/ui-catalog/catalog-shared-table-keeps-90b7b-ion-and-overflow-accessible/table-mobile.png`.
 - [ ] Uji canonical SVG dan generated React wrapper.
 - [ ] Uji inventory, lisensi, package exports, dan generator deterministik.

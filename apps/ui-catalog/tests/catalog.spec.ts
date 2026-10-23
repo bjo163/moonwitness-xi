@@ -191,6 +191,54 @@ test('filter input controls sample table and navigation keeps a deep link at the
   await expect(page.getByRole('heading', { name: 'Charts', exact: true })).toBeVisible();
 });
 
+test('shared controls expose controlled, disabled, validation, and loading states', async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('./#actions');
+
+  const disabledButton = page.getByRole('button', { name: 'Disabled', exact: true });
+  await expect(disabledButton).toBeDisabled();
+  await page.locator('.catalog-button-grid').screenshot({
+    path: testInfo.outputPath('disabled-action-state.png'),
+  });
+
+  await page.goto('./#forms');
+  const filter = page.getByRole('textbox', { name: 'Filter records' });
+  await expect(filter).toHaveValue('');
+  await filter.fill('Inventory');
+  await expect(filter).toHaveValue('Inventory');
+  const consent = page.getByRole('checkbox', { name: 'Include archived records' });
+  await expect(consent).toBeChecked();
+  await consent.uncheck();
+  await expect(consent).not.toBeChecked();
+
+  const email = page.getByRole('textbox', { name: 'Work email' });
+  await expect(email).toHaveAttribute('aria-invalid', 'true');
+  await expect(email).toHaveAttribute('aria-describedby', 'catalog-email-error');
+  await expect(page.locator('#catalog-email-error')).toContainText(
+    'Enter a valid work email address.'
+  );
+  await page.locator('.catalog-form-grid').screenshot({
+    path: testInfo.outputPath('form-controlled-validation-states.png'),
+  });
+
+  await page.goto('./#data-display');
+  await expect(page.getByRole('status', { name: 'Loading a partner record' })).toHaveAttribute(
+    'aria-busy',
+    'true'
+  );
+  await page.locator('.catalog-state-stack').screenshot({
+    path: testInfo.outputPath('loading-empty-states.png'),
+  });
+  await page.goto('./#charts');
+  await expect(page.getByText('Activity could not be loaded.')).toBeVisible();
+  await expect(page.getByText('Loading example', { exact: true })).toBeVisible();
+  await page.locator('.catalog-chart-grid').screenshot({
+    path: testInfo.outputPath('chart-loading-error-states.png'),
+  });
+});
+
 test('shared table keeps sort, selection, pagination, and overflow accessible', async ({
   page,
 }, testInfo) => {
