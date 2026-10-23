@@ -54,12 +54,12 @@ di-retag untuk melewatinya.
    secara eksplisit karena push `GITHUB_TOKEN` tidak memicu workflow. Setelah PR promosi di-merge dan
    CI `main` selesai, orchestrator membuat tag pada SHA `main` hasil verifikasi lalu men-dispatch
    publication. Publikasi RC tidak mengubah alias `latest`.
-2. **Stable:** setelah RC terakhir published, dispatch `channel=stable` untuk menyiapkan versi final
-   di `dev`. Setelah promosi di-merge, dispatch lagi dengan `channel=stable` dan
-   `confirm_version=vX.Y.Z`. Job stable berjalan di environment `release`; `release.yml` memeriksa
-   ulang nilai konfirmasi sebelum menulis registry.
+2. **Stable:** setelah RC terakhir published, dispatch `channel=stable` dengan
+   `confirm_version=vX.Y.Z` untuk menyiapkan versi final di `dev`. Setelah promosi di-merge, dispatch
+   lagi dengan nilai konfirmasi yang sama. Job stable berjalan di environment `release`;
+   `release.yml` memeriksa ulang nilai konfirmasi sebelum menulis registry.
 3. **Hotfix:** dispatch `channel=hotfix`. Channel ini hanya menerima perubahan patch dan tetap
-   memerlukan konfirmasi stable sebelum publikasi.
+   memerlukan konfirmasi stable sebelum persiapan dan publikasi.
 
 Jangan mengandalkan push bot atau tag yang dibuat `GITHUB_TOKEN` untuk memulai workflow lain.
 Periksa hasil run dispatch dan SHA head yang tepat; status lokal bukan bukti publikasi hosted. Detail
