@@ -758,6 +758,16 @@
       "height": 160
     },
     {
+      "path": "illustrations/story-workbench-masthead.webp",
+      "source": "source/artwork/story-workbench-masthead-master.png",
+      "kind": "artwork",
+      "variant": "story-workbench-masthead",
+      "format": "webp",
+      "width": 1200,
+      "height": 600,
+      "license": "OpenAI Terms of Use (Output owned by user, subject to applicable law)"
+    },
+    {
       "path": "sounds/ui-alert.wav",
       "kind": "sound",
       "variant": "ui",
@@ -809,6 +819,15 @@
       "format": "png",
       "width": 1672,
       "height": 941,
+      "license": "OpenAI Terms of Use (Output owned by user, subject to applicable law)"
+    },
+    {
+      "path": "source/artwork/story-workbench-masthead-master.png",
+      "kind": "source",
+      "variant": "original-ai-artwork",
+      "format": "png",
+      "width": 1774,
+      "height": 887,
       "license": "OpenAI Terms of Use (Output owned by user, subject to applicable law)"
     },
     {

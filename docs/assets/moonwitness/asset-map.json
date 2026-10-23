@@ -4,7 +4,7 @@
   "generatedFrom": "packages/assets/manifest.json and packages/ui/src/styles/tokens.css",
   "sources": {
     "assetManifest": "manifest.json",
-    "assetManifestSha256": "cca95374ad277d8599d489adf29cd64ca03f82a5ff27c5babff31f771c4b72e8",
+    "assetManifestSha256": "8269c27b05e1d3349f5378ee4880bb70767e20d49b09d43e1d377f02e763aae6",
     "tokens": "packages/ui/src/styles/tokens.css",
     "tokensSha256": "c95c112b247fa59ec5f9cc5b6aa62a54fb9e5c44956bc41701330a76e76b9060"
   },
@@ -825,6 +825,15 @@
       "width": 160,
       "height": 160,
       "sha256": "efeae87d4ead889767d59a3d4874d0c40e93de1edaaba2117d2c053f8e5903e9"
+    },
+    {
+      "source": "packages/assets/illustrations/story-workbench-masthead.webp",
+      "output": "docs/assets/moonwitness/illustrations/story-workbench-masthead.webp",
+      "kind": "artwork",
+      "format": "webp",
+      "width": 1200,
+      "height": 600,
+      "sha256": "24883a8bc162391ff01b8d90ff70e4a826c56c92c56d05c03d4a077b9db248db"
     },
     {
       "source": "packages/assets/sounds/ui-alert.wav",

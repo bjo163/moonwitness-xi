@@ -21,10 +21,12 @@ test('manifest describes all stable brand and icon exports with unique paths', (
     'brand/source/moonwitness-master.svg',
     'source/artwork/home-hero-master.png',
     'source/artwork/board-masthead-master.png',
+    'source/artwork/story-workbench-masthead-master.png',
     'source/fonts/RoadRage-Regular.ttf',
     'illustrations/home-hero-desktop.webp',
     'illustrations/home-hero-mobile.webp',
     'illustrations/board-masthead.webp',
+    'illustrations/story-workbench-masthead.webp',
     'fonts/RoadRage-latin.woff2',
   ]) {
     assert.ok(assetByPath.has(path), `${path} is in the manifest`);
@@ -306,8 +308,21 @@ test('provenance covers original design assets and every externally sourced font
     await readFile(resolve(packageRoot, 'fonts/OFL-RoadRage.txt'), 'utf8'),
     /SIL OPEN FONT LICENSE Version 1\.1/u
   );
-  assert.equal(provenance.artwork.length, 6);
-  assert.ok(provenance.artwork.every(({ terms, source }) => terms && source));
+  const manifestArtwork = manifest.assets
+    .filter(({ kind }) => kind === 'artwork')
+    .map(({ path }) => path)
+    .sort();
+  const licensedArtwork = provenance.artwork.map(({ path }) => path).sort();
+  assert.deepEqual(licensedArtwork, manifestArtwork);
+  assert.ok(
+    provenance.artwork.every(({ terms, source, sourceFile, generatedOn, notes }) =>
+      Boolean(terms && source && sourceFile && generatedOn && notes)
+    )
+  );
+  assert.ok(
+    (await stat(resolve(packageRoot, 'illustrations/story-workbench-masthead.webp'))).size <=
+      180 * 1024
+  );
 });
 
 test('Board, UI catalog, and docs portal consume the shared local font export', async () => {

@@ -32,6 +32,14 @@ const generated = [
     quality: 76,
   },
   {
+    source: 'source/artwork/story-workbench-masthead-master.png',
+    path: 'illustrations/story-workbench-masthead.webp',
+    variant: 'story-workbench-masthead',
+    width: 1200,
+    height: 600,
+    quality: 57,
+  },
+  {
     source: 'source/artwork/home-editorial-triptych-master.png',
     extract: { left: 0, top: 390, width: 500, height: 281 },
     path: 'illustrations/editorial-people.webp',

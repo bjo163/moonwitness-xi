@@ -171,6 +171,15 @@
       "terms": "https://openai.com/policies/terms-of-use/",
       "generatedOn": "2026-10-23",
       "notes": "Original illustration generated without embedded typography or UI. The user-provided reference was used for art direction; no screenshot was used as artwork."
+    },
+    {
+      "path": "illustrations/story-workbench-masthead.webp",
+      "sourceFile": "source/artwork/story-workbench-masthead-master.png",
+      "creator": "OpenAI image generation, commissioned by MoonWitness contributors",
+      "source": "Codex image_gen using the user-provided MoonWitness visual references",
+      "terms": "https://openai.com/policies/terms-of-use/",
+      "generatedOn": "2026-10-23",
+      "notes": "Original illustration generated without embedded typography or UI. The user-provided reference was used for art direction; no screenshot was used as artwork."
     }
   ]
 }

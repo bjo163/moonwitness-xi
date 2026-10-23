@@ -3,6 +3,7 @@
 import { Textarea } from '@moonwitness/ui/components/textarea';
 import { SelectField } from '@moonwitness/ui/components/select-field';
 import { Input } from '@moonwitness/ui/components/input';
+import Image from 'next/image';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, BookOpenCheck, Save } from 'lucide-react';
@@ -145,20 +146,29 @@ export function StoryWorkbenchPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-5xl space-y-6 p-5 sm:p-8">
-      <header className="ink-panel space-y-3 bg-card p-6">
-        <div className="flex items-center gap-3">
-          <BookOpenCheck aria-hidden="true" className="size-6 text-lime-700 dark:text-lime" />
-          <p className="font-mono text-xs uppercase tracking-[0.18em] text-ink-faint">
-            K8 · Editorial
+    <main className="mx-auto w-full max-w-[100rem] space-y-6 p-4 sm:p-6 xl:p-8">
+      <header className="dashboard-masthead">
+        <Image
+          src="/illustrations/story-workbench-masthead.webp"
+          alt=""
+          fill
+          priority
+          sizes="(max-width: 1024px) 100vw, calc(100vw - 16rem)"
+          className="dashboard-masthead-art"
+        />
+        <div className="dashboard-masthead-shade" aria-hidden="true" />
+        <div className="dashboard-masthead-copy">
+          <div className="dashboard-masthead-kicker">
+            <BookOpenCheck aria-hidden="true" className="size-4" />
+            MoonWitness / Internal editorial
+          </div>
+          <h1 className="dashboard-masthead-title">Story workbench</h1>
+          <p className="dashboard-masthead-subtitle">
+            Edit and arrange the pages of an internal story. Saving appends an immutable revision;
+            previous text remains available by version. This workbench does not publish content or
+            upload media.
           </p>
         </div>
-        <h1 className="font-display text-3xl uppercase sm:text-4xl">Story workbench</h1>
-        <p className="max-w-3xl text-sm leading-relaxed text-ink-soft">
-          Edit and arrange the pages of an internal story. Saving appends an immutable revision;
-          previous text remains available by version. This workbench does not publish content or
-          upload media.
-        </p>
       </header>
       <section
         className="ink-panel space-y-4 bg-card p-5 sm:p-6"

@@ -237,6 +237,8 @@ Gunakan Road Rage sebagai brush display, Anton untuk judul condensed dan KPI, Sp
 ### Paket Board dan katalog
 
 - [x] Buat panorama masthead Board dengan karakter/kota/musik. Bukti: `docs/design/assets/artwork-contact-sheet-current.png`.
+- [x] Buat panorama khusus Story workbench dengan ruang copy kiri dan fokus karakter/bulan di kanan. Bukti: `packages/assets/illustrations/story-workbench-masthead.webp`; preview: `test-results/visual-audit/workbench-desktop-1440.png`.
+- [x] Daftarkan master, turunan, dimensi, dan provenance masthead workbench melalui pipeline artwork. Bukti: `packages/assets/manifest.json`, `packages/assets/licenses.json`, dan `packages/assets/scripts/prepare-artwork.mjs`.
 - [ ] Buat potongan bulan dan skyline yang dapat digunakan ulang.
 - [ ] Buat peta/orbit dekoratif tanpa data lokasi/statistik.
 - [ ] Buat cover story, poster, dan portrait fiktif untuk UI Catalog saja.
@@ -533,7 +535,7 @@ Pertahankan satu command manual/otomatis: **`pnpm board:ui:check`**.
 - [ ] Pertahankan layout/token snapshot katalog yang sudah tersedia.
 - [x] Tambahkan screenshot baseline untuk Home dan login. Bukti: baseline Home 390/1672 dan screenshot login dalam visual audit.
 - [ ] Tambahkan screenshot baseline dashboard user/admin.
-- [ ] Tambahkan screenshot baseline workbench.
+- [x] Tambahkan screenshot baseline workbench desktop dan mobile; exact brand copy, pemuatan artwork, overflow, dan accessibility diperiksa. Bukti: `apps/board/e2e/visual-audit.spec.ts-snapshots/workbench-desktop-1440-chromium-win32.png`, `apps/board/e2e/visual-audit.spec.ts-snapshots/workbench-mobile-390-chromium-win32.png`, serta `test-results/visual-audit/workbench-desktop-1440.png` dan `test-results/visual-audit/workbench-mobile-390.png`.
 - [ ] Tambahkan specimen tabel, form, overlay, dan state utama.
 - [ ] Gunakan data, waktu, font, dan dekorasi deterministik.
 - [x] Review di `1672×941`, `1440×900`, `768×1024`, dan `390×844`. Bukti: fullpage screenshots dan audit; 320 px masih tersisa.
@@ -556,7 +558,7 @@ Pertahankan satu command manual/otomatis: **`pnpm board:ui:check`**.
 - [ ] Pertahankan budget JS/CSS existing tanpa menaikkannya untuk menyembunyikan regresi.
 - [ ] Target hero desktop maksimal sekitar 500 KB.
 - [ ] Target hero mobile maksimal sekitar 220 KB.
-- [ ] Target Board masthead maksimal sekitar 180 KB.
+- [x] Jaga masthead Board dan Story workbench pada target sekitar 180 KB. Bukti: `packages/assets/illustrations/board-masthead.webp` 168 KB; `packages/assets/illustrations/story-workbench-masthead.webp` 177 KB.
 - [ ] Target font viewport awal maksimal sekitar 160 KB.
 - [ ] Ukur transfer cold load, lazy assets, dan layout shift melalui browser.
 - [ ] Pastikan asset Board tidak terunduh di homepage.

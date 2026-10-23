@@ -200,6 +200,48 @@ test('homepage spelling, responsive layout, and reference screenshots', async ({
   }
 });
 
+test('story workbench masthead keeps brand copy readable across viewports', async ({
+  page,
+}, testInfo) => {
+  await mkdir(auditDirectory, { recursive: true });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/login');
+  await page.getByLabel('Login').fill('superadmin');
+  await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the board' }).click();
+  await expect(page).toHaveURL(/\/board$/u);
+
+  for (const size of [
+    { name: 'desktop-1440', width: 1440, height: 1000 },
+    { name: 'mobile-390', width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize({ width: size.width, height: size.height });
+    await page.goto('/board/stories/workbench');
+    await expect(page.getByRole('heading', { name: 'Story workbench', exact: true })).toBeVisible();
+    await expect(page.getByText('MoonWitness / Internal editorial', { exact: true })).toBeVisible();
+    const mastheadImage = page.locator('header.dashboard-masthead img');
+    await expect
+      .poll(() => mastheadImage.evaluate((image: HTMLImageElement) => image.complete))
+      .toBe(true);
+    expect(await mastheadImage.evaluate((image: HTMLImageElement) => image.naturalWidth > 0)).toBe(
+      true
+    );
+    await expectNoHorizontalOverflow(page, `workbench/${size.name}`);
+    await expectNoA11yViolations(page, `workbench/${size.name}`);
+    await page.screenshot({
+      path: path.join(auditDirectory, `workbench-${size.name}${browserSuffix(testInfo)}.png`),
+      fullPage: true,
+    });
+    if (testInfo.project.name === 'chromium') {
+      await expect(page).toHaveScreenshot(`workbench-${size.name}.png`, {
+        animations: 'disabled',
+        caret: 'hide',
+        fullPage: true,
+      });
+    }
+  }
+});
+
 test('responsive protected screens fit and remain accessible in both themes', async ({
   page,
 }, testInfo) => {
