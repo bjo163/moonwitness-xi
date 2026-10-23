@@ -12,7 +12,11 @@ function id(value: string): number | null {
   return Number.isSafeInteger(n) && n > 0 ? n : null;
 }
 function internalAllowed(value: unknown): boolean {
-  const secret = process.env.WHATSAPP_INTERNAL_TOKEN ?? '';
+  const secret =
+    process.env.WHATSAPP_INTERNAL_TOKEN ||
+    (process.env.NODE_ENV !== 'production'
+      ? 'moonwitness-local-whatsapp-internal-token-v1-unsafe'
+      : '');
   const supplied = typeof value === 'string' ? value : '';
   const expectedBytes = Buffer.from(secret);
   const suppliedBytes = Buffer.from(supplied);

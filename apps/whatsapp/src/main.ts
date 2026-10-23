@@ -9,8 +9,14 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:
 import type { AuthenticationState, SignalDataTypeMap } from '@whiskeysockets/baileys';
 
 const apiUrl = (process.env.WHATSAPP_API_URL ?? 'http://api:3000').replace(/\/$/u, '');
-const internalToken = process.env.WHATSAPP_INTERNAL_TOKEN ?? '';
-const encryptionKey = Buffer.from(process.env.WHATSAPP_SESSION_KEY ?? '', 'base64');
+const developmentMode = process.env.NODE_ENV !== 'production';
+const internalToken =
+  process.env.WHATSAPP_INTERNAL_TOKEN ||
+  (developmentMode ? 'moonwitness-local-whatsapp-internal-token-v1-unsafe' : '');
+const sessionKey =
+  process.env.WHATSAPP_SESSION_KEY ||
+  (developmentMode ? 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=' : '');
+const encryptionKey = Buffer.from(sessionKey, 'base64');
 const port = Number(process.env.WHATSAPP_PORT ?? 3100);
 if (internalToken.length < 32)
   throw new Error('WHATSAPP_INTERNAL_TOKEN must contain at least 32 characters');

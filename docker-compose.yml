@@ -7,11 +7,11 @@ services:
     restart: unless-stopped
     init: true
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
       WHATSAPP_API_URL: http://host.docker.internal:${API_PORT:-3000}
       WHATSAPP_PORT: 3100
-      WHATSAPP_INTERNAL_TOKEN: ${WHATSAPP_INTERNAL_TOKEN:?Set WHATSAPP_INTERNAL_TOKEN in .env}
-      WHATSAPP_SESSION_KEY: ${WHATSAPP_SESSION_KEY:?Set WHATSAPP_SESSION_KEY in .env}
+      WHATSAPP_INTERNAL_TOKEN: ${WHATSAPP_INTERNAL_TOKEN:-moonwitness-local-whatsapp-internal-token-v1-unsafe}
+      WHATSAPP_SESSION_KEY: ${WHATSAPP_SESSION_KEY:-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
     extra_hosts:
       - host.docker.internal:host-gateway
     ports:

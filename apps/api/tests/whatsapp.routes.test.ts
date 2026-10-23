@@ -14,6 +14,7 @@ describe('WhatsApp API tenant boundary and durable queue', () => {
   let app: ReturnType<typeof Fastify>;
   let companyId: number;
   const previousToken = process.env.WHATSAPP_INTERNAL_TOKEN;
+  const previousNodeEnv = process.env.NODE_ENV;
   const stored = new Map<string, Buffer>();
   const storage: AttachmentStorage = {
     async put(key, content) {
@@ -63,6 +64,8 @@ describe('WhatsApp API tenant boundary and durable queue', () => {
     stored.clear();
     if (previousToken === undefined) delete process.env.WHATSAPP_INTERNAL_TOKEN;
     else process.env.WHATSAPP_INTERNAL_TOKEN = previousToken;
+    if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previousNodeEnv;
   });
 
   it('requires authentication and scopes inbox and send operations to the active company', async () => {
@@ -165,6 +168,39 @@ describe('WhatsApp API tenant boundary and durable queue', () => {
         .statusCode
     ).toBe(200);
     expect(Number((await db('whatsapp_messages').count({ count: '*' }).first())?.count)).toBe(1);
+  });
+
+  it('uses the development-only fallback token when no internal token is configured', async () => {
+    delete process.env.WHATSAPP_INTERNAL_TOKEN;
+    process.env.NODE_ENV = 'test';
+    const connected = await app.inject({
+      method: 'POST',
+      url: '/whatsapp/connect',
+      headers: { authorization: 'Bearer test' },
+      payload: {},
+    });
+    const accountId = connected.json().data.id as number;
+    const response = await app.inject({
+      method: 'GET',
+      url: '/internal/whatsapp/accounts',
+      headers: {
+        'x-whatsapp-internal-token': 'moonwitness-local-whatsapp-internal-token-v1-unsafe',
+      },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json().data).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: accountId })])
+    );
+
+    process.env.NODE_ENV = 'production';
+    const productionResponse = await app.inject({
+      method: 'GET',
+      url: '/internal/whatsapp/accounts',
+      headers: {
+        'x-whatsapp-internal-token': 'moonwitness-local-whatsapp-internal-token-v1-unsafe',
+      },
+    });
+    expect(productionResponse.statusCode).toBe(401);
   });
 
   it('handles internal connection control and validates duplicate/media callbacks idempotently', async () => {

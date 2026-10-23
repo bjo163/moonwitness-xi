@@ -7,7 +7,10 @@ AES-GCM encrypted with `WHATSAPP_SESSION_KEY`; uploaded media uses the API attac
 
 ## Local setup
 
-Add two independent secrets to `.env` before starting the service:
+For local development, both secrets have development-only fallbacks, so they can be left unset.
+The fallback session key is public and must not be used for production or to protect valuable
+WhatsApp sessions. Set unique secrets in `.env` if you want the local session to remain protected
+and stable across environments:
 
 ```powershell
 node -e "const c=require('node:crypto'); console.log('WHATSAPP_INTERNAL_TOKEN='+c.randomBytes(48).toString('base64url')); console.log('WHATSAPP_SESSION_KEY='+c.randomBytes(32).toString('base64'))"
@@ -25,8 +28,9 @@ For local production-mode startup, build the workspace with `pnpm build`, then r
 ## Production
 
 Set `WHATSAPP_INTERNAL_TOKEN` and `WHATSAPP_SESSION_KEY` in the production environment before
-starting `docker-compose.production.yml`. The API and WhatsApp service must receive the same
-internal token. The named `whatsapp_attachments` volume stores message media. PostgreSQL stores
+starting `docker-compose.production.yml`; production has no fallback and refuses to start without
+them. The API and WhatsApp service must receive the same internal token. The named
+`whatsapp_attachments` volume stores message media. PostgreSQL stores
 account state, encrypted Baileys credentials, conversations, messages, and queued sends.
 
 The inbox supports one linked WhatsApp account per company, private and group chats, text, and
