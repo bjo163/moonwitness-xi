@@ -190,8 +190,8 @@
       "build": "node ../../scripts/copy-board-public-assets.mjs && next build",
       "dev": "node ../../scripts/copy-board-public-assets.mjs && next dev -p 5173",
       "lint": "oxlint",
-      "preview": "next start -p 3000",
-      "start": "next start -p 3000",
+      "preview": "node ../../scripts/prepare-board-standalone.mjs && node .next/standalone/apps/board/server.js",
+      "start": "node ../../scripts/prepare-board-standalone.mjs && node .next/standalone/apps/board/server.js",
       "typecheck": "tsc --noEmit"
     },
     "@moonwitness/docs": {
@@ -308,7 +308,7 @@
       "automation:check:ubuntu-runner-candidate": "node scripts/check-ubuntu-runner-candidate.mjs",
       "automation:check:workflow-trust": "node scripts/check-workflow-checkout-trust.mjs",
       "board:budget": "node scripts/check-board-bundle.mjs",
-      "board:ui:check": "node scripts/check-board-shared-ui.mjs",
+      "board:ui:check": "node --test scripts/check-board-shared-ui.test.mjs && node scripts/check-board-shared-ui.mjs",
       "board:visual:update": "pnpm test:e2e --grep 'responsive screen audit|responsive protected screens' --update-snapshots",
       "build": "node scripts/ci/build-workspace.mjs",
       "ci:affected": "node scripts/select-affected.mjs",
@@ -6272,5 +6272,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "22c964a2994ba7c70d2ed71b192ad4a59a9d37288097ce72d27b285b786179df"
+  "generatedFromSha256": "5cb3d09c704443782c1ab03a0b61e2fb3e3d9243cf3eb5c77047db71cab741be"
 }

@@ -15,6 +15,7 @@
   --mw-night-raised: #17171a;
   --mw-night-blue: #092c49;
   --mw-night-magenta: #421027;
+  --mw-night-outline: color-mix(in srgb, var(--mw-paper) 22%, transparent);
   --mw-paper-highlight: #e3dfd4;
   --mw-paper-muted: #cbc7bd;
   --mw-moon: #b6cad7;
@@ -44,6 +45,7 @@
   --mw-border: var(--mw-ink);
   --mw-input: var(--mw-ink);
   --mw-focus: var(--mw-ink);
+  --mw-backdrop: rgb(13 13 13 / 50%);
   --mw-success: #166534;
   --mw-on-success: #fffdf6;
   --mw-warning: #facc15;

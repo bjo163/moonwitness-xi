@@ -29,9 +29,9 @@ Checklist ini menjadi rencana kerja untuk mendekatkan Home, Board, dan workbench
 
 ### Screenshot dan inventaris
 
-- [ ] Ambil screenshot homepage pada ukuran referensi `1672×941`.
+- [x] Ambil screenshot homepage pada ukuran referensi `1672×941`. Bukti: `test-results/ui-before-home-1672.png`.
 - [ ] Ambil screenshot homepage desktop `1440×900`.
-- [ ] Ambil screenshot homepage mobile `390×844`.
+- [x] Ambil screenshot homepage mobile `390×844`. Bukti: `test-results/ui-before-home-390.png`.
 - [ ] Ambil screenshot Board untuk role pengguna biasa.
 - [ ] Ambil screenshot Board untuk role admin.
 - [ ] Ambil screenshot workbench dengan dokumen berisi.
@@ -115,14 +115,14 @@ UI Bible tunggal tetap `packages/ui/README.md`. `packages/ui/TOKENS.md` menjadi 
 
 Gunakan nilai berikut sebagai starting point; finalisasi setelah specimen dan tes kontras.
 
-| Peran | Nilai awal |
-|---|---|
-| Tinta | `#0D0D0D` |
-| Panel gelap | `#17171A` |
-| Paper cream | `#F3EFE4` |
-| Magenta | `#FF2E88` |
-| Cyan | `#00B8F0` |
-| Kuning | `#FFE031` |
+| Peran       | Nilai awal |
+| ----------- | ---------- |
+| Tinta       | `#0D0D0D`  |
+| Panel gelap | `#17171A`  |
+| Paper cream | `#F3EFE4`  |
+| Magenta     | `#FF2E88`  |
+| Cyan        | `#00B8F0`  |
+| Kuning      | `#FFE031`  |
 
 - [ ] Pisahkan warna material tetap dari semantic color yang berubah menurut theme.
 - [ ] Pastikan paper cream tetap krem pada Board dark theme.
@@ -257,18 +257,18 @@ Perluas komponen yang sudah ada; jangan membuat duplicate `MangaButton`/`MangaPa
 
 ### API UI yang dituju
 
-| API | Perubahan terencana |
-|---|---|
-| `Button` | Tambah `treatment="solid\|brush"`; pertahankan `variant`, `size`, `asChild` |
-| `Panel` | Tambah pilihan surface, frame `line\|torn`, density, dan heading level |
-| `Table` | Tambah density compact/comfortable; pertahankan native table semantics |
-| `PageHeader` | Tambah brush treatment dan pilihan heading level |
-| `SectionRibbon` | Judul section, nomor opsional, accent, slot action |
-| `PaperNote` | Note/sticker presentasional; isi tetap teks HTML |
-| `ArtworkFrame` | Frame artwork landscape, portrait, dan square |
-| `MetricTile` | Label, value, icon, keterangan; kalkulasi tetap di app |
-| Effects | Motif canonical bernama, dekorasi konsisten dan dapat disetel |
-| Audio | Pertahankan `SoundProvider`, `useSfx`, dan `SoundToggle` yang ada |
+| API             | Perubahan terencana                                                         |
+| --------------- | --------------------------------------------------------------------------- |
+| `Button`        | Tambah `treatment="solid\|brush"`; pertahankan `variant`, `size`, `asChild` |
+| `Panel`         | Tambah pilihan surface, frame `line\|torn`, density, dan heading level      |
+| `Table`         | Tambah density compact/comfortable; pertahankan native table semantics      |
+| `PageHeader`    | Tambah brush treatment dan pilihan heading level                            |
+| `SectionRibbon` | Judul section, nomor opsional, accent, slot action                          |
+| `PaperNote`     | Note/sticker presentasional; isi tetap teks HTML                            |
+| `ArtworkFrame`  | Frame artwork landscape, portrait, dan square                               |
+| `MetricTile`    | Label, value, icon, keterangan; kalkulasi tetap di app                      |
+| Effects         | Motif canonical bernama, dekorasi konsisten dan dapat disetel               |
+| Audio           | Pertahankan `SoundProvider`, `useSfx`, dan `SoundToggle` yang ada           |
 
 Accent `magenta`, `cyan`, dan `yellow` bersifat dekoratif; accent tidak mengubah arti error/success.
 
@@ -557,18 +557,18 @@ Pertahankan satu command manual/otomatis: **`pnpm board:ui:check`**.
 
 ### Visual acceptance
 
-| Aspek | Bukti yang harus dilihat reviewer |
-|---|---|
-| Identitas | Crown dan brush wordmark konsisten di Home, Board, dan auth |
-| Artwork | Manga character, moon, cityscape, dan collage benar-benar hadir |
-| Material | Torn edge, ink, paper note, tape, dan halftone satu sistem |
-| Typography | Headline ekspresif; tabel/form tetap mudah dibaca |
-| Home | Urutan dan dominasi visual mendekati gambar 2 |
-| Dashboard | Sidebar, masthead, KPI, dan panel mendekati gambar 4 |
-| Workbench | Navigator, editor, inspector mendekati gambar 3 |
-| Detail | Icon, ribbon, caption, arrow, badge, focus, dan state selesai |
-| Mobile | Komposisi disusun ulang, bukan hanya diperkecil |
-| Kejujuran | Produksi tidak memuat fitur atau metrik mockup yang belum ada |
+| Aspek      | Bukti yang harus dilihat reviewer                               |
+| ---------- | --------------------------------------------------------------- |
+| Identitas  | Crown dan brush wordmark konsisten di Home, Board, dan auth     |
+| Artwork    | Manga character, moon, cityscape, dan collage benar-benar hadir |
+| Material   | Torn edge, ink, paper note, tape, dan halftone satu sistem      |
+| Typography | Headline ekspresif; tabel/form tetap mudah dibaca               |
+| Home       | Urutan dan dominasi visual mendekati gambar 2                   |
+| Dashboard  | Sidebar, masthead, KPI, dan panel mendekati gambar 4            |
+| Workbench  | Navigator, editor, inspector mendekati gambar 3                 |
+| Detail     | Icon, ribbon, caption, arrow, badge, focus, dan state selesai   |
+| Mobile     | Komposisi disusun ulang, bukan hanya diperkecil                 |
+| Kejujuran  | Produksi tidak memuat fitur atau metrik mockup yang belum ada   |
 
 - [ ] Jangan terima neon recolor, border lurus, atau skyline geometris sebagai hasil akhir.
 - [ ] Jangan terima dekorasi yang menurunkan contrast atau menutupi kontrol.
