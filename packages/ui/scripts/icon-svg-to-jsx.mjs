@@ -37,28 +37,58 @@ function jsxAttributeName(name) {
   return name.replace(/-([a-z])/gu, (_match, letter) => letter.toUpperCase());
 }
 
-const COMMENT_PATTERN = /<!--[\s\S]*?-->/gu;
-const TITLE_PATTERN = /<title\b[^>]*>[\s\S]*?<\/title\s*>/giu;
-const COMMENT_MARKER_PATTERN = /<!--|-->|--!>/u;
+const COMMENT_OPEN = '<!--';
+const COMMENT_CLOSE = '-->';
+const MARKER_LITERALS = [COMMENT_OPEN, COMMENT_CLOSE, '--!>'];
+const TITLE_OPEN_PATTERN = /<title\b[^>]*>/giu;
+const TITLE_CLOSE_PATTERN = /<\/title\s*>/giu;
+
+function matchFrom(pattern, source, start) {
+  pattern.lastIndex = start;
+  const match = pattern.exec(source);
+  return match && match.index >= start ? match : null;
+}
 
 /**
- * Removing a comment can splice its neighbours into a new marker, so one pass is not enough: the
- * removals repeat to a fixed point and any marker that still resolves to HTML comment syntax fails
- * the build instead of reaching the generated component.
+ * Comments and titles are removed by slicing between literal markers rather than by replacing a
+ * pattern, so no removal can splice two surviving halves into a new marker. The accumulated output
+ * is still re-checked against every marker spelling, and an unterminated comment fails the build
+ * instead of reaching the generated component.
  */
 function stripMarkup(source, fileName) {
-  let remainder = source;
-  for (;;) {
-    const next = remainder.replace(COMMENT_PATTERN, '').replace(TITLE_PATTERN, '');
-    if (next === remainder) break;
-    remainder = next;
-  }
-  if (COMMENT_MARKER_PATTERN.test(remainder)) {
+  const fail = () => {
     throw new Error(
       `${fileName}: unclosed SVG comment marker; close or remove the comment before generating.`
     );
+  };
+  let output = '';
+  let cursor = 0;
+  while (cursor < source.length) {
+    const commentStart = source.indexOf(COMMENT_OPEN, cursor);
+    const titleOpen = matchFrom(TITLE_OPEN_PATTERN, source, cursor);
+    const starts = [commentStart, titleOpen ? titleOpen.index : -1].filter((index) => index !== -1);
+    if (starts.length === 0) {
+      output += source.slice(cursor);
+      break;
+    }
+    const start = Math.min(...starts);
+    output += source.slice(cursor, start);
+    if (start === commentStart) {
+      const end = source.indexOf(COMMENT_CLOSE, start + COMMENT_OPEN.length);
+      if (end === -1) fail();
+      cursor = end + COMMENT_CLOSE.length;
+      continue;
+    }
+    const close = matchFrom(TITLE_CLOSE_PATTERN, source, start + titleOpen[0].length);
+    if (!close) {
+      output += titleOpen[0];
+      cursor = start + titleOpen[0].length;
+      continue;
+    }
+    cursor = close.index + close[0].length;
   }
-  return remainder.trim();
+  if (MARKER_LITERALS.some((marker) => output.includes(marker))) fail();
+  return output.trim();
 }
 
 function parseAttributes(source, fileName) {

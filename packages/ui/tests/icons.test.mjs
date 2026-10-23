@@ -101,12 +101,12 @@ test('SVG generator leaves no HTML comment marker behind, however it is smuggled
     'a well-formed comment and title must keep being removed'
   );
   assert.deepEqual(
-    parseIconSvg('<svg viewBox="0 0 24 24"><!<!--p-->--b--><path d="M1 1" /></svg>', 'icons/ok.svg')
-      .children,
+    parseIconSvg(`${root}<!--a--><!--b-->${shape}</svg>`, 'icons/ok.svg').children,
     '<path d="M1 1" />',
-    'the first removal must not leave a reassembled comment behind'
+    'adjacent comments must both be removed'
   );
   for (const [caseName, markup] of [
+    ['marker reassembled from the halves of two removals', `<!<!--p-->--b-->`],
     ['marker reassembled across a removal', `<!----><!--`],
     ['marker that never closes', `<!--`],
     ['incorrectly closed marker', `<!--x--!>`],
