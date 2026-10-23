@@ -49,6 +49,7 @@ const expectationsFile = join(temporaryDirectory, 'expectations.json');
 const backupFileDirectory = join(temporaryDirectory, 'backups');
 const scriptsDirectory = dirname(fileURLToPath(import.meta.url));
 const postgresImage = process.env.POSTGRES_TOOL_IMAGE || 'postgres:16-bookworm';
+const fixtureJwtSecret = randomBytes(32).toString('base64url');
 const nativePostgresTools = ['bash', 'createdb', 'dropdb', 'pg_dump', 'pg_restore', 'psql'];
 const missingNativeTools = nativePostgresTools.filter(
   (command) => spawnSync(command, ['--version'], { stdio: 'ignore' }).error
@@ -252,6 +253,7 @@ function invokeFixture(mode, databaseUrl) {
       {
         env: {
           ...process.env,
+          JWT_SECRET: fixtureJwtSecret,
           RESTORE_DRILL_DATABASE_URL: databaseUrl,
           RESTORE_DRILL_EXPECTATIONS_FILE: expectationsFile,
           RESTORE_DRILL_PASSWORD: fixturePassword,

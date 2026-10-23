@@ -1,2 +1,5 @@
 # Source artifacts are content-addressed; Git must preserve their exact bytes.
 corpus/reference/sha256/** -text
+
+# Bash scripts must keep LF endings when checked out on Windows hosts.
+scripts/*.sh text eol=lf
