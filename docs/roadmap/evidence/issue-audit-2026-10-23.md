@@ -15,51 +15,51 @@ Klasifikasi: `LOCAL` = sisa pekerjaan dapat dikerjakan di repo ini sekarang; `EX
 
 ## Tabel cross-check
 
-| Issue | Task    | Kelas    | Sisa pekerjaan konkret                                                                                                            |
-| ----- | ------- | -------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| #25   | M11.06  | LOCAL    | Catat aktivasi cron `roadmap-issue-plan` yang sudah berjalan dan diagnosis apply run gagal pada push terbaru.                     |
-| #26   | M11.14  | EXTERNAL | Siklus penuh menutup hanya setelah promosi `main` dan rilis stabil pertama ada.                                                   |
-| #27   | M11.03  | LOCAL    | `test:roadmap` sudah 125/125; rekam ulang hitung tes pada evidence dan bukti no-op apply.                                         |
-| #28   | M11.04  | LOCAL    | Proyeksi 213 task baru 72; lanjutkan batch terbatas dan catat read-back metadata/`metadataDrift=6`.                               |
-| #29   | M11.09  | LOCAL    | Dashboard berjalan; implementasikan probe GitHub Projects atau catat acceptance ekivalen sesuai kartu.                            |
-| #30   | M7.05   | EXTERNAL | Butuh hosted apply idempotent + retry no-op; work lokal: re-pin SHA parity `2.0.0-rc.1` (27 berkas) di evidence + checklist.      |
-| #31   | M8.03   | EXTERNAL | Machinery scan/policy/exception lengkap; disposition alert CodeQL/Trivy privat dan temuan secret historis milik security owner.   |
-| #32   | M8.11   | EXTERNAL | Dokumen reporting/IR/rotasi/koreksi rilis sudah ada; verifikasi kanal privat + penunjukan owner masih aksi pemilik.               |
-| #33   | M10.01  | LOCAL    | Matriks coverage 38 baris (bukan 39 yang diklaim); tambahkan baris permukaan pasca-Next.js dengan owner + prioritas.              |
-| #34   | M11.15  | LOCAL    | Runbook dan `docs/operations/roadmap-sync.md` masih menyebut schedule belum aktif; koreksi + rekam pemulihan run gagal.           |
-| #35   | M7.16   | EXTERNAL | Artifact `release-plan` hosted belum pernah ada dan Release kosong; work lokal: tes plumbing `--channel`.                         |
-| #37   | M3.11   | LOCAL    | Evidence lama mengukur SPA Vite 24 tes; Board kini Next.js dengan 34 tes, termasuk homepage publik yang belum pernah divisualkan. |
-| #38   | M9.08   | LOCAL    | Angka budget/siklus hasil ekstraksi lama; ukur ulang `audit:workspace`, `architecture:check:built`, `board:budget` di HEAD baru.  |
-| #39   | M11.07  | LOCAL    | 29 issue managed tertutup 2026-10-23 tetapi tanpa attribution run; tambahkan jejak penutupan pada evidence.                       |
-| #43   | M8.10   | EXTERNAL | Audit kode/test lengkap; baca registry+billing Actions (401/404) dan baseline bulanan pertama (2026-11-01) milik admin.           |
-| #44   | M7.14   | EXTERNAL | Adapter test lokal lengkap; race kredensial/registry hosted belum berjalan; perbaiki matriks evidence yang kontradiktif.          |
-| #45   | M10.06  | EXTERNAL | _suite_ lokal 18/18 hijau; rehearsal interupsi hosted di `main` milik Actions admin. Work lokal: peta guard orchestrator ke tes.  |
-| #47   | M8.06   | EXTERNAL | Eksekutor + serialisasi terbukti lokal; dispatch `dependency-candidate` dan CI exact-SHA Node 22 belum ada.                       |
-| #48   | M9.06   | EXTERNAL | Addon request/approval nyata dan lulus test lokal; sisa acceptance adalah exact-SHA hosted, browser journey, M8.03, CODEOWNER.    |
-| #50   | M11.11  | EXTERNAL | Coordinator + 26/26 trust test hijau; PR #51 belum `auto_merge` dan berhenti pada approval CODEOWNER baru.                        |
-| #54   | M8.07   | LOCAL    | 10 kandidat major belum punya laporan kompatibilitas per kandidat; planner masih mencetak "release notes: not reported".          |
-| #59   | M10.03  | EXTERNAL | Memerlukan required checks lulus pada SHA yang dipromosikan + review CODEOWNER.                                                   |
-| #67   | M8.05   | LOCAL    | Langkah kartu "batasi batch" belum diimplementasikan di `scripts/dependency-update-plan.mjs`; koreksi teks schedule kadaluarsa.   |
-| #70   | K3-005  | EXTERNAL | Acceptance review flow terimplementasi dan bertes; tunggu exact-SHA hosted, CODEOWNER, sign-off privasi.                          |
-| #71   | K3-006  | EXTERNAL | Explanation API lengkap lokal; gerbang hosted + penerimaan operasional/privasi oleh pemilik.                                      |
-| #72   | K3-007  | EXTERNAL | Kandidat duplikat bertes; target verifikasi "G3 009/012/013" butuh keputusan re-scope atau sumber ber-hak dari pemilik.           |
-| #74   | K4-003  | LOCAL    | Analyzer bernama + golden candidate source-derived + negatif false-positive + laporan reproduksi di `research/evaluations/`.      |
-| #75   | K4-004  | EXTERNAL | Skema/persistensi/rute baca selesai; mapping RUH/HIZAB butuh sumber teologi berlisensi dan approval kebijakan digest pemilik.     |
-| #76   | M10.05  | EXTERNAL | Job `containers` hosted + ikatan digest image↔candidate (M7.09); board image pindah ke runtime Next.js tanpa smoke terekam.       |
-| #79   | K5-002  | LOCAL    | Revocation baru menutup proyeksi pencarian sintetis; perlu derivatif lain + negatif jalur eksposur + keputusan retensi pemilik.   |
-| #82   | K8-001  | LOCAL    | Explorer sudah pindah Next.js; perlu jalan ulang journey di HEAD, tinjauan screen-reader, dan bukti hosted.                       |
-| #83   | K5-003  | LOCAL    | Domain + guard sintetis lengkap; endpoint akses purpose/consent non-superadmin belum ada.                                         |
-| #87   | K4-005  | EXTERNAL | Kontrak kandidat + store selesai; "empat tradisi" butuh saksi nyata/rights dan aturan review subject dari pemilik.                |
-| #88   | K5-004  | LOCAL    | Kontrak story/page lengkap; tidak ada model `episode` padahal judul kartu menyebutnya; dep K5-003 belum closed.                   |
-| #89   | M7.15   | EXTERNAL | Orchestrator baru ada di `dev`; `main` belum memilikinya dan environment `release` belum dibuat.                                  |
-| #90   | K5-005  | LOCAL    | Validator hanya memeriksa struktur milik pemanggil; lookup keputusan tenant-scoped tepercaya + resolusi source belum ada.         |
-| #91   | K7-005  | LOCAL    | Boundary tool-free + fixture injeksi lolos dengan provider palsu; matriks fixture adversarial lebih luas masih lokal.             |
-| #92   | K7-002  | EXTERNAL | Survey + registry kosong + verifier ada; pemilik harus memilih, mengunduh, dan me-review lisensi artifact model.                  |
-| #93   | K7-004  | LOCAL    | Envelope/store/rute ada; `research-review.routes.ts` belum punya binding kandidat (dep K3-005).                                   |
-| #94   | K7-006  | EXTERNAL | Baseline model-off jujur tercatat; metrik p50/p95 dan perbandingan source-tunggal mustahil sebelum #92 selesai.                   |
-| #95   | M6.07   | EXTERNAL | Preview artifact `dev` terbukti berulang; deploy `main` terpercaya pertama belum pernah sukses.                                   |
-| #96   | K8-002  | LOCAL    | Workbench + pratinjau komposisi ada; provenance original/derived, manajemen gambar, review, publikasi, halaman poster belum.      |
-| #97   | insiden | EXTERNAL | Koreksi kode sudah di `dev` (`d4f2d8a`, `8fc2dba`, `a2b6f21`); tutup hanya setelah `postgres-recovery` hijau di `main`.           |
+| Issue | Task    | Kelas    | Sisa pekerjaan konkret                                                                                                                         |
+| ----- | ------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| #25   | M11.06  | LOCAL    | Apply push-triggered hijau tercatat sampai `3e31723` (read-back #25/#34/#29/#38); sisa: bukti hosted continuation dispatch saat selection > 5. |
+| #26   | M11.14  | EXTERNAL | Siklus penuh menutup hanya setelah promosi `main` dan rilis stabil pertama ada.                                                                |
+| #27   | M11.03  | LOCAL    | Hitung tes tercatat ulang (142/142); no-op apply hosted butuh dua dispatch `task_ids` pada head yang sama (aksi pemilik).                      |
+| #28   | M11.04  | LOCAL    | Drift dibaca ulang di `3e31723` (6 entri, staleSource=71); sisa: backfill 141 create + 72 update dalam batch terbatas.                         |
+| #29   | M11.09  | LOCAL    | Langkah 5 acceptance browser lulus (`b654c26`); sisa: probe Projects terautentikasi + read-back delivery di Pages stabil.                      |
+| #30   | M7.05   | EXTERNAL | Butuh hosted apply idempotent + retry no-op; work lokal: re-pin SHA parity `2.0.0-rc.1` (27 berkas) di evidence + checklist.                   |
+| #31   | M8.03   | EXTERNAL | Machinery scan/policy/exception lengkap; disposition alert CodeQL/Trivy privat dan temuan secret historis milik security owner.                |
+| #32   | M8.11   | EXTERNAL | Dokumen reporting/IR/rotasi/koreksi rilis sudah ada; verifikasi kanal privat + penunjukan owner masih aksi pemilik.                            |
+| #33   | M10.01  | LOCAL    | Matriks coverage 38 baris (bukan 39 yang diklaim); tambahkan baris permukaan pasca-Next.js dengan owner + prioritas.                           |
+| #34   | M11.15  | LOCAL    | Runbook dikoreksi dan rute pemulihan tercatat; sisa: retry stale-sync hosted memakai `stale_sync_retry_count`.                                 |
+| #35   | M7.16   | EXTERNAL | Artifact `release-plan` hosted belum pernah ada dan Release kosong; work lokal: tes plumbing `--channel`.                                      |
+| #37   | M3.11   | LOCAL    | Evidence lama mengukur SPA Vite 24 tes; Board kini Next.js dengan 34 tes, termasuk homepage publik yang belum pernah divisualkan.              |
+| #38   | M9.08   | LOCAL    | Angka diukur ulang di `e6be76f` (stylesheet 76.838 B, lebih 11.302 B); sisa: keputusan anggaran oleh pemilik.                                  |
+| #39   | M11.07  | LOCAL    | Isu tanpa marker teridentifikasi (#97, issue insiden); sisa: atribusi 29 closure + GitHub App preflight.                                       |
+| #43   | M8.10   | EXTERNAL | Audit kode/test lengkap; baca registry+billing Actions (401/404) dan baseline bulanan pertama (2026-11-01) milik admin.                        |
+| #44   | M7.14   | EXTERNAL | Adapter test lokal lengkap; race kredensial/registry hosted belum berjalan; perbaiki matriks evidence yang kontradiktif.                       |
+| #45   | M10.06  | EXTERNAL | _suite_ lokal 18/18 hijau; rehearsal interupsi hosted di `main` milik Actions admin. Work lokal: peta guard orchestrator ke tes.               |
+| #47   | M8.06   | EXTERNAL | Eksekutor + serialisasi terbukti lokal; dispatch `dependency-candidate` dan CI exact-SHA Node 22 belum ada.                                    |
+| #48   | M9.06   | EXTERNAL | Addon request/approval nyata dan lulus test lokal; sisa acceptance adalah exact-SHA hosted, browser journey, M8.03, CODEOWNER.                 |
+| #50   | M11.11  | EXTERNAL | Coordinator + 26/26 trust test hijau; PR #51 belum `auto_merge` dan berhenti pada approval CODEOWNER baru.                                     |
+| #54   | M8.07   | LOCAL    | 10 kandidat major belum punya laporan kompatibilitas per kandidat; planner masih mencetak "release notes: not reported".                       |
+| #59   | M10.03  | EXTERNAL | Memerlukan required checks lulus pada SHA yang dipromosikan + review CODEOWNER.                                                                |
+| #67   | M8.05   | LOCAL    | Langkah kartu "batasi batch" belum diimplementasikan di `scripts/dependency-update-plan.mjs`; koreksi teks schedule kadaluarsa.                |
+| #70   | K3-005  | EXTERNAL | Acceptance review flow terimplementasi dan bertes; tunggu exact-SHA hosted, CODEOWNER, sign-off privasi.                                       |
+| #71   | K3-006  | EXTERNAL | Explanation API lengkap lokal; gerbang hosted + penerimaan operasional/privasi oleh pemilik.                                                   |
+| #72   | K3-007  | EXTERNAL | Kandidat duplikat bertes; target verifikasi "G3 009/012/013" butuh keputusan re-scope atau sumber ber-hak dari pemilik.                        |
+| #74   | K4-003  | LOCAL    | Analyzer bernama + golden candidate source-derived + negatif false-positive + laporan reproduksi di `research/evaluations/`.                   |
+| #75   | K4-004  | EXTERNAL | Skema/persistensi/rute baca selesai; mapping RUH/HIZAB butuh sumber teologi berlisensi dan approval kebijakan digest pemilik.                  |
+| #76   | M10.05  | EXTERNAL | Job `containers` hosted + ikatan digest image↔candidate (M7.09); board image pindah ke runtime Next.js tanpa smoke terekam.                    |
+| #79   | K5-002  | LOCAL    | Revocation baru menutup proyeksi pencarian sintetis; perlu derivatif lain + negatif jalur eksposur + keputusan retensi pemilik.                |
+| #82   | K8-001  | LOCAL    | Explorer sudah pindah Next.js; perlu jalan ulang journey di HEAD, tinjauan screen-reader, dan bukti hosted.                                    |
+| #83   | K5-003  | LOCAL    | Domain + guard sintetis lengkap; endpoint akses purpose/consent non-superadmin belum ada.                                                      |
+| #87   | K4-005  | EXTERNAL | Kontrak kandidat + store selesai; "empat tradisi" butuh saksi nyata/rights dan aturan review subject dari pemilik.                             |
+| #88   | K5-004  | LOCAL    | Kontrak story/page lengkap; tidak ada model `episode` padahal judul kartu menyebutnya; dep K5-003 belum closed.                                |
+| #89   | M7.15   | EXTERNAL | Orchestrator baru ada di `dev`; `main` belum memilikinya dan environment `release` belum dibuat.                                               |
+| #90   | K5-005  | LOCAL    | Validator hanya memeriksa struktur milik pemanggil; lookup keputusan tenant-scoped tepercaya + resolusi source belum ada.                      |
+| #91   | K7-005  | LOCAL    | Boundary tool-free + fixture injeksi lolos dengan provider palsu; matriks fixture adversarial lebih luas masih lokal.                          |
+| #92   | K7-002  | EXTERNAL | Survey + registry kosong + verifier ada; pemilik harus memilih, mengunduh, dan me-review lisensi artifact model.                               |
+| #93   | K7-004  | LOCAL    | Envelope/store/rute ada; `research-review.routes.ts` belum punya binding kandidat (dep K3-005).                                                |
+| #94   | K7-006  | EXTERNAL | Baseline model-off jujur tercatat; metrik p50/p95 dan perbandingan source-tunggal mustahil sebelum #92 selesai.                                |
+| #95   | M6.07   | EXTERNAL | Preview artifact `dev` terbukti berulang; deploy `main` terpercaya pertama belum pernah sukses.                                                |
+| #96   | K8-002  | LOCAL    | Workbench + pratinjau komposisi ada; provenance original/derived, manajemen gambar, review, publikasi, halaman poster belum.                   |
+| #97   | insiden | EXTERNAL | Koreksi kode sudah di `dev` (`d4f2d8a`, `8fc2dba`, `a2b6f21`); tutup hanya setelah `postgres-recovery` hijau di `main`.                        |
 
 ## Temuan yang membantah catatan lama
 
@@ -99,7 +99,11 @@ Push bertahap ke `dev` sejak audit ini ditulis: `1ee1a9d` (kelanjutan batch issu
 - Gerbang hosted `Roadmap issue sync` lulus pada setiap push: plan + apply success, dan read-back publik menunjukkan issue yang berubah saja yang ditulis. Run `39995402621` (head `b654c26`) memperbarui [#29](https://github.com/bjo163/moonwitness-xi/issues/29) pada 17:30:08Z dengan `Source SHA: b654c26…`; blok terkelolanya menampilkan `Work status: blocked` dengan blocker `Dependency M11.04 is not complete.` dan `Dependency M11.07 is not complete.`, sehingga acceptance langkah 5 yang baru tidak membuat issue ini bisa ditutup.
 - Cabang continuation (`selection` > 5 task → `workflow_dispatch` lanjutan) masih belum terbukti secara hosted: daftar run `workflow_dispatch` sejak 17:00Z kosong (`total_count = 0`) karena setiap seleksi tetap di bawah cap. Yang terbukti hanyalah `prepare`/`dispatch` lokal (12 unit test) dan apply hosted yang benar-benar menulis.
 - Lane CI pada run `39995617915` (head `e6be76f`): `quality` kini **hijau** — ini konfirmasi hosted bahwa regenerasi `5277e31` membereskan penyebab merah yang sebelumnya hanya bisa direproduksi lokal. `containers`, keempat job `automation`, `Gitleaks`, dan `CodeQL` juga hijau. `ui` gagal, `integration` dan `browser` masih berjalan saat catatan ini dibuat.
+- Run berikutnya pada head `3e31723` (`39997107575`) menyelesaikan sebagian: `plan`, `quality`, `containers`, keempat `automation` **hijau**; `ui` **gagal**; `browser` **gagal**; `integration` masih berjalan saat read-back terakhir. Dua run sebelumnya (`39995411618`, `39995617915`) membatalkan `integration`/`browser` di tengah jalan, jadi sampai kini tidak ada satu pun verdict `integration` untuk head-head hari ini.
+- Penyebab pembatalan itu struktural dan terlihat di source: `.github/workflows/ci.yml:17-19` memakai `group: ci-<base_ref>-<event>` dengan `cancel-in-progress: true`. Semua push ke `dev` berbagi satu grup, sehingga push berikutnya (punya saya maupun agen lain) selalu memotong lane panjang yang sedang jalan. Implikasi praktis untuk pemilik: satu verdict `integration`/`browser` yang utuh memerlukan jendela tanpa push, atau lane itu dijalankan sendiri lewat `browser-matrix`/`deep-regression` yang grupnya terpisah. Mengubah `cancel-in-progress` akan menambah konsumsi runner, jadi tidak dilakukan di sini.
 - Job `ui` gagal tepat satu step (`Enforce tested JavaScript and CSS bundle budgets`) dan akibatnya step `Test UI catalog interactions, WCAG, and visual contract` berstatus `skipped` — pola yang sama dengan yang dicatat di [M9.08 evidence](M9.08.md), kini terlihat pada runner.
+- Lane `browser` pada run yang sama: step `Run Board browser tests` (`ci.yml:269`) **failure** dengan tepat lima test `visual-audit` yang dinamai annotation-nya (`responsive protected screens…`, `empty and unavailable story workbench states…`, `story workbench editor and preview…`, `story workbench masthead…`, `homepage spelling, responsive layout, and reference screenshots`), dan step berikutnya `Test documentation portal routing, search, and responsive navigation` (`ci.yml:277`, yaitu `pnpm test:docs-portal`) berstatus `skipped`.
+- Konsekuensi struktural yang perlu dicatat, bukan diperbaiki diam-diam: dua lane punya pola "step pertama merah menyembunyikan bukti berikutnya". Di `ui`, anggaran ukuran menekan bukti interaksi/WCAG/visual katalog; di `browser`, kegagalan step Board menekan seluruh acceptance portal dokumen — termasuk acceptance langkah 5 M11.09 yang baru lolos lokal. Annotation hanya menyebut nama test, jadi penyebab gagal tidak terbaca dari API anonim; yang terbaca adalah urutannya. Keduanya hanya bisa dibuka dari sisi runner (baseline Linux + keputusan anggaran), jadi tidak ada perubahan `if:`/order step yang dilakukan audit ini.
 - Anggaran `ui-catalog` diukur ulang pada head yang sama (`pnpm --filter @moonwitness/ui-catalog build` lalu `node scripts/check-ui-catalog-budget.mjs`): Stylesheet **76.838 B** raw terhadap `maxRawBytes` 65.536 B (lebih **11.302 B**), gzip 14.999 B terhadap 16.384 B (lolos, sisa 1.385 B); JavaScript 423.868 B / 126.533 B lolos kedua sisi. Antara `5277e31` dan `e6be76f` satu-satunya sumber CSS yang berubah adalah `apps/ui-catalog/src/styles.css` (14.016 B → 20.574 B, +6.558 B) Sementara `packages/ui/src/styles/components.css` tetap 27.416 B. overrun ini karena itu didorong stylesheet demo katalog, bukan paket design-system bersama.
 - Tidak ada guard yang dilonggarkan: `maxRawBytes` tidak dinaikkan, `blockExoticSubdeps` tidak dimatikan, dan ambang visual tidak diubah. Angka 11.302 B ini juga bergerak — dua commit `ui-catalog` hari ini menambah ~9 KB CSS, jadi keputusan pemilik perlu diukur ulang saat merge.
 - Kelas `CLOSEABLE` tetap 0 dan tidak ada issue yang ditutup hari ini: tidak satu pun issue punya acceptance yang terbukti lengkap tanpa aksi pemilik (promosi `main`, akses Actions, Projects, Release baseline, keputusan konten/privasi).
