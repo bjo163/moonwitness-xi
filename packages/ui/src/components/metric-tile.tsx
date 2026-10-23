@@ -26,7 +26,11 @@ export function MetricTile({
     >
       <div className="mw-ui-metric-tile-heading">
         <p className="mw-ui-metric-tile-label">{label}</p>
-        {icon ? <span aria-hidden="true" className="mw-ui-metric-tile-icon">{icon}</span> : null}
+        {icon ? (
+          <span aria-hidden="true" className="mw-ui-metric-tile-icon">
+            {icon}
+          </span>
+        ) : null}
       </div>
       <strong className="mw-ui-metric-tile-value">{value}</strong>
       {detail ? <p className="mw-ui-metric-tile-detail">{detail}</p> : null}

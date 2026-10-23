@@ -52,22 +52,26 @@ const icons = [
   {
     name: 'users',
     title: 'Users',
-    paths: '<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3.5 20c.4-3.2 2.2-5 5.5-5s5.1 1.8 5.5 5m.5-4.5c3.3 0 5 1.6 5.5 4.5"/>',
+    paths:
+      '<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3.5 20c.4-3.2 2.2-5 5.5-5s5.1 1.8 5.5 5m.5-4.5c3.3 0 5 1.6 5.5 4.5"/>',
   },
   {
     name: 'document',
     title: 'Document',
-    paths: '<path d="M6 3.5h8l4 4V20a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z"/><path d="M14 3.5v5h5M8 12h8m-8 3.5h8"/>',
+    paths:
+      '<path d="M6 3.5h8l4 4V20a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z"/><path d="M14 3.5v5h5M8 12h8m-8 3.5h8"/>',
   },
   {
     name: 'knowledge',
     title: 'Knowledge',
-    paths: '<path d="M4 5.5c3.2-1.2 5.8-.8 8 1.2 2.2-2 4.8-2.4 8-1.2v14c-3.2-1.2-5.8-.8-8 1.2-2.2-2-4.8-2.4-8-1.2v-14Z"/><path d="M12 6.7v14m-5-11h2m6 0h2"/>',
+    paths:
+      '<path d="M4 5.5c3.2-1.2 5.8-.8 8 1.2 2.2-2 4.8-2.4 8-1.2v14c-3.2-1.2-5.8-.8-8 1.2-2.2-2-4.8-2.4-8-1.2v-14Z"/><path d="M12 6.7v14m-5-11h2m6 0h2"/>',
   },
   {
     name: 'image',
     title: 'Image',
-    paths: '<rect x="3.5" y="4.5" width="17" height="15" rx="1.5"/><circle cx="9" cy="9" r="1.5"/><path d="m5 17 5-5 3.5 3 2.5-2 3 4"/>',
+    paths:
+      '<rect x="3.5" y="4.5" width="17" height="15" rx="1.5"/><circle cx="9" cy="9" r="1.5"/><path d="m5 17 5-5 3.5 3 2.5-2 3 4"/>',
   },
   {
     name: 'partner',
@@ -189,7 +193,8 @@ const icons = [
   {
     name: 'save',
     title: 'Save',
-    paths: '<path d="M5 3.5h12l3.5 3.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z"/><path d="M8 3.5v5h8v-5M8 21v-8h8v8"/>',
+    paths:
+      '<path d="M5 3.5h12l3.5 3.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z"/><path d="M8 3.5v5h8v-5M8 21v-8h8v8"/>',
   },
   {
     name: 'delete',
@@ -299,7 +304,8 @@ const icons = [
   {
     name: 'book-open',
     title: 'Open book',
-    paths: '<path d="M12 6c-2-2-5-2.5-9-1v14c4-1.5 7-1 9 1m0-14c2-2 5-2.5 9-1v14c-4-1.5-7-1-9 1m0-14v14"/>',
+    paths:
+      '<path d="M12 6c-2-2-5-2.5-9-1v14c4-1.5 7-1 9 1m0-14c2-2 5-2.5 9-1v14c-4-1.5-7-1-9 1m0-14v14"/>',
   },
   {
     name: 'story',

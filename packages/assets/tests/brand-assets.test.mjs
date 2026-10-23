@@ -203,12 +203,20 @@ test('brand master is hand-authored vector and artwork has intentional optimized
   assert.match(master, /id="mw-brand-source-moonwitness-master-svg-crown"/u);
   assert.match(master, /id="mw-brand-source-moonwitness-master-svg-wordmark"/u);
   assert.doesNotMatch(master, /<text\b|<image\b|base64,/iu);
-  assert.doesNotMatch(master, /NaN|Infinity/u, 'canonical wordmark paths contain valid SVG numbers');
+  assert.doesNotMatch(
+    master,
+    /NaN|Infinity/u,
+    'canonical wordmark paths contain valid SVG numbers'
+  );
   const wordmark = master.match(
     /<g id="mw-brand-source-moonwitness-master-svg-wordmark"[^>]*>([\s\S]*?)<\/g>/u
   )?.[1];
   assert.ok(wordmark, 'canonical source includes an outlined wordmark');
-  assert.equal((wordmark.match(/<path\b/gu) ?? []).length, 11, 'MOONWITNESS has 11 outlined glyphs');
+  assert.equal(
+    (wordmark.match(/<path\b/gu) ?? []).length,
+    11,
+    'MOONWITNESS has 11 outlined glyphs'
+  );
   const brandGenerator = await readFile(
     resolve(packageRoot, 'scripts/prepare-brand-master.mjs'),
     'utf8'
@@ -226,7 +234,10 @@ test('brand master is hand-authored vector and artwork has intentional optimized
   const artwork = manifest.assets.filter(({ kind }) => kind === 'artwork');
   assert.ok(artwork.length >= 3, 'the manifest includes the required production artwork crops');
   for (const asset of artwork) {
-    assert.equal(asset.license, 'OpenAI Terms of Use (Output owned by user, subject to applicable law)');
+    assert.equal(
+      asset.license,
+      'OpenAI Terms of Use (Output owned by user, subject to applicable law)'
+    );
     const image = sharp(resolve(packageRoot, asset.path));
     const metadata = await image.metadata();
     assert.equal(metadata.format, 'webp');

@@ -19,21 +19,25 @@ const font = opentype.parse(exactArrayBuffer);
 const wordmark = 'MOONWITNESS';
 const glyphs = font.stringToGlyphs(wordmark);
 let x = 0;
-const glyphPaths = glyphs.map((glyph, index) => {
-  const path = glyph.getPath(0, 70, 108);
-  const pathData = path.toPathData(2);
-  if (/NaN|Infinity/u.test(pathData)) {
-    throw new Error(`Road Rage produced invalid vector data for glyph ${wordmark[index]}.`);
-  }
-  const element = `<path transform="translate(${x.toFixed(2)} 0)" d="${pathData}"/>`;
-  x += (glyph.advanceWidth * 108) / font.unitsPerEm;
-  if (index < glyphs.length - 1) {
-    x += (font.getKerningValue(glyph, glyphs[index + 1]) * 108) / font.unitsPerEm;
-  }
-  return element;
-}).join('');
+const glyphPaths = glyphs
+  .map((glyph, index) => {
+    const path = glyph.getPath(0, 70, 108);
+    const pathData = path.toPathData(2);
+    if (/NaN|Infinity/u.test(pathData)) {
+      throw new Error(`Road Rage produced invalid vector data for glyph ${wordmark[index]}.`);
+    }
+    const element = `<path transform="translate(${x.toFixed(2)} 0)" d="${pathData}"/>`;
+    x += (glyph.advanceWidth * 108) / font.unitsPerEm;
+    if (index < glyphs.length - 1) {
+      x += (font.getKerningValue(glyph, glyphs[index + 1]) * 108) / font.unitsPerEm;
+    }
+    return element;
+  })
+  .join('');
 if (glyphs.length !== wordmark.length || x < 400 || x > 440) {
-  throw new Error(`Unexpected MOONWITNESS outline metrics: ${glyphs.length} glyphs, ${x.toFixed(2)}px.`);
+  throw new Error(
+    `Unexpected MOONWITNESS outline metrics: ${glyphs.length} glyphs, ${x.toFixed(2)}px.`
+  );
 }
 const wordmarkGroup = `<g id="mw-brand-source-moonwitness-master-svg-wordmark" fill="currentColor" transform="translate(76 0) skewX(-5)">${glyphPaths}</g>`;
 const result = master.replace(

@@ -43,9 +43,7 @@ async function loginSuperadmin(page: Page) {
   await page.getByLabel('Password').fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the board' }).click();
   await expect(page).toHaveURL(/\/board$/u);
-  await expect(
-    page.getByRole('heading', { name: 'Command center', exact: false })
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Command center', exact: false })).toBeVisible();
 }
 
 test('reload restores session, concurrent requests share expired-token refresh, and logout revokes it', async ({
@@ -59,9 +57,7 @@ test('reload restores session, concurrent requests share expired-token refresh, 
 
   await page.reload();
   await expect(page).toHaveURL(/\/board$/u);
-  await expect(
-    page.getByRole('heading', { name: 'Command center', exact: false })
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Command center', exact: false })).toBeVisible();
 
   const expired = expiredAccessToken(original!.user);
   await page.evaluate((token) => {
@@ -79,9 +75,7 @@ test('reload restores session, concurrent requests share expired-token refresh, 
   });
   await page.reload();
   await expect(page).toHaveURL(/\/board$/u);
-  await expect(
-    page.getByRole('heading', { name: 'Command center', exact: false })
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Command center', exact: false })).toBeVisible();
   await expect
     .poll(async () =>
       page.evaluate(() => {

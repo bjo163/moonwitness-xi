@@ -23,7 +23,9 @@ export function ArtworkFrame({
       data-surface={surface}
       {...props}
     >
-      <div className="mw-ui-artwork-frame-media" data-surface={surface}>{children}</div>
+      <div className="mw-ui-artwork-frame-media" data-surface={surface}>
+        {children}
+      </div>
       {caption ? <figcaption className="mw-ui-artwork-frame-caption">{caption}</figcaption> : null}
     </figure>
   );

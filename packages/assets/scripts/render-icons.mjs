@@ -8,8 +8,14 @@ import { chromium } from '@playwright/test';
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = resolve(packageRoot, '../..');
 const outputPath = resolve(repositoryRoot, 'docs/design/assets/icon-contact-sheet-current.png');
-const brandOutputPath = resolve(repositoryRoot, 'docs/design/assets/brand-contact-sheet-current.png');
-const artworkOutputPath = resolve(repositoryRoot, 'docs/design/assets/artwork-contact-sheet-current.png');
+const brandOutputPath = resolve(
+  repositoryRoot,
+  'docs/design/assets/brand-contact-sheet-current.png'
+);
+const artworkOutputPath = resolve(
+  repositoryRoot,
+  'docs/design/assets/artwork-contact-sheet-current.png'
+);
 const manifest = JSON.parse(await readFile(resolve(packageRoot, 'manifest.json'), 'utf8'));
 const icons = manifest.assets.filter((asset) => asset.kind === 'icon');
 const illustrations = manifest.assets.filter(
@@ -170,7 +176,9 @@ try {
     'illustrations/editorial-knowledge.webp',
     'illustrations/editorial-stories.webp',
   ];
-  const artworkAssets = artworkOrder.map((path) => manifest.assets.find((asset) => asset.path === path));
+  const artworkAssets = artworkOrder.map((path) =>
+    manifest.assets.find((asset) => asset.path === path)
+  );
   if (artworkAssets.some((asset) => asset?.kind !== 'artwork')) {
     throw new Error('Artwork contact sheet is missing a required visual asset from the manifest.');
   }
@@ -186,7 +194,8 @@ try {
   );
   const artworkMarkup = artworkPreviews
     .map(
-      ({ path, data }) => `<article class="${path.split('/').at(-1)?.replace('.webp', '')}"><h2>${path.split('/').at(-1)}</h2><img src="${data}" alt=""></article>`
+      ({ path, data }) =>
+        `<article class="${path.split('/').at(-1)?.replace('.webp', '')}"><h2>${path.split('/').at(-1)}</h2><img src="${data}" alt=""></article>`
     )
     .join('');
   await artworkPage.setContent(`<!doctype html><html lang="en"><head><meta charset="utf-8"><style>
@@ -205,7 +214,9 @@ try {
     animations: 'disabled',
   });
   await artworkPage.close();
-  stdout.write(`Rendered brand and artwork proofs to ${brandOutputPath} and ${artworkOutputPath}.\n`);
+  stdout.write(
+    `Rendered brand and artwork proofs to ${brandOutputPath} and ${artworkOutputPath}.\n`
+  );
 } finally {
   await browser.close();
 }

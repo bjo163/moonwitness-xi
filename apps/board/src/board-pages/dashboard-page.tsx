@@ -298,9 +298,7 @@ export function DashboardPage() {
           <div className="dashboard-masthead-kicker">
             <Sparkles className="size-3.5" aria-hidden="true" /> MoonWitness / Command Center
           </div>
-          <h1 className="dashboard-masthead-title">
-            Command center
-          </h1>
+          <h1 className="dashboard-masthead-title">Command center</h1>
           <p className="dashboard-masthead-subtitle">
             <span>Welcome,</span>
             <AccentMarker>{user?.login}</AccentMarker>
@@ -369,35 +367,47 @@ export function DashboardPage() {
           {/* KPI Counters Grid */}
           <div className="dashboard-metrics">
             {/* Partner Count */}
-            <Link
-              href="/board/m/base.partner"
-              className="dashboard-metric-link"
-            >
-              <MetricTile label="Partners & contacts" value={partnerLoading ? '—' : (partnerStats?.total ?? 0)} detail="View directory" icon={<Users className="size-4" />} accent="magenta" />
+            <Link href="/board/m/base.partner" className="dashboard-metric-link">
+              <MetricTile
+                label="Partners & contacts"
+                value={partnerLoading ? '—' : (partnerStats?.total ?? 0)}
+                detail="View directory"
+                icon={<Users className="size-4" />}
+                accent="magenta"
+              />
             </Link>
 
             {/* Active Users */}
-            <Link
-              href="/board/m/base.user"
-              className="dashboard-metric-link"
-            >
-              <MetricTile label="Active users" value={userLoading ? '—' : (userStats?.total ?? 0)} detail="System accounts" icon={<UserPlus className="size-4" />} accent="cyan" />
+            <Link href="/board/m/base.user" className="dashboard-metric-link">
+              <MetricTile
+                label="Active users"
+                value={userLoading ? '—' : (userStats?.total ?? 0)}
+                detail="System accounts"
+                icon={<UserPlus className="size-4" />}
+                accent="cyan"
+              />
             </Link>
 
             {/* Companies / Multi-Tenant */}
-            <Link
-              href="/board/m/base.company"
-              className="dashboard-metric-link"
-            >
-              <MetricTile label="Companies" value={companyLoading ? '—' : (companyStats?.total ?? 0)} detail="Tenant scopes" icon={<Building2 className="size-4" />} accent="yellow" />
+            <Link href="/board/m/base.company" className="dashboard-metric-link">
+              <MetricTile
+                label="Companies"
+                value={companyLoading ? '—' : (companyStats?.total ?? 0)}
+                detail="Tenant scopes"
+                icon={<Building2 className="size-4" />}
+                accent="yellow"
+              />
             </Link>
 
             {/* Pending Activities */}
-            <Link
-              href="/board/m/base.activity"
-              className="dashboard-metric-link"
-            >
-              <MetricTile label="Planned activities" value={activityLoading ? '—' : (activityStats?.total ?? 0)} detail="Active reminders" icon={<CheckCircle2 className="size-4" />} accent="magenta" />
+            <Link href="/board/m/base.activity" className="dashboard-metric-link">
+              <MetricTile
+                label="Planned activities"
+                value={activityLoading ? '—' : (activityStats?.total ?? 0)}
+                detail="Active reminders"
+                icon={<CheckCircle2 className="size-4" />}
+                accent="magenta"
+              />
             </Link>
           </div>
 
