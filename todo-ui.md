@@ -462,7 +462,7 @@ Urutan: header → hero manga → tiga panel editorial → band koneksi → film
 
 ### Route lain
 
-- [ ] Tambahkan mockup login “Enter the Shadow” yang dilampirkan pengguna sebagai referensi visual auth khusus; jangan mengubahnya menjadi spesifikasi fitur baru.
+- [x] Simpan dan tautkan mockup login “Enter the Shadow” sebagai referensi visual auth khusus di `docs/Moonwitness_ Enter the Shadow-Login.png`; tinjau visual wordmark sebagai `MOONWITNESS`. Gunakan gambar sebagai acuan, bukan spesifikasi fitur baru.
 - [ ] Catat bahwa komposisi login memakai artwork malam-bulan-kota di sisi kanan dan panel form gelap di kiri.
 - [ ] Catat bahwa mahkota dan wordmark memakai sumber brand canonical, bukan lettering logo yang dirender sebagai teks.
 - [ ] Catat bahwa headline, label, helper text, status, dan tombol tetap berupa HTML yang dapat diakses.
