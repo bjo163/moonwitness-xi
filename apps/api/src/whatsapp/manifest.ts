@@ -103,6 +103,27 @@ export const whatsappManifest = defineAddon({
       },
       search: { fields: ['recipient_jid'] },
     }),
+    defineView(WhatsappEvent, {
+      title: 'WhatsApp Events',
+      list: { columns: ['account', 'external_id', 'status', 'attempts', 'available_at'] },
+      form: {
+        sections: [
+          {
+            title: 'Inbound event',
+            fields: [
+              'company',
+              'account',
+              'external_id',
+              'status',
+              'attempts',
+              'available_at',
+              'last_error',
+            ],
+          },
+        ],
+      },
+      search: { fields: ['external_id'] },
+    }),
   ],
   menus: models.map((model, index) => ({
     model: model.modelName,
