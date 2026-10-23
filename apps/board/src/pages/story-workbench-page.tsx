@@ -65,8 +65,8 @@ export function StoryWorkbenchPage() {
     pages.find((page) => page.page_id === selectedPageId) ?? pages[0] ?? initialPage;
   const value = viewingHistory ? selectedPage.original_text : (draft ?? selectedPage.original_text);
   const nextVersion = (current?.version ?? 0) + 1;
-  const canEdit =
-    !viewingHistory && !saving && !storyQuery.isLoading && (!storyQuery.isError || storyIsMissing);
+  const canEdit = !viewingHistory && !saving && !storyQuery.isLoading;
+  const canSave = canEdit && (!storyQuery.isError || storyIsMissing);
 
   function loadRevision() {
     const version = Number(revisionInput);
@@ -326,7 +326,7 @@ export function StoryWorkbenchPage() {
           to LF; other whitespace is preserved.
         </p>
         <div className="flex flex-wrap items-center gap-3">
-          <Button type="button" onClick={() => void saveRevision()} disabled={!canEdit}>
+          <Button type="button" onClick={() => void saveRevision()} disabled={!canSave}>
             <Save aria-hidden="true" className="mr-2 size-4" />
             {saving ? 'Saving…' : `Save revision ${nextVersion}`}
           </Button>
