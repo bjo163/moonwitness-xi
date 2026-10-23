@@ -8,6 +8,23 @@ const workflowPath = path.join(root, '.github', 'workflows', 'gitleaks.yml');
 const configPath = path.join(root, '.gitleaks.toml');
 const actionReference = /gitleaks\/gitleaks-action@[0-9a-f]{40}\s+#\s*v\d+\.\d+\.\d+/;
 const exactLine = (segments) => new RegExp(segments.join(''), 'u');
+const runtimeSecretNames = [
+  'JWT_SECRET',
+  'METRICS_TOKEN',
+  'WHATSAPP_INTERNAL_TOKEN',
+  'WHATSAPP_SESSION_KEY',
+];
+// WhatsApp stores an AES-GCM session key as padded base64, so a base64url-only class would miss it.
+const paddedBase64Class = '[A-Za-z0-9_+/=-]{32,}';
+const runtimeSecretRulePin = new RegExp(
+  [
+    String.raw`\[\[rules\]\][\s\S]*?id\s*=\s*"moonwitness-runtime-secret"`,
+    String.raw`[\s\S]*?secretGroup\s*=\s*1[\s\S]*?entropy\s*=\s*4\.2[\s\S]*?keywords\s*=\s*\[`,
+    runtimeSecretNames.map((name) => `"${name}"`).join(String.raw`\s*,\s*`),
+    String.raw`\]`,
+  ].join(''),
+  'u'
+);
 const tokenHash = [
   '269a6e000da6fa28',
   '8380cf36ec127df0',
@@ -89,13 +106,14 @@ export function validateGitleaksSetup(workflow, config) {
   if (!/regexTarget\s*=\s*"line"/.test(config))
     problems.push('Allowlist must match exact lines, not whole files or commits.');
 
+  // A CRLF-terminated line otherwise escapes the `$` anchor and reads as a clean scan.
   if (
-    !/\[\[rules\]\][\s\S]*?id\s*=\s*"moonwitness-runtime-secret"[\s\S]*?secretGroup\s*=\s*1[\s\S]*?entropy\s*=\s*4\.2[\s\S]*?keywords\s*=\s*\["JWT_SECRET",\s*"METRICS_TOKEN"\]/u.test(
-      config
-    )
+    !runtimeSecretRulePin.test(config) ||
+    !config.includes(`(${paddedBase64Class})`) ||
+    !config.includes(String.raw`\r?$`)
   ) {
     problems.push(
-      'MoonWitness runtime secret detection must cover high-entropy JWT and metrics secrets.'
+      'MoonWitness runtime secret detection must cover high-entropy JWT, metrics, and WhatsApp credentials.'
     );
   }
 
