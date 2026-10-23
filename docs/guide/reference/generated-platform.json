@@ -6187,6 +6187,10 @@
     },
     {
       "method": "GET",
+      "path": "/api/research/suggestions"
+    },
+    {
+      "method": "GET",
       "path": "/api/research/suggestions/:suggestionId"
     },
     {
@@ -6286,5 +6290,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "9e65a0a5ba564ed790b7afd150433521c064974ec2a609a37af6c05e62035a8a"
+  "generatedFromSha256": "b323d00c6c41839224841bad201f60f88cc698c7a9dcc2aa7a4b3a2109108ca3"
 }

@@ -4,7 +4,9 @@ import { readQuranPassageSnapshot, readTextualWitnessPassageSnapshot } from '@mo
 import { generateLocalAiSuggestion } from '@moonwitness/local-ai';
 import {
   resolveConceptProfileEvidence,
+  listResearchSuggestionVersions,
   readResearchSuggestionVersion,
+  researchSuggestionListMaxLimit,
   storeResearchSuggestions,
 } from '@moonwitness/orm-knowledge';
 import {
@@ -78,6 +80,114 @@ async function localPassage(selector: { source_id: string; edition_id: string; l
 
 export const localAiSuggestionRoutes: FastifyPluginAsync = async (fastify) => {
   const bodyWithAdditionalFields = new WeakSet<object>();
+  const queryWithAdditionalFields = new WeakSet<object>();
+  fastify.get<{ Querystring: { limit?: string } }>(
+    '/api/research/suggestions',
+    {
+      attachValidation: true,
+      preValidation: async (request) => {
+        // Fastify strips unknown query fields before the handler runs, so capture them first.
+        if (isRecord(request.query) && Object.keys(request.query).some((key) => key !== 'limit'))
+          queryWithAdditionalFields.add(request);
+      },
+      schema: {
+        tags: ['Research'],
+        summary: 'List one bounded page of tenant-scoped INTERNAL candidate identities',
+        description:
+          'Returns only the newest stored suggestion id, version and digest for the authenticated company. Candidate text and citations are never bulk-exported: every item must be revalidated through the single-candidate read route before it is reviewed.',
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            limit: { type: 'string', pattern: '^[1-9][0-9]{0,2}$' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['success', 'data'],
+            properties: {
+              success: { const: true },
+              data: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['visibility', 'status', 'items', 'truncated'],
+                properties: {
+                  visibility: { const: 'INTERNAL' },
+                  status: { const: 'unreviewed' },
+                  truncated: { type: 'boolean' },
+                  items: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      additionalProperties: false,
+                      required: ['suggestionId', 'version', 'digest', 'visibility', 'status'],
+                      properties: {
+                        suggestionId: { type: 'string' },
+                        version: { type: 'integer' },
+                        digest: { type: 'string', pattern: '^[a-f0-9]{64}$' },
+                        visibility: { const: 'INTERNAL' },
+                        status: { const: 'unreviewed' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: error,
+          401: error,
+          403: error,
+        },
+      },
+    },
+    async (request, reply) => {
+      reply.header('Cache-Control', 'private, no-store');
+      const auth = request.auth;
+      if (!auth) return reply.code(401).send({ success: false, error: 'Authentication required' });
+      if (
+        !['user', 'superadmin'].includes(auth.role) ||
+        !Number.isSafeInteger(auth.userId) ||
+        auth.userId < 1 ||
+        !Number.isSafeInteger(auth.companyId) ||
+        !auth.companyId
+      )
+        return reply.code(403).send({ success: false, error: 'Suggestion list is unavailable' });
+      const limit = request.query.limit === undefined ? 50 : Number(request.query.limit);
+      if (
+        request.validationError ||
+        queryWithAdditionalFields.has(request) ||
+        (request.query.limit !== undefined && String(limit) !== request.query.limit) ||
+        !Number.isSafeInteger(limit) ||
+        limit < 1 ||
+        limit > researchSuggestionListMaxLimit
+      )
+        return reply.code(400).send({ success: false, error: 'Invalid suggestion list page size' });
+      try {
+        const page = await listResearchSuggestionVersions(fastify.db, {
+          authenticatedReader: {
+            userId: auth.userId,
+            companyId: auth.companyId,
+            role: auth.role as 'user' | 'superadmin',
+          },
+          limit,
+        });
+        return reply.send({
+          success: true,
+          data: {
+            visibility: 'INTERNAL',
+            status: 'unreviewed',
+            truncated: page.truncated,
+            items: page.items,
+          },
+        });
+      } catch {
+        return reply.code(403).send({ success: false, error: 'Suggestion list is unavailable' });
+      }
+    }
+  );
   fastify.get<{ Params: { suggestionId: string }; Querystring: { version?: string } }>(
     '/api/research/suggestions/:suggestionId',
     {

@@ -1,6 +1,6 @@
 # Generated model and addon reference
 
-Source fingerprint: `9e65a0a5ba564ed790b7afd150433521c064974ec2a609a37af6c05e62035a8a`. Seed values and field defaults are intentionally omitted.
+Source fingerprint: `b323d00c6c41839224841bad201f60f88cc698c7a9dcc2aa7a4b3a2109108ca3`. Seed values and field defaults are intentionally omitted.
 
 ## Addon `auth`
 

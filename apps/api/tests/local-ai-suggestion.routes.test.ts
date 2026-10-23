@@ -530,4 +530,159 @@ describe('local AI suggestion generation route authorization boundary', () => {
     expect(response.statusCode).toBe(400);
     expect(await db('knowledge_research_suggestion_versions')).toHaveLength(0);
   });
+
+  async function storeTermCandidate(
+    suggestionId: string,
+    scalarIndex: number,
+    snapshot: Awaited<ReturnType<typeof publishEvidence>>
+  ) {
+    const scalar = Array.from(snapshot.passage.text)[scalarIndex] ?? '';
+    generate.mockResolvedValueOnce({
+      status: 'generated',
+      text: JSON.stringify({
+        format: 'mw-local-ai-suggestion-envelope/v1',
+        suggestions: [
+          {
+            id: suggestionId,
+            status: 'unreviewed',
+            visibility: 'INTERNAL',
+            kind: 'term',
+            text: scalar,
+            citations: [
+              {
+                evidence_id: evidenceId,
+                assertion_id: assertionId,
+                selector: {
+                  source_id: sourceId,
+                  edition_id: editionId,
+                  locator: 'Q7:46',
+                  content_sha256: snapshot.passage.sha256,
+                  range: { unit: 'unicode_scalar', start: scalarIndex, end: scalarIndex + 1 },
+                  selected_span_sha256: createHash('sha256').update(scalar, 'utf8').digest('hex'),
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    });
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/research/suggestions/generate',
+      headers: { authorization: 'Bearer test' },
+      payload: { kind: 'term', evidence_ids: [evidenceId] },
+    });
+    expect(response.statusCode).toBe(200);
+  }
+
+  it('lists the newest candidate identity per suggestion id for the authenticated company', async () => {
+    const snapshot = await publishEvidence();
+    await storeTermCandidate('mw:suggestion:list-002', 0, snapshot);
+    await storeTermCandidate('mw:suggestion:list-001', 0, snapshot);
+    await storeTermCandidate('mw:suggestion:list-001', 1, snapshot);
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/research/suggestions',
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['cache-control']).toBe('private, no-store');
+    const data = response.json().data as {
+      visibility: string;
+      status: string;
+      truncated: boolean;
+      items: Record<string, unknown>[];
+    };
+    expect([data.visibility, data.status, data.truncated]).toEqual([
+      'INTERNAL',
+      'unreviewed',
+      false,
+    ]);
+    expect(data.items.map((item) => [item.suggestionId, item.version])).toEqual([
+      ['mw:suggestion:list-001', 2],
+      ['mw:suggestion:list-002', 1],
+    ]);
+    expect(Object.keys(data.items[0]!).sort()).toEqual([
+      'digest',
+      'status',
+      'suggestionId',
+      'version',
+      'visibility',
+    ]);
+    expect(data.items[0]!.digest).toMatch(/^[a-f0-9]{64}$/u);
+    expect(JSON.stringify(data)).not.toContain('citation');
+  });
+
+  it('returns an empty bounded page when the company has no stored candidates', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/research/suggestions',
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json().data).toEqual({
+      visibility: 'INTERNAL',
+      status: 'unreviewed',
+      truncated: false,
+      items: [],
+    });
+  });
+
+  it('bounds the review queue page and rejects non-canonical or unknown query fields', async () => {
+    const snapshot = await publishEvidence();
+    await storeTermCandidate('mw:suggestion:list-002', 0, snapshot);
+    await storeTermCandidate('mw:suggestion:list-001', 0, snapshot);
+    const page = await app.inject({
+      method: 'GET',
+      url: '/api/research/suggestions?limit=1',
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(page.statusCode).toBe(200);
+    expect(page.json().data).toMatchObject({
+      truncated: true,
+      items: [{ suggestionId: 'mw:suggestion:list-001', version: 1 }],
+    });
+    for (const limit of ['0', '01', '101', '999', '1.0', '']) {
+      const rejected = await app.inject({
+        method: 'GET',
+        url: `/api/research/suggestions?limit=${limit}`,
+        headers: { authorization: 'Bearer test' },
+      });
+      expect([rejected.statusCode, rejected.json()]).toEqual([
+        400,
+        { success: false, error: 'Invalid suggestion list page size' },
+      ]);
+    }
+    const cursor = await app.inject({
+      method: 'GET',
+      url: '/api/research/suggestions?limit=1&offset=1',
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(cursor.statusCode).toBe(400);
+  });
+
+  it('refuses the candidate queue without an active authenticated company membership', async () => {
+    const snapshot = await publishEvidence();
+    await storeTermCandidate('mw:suggestion:list-001', 0, snapshot);
+    const unauthenticated = await app.inject({ method: 'GET', url: '/api/research/suggestions' });
+    expect(unauthenticated.statusCode).toBe(401);
+    const foreign = await app.inject({
+      method: 'GET',
+      url: '/api/research/suggestions',
+      headers: { authorization: 'Bearer test', 'x-test-company': 'foreign' },
+    });
+    expect([foreign.statusCode, foreign.json()]).toEqual([
+      403,
+      { success: false, error: 'Suggestion list is unavailable' },
+    ]);
+    await db('company_memberships')
+      .where({ user_id: userId, company_id: companyId })
+      .update({ active: false });
+    const revoked = await app.inject({
+      method: 'GET',
+      url: '/api/research/suggestions',
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(revoked.statusCode).toBe(403);
+  });
 });

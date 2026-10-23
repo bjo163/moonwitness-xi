@@ -173,6 +173,131 @@ export async function storeResearchSuggestions(
   return results;
 }
 
+export interface ListResearchSuggestionInput {
+  readonly authenticatedReader: AuthenticatedResearchReviewer;
+  /** Bounded page size enforced by the caller-facing contract. */
+  readonly limit: number;
+}
+
+export interface ResearchSuggestionListItem {
+  readonly suggestionId: string;
+  readonly version: number;
+  readonly digest: string;
+  readonly visibility: 'INTERNAL';
+  readonly status: 'unreviewed';
+}
+
+export interface ResearchSuggestionListPage {
+  readonly items: readonly ResearchSuggestionListItem[];
+  readonly truncated: boolean;
+}
+
+export const researchSuggestionListMaxLimit = 100;
+
+/**
+ * List only the identity columns of the newest stored candidate per suggestion id.
+ * Citation and evidence revalidation is deliberately not performed here; it is the
+ * single-read path's job, so a page cannot become an unvalidated bulk content export.
+ */
+export async function listResearchSuggestionVersions(
+  db: Knex,
+  input: ListResearchSuggestionInput
+): Promise<ResearchSuggestionListPage> {
+  const requestedActor = input.authenticatedReader;
+  const actor = {
+    userId: requestedActor.userId,
+    companyId: requestedActor.companyId,
+    role: requestedActor.role,
+  };
+  if (
+    !validActor(actor) ||
+    !Number.isSafeInteger(input.limit) ||
+    input.limit < 1 ||
+    input.limit > researchSuggestionListMaxLimit
+  ) {
+    fail('Research suggestion list context is invalid');
+  }
+  return db.transaction(async (trx) => {
+    await assertActiveCompanyActor(trx, actor);
+    const page = (await trx('knowledge_research_suggestion_versions')
+      .where({ company_id: actor.companyId })
+      .groupBy('suggestion_id')
+      .max({ version: 'version' })
+      .orderBy('suggestion_id', 'asc')
+      .limit(input.limit + 1)
+      .select('suggestion_id')) as unknown as { suggestion_id: string; version: number }[];
+    const truncated = page.length > input.limit;
+    const newest = page
+      .slice(0, input.limit)
+      .map((row) => ({ suggestionId: String(row.suggestion_id), version: Number(row.version) }));
+    if (newest.length === 0) return { items: [], truncated: false };
+    const rows = (await trx('knowledge_research_suggestion_versions')
+      .where({ company_id: actor.companyId })
+      .whereIn(
+        'suggestion_id',
+        newest.map(({ suggestionId }) => suggestionId)
+      )
+      .select(
+        'suggestion_id',
+        'version',
+        'visibility',
+        'status',
+        'suggestion_json',
+        'suggestion_digest'
+      )) as unknown as {
+      suggestion_id: string;
+      version: number;
+      visibility: string;
+      status: string;
+      suggestion_json: string;
+      suggestion_digest: string;
+    }[];
+    const items: ResearchSuggestionListItem[] = [];
+    for (const { suggestionId, version } of newest) {
+      const row = rows.find(
+        (candidate) =>
+          String(candidate.suggestion_id) === suggestionId && Number(candidate.version) === version
+      );
+      if (!row) fail('Stored research suggestion version disappeared during listing');
+      if (row.visibility !== 'INTERNAL' || row.status !== 'unreviewed') {
+        fail('Stored research suggestion exceeded its INTERNAL unreviewed ceiling');
+      }
+      const suggestionJson = String(row.suggestion_json);
+      const suggestionDigest = digest(suggestionJson);
+      if (suggestionDigest !== row.suggestion_digest) {
+        fail('Stored research suggestion failed integrity verification');
+      }
+      let value: unknown;
+      try {
+        value = JSON.parse(suggestionJson) as unknown;
+      } catch {
+        fail('Stored research suggestion is malformed');
+      }
+      const suggestion = value as ResearchSuggestion;
+      const shape = validateResearchSuggestionEnvelope({
+        format: 'mw-local-ai-suggestion-envelope/v1',
+        suggestions: [value],
+      });
+      if (
+        !shape.valid ||
+        suggestion.id !== suggestionId ||
+        suggestion.visibility !== 'INTERNAL' ||
+        suggestion.status !== 'unreviewed'
+      ) {
+        fail('Stored research suggestion failed canonical projection verification');
+      }
+      items.push({
+        suggestionId,
+        version,
+        digest: suggestionDigest,
+        visibility: 'INTERNAL',
+        status: 'unreviewed',
+      });
+    }
+    return { items, truncated };
+  });
+}
+
 /** Read one tenant-scoped immutable suggestion and verify its digest and review ceiling. */
 export async function readResearchSuggestionVersion(
   db: Knex,

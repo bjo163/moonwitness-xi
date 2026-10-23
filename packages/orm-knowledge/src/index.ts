@@ -49,11 +49,16 @@ export {
   readTextualAlignmentCandidateVersion,
 } from './textual-alignment-candidate-store.js';
 export {
+  listResearchSuggestionVersions,
   readResearchSuggestionVersion,
+  researchSuggestionListMaxLimit,
   storeResearchSuggestions,
 } from './research-suggestion-store.js';
 export type {
+  ListResearchSuggestionInput,
   ReadResearchSuggestionInput,
+  ResearchSuggestionListItem,
+  ResearchSuggestionListPage,
   StoreResearchSuggestionsInput,
   StoredResearchSuggestionVersion,
 } from './research-suggestion-store.js';

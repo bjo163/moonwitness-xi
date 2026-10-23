@@ -6,7 +6,12 @@ import { manifest as baseManifest } from '@moonwitness/orm-base';
 import { jobsManifest } from '@moonwitness/jobs';
 import { manifest as notificationManifest } from '@moonwitness/orm-notification';
 import { manifest as workflowManifest } from '@moonwitness/orm-workflow';
-import { manifest, readResearchSuggestionVersion, storeResearchSuggestions } from '../src/index.js';
+import {
+  manifest,
+  listResearchSuggestionVersions,
+  readResearchSuggestionVersion,
+  storeResearchSuggestions,
+} from '../src/index.js';
 import { canonicalResearchJson } from '../src/research-release.js';
 
 let db: Knex;
@@ -386,4 +391,90 @@ describe('tenant-scoped INTERNAL research suggestion versions', () => {
       ).rejects.toThrow(/trusted source and evidence validation/u);
     }
   );
+
+  it('lists only the newest candidate identity per suggestion id inside the tenant', async () => {
+    const input = {
+      authenticatedActor: actor(),
+      envelope: envelope(),
+      resolverForTransaction,
+    };
+    await storeResearchSuggestions(db, input);
+    await storeResearchSuggestions(db, {
+      ...input,
+      envelope: envelope({ ...suggestion(), id: 'mw:suggestion:synthetic-second' }),
+    });
+    await storeResearchSuggestions(db, {
+      ...input,
+      envelope: envelope(suggestion('Synthetic revised extractive passage.')),
+    });
+    const page = await listResearchSuggestionVersions(db, {
+      authenticatedReader: actor(),
+      limit: 10,
+    });
+    expect(page.truncated).toBe(false);
+    expect(page.items).toEqual([
+      {
+        suggestionId: 'mw:suggestion:synthetic-second',
+        version: 1,
+        digest: expect.stringMatching(/^[a-f0-9]{64}$/u),
+        visibility: 'INTERNAL',
+        status: 'unreviewed',
+      },
+      {
+        suggestionId: 'mw:suggestion:synthetic-summary',
+        version: 2,
+        digest: expect.stringMatching(/^[a-f0-9]{64}$/u),
+        visibility: 'INTERNAL',
+        status: 'unreviewed',
+      },
+    ]);
+    expect(JSON.stringify(page)).not.toContain('citation');
+    const bounded = await listResearchSuggestionVersions(db, {
+      authenticatedReader: actor(),
+      limit: 1,
+    });
+    expect(bounded.truncated).toBe(true);
+    expect(bounded.items.map(({ suggestionId }) => suggestionId)).toEqual([
+      'mw:suggestion:synthetic-second',
+    ]);
+    await expect(
+      listResearchSuggestionVersions(db, {
+        authenticatedReader: { ...actor(), companyId: companyId + 1 },
+        limit: 10,
+      })
+    ).rejects.toThrow(/unavailable in this company context/u);
+    await expect(
+      listResearchSuggestionVersions(db, { authenticatedReader: actor(), limit: 0 })
+    ).rejects.toThrow(/list context is invalid/u);
+    await expect(
+      listResearchSuggestionVersions(db, { authenticatedReader: actor(), limit: 101 })
+    ).rejects.toThrow(/list context is invalid/u);
+    await db('company_memberships')
+      .where({ user_id: userId, company_id: companyId })
+      .update({ active: false });
+    await expect(
+      listResearchSuggestionVersions(db, { authenticatedReader: actor(), limit: 10 })
+    ).rejects.toThrow(/unavailable in this company context/u);
+  });
+
+  it('fails closed when a listed candidate row no longer matches its stored digest', async () => {
+    await storeResearchSuggestions(db, {
+      authenticatedActor: actor(),
+      envelope: envelope(),
+      resolverForTransaction,
+    });
+    // Simulate an out-of-band privileged database edit to exercise list-time integrity checks.
+    await db.raw('DROP TRIGGER knowledge_research_suggestion_versions_reject_update');
+    await db('knowledge_research_suggestion_versions')
+      .where({ suggestion_id: 'mw:suggestion:synthetic-summary' })
+      .update({
+        suggestion_json: canonicalResearchJson({
+          ...suggestion(),
+          text: 'Out-of-band altered content.',
+        }),
+      });
+    await expect(
+      listResearchSuggestionVersions(db, { authenticatedReader: actor(), limit: 10 })
+    ).rejects.toThrow(/integrity verification/u);
+  });
 });
