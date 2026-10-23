@@ -51,6 +51,8 @@ Import through public subpaths such as `@moonwitness/ui/components/button`, `@mo
 
 `Button asChild` preserves the child link's navigation semantics. When disabled, it sets `aria-disabled`, removes the child from sequential keyboard focus, and suppresses click/Enter/Space activation—including child click handlers. Prefer a real button with `disabled` when the action does not navigate.
 
+Use `Table`'s optional `scrollLabel` when a table can overflow horizontally. It makes the overflow wrapper a named, keyboard-focusable region while leaving the nested native table semantics intact. When the region itself is focused, Arrow Left/Right pans and Home/End moves to either edge; controls inside the table retain their normal key behavior. The whole page must not acquire horizontal overflow.
+
 Consumers that compile Tailwind utilities must include both the UI package source and built `dist` files in Tailwind's source scan. Otherwise utility-based shared primitives such as Sheet and Dialog can render in the DOM without their required position, overlay, or responsive styles. The Board and UI Catalog stylesheets show the required source paths.
 
 When adding a component: first record its behavior and accessibility contract; build it from existing tokens and helpers; expose a narrow public subpath; add a catalog specimen and relevant package checks; then use it from the product surface. Do not add a duplicate “manga” component when an existing primitive can accept a visual treatment.

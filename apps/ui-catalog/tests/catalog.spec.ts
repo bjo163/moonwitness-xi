@@ -191,6 +191,67 @@ test('filter input controls sample table and navigation keeps a deep link at the
   await expect(page.getByRole('heading', { name: 'Charts', exact: true })).toBeVisible();
 });
 
+test('shared table keeps sort, selection, pagination, and overflow accessible', async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('./#data-display');
+
+  const scrollRegion = page.getByRole('region', {
+    name: 'Installed add-ons table horizontal scroll',
+  });
+  const table = page.getByRole('table', { name: 'Installed add-ons' });
+  await expect(scrollRegion).toBeVisible();
+  await expect(scrollRegion).toHaveAttribute('tabindex', '0');
+  await expect(table.getByRole('row')).toHaveCount(4);
+  expect(await scrollRegion.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(
+    true
+  );
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth
+    )
+  ).toBe(true);
+  await scrollRegion.focus();
+  await expect(scrollRegion).toBeFocused();
+  const initialScrollLeft = await scrollRegion.evaluate((element) => element.scrollLeft);
+  await page.keyboard.press('ArrowRight');
+  const afterArrowRight = await scrollRegion.evaluate((element) => element.scrollLeft);
+  expect(afterArrowRight).toBeGreaterThan(initialScrollLeft);
+  await page.keyboard.press('End');
+  expect(await scrollRegion.evaluate((element) => element.scrollLeft)).toBe(
+    await scrollRegion.evaluate((element) => element.scrollWidth - element.clientWidth)
+  );
+  await page.keyboard.press('Home');
+  expect(await scrollRegion.evaluate((element) => element.scrollLeft)).toBe(0);
+
+  const addonHeader = table.getByRole('row').first().getByRole('columnheader').first();
+  await addonHeader.getByRole('button', { name: 'Sort by addon' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(addonHeader).toHaveAttribute('aria-sort', 'ascending');
+  await expect(table.getByRole('row').nth(1)).toContainText('Analytics');
+
+  await table.getByRole('checkbox', { name: 'Select all add-ons on this page' }).check();
+  for (const name of ['Analytics', 'Base', 'CRM']) {
+    await expect(table.getByRole('checkbox', { name: `Select ${name}` })).toBeChecked();
+  }
+
+  const pagination = page.getByRole('navigation', { name: 'Pagination' });
+  await pagination.getByRole('button', { name: 'Next' }).click();
+  await expect(pagination).toContainText('Page 2 of 2');
+  await expect(table.getByRole('row').nth(1)).toContainText('Inventory');
+
+  await addonHeader.getByRole('button', { name: 'Sort by addon' }).click();
+  await expect(addonHeader).toHaveAttribute('aria-sort', 'descending');
+  await expect(pagination).toContainText('Page 1 of 2');
+  await expect(table.getByRole('row').nth(1)).toContainText('Timeline');
+
+  await scrollRegion.evaluate((element) => {
+    element.scrollLeft = 0;
+  });
+  await scrollRegion.screenshot({ path: testInfo.outputPath('table-mobile.png') });
+});
+
 test('catalog reflows component examples for a narrow screen', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('./#actions');

@@ -526,7 +526,7 @@ Pertahankan satu command manual/otomatis: **`pnpm board:ui:check`**.
 - [x] Uji Dialog/Sheet focus trap, Escape, dan return focus. Bukti: `mobile overlays keep accessible names, keyboard dismissal, focus return, and WCAG contrast` menguji tab-loop dua arah pada dialog Model navigation dan command palette, Escape, serta fokus kembali ke trigger; screenshot command palette mobile diperiksa di `test-results/visual-audit/command-palette-mobile-375.png`.
 - [x] Uji Button as Link dan disabled behavior. Bukti: package test mengecek semantik `aria-disabled`/tabindex; UI Catalog E2E membuktikan link enabled menavigasi, link disabled mempertahankan URL, dan keduanya memakai Button shared.
 - [ ] Uji controlled/disabled/error/loading states.
-- [ ] Uji Table sort, selection, pagination, dan overflow.
+- [x] Uji Table sort, selection, pagination, dan overflow. Bukti: UI Catalog E2E menguji sort keyboard, seleksi semua/baris, pagination terkendali, region overflow bernama/focusable dengan Arrow Left/Right dan Home/End, serta body tanpa overflow; screenshot mobile diperiksa di `test-results/ui-catalog/catalog-shared-table-keeps-90b7b-ion-and-overflow-accessible/table-mobile.png`.
 - [ ] Uji canonical SVG dan generated React wrapper.
 - [ ] Uji inventory, lisensi, package exports, dan generator deterministik.
 - [ ] Uji mute persistence, lazy load, dan playback failure.

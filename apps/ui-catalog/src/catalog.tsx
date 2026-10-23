@@ -162,9 +162,40 @@ function Section({
 
 export function Catalog() {
   const [dark, setDark] = useState(false);
-  const [page, setPage] = useState(2);
+  const [page, setPage] = useState(1);
   const [checked, setChecked] = useState(true);
   const [query, setQuery] = useState('');
+  const [addonSort, setAddonSort] = useState<'ascending' | 'descending' | null>(null);
+  const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
+
+  const addons = [
+    ['Base', 'Platform team', 'Active'],
+    ['CRM', 'Operations', 'Review'],
+    ['Inventory', 'Supply group', 'Active'],
+    ['Analytics', 'Research team', 'Active'],
+    ['Media', 'Editorial team', 'Review'],
+    ['Timeline', 'Platform team', 'Active'],
+  ];
+  const filteredAddons = addons
+    .filter(([name]) => name.toLocaleLowerCase().includes(query.toLocaleLowerCase()))
+    .sort((left, right) =>
+      addonSort === null
+        ? 0
+        : left[0].localeCompare(right[0]) * (addonSort === 'ascending' ? 1 : -1)
+    );
+  const pageCount = Math.max(1, Math.ceil(filteredAddons.length / 3));
+  const currentPage = Math.min(page, pageCount);
+  const visibleAddons = filteredAddons.slice((currentPage - 1) * 3, currentPage * 3);
+  const allVisibleAddonsSelected =
+    visibleAddons.length > 0 && visibleAddons.every(([name]) => selectedAddons.includes(name));
+
+  function toggleVisibleAddons() {
+    setSelectedAddons((current) =>
+      allVisibleAddonsSelected
+        ? current.filter((name) => !visibleAddons.some(([visibleName]) => visibleName === name))
+        : [...new Set([...current, ...visibleAddons.map(([name]) => name)])]
+    );
+  }
 
   function toggleTheme() {
     setDark((current) => {
@@ -827,43 +858,80 @@ export function Catalog() {
             >
               <Example
                 title="Table & pagination"
-                description="Native table semantics and bounded, controlled page navigation."
+                description="Contoh desain: native table semantics, row selection, sorting, and bounded page navigation."
               >
-                <Table>
-                  <caption className="sr-only">Sample installed addons</caption>
+                <Table
+                  className="min-w-[36rem]"
+                  scrollLabel="Installed add-ons table horizontal scroll"
+                  aria-label="Installed add-ons"
+                >
+                  <caption className="sr-only">Sample design: installed add-ons</caption>
                   <TableHead>
                     <TableRow>
-                      <TableHeader scope="col">Addon</TableHeader>
+                      <TableHeader scope="col" aria-sort={addonSort ?? 'none'}>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            aria-label="Select all add-ons on this page"
+                            checked={allVisibleAddonsSelected}
+                            onChange={toggleVisibleAddons}
+                          />
+                          <Button
+                            size="xs"
+                            variant="ghost"
+                            aria-label="Sort by addon"
+                            onClick={() => {
+                              setAddonSort((current) =>
+                                current === 'ascending' ? 'descending' : 'ascending'
+                              );
+                              setPage(1);
+                            }}
+                          >
+                            Addon{' '}
+                            {addonSort === 'ascending'
+                              ? '↑'
+                              : addonSort === 'descending'
+                                ? '↓'
+                                : '↕'}
+                          </Button>
+                        </div>
+                      </TableHeader>
                       <TableHeader scope="col">Owner</TableHeader>
                       <TableHeader scope="col">Status</TableHeader>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {[
-                      ['Base', 'Platform team', 'Active'],
-                      ['CRM', 'Operations', 'Review'],
-                      ['Inventory', 'Supply group', 'Active'],
-                    ]
-                      .filter(([name]) =>
-                        name.toLocaleLowerCase().includes(query.toLocaleLowerCase())
-                      )
-                      .map(([name, owner, status]) => (
-                        <TableRow key={name}>
-                          <TableCell>{name}</TableCell>
-                          <TableCell>{owner}</TableCell>
-                          <TableCell>
-                            <Badge variant={status === 'Active' ? 'primary' : 'default'}>
-                              {status}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                    {visibleAddons.map(([name, owner, status]) => (
+                      <TableRow key={name}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              aria-label={`Select ${name}`}
+                              checked={selectedAddons.includes(name)}
+                              onChange={() =>
+                                setSelectedAddons((current) =>
+                                  current.includes(name)
+                                    ? current.filter((selected) => selected !== name)
+                                    : [...current, name]
+                                )
+                              }
+                            />
+                            {name}
+                          </div>
+                        </TableCell>
+                        <TableCell>{owner}</TableCell>
+                        <TableCell>
+                          <Badge variant={status === 'Active' ? 'primary' : 'default'}>
+                            {status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
                 <Pagination
                   className="catalog-pagination"
-                  page={page}
-                  pageCount={5}
+                  page={currentPage}
+                  pageCount={pageCount}
                   onPageChange={setPage}
                 />
               </Example>
