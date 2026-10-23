@@ -74,7 +74,7 @@ Dialog centering must be defined in one place. `DialogContent` already applies T
 
 Motion is brief, purposeful, and never required to understand a state. Respect `prefers-reduced-motion` in CSS and JavaScript. Avoid perpetual parallax, animated texture, or hidden/off-screen work. Effects never intercept input. Prefer CSS/SVG; add canvas/WebGL only for a measured need with an explicit performance budget.
 
-Use `SoundProvider`, `useSfx`, and `SoundToggle` from the audio public subpath. Default to muted. Sound is available only after a user interaction and an explicit unmuted preference, stored locally. Load a named short cue only when an approved success, important alert, or explicit media action occurs. Never sound on hover, scrolling, or every click. Audio failure cannot affect the product action, and visual/text status remains complete when sound is unavailable.
+Use `SoundProvider`, `useSfx`, and `SoundToggle` from the audio public subpath. Default to muted. Sound is available only after a user interaction and an explicit unmuted preference, stored locally. Load a named short cue only when an approved success, important alert, or explicit media action occurs. Never sound on hover, scrolling, or every click. Allow one cue to play at a time; drop new cues while the current cue is active. Release the playback slot after completion or failure. Audio failure cannot affect the product action, and visual/text status remains complete when sound is unavailable.
 
 ## Quick visual examples
 

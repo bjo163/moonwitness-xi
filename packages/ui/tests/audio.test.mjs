@@ -42,6 +42,8 @@ test('sound files are created only for enabled playback after first interaction'
     const audio = {
       preload: '',
       volume: 1,
+      ended: false,
+      onended: null,
       play: () => Promise.resolve(),
     };
     created.push({ source, audio });
@@ -57,6 +59,8 @@ test('sound files are created only for enabled playback after first interaction'
   assert.equal(created[0].source, '/sounds/ui-signal.wav');
   assert.equal(created[0].audio.preload, 'none');
   assert.equal(created[0].audio.volume, 0.32);
+  created[0].audio.ended = true;
+  created[0].audio.onended?.({});
 });
 
 test('audio creation and playback failures never escape into product actions', async () => {
@@ -69,8 +73,58 @@ test('audio creation and playback failures never escape into product actions', a
     playCatalogSound('success', true, true, () => ({
       preload: '',
       volume: 1,
+      ended: false,
+      onended: null,
       play: () => Promise.reject(new Error('playback blocked')),
     }))
   );
   await Promise.resolve();
+});
+
+test('only one cue plays at a time and the next cue can play after the active cue ends', () => {
+  const created = [];
+  const createAudio = (source) => {
+    const audio = {
+      source,
+      preload: '',
+      volume: 1,
+      ended: false,
+      onended: null,
+      play: () => Promise.resolve(),
+    };
+    created.push(audio);
+    return audio;
+  };
+
+  playCatalogSound('success', true, true, createAudio);
+  playCatalogSound('alert', true, true, createAudio);
+  assert.equal(created.length, 1, 'a second cue is dropped while the first is active');
+
+  created[0].ended = true;
+  created[0].onended?.({});
+  playCatalogSound('signal', true, true, createAudio);
+  assert.equal(created.length, 2);
+  assert.equal(created[1].source, '/sounds/ui-signal.wav');
+  created[1].ended = true;
+  created[1].onended?.({});
+});
+
+test('rejected playback releases the active cue slot', async () => {
+  let attempts = 0;
+  const createAudio = () => {
+    attempts += 1;
+    return {
+      preload: '',
+      volume: 1,
+      ended: false,
+      onended: null,
+      play: () => Promise.reject(new Error('media unavailable')),
+    };
+  };
+
+  playCatalogSound('alert', true, true, createAudio);
+  await Promise.resolve();
+  playCatalogSound('success', true, true, createAudio);
+  await Promise.resolve();
+  assert.equal(attempts, 2, 'a failed cue does not block later playback');
 });

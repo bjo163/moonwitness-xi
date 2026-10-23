@@ -288,6 +288,46 @@ test('shared controls expose controlled, disabled, validation, and loading state
   });
 });
 
+test('sound toggle persists preference and cues load only after explicit enabled playback', async ({
+  page,
+}, testInfo) => {
+  let cueRequests = 0;
+  await page.route('**/sounds/ui-success.wav', async (route) => {
+    cueRequests += 1;
+    await route.fulfill({
+      path: resolve(process.cwd(), '../../packages/assets/sounds/ui-success.wav'),
+      contentType: 'audio/wav',
+    });
+  });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('./#actions');
+
+  const enableSounds = page.getByRole('button', { name: 'Enable interface sounds' });
+  const playCue = page.getByRole('button', { name: 'Play success cue' });
+  await expect(enableSounds).toHaveAttribute('aria-pressed', 'false');
+  await playCue.click();
+  expect(cueRequests).toBe(0);
+
+  await enableSounds.click();
+  const muteSounds = page.getByRole('button', { name: 'Mute interface sounds' });
+  await expect(muteSounds).toHaveAttribute('aria-pressed', 'true');
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem('mw-ui-sound-enabled')))
+    .toBe('true');
+
+  await page.reload();
+  const restoredToggle = page.getByRole('button', { name: 'Mute interface sounds' });
+  await expect(restoredToggle).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Play success cue' }).click();
+  await expect.poll(() => cueRequests).toBe(1);
+  await page
+    .locator('.catalog-inline')
+    .filter({ has: restoredToggle })
+    .screenshot({
+      path: testInfo.outputPath('sound-toggle-enabled-state.png'),
+    });
+});
+
 test('shared table keeps sort, selection, pagination, and overflow accessible', async ({
   page,
 }, testInfo) => {

@@ -493,8 +493,8 @@ Urutan: header → hero manga → tiga panel editorial → band koneksi → film
 - [x] Tampilkan SoundToggle di Home dan Board. Bukti: `apps/board/src/app/page.tsx`, `apps/board/src/components/layout/app-shell.tsx`.
 - [x] Lazy-load audio saat cue dipakai. `Audio` dibuat hanya ketika cue dipanggil dan preferensi/aktivasi mengizinkan; dites di `packages/ui/tests/audio.test.mjs`.
 - [x] Jangan bunyikan hover, scroll, atau setiap klik biasa. Pemanggilan produk saat ini hanya pada hasil sukses autentikasi.
-- [ ] Batasi overlap cue ketika event berdekatan.
-- [ ] Tangani audio hilang/diblokir tanpa mengganggu aksi UI.
+- [x] Batasi overlap cue ketika event berdekatan. UI Bible menetapkan satu cue aktif; `packages/ui/tests/audio.test.mjs` membuktikan cue kedua diabaikan dan playback berikutnya bisa berjalan setelah selesai.
+- [x] Tangani audio hilang/diblokir tanpa mengganggu aksi UI. Tes audio menguji constructor gagal dan Promise playback reject; keduanya tidak melempar dan slot dilepas untuk cue berikutnya.
 - [ ] Audit clipping, durasi, channel, dan volume berkas.
 - [ ] Gunakan format terkompresi bila pengukuran membuktikan manfaat.
 - [ ] Catat source/provenance/lisensi di manifest yang ada.
@@ -529,7 +529,7 @@ Pertahankan satu command manual/otomatis: **`pnpm board:ui:check`**.
 - [x] Uji Table sort, selection, pagination, dan overflow. Bukti: UI Catalog E2E menguji sort keyboard, seleksi semua/baris, pagination terkendali, region overflow bernama/focusable dengan Arrow Left/Right dan Home/End, serta body tanpa overflow; screenshot mobile diperiksa di `test-results/ui-catalog/catalog-shared-table-keeps-90b7b-ion-and-overflow-accessible/table-mobile.png`.
 - [x] Uji canonical SVG dan generated React wrapper. Bukti: `packages/ui/tests/icons.test.mjs` membandingkan atribut pada 50 wrapper; UI Catalog merender semua pasangan di browser dan memeriksa ukuran render, lalu contact sheet diperiksa visual dan disimpan di `docs/design/ui-catalog/canonical-vs-react-icons.png`.
 - [x] Uji inventory, lisensi, package exports, dan generator deterministik. Bukti: `pnpm test:assets` (24/24) memeriksa exact inventory, provenance/hash font, dan isi tarball; `pnpm assets:generate` dijalankan dua kali dan hash seluruh media tetap identik.
-- [ ] Uji mute persistence, lazy load, dan playback failure.
+- [x] Uji mute persistence, lazy load, dan playback failure. `packages/ui/tests/audio.test.mjs` mencakup preference, gating, constructor/reject, dan overlap; UI Catalog E2E membuktikan default mute, toggle tersimpan setelah reload, tanpa request audio saat muted, dan request baru saat cue eksplisit dimainkan. Screenshot label ditinjau dan disimpan di `docs/design/ui-catalog/sound-toggle-enabled-state.png`.
 - [ ] Uji reduced-motion tanpa kehilangan informasi state.
 - [ ] Uji zoom 200%, font fallback, dan image load failure.
 

@@ -73,6 +73,7 @@ import {
 } from '@moonwitness/ui/components/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@moonwitness/ui/components/tabs';
 import { toast, ToastHost } from '@moonwitness/ui/components/toast';
+import { SoundProvider, SoundToggle, useSfx } from '@moonwitness/ui/components/audio';
 import { Toolbar } from '@moonwitness/ui/components/toolbar';
 import {
   Tooltip,
@@ -160,13 +161,14 @@ function Section({
   );
 }
 
-export function Catalog() {
+function CatalogContent() {
   const [dark, setDark] = useState(false);
   const [page, setPage] = useState(1);
   const [checked, setChecked] = useState(true);
   const [query, setQuery] = useState('');
   const [addonSort, setAddonSort] = useState<'ascending' | 'descending' | null>(null);
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
+  const { play } = useSfx();
 
   const addons = [
     ['Base', 'Platform team', 'Active'],
@@ -658,9 +660,13 @@ export function Catalog() {
               </Example>
               <Example
                 title="Tooltip & toast"
-                description="Tooltip opens on focus or hover; toast reports the result without moving focus."
+                description="Tooltip opens on focus or hover; toast reports results, and SFX stays muted until enabled."
               >
                 <div className="catalog-inline">
+                  <SoundToggle />
+                  <Button variant="outline" onClick={() => play('success')}>
+                    Play success cue
+                  </Button>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="outline">
@@ -997,5 +1003,13 @@ export function Catalog() {
         </main>
       </div>
     </TooltipProvider>
+  );
+}
+
+export function Catalog() {
+  return (
+    <SoundProvider>
+      <CatalogContent />
+    </SoundProvider>
   );
 }

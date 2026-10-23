@@ -16,8 +16,12 @@ type SoundStorage = {
 type AudioPlayback = {
   preload: string;
   volume: number;
+  ended: boolean;
+  onended: ((event: Event) => unknown) | null;
   play: () => Promise<unknown>;
 };
+
+let activeAudio: AudioPlayback | null = null;
 
 export function readSoundPreference(storage: SoundStorage): boolean {
   try {
@@ -42,12 +46,20 @@ export function playCatalogSound(
   createAudio: (source: string) => AudioPlayback
 ): void {
   if (!enabled || !ready) return;
+  if (activeAudio && !activeAudio.ended) return;
   try {
     const audio = createAudio(catalog[name]);
+    activeAudio = audio;
+    audio.onended = () => {
+      if (activeAudio === audio) activeAudio = null;
+    };
     audio.preload = 'none';
     audio.volume = 0.32;
-    void audio.play().catch(() => undefined);
+    void audio.play().catch(() => {
+      if (activeAudio === audio) activeAudio = null;
+    });
   } catch {
+    activeAudio = null;
     // Missing audio never interrupts the action.
   }
 }
