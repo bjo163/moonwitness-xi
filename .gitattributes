@@ -4,6 +4,12 @@ corpus/reference/sha256/** -text
 # Bash scripts must keep LF endings when checked out on Windows hosts.
 scripts/*.sh text eol=lf
 
+# Workflow YAML is asserted byte-for-byte by scripts/roadmap and scripts/*.test.mjs,
+# and corpus manifests are hash-pinned by packages/local-ai retrieval; both compare
+# LF content recorded from Linux CI, so a CRLF checkout breaks them.
+.github/**/*.yml text eol=lf
+corpus/manifests/** text eol=lf
+
 # Design assets are hashed byte-for-byte into docs/assets/moonwitness/asset-map.json,
 # so a CRLF checkout on Windows would commit hashes that Linux CI cannot reproduce.
 packages/assets/**/*.svg text eol=lf
