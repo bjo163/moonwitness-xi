@@ -69,7 +69,9 @@ and retry fencing, with the external-system and pre-acceptance outage limits doc
 
 ## Integration on the current remote branch
 
-The publish branch is based on remote `dev` at `11b1455`. Existing remote WhatsApp controls,
+Verification was run against remote `dev` at `11b1455`, then rebased onto `e712b04` before
+publishing commit `acbed8d`. The additional base commit changes an unrelated KPI test and
+documentation; WhatsApp runtime sources are unchanged by that rebase. Existing remote WhatsApp controls,
 route metadata and `start:built` scripts were retained while applying the tested fixes. The
 combined source passes a full workspace build, 13 API cases on each database backend, 56 auth
 and record-rule regression cases, 5 worker cases, 9 ORM cases and the 2 Chromium scenarios.
