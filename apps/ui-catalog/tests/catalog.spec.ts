@@ -1,5 +1,10 @@
 import AxeBuilder from '@axe-core/playwright';
+import { readFile, readdir } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { expect, test } from '@playwright/test';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 
 test('static catalog loads under the repository Pages subpath with its shared UI assets', async ({
   page,
@@ -84,6 +89,50 @@ test('brand, typography, and homepage proof use canonical assets and correct spe
     ).toBe(false);
     await page.screenshot({ path: testInfo.outputPath(`editorial-proof-${viewport.name}.png`) });
   }
+});
+
+test('canonical icon SVGs match generated React wrappers in a browser contact sheet', async ({
+  page,
+}, testInfo) => {
+  const iconDirectory = resolve(process.cwd(), '../../packages/assets/icons');
+  const wrapperDirectory = resolve(process.cwd(), '../../packages/ui/dist/icons');
+  const iconFiles = (await readdir(iconDirectory)).filter((file) => file.endsWith('.svg')).sort();
+  const cards = await Promise.all(
+    iconFiles.map(async (file) => {
+      const name = file.slice(0, -4);
+      const source = await readFile(resolve(iconDirectory, file), 'utf8');
+      const module = await import(pathToFileURL(resolve(wrapperDirectory, `${name}.js`)).href);
+      const componentName = `${name.replace(/(^|-)([a-z])/gu, (_match, _dash, letter) => letter.toUpperCase())}Icon`;
+      const Wrapper = module[componentName];
+      expect(Wrapper, `${name} has a generated React wrapper`).toBeDefined();
+      const canonical = source.replace('<svg', '<svg class="icon-render"');
+      const generated = renderToStaticMarkup(createElement(Wrapper, { className: 'icon-render' }));
+      return `<article class="icon-pair"><h2>${name}</h2><div><figure>${canonical}<figcaption>Canonical SVG</figcaption></figure><figure>${generated}<figcaption>React wrapper</figcaption></figure></div></article>`;
+    })
+  );
+
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.setContent(`<!doctype html><html><head><style>
+    *{box-sizing:border-box}body{margin:0;padding:20px;background:#f3efe4;color:#0d0d0d;font:12px Arial,sans-serif}
+    main{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+    .icon-pair{margin:0;padding:8px;border:1px solid #0d0d0d;background:#fffdf6;min-width:0}
+    h2{margin:0 0 6px;font:700 11px Arial,sans-serif;overflow-wrap:anywhere}
+    .icon-pair>div{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+    figure{margin:0;min-height:64px;display:grid;place-items:center;align-content:center;gap:4px;border:1px solid #d7d0c2}
+    .icon-render{width:32px;height:32px;color:#0d0d0d}
+    figcaption{font:9px Arial,sans-serif;color:#353535}
+    </style></head><body><main>${cards.join('')}</main></body></html>`);
+  await expect(page.locator('.icon-pair')).toHaveCount(iconFiles.length);
+  await expect(page.locator('.icon-render')).toHaveCount(iconFiles.length * 2);
+  for (const icon of await page.locator('.icon-render').all()) {
+    const bounds = await icon.boundingBox();
+    expect(bounds?.width).toBeGreaterThan(0);
+    expect(bounds?.height).toBeGreaterThan(0);
+  }
+  await page.screenshot({
+    path: testInfo.outputPath('canonical-vs-react-icons.png'),
+    fullPage: true,
+  });
 });
 
 test('dashboard proof uses canonical masthead and labels all fixture content as sample data', async ({

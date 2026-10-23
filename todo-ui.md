@@ -527,7 +527,7 @@ Pertahankan satu command manual/otomatis: **`pnpm board:ui:check`**.
 - [x] Uji Button as Link dan disabled behavior. Bukti: package test mengecek semantik `aria-disabled`/tabindex; UI Catalog E2E membuktikan link enabled menavigasi, link disabled mempertahankan URL, dan keduanya memakai Button shared.
 - [x] Uji controlled/disabled/error/loading states. Bukti: `apps/ui-catalog/tests/catalog.spec.ts` menguji input dan checkbox controlled, tombol disabled, field validation dengan `aria-invalid`/`aria-describedby`, skeleton `aria-busy`, serta chart loading/error; screenshot states diperiksa visual di `test-results/ui-catalog/catalog-shared-controls-ex-32dea-lidation-and-loading-states/`.
 - [x] Uji Table sort, selection, pagination, dan overflow. Bukti: UI Catalog E2E menguji sort keyboard, seleksi semua/baris, pagination terkendali, region overflow bernama/focusable dengan Arrow Left/Right dan Home/End, serta body tanpa overflow; screenshot mobile diperiksa di `test-results/ui-catalog/catalog-shared-table-keeps-90b7b-ion-and-overflow-accessible/table-mobile.png`.
-- [ ] Uji canonical SVG dan generated React wrapper.
+- [x] Uji canonical SVG dan generated React wrapper. Bukti: `packages/ui/tests/icons.test.mjs` membandingkan atribut pada 50 wrapper; UI Catalog merender semua pasangan di browser dan memeriksa ukuran render, lalu contact sheet diperiksa visual dan disimpan di `docs/design/ui-catalog/canonical-vs-react-icons.png`.
 - [ ] Uji inventory, lisensi, package exports, dan generator deterministik.
 - [ ] Uji mute persistence, lazy load, dan playback failure.
 - [ ] Uji reduced-motion tanpa kehilangan informasi state.
