@@ -1,6 +1,6 @@
 # Generated API route reference
 
-Extracted from literal Fastify route declarations. Source fingerprint: `e1cb6f5e44193b196170719b964a8e54e4d62631f97366897dea5351b8bfe15e`. Generic handler request payloads are not inferred where the source does not declare a static schema.
+Extracted from literal Fastify route declarations. Source fingerprint: `7205187deed9f728c777e18078634c9d4454a410bc53087f09b9d2bbd91f0c0a`. Generic handler request payloads are not inferred where the source does not declare a static schema.
 
 | Method | Path                                              |
 | ------ | ------------------------------------------------- |
@@ -58,6 +58,14 @@ Extracted from literal Fastify route declarations. Source fingerprint: `e1cb6f5e
 | POST   | `/auth/refresh`                                   |
 | POST   | `/auth/register`                                  |
 | GET    | `/health`                                         |
+| GET    | `/internal/whatsapp/accounts`                     |
+| POST   | `/internal/whatsapp/connection-control`           |
+| POST   | `/internal/whatsapp/incoming`                     |
+| POST   | `/internal/whatsapp/job-result`                   |
+| POST   | `/internal/whatsapp/jobs/claim`                   |
+| GET    | `/internal/whatsapp/media/:id`                    |
+| POST   | `/internal/whatsapp/message-status`               |
+| POST   | `/internal/whatsapp/status`                       |
 | POST   | `/jsonrpc`                                        |
 | GET    | `/livez`                                          |
 | GET    | `/metrics`                                        |
@@ -66,6 +74,13 @@ Extracted from literal Fastify route declarations. Source fingerprint: `e1cb6f5e
 | GET    | `/notifications/preferences`                      |
 | PUT    | `/notifications/preferences/:channel`             |
 | GET    | `/readyz`                                         |
+| GET    | `/whatsapp/account`                               |
+| POST   | `/whatsapp/connect`                               |
+| GET    | `/whatsapp/conversations`                         |
+| GET    | `/whatsapp/conversations/:id/messages`            |
+| POST   | `/whatsapp/conversations/:id/messages`            |
+| POST   | `/whatsapp/disconnect`                            |
+| GET    | `/whatsapp/media/:id`                             |
 | GET    | `/workflows/definitions`                          |
 | GET    | `/workflows/instances`                            |
 | POST   | `/workflows/instances`                            |

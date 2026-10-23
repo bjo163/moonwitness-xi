@@ -23,6 +23,7 @@
         "reset:superadmin-password",
         "revoke:auth-sessions",
         "start",
+        "start:built",
         "test",
         "visual-audit:server"
       ]
@@ -31,7 +32,7 @@
       "name": "@moonwitness/board",
       "version": "1.0.0-rc.1",
       "directory": "apps/board",
-      "scripts": ["build", "dev", "lint", "preview", "start", "typecheck"]
+      "scripts": ["build", "dev", "lint", "preview", "start", "start:built", "typecheck"]
     },
     {
       "name": "@moonwitness/docs",
@@ -49,7 +50,7 @@
       "name": "@moonwitness/whatsapp",
       "version": "1.0.0-rc.1",
       "directory": "apps/whatsapp",
-      "scripts": ["build", "dev", "start", "typecheck"]
+      "scripts": ["build", "dev", "start", "start:built", "typecheck"]
     },
     {
       "name": "@moonwitness/assets",
@@ -189,6 +190,7 @@
       "reset:superadmin-password": "tsx src/commands/reset-superadmin-password.ts",
       "revoke:auth-sessions": "tsx src/commands/revoke-auth-sessions.ts",
       "start": "node dist/server.js",
+      "start:built": "node dist/server.js",
       "test": "vitest run",
       "visual-audit:server": "tsx src/commands/visual-audit-server.ts"
     },
@@ -198,6 +200,7 @@
       "lint": "oxlint",
       "preview": "node ../../scripts/prepare-board-standalone.mjs && node .next/standalone/apps/board/server.js",
       "start": "node ../../scripts/prepare-board-standalone.mjs && node .next/standalone/apps/board/server.js",
+      "start:built": "node .next/standalone/apps/board/server.js",
       "typecheck": "tsc --noEmit"
     },
     "@moonwitness/docs": {
@@ -219,6 +222,7 @@
       "build": "tsc",
       "dev": "tsx watch src/main.ts",
       "start": "node dist/main.js",
+      "start:built": "node dist/main.js",
       "typecheck": "tsc --noEmit"
     },
     "@moonwitness/assets": {
@@ -332,7 +336,7 @@
       "ci:affected": "node scripts/select-affected.mjs",
       "dependency:candidate": "node scripts/dependency-candidate.mjs",
       "dependency:plan": "node scripts/dependency-update-plan.mjs",
-      "dev": "pnpm --filter @moonwitness/api --filter @moonwitness/board --parallel dev",
+      "dev": "pnpm --filter @moonwitness/api --filter @moonwitness/board --filter @moonwitness/whatsapp --parallel dev",
       "dev:api": "pnpm --filter @moonwitness/api dev",
       "dev:board": "pnpm --filter @moonwitness/board dev",
       "dev:whatsapp": "pnpm --filter @moonwitness/whatsapp dev",
@@ -373,6 +377,8 @@
       "roadmap:issues:audit": "node scripts/roadmap/audit-issues.mjs",
       "roadmap:issues:plan": "node scripts/roadmap/sync-issues.mjs",
       "roadmap:progress": "node scripts/roadmap/progress-dashboard.mjs",
+      "start": "pnpm --filter @moonwitness/api --filter @moonwitness/board --filter @moonwitness/whatsapp --parallel start",
+      "start:built": "pnpm --filter @moonwitness/api --filter @moonwitness/board --filter @moonwitness/whatsapp --parallel start:built",
       "test": "pnpm test:unit",
       "test:action-pins": "node --test scripts/check-action-pins.test.mjs",
       "test:action-tags": "node --test scripts/check-action-tag-pins.test.mjs",
@@ -6276,6 +6282,38 @@
       "path": "/health"
     },
     {
+      "method": "GET",
+      "path": "/internal/whatsapp/accounts"
+    },
+    {
+      "method": "POST",
+      "path": "/internal/whatsapp/connection-control"
+    },
+    {
+      "method": "POST",
+      "path": "/internal/whatsapp/incoming"
+    },
+    {
+      "method": "POST",
+      "path": "/internal/whatsapp/job-result"
+    },
+    {
+      "method": "POST",
+      "path": "/internal/whatsapp/jobs/claim"
+    },
+    {
+      "method": "GET",
+      "path": "/internal/whatsapp/media/:id"
+    },
+    {
+      "method": "POST",
+      "path": "/internal/whatsapp/message-status"
+    },
+    {
+      "method": "POST",
+      "path": "/internal/whatsapp/status"
+    },
+    {
       "method": "POST",
       "path": "/jsonrpc"
     },
@@ -6309,6 +6347,34 @@
     },
     {
       "method": "GET",
+      "path": "/whatsapp/account"
+    },
+    {
+      "method": "POST",
+      "path": "/whatsapp/connect"
+    },
+    {
+      "method": "GET",
+      "path": "/whatsapp/conversations"
+    },
+    {
+      "method": "GET",
+      "path": "/whatsapp/conversations/:id/messages"
+    },
+    {
+      "method": "POST",
+      "path": "/whatsapp/conversations/:id/messages"
+    },
+    {
+      "method": "POST",
+      "path": "/whatsapp/disconnect"
+    },
+    {
+      "method": "GET",
+      "path": "/whatsapp/media/:id"
+    },
+    {
+      "method": "GET",
       "path": "/workflows/definitions"
     },
     {
@@ -6328,5 +6394,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "e1cb6f5e44193b196170719b964a8e54e4d62631f97366897dea5351b8bfe15e"
+  "generatedFromSha256": "7205187deed9f728c777e18078634c9d4454a410bc53087f09b9d2bbd91f0c0a"
 }

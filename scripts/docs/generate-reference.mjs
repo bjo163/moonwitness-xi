@@ -115,6 +115,10 @@ function routeLiteral(node) {
   return undefined;
 }
 
+// Fastify plugins receive the instance as their first parameter; route files name it either
+// `fastify` or an alias, and an alias must not silently drop that file from the reference.
+const routeReceivers = new Set(['fastify', 'app', 'server']);
+
 export function extractRoutes(source, fileName = 'routes.ts') {
   const file = ts.createSourceFile(
     fileName,
@@ -133,7 +137,7 @@ export function extractRoutes(source, fileName = 'routes.ts') {
       const receiver = node.expression.expression;
       if (
         ts.isIdentifier(receiver) &&
-        receiver.text === 'fastify' &&
+        routeReceivers.has(receiver.text) &&
         ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'].includes(method)
       ) {
         const route = routeLiteral(node.arguments[0]);
