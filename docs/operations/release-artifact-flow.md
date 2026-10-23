@@ -36,7 +36,7 @@ A stable cycle starts only after the final release candidate is published:
 
 1. Dispatch **Orchestrate release** on `main` with `channel=stable` and `confirm_version=vX.Y.Z`. The planner finalizes the version from the published RC baseline; the exact confirmation authorizes preparation.
 2. Merge the promotion PR through the protected path.
-3. Dispatch **Orchestrate release** again with `channel=stable` and the same `confirm_version=vX.Y.Z`. The run must pass the `release` environment gate; the tag and the publication dispatch carry the same confirmation.
+3. Dispatch **Orchestrate release** again with `channel=stable` and the same `confirm_version=vX.Y.Z`. The job runs in the `release` environment; configure required reviewers there before the first stable publication. The tag and the publication dispatch carry the same confirmation.
 
 A hotfix uses `channel=hotfix`, accepts only patch-level changes, and always requires the explicit stable confirmation before preparation and publication. Local decision previews can be reproduced without writes:
 
@@ -49,7 +49,7 @@ node scripts/release-orchestrator.mjs \
 
 `remote-tags.txt` is the output of `git ls-remote --tags origin`; `releases.json` is `gh api --paginate --slurp repos/<owner>/<repo>/releases?per_page=100`. Add `--confirm-version vX.Y.Z` to preview a stable publication.
 
-The repository currently has the `v1.0.0-rc.1` tag without a published GitHub Release. Until an authorized operator publishes that baseline through the release workflow, orchestration fails closed with `baseline-unpublished`; do not delete, move, or retag it to bypass the check.
+The repository currently has the `v1.0.0-rc.1` tag without a published GitHub Release, and its commit has no successful main-push `ci-gate`, so the trusted release workflow cannot publish it as-is. Orchestration fails closed with `baseline-unpublished`; a maintainer must decide and document an explicit baseline/bootstrap policy before release automation can proceed. Do not delete, move, or retag the tag to bypass the check.
 
 ## Consumer verification
 
