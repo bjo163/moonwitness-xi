@@ -169,6 +169,18 @@ test('core controls preserve native form semantics and use package-owned styles'
   assert.match(slottedButton, /<a[^>]*href="\/profile"/u);
   assert.match(slottedButton, /data-slot="button"/u);
 
+  const disabledSlottedButton = renderToStaticMarkup(
+    createElement(
+      Button,
+      { asChild: true, disabled: true },
+      createElement('a', { href: '/profile', onClick: () => {} }, 'Disabled profile')
+    )
+  );
+  assert.match(disabledSlottedButton, /aria-disabled="true"/u);
+  assert.match(disabledSlottedButton, /tabindex="-1"/u);
+  assert.match(disabledSlottedButton, /href="\/profile"/u);
+  assert.match(disabledSlottedButton, /data-variant="default"/u);
+
   const input = renderToStaticMarkup(
     createElement(Input, { type: 'email', name: 'email', required: true })
   );

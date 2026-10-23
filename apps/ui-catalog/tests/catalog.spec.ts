@@ -155,6 +155,28 @@ test('dialog and tabs support keyboard interaction and restore focus', async ({ 
   await expect(page.getByRole('tabpanel')).toContainText('Recent events');
 });
 
+test('button links preserve navigation and disabled links cannot activate', async ({
+  page,
+}, testInfo) => {
+  await page.goto('./#actions');
+  const enabledLink = page.getByRole('link', { name: 'Enabled link action' });
+  await expect(enabledLink).toHaveAttribute('href', '#brand');
+  await expect(enabledLink).toHaveAttribute('data-slot', 'button');
+  await enabledLink.click();
+  await expect(page).toHaveURL(/#brand$/u);
+  await page.goto('./#actions');
+
+  const disabledLink = page.getByTestId('disabled-button-link');
+  await expect(disabledLink).toHaveAttribute('aria-disabled', 'true');
+  await expect(disabledLink).toHaveAttribute('tabindex', '-1');
+  await expect(disabledLink).toHaveAttribute('href', '#brand');
+  await disabledLink.dispatchEvent('click');
+  await expect(page).toHaveURL(/#actions$/u);
+  await page.locator('.catalog-button-grid').screenshot({
+    path: testInfo.outputPath('button-link-states.png'),
+  });
+});
+
 test('filter input controls sample table and navigation keeps a deep link at the Pages base path', async ({
   page,
 }) => {

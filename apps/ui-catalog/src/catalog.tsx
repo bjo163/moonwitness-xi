@@ -606,6 +606,20 @@ export function Catalog() {
                   <Button size="xs">Extra small</Button>
                   <Button size="lg">Large action</Button>
                   <Button disabled>Disabled</Button>
+                  <Button asChild variant="outline">
+                    <a href="#brand">Enabled link action</a>
+                  </Button>
+                  <Button asChild disabled variant="outline">
+                    <a
+                      href="#brand"
+                      data-testid="disabled-button-link"
+                      onClick={() => {
+                        window.location.hash = 'brand';
+                      }}
+                    >
+                      Disabled link action
+                    </a>
+                  </Button>
                   <Button className="catalog-long-button">
                     Save these organization preferences and notify every workspace administrator
                   </Button>

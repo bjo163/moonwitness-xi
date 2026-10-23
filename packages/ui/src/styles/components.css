@@ -227,7 +227,7 @@
     font-size: var(--mw-font-size-xs);
   }
 
-  .mw-ui-button:hover:not(:disabled) {
+  .mw-ui-button:hover:not(:disabled):not([aria-disabled='true']) {
     transform: translate(-1px, -1px);
     box-shadow: 3px 3px 0 var(--mw-ink);
   }
@@ -240,7 +240,8 @@
     outline-offset: 2px;
   }
 
-  .mw-ui-button:disabled {
+  .mw-ui-button:disabled,
+  .mw-ui-button[aria-disabled='true'] {
     cursor: not-allowed;
     opacity: 0.55;
   }
