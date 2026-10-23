@@ -280,6 +280,8 @@ Perluas komponen yang sudah ada; jangan membuat duplicate `MangaButton`/`MangaPa
 
 Accent `magenta`, `cyan`, dan `yellow` bersifat dekoratif; accent tidak mengubah arti error/success.
 
+- [x] Sertakan source dan output UI package pada pemindaian Tailwind consumer agar style Sheet/Dialog shared tersedia. Bukti: `apps/board/src/index.css` dan `apps/ui-catalog/src/styles.css`; E2E memeriksa posisi Sheet dan overlay.
+
 ### Primitive dan composition
 
 - [x] Terapkan treatment brush ke Button tanpa mengubah perilaku tombol.
@@ -353,7 +355,7 @@ Urutan: header → hero manga → tiga panel editorial → band koneksi → film
 - [x] Gunakan shared Button untuk CTA login. Bukti: CTA `Enter the board` memakai `Button` + Next `Link` di `apps/board/src/app/page.tsx`.
 - [x] Tampilkan SoundToggle dengan label yang jelas. Bukti visual `homepage-filmstrip-desktop-1672.png`; accessible name diperiksa pada homepage.
 - [x] Tampilkan search/language hanya jika kontrol punya aksi nyata. Home tidak menampilkan kontrol search atau language yang belum berfungsi.
-- [ ] Jadikan navigasi mobile sebagai menu accessible.
+- [x] Jadikan navigasi mobile sebagai menu accessible dari Sheet shared. Bukti visual ejaan dan isi menu: `docs/design/ui-catalog/homepage-mobile-menu-390.png`; keyboard open/close, focus trap, return focus, tautan section, posisi panel/overlay, dan CTA ke login diuji di `apps/board/e2e/public-home.spec.ts`.
 - [x] Ganti hero geometris dua kolom dengan panorama collage. Bukti: `docs/design/ui-catalog/homepage-filmstrip-desktop-1672.png`.
 - [x] Letakkan karakter besar di tengah/kanan dan beri negative space untuk copy. Bukti: screenshot desktop dan mobile di UI Catalog.
 - [x] Render headline dan copy sebagai HTML yang dapat diakses/searchable. Bukti: h1 `MOONWITNESS` terdeteksi pada Playwright dan terbaca di screenshot.
@@ -539,7 +541,7 @@ Pertahankan satu command manual/otomatis: **`pnpm board:ui:check`**.
 - [x] Tambahkan screenshot baseline workbench kosong dan populated desktop/mobile; ejaan brand/copy, pemuatan artwork, overflow, accessibility, dan hash contoh diperiksa secara visual. Bukti: baseline `workbench-desktop-1440`, `workbench-mobile-390`, `workbench-filled-desktop-1440`, dan `workbench-filled-mobile-390` di `apps/board/e2e/visual-audit.spec.ts-snapshots/`.
 - [ ] Tambahkan specimen tabel, form, overlay, dan state utama.
 - [ ] Gunakan data, waktu, font, dan dekorasi deterministik.
-- [x] Review di `1672×941`, `1440×900`, `1024×900`, `768×1024`, dan `390×844`. Bukti: fullpage screenshots dan audit; 320 px masih tersisa.
+- [x] Review di `1672×941`, `1440×900`, `1024×900`, `768×1024`, `390×844`, dan `320×700`. Bukti: screenshot homepage desktop/mobile dan `docs/design/ui-catalog/homepage-mobile-320.png`; tidak ada page overflow.
 - [ ] Review light/dark dan reduced motion.
 - [ ] Pastikan body tidak overflow horizontal; tabel memakai scroll region berlabel.
 - [ ] Bandingkan side-by-side dengan referensi dan catat gap.

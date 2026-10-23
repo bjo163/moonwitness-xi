@@ -4,6 +4,9 @@
 @import '@moonwitness/ui/components.css';
 @import '@moonwitness/assets/fonts.css';
 
+@source '../../../packages/ui/src';
+@source '../../../packages/ui/dist';
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*

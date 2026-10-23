@@ -71,6 +71,38 @@ test('homepage adapts to a narrow mobile viewport without horizontal overflow', 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1, name: 'MoonWitness' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeHidden();
+  const menuTrigger = page.getByRole('button', { name: 'Open site navigation' });
+  await expect(menuTrigger).toBeVisible();
+  await menuTrigger.focus();
+  await page.keyboard.press('Enter');
+  const mobileNav = page.getByRole('navigation', { name: 'Mobile navigation' });
+  await expect(mobileNav).toBeVisible();
+  const sheetPanel = page.locator('[data-slot="sheet-content"]');
+  const panelBounds = await sheetPanel.evaluate((element) =>
+    element.getBoundingClientRect().toJSON()
+  );
+  expect(panelBounds.top).toBeGreaterThanOrEqual(0);
+  expect(panelBounds.bottom).toBeLessThanOrEqual(844);
+  expect(panelBounds.right).toBeGreaterThanOrEqual(389);
+  const overlayColor = await page
+    .locator('[data-slot="sheet-overlay"]')
+    .evaluate((element) => getComputedStyle(element).backgroundColor);
+  expect(overlayColor).not.toBe('rgba(0, 0, 0, 0)');
+  await expect(mobileNav.getByRole('link', { name: 'People' })).toHaveAttribute('href', '#people');
+  await expect(mobileNav.getByRole('link', { name: 'Knowledge' })).toHaveAttribute(
+    'href',
+    '#knowledge'
+  );
+  for (let tabPress = 0; tabPress < 8; tabPress += 1) {
+    await page.keyboard.press('Tab');
+    expect(await sheetPanel.evaluate((element) => element.contains(document.activeElement))).toBe(
+      true
+    );
+  }
+  await page.keyboard.press('Escape');
+  await expect(mobileNav).toBeHidden();
+  await expect(menuTrigger).toBeFocused();
   const hasHorizontalOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth
   );
@@ -95,4 +127,10 @@ test('homepage adapts to a narrow mobile viewport without horizontal overflow', 
   await expect.poll(() => filmstrip.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
   await page.keyboard.press('Home');
   await expect.poll(() => filmstrip.evaluate((element) => element.scrollLeft)).toBeLessThan(10);
+  await menuTrigger.click();
+  const mobileDialog = page.getByRole('dialog', { name: 'Explore MoonWitness' });
+  await expect(mobileDialog).toBeVisible();
+  await mobileDialog.getByRole('link', { name: 'Enter the board' }).click();
+  await expect(page).toHaveURL(/\/login$/u);
+  await expect(mobileDialog).toBeHidden();
 });

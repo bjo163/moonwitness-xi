@@ -4,8 +4,8 @@ import type { Metadata } from 'next';
 import { Button } from '@moonwitness/ui/components/button';
 import { PaperNote } from '@moonwitness/ui/components/paper-note';
 import { SectionRibbon } from '@moonwitness/ui/components/section-ribbon';
-import { SoundToggle } from '@moonwitness/ui/components/audio';
 import { ArrowRightIcon, GlobeIcon, MoonIcon } from '@moonwitness/ui/icons';
+import { HomeHeader } from '../components/home/home-header';
 import { HorizontalFilmstrip } from '../components/home/horizontal-filmstrip';
 
 // Next.js route metadata must be exported from the route file alongside its component.
@@ -104,32 +104,7 @@ const processSteps = [
 export default function HomePage() {
   return (
     <main className="home-page">
-      <header className="home-header">
-        <Link href="/" className="home-mark" aria-label="MoonWitness home">
-          <Image
-            src="/brand/moonwitness-lockup-dark.svg"
-            alt="MoonWitness"
-            className="home-lockup"
-            width={500}
-            height={80}
-            loading="eager"
-          />
-        </Link>
-        <nav className="home-nav" aria-label="Main navigation">
-          <a href="#people">People</a>
-          <a href="#knowledge">Knowledge</a>
-          <a href="#stories">Stories</a>
-          <a href="#about">About</a>
-        </nav>
-        <div className="home-header-actions">
-          <SoundToggle />
-          <Button asChild treatment="brush" size="sm">
-            <Link href="/login">
-              Enter the board <ArrowRightIcon aria-hidden="true" />
-            </Link>
-          </Button>
-        </div>
-      </header>
+      <HomeHeader />
 
       <section className="home-hero" aria-labelledby="home-title">
         <picture className="home-hero-art">

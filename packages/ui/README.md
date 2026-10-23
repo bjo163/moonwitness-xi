@@ -47,6 +47,8 @@ Build upward only where repeated behavior requires it:
 
 Import through public subpaths such as `@moonwitness/ui/components/button`, `@moonwitness/ui/icons/search`, and `@moonwitness/ui/components.css`. Never import `dist` or package internals. Import styles once with tokens before component styles. Board pages must use shared buttons, inputs, selects, textareas, checkboxes, and shared table compositions; do not add new raw native JSX controls. Preserve the existing controlled state, labels, validation, disabled behavior, keyboard use, file input behavior, indeterminate checkboxes, sorting, and row propagation.
 
+Consumers that compile Tailwind utilities must include both the UI package source and built `dist` files in Tailwind's source scan. Otherwise utility-based shared primitives such as Sheet and Dialog can render in the DOM without their required position, overlay, or responsive styles. The Board and UI Catalog stylesheets show the required source paths.
+
 When adding a component: first record its behavior and accessibility contract; build it from existing tokens and helpers; expose a narrow public subpath; add a catalog specimen and relevant package checks; then use it from the product surface. Do not add a duplicate “manga” component when an existing primitive can accept a visual treatment.
 
 ## Accessibility, responsive behavior, and states
