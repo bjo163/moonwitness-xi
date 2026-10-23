@@ -88,7 +88,7 @@ Replace the TypeScript Baileys transport in `apps/whatsapp` with a Go service us
 - [x] Run Go race detector in Linux against the vendored module set.
 - [x] Complete the targeted Board WhatsApp E2E run against isolated `moonwitness_e2e` PostgreSQL (2/2 passed).
 - [x] Build `whatsapp-runtime` Docker target after vendoring Go modules so builder does not need Go proxy TLS access.
-- [ ] Run `pnpm dev`; confirm API/Board/Go service health and fresh QR display from this migration. Startup was observed healthy, but QR is not yet displayed in Board pending browser sign-in/pairing.
+- [x] Run `pnpm dev`; API, Board, and WhatsApp health checks passed and the fresh whatsmeow QR is visible on the authenticated Board page.
 - [ ] Pair the new whatsmeow device by scanning a fresh QR, then verify service restart restores the session without another QR.
 - [ ] Verify live text and media send only to the previously authorized test destination; test inbound via mock if no separate sender is available.
 - [x] Verify Board inbox, status progression, retry, and company-scope paths with mocked browser flows and authenticated API route tests.
@@ -113,7 +113,7 @@ Replace the TypeScript Baileys transport in `apps/whatsapp` with a Go service us
 - Root `pnpm dev` now builds the UI package before launching the apps, avoiding stale `packages/ui/dist` exports on a clean checkout.
 - Go tests, `go vet`, WhatsApp API route tests (13), and the targeted Board login E2E (1) passed after the fixes.
 - A real `pnpm dev` startup exposed healthy API `/readyz`, Board (HTTP 200 after the UI build), and WhatsApp `/health`. The test WhatsApp account was placed into QR state through the authenticated API; manual QR scan and post-pair verification still require the user.
-- Local browser sign-in could not be confirmed in this session; the Playwright login E2E passed and direct API sign-in returned HTTP 200. QR pairing remains a user handoff step.
+- Signed in to the local Board as superadmin using the configured development password; the WhatsApp page displayed the new QR. The scan and post-pair checks remain a user handoff step.
 
 ## Completion criteria
 
