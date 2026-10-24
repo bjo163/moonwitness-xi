@@ -1,4 +1,4 @@
-# Menjalankan attachment storage dengan RustFS / S3-compatible storage
+# Menjalankan attachment storage dengan Garage / S3-compatible storage
 
 ## Kebijakan ukuran
 
@@ -9,7 +9,7 @@
 
 ## Menyiapkan konfigurasi
 
-Buat bucket privat pada RustFS dan access key khusus aplikasi dengan akses minimum hanya ke bucket tersebut. Jangan membuat bucket publik dan jangan menyimpan secret di repository. Provider menggunakan AWS S3 API dan juga dapat diarahkan ke layanan S3-compatible lain.
+Buat bucket privat dan access key khusus aplikasi dengan akses minimum hanya ke bucket tersebut. Jangan membuat bucket publik dan jangan menyimpan secret di repository. Provider menggunakan AWS S3 API dan dapat diarahkan ke layanan S3-compatible mana pun.
 
 Policy service account perlu mengizinkan pemeriksaan/list bucket serta get, head, put, dan delete object di bucket ini. Jika menggunakan policy IAM S3, resource dibatasi seperti berikut (ganti nama bucket):
 
@@ -73,7 +73,7 @@ Driver `s3` menggunakan layanan S3-compatible apa pun, termasuk Garage yang dipa
 
 ### Keputusan data legacy
 
-Pemilik memilih **RustFS hanya untuk unggahan baru dan tidak menyalin data legacy lokal**. Setelah driver global dialihkan ke `s3`, byte lampiran lama yang masih hanya berada di volume lokal tidak akan ditemukan lewat provider aktif. Baris metadata tetap berada di database, tetapi unduhan object legacy dapat berakhir 404. Tidak ada fallback otomatis ke disk lokal. Pertahankan volume lokal sebagai retensi/rollback; jangan hapus hingga masa retensi diputuskan.
+Pemilik memilih **bucket S3 hanya untuk unggahan baru dan tidak menyalin data legacy lokal**. Setelah driver global dialihkan ke `s3`, byte lampiran lama yang masih hanya berada di volume lokal tidak akan ditemukan lewat provider aktif. Baris metadata tetap berada di database, tetapi unduhan object legacy dapat berakhir 404. Tidak ada fallback otomatis ke disk lokal. Pertahankan volume lokal sebagai retensi/rollback; jangan hapus hingga masa retensi diputuskan.
 
 ### Reverse proxy
 
@@ -92,7 +92,7 @@ location / {
 
 ## Migrasi legacy (opsional, tidak dipilih untuk cutover ini)
 
-Pemilik memutuskan legacy boleh ditinggalkan, sehingga **jangan jalankan migrator untuk cutover ini**. Jika keputusan berubah dan sebagian/seluruh legacy harus tetap tersedia, migrator berikut membaca referensi `attachments.storage_key` dan `whatsapp_messages.media_key`; jalankan dari runtime yang dapat mengakses volume lokal, PostgreSQL, dan RustFS. Dry-run adalah default dan sumber lokal tidak pernah dihapus.
+Pemilik memutuskan legacy boleh ditinggalkan, sehingga **jangan jalankan migrator untuk cutover ini**. Jika keputusan berubah dan sebagian/seluruh legacy harus tetap tersedia, migrator berikut membaca referensi `attachments.storage_key` dan `whatsapp_messages.media_key`; jalankan dari runtime yang dapat mengakses volume lokal, PostgreSQL, dan bucket S3 tujuan. Dry-run adalah default dan sumber lokal tidak pernah dihapus.
 
 ```powershell
 $env:ATTACHMENT_STORAGE_DRIVER = 's3'
@@ -110,7 +110,7 @@ pnpm attachments:migrate-to-s3 -- --apply --limit=1000 --offset=0
 
 Perintah aman diulang: objek tujuan yang checksum-nya cocok dilaporkan `already_verified`; konten yang berbeda tidak ditimpa diam-diam. Simpan JSON output sebagai laporan cutover. Jika API berjalan dalam container, jalankan migrasi di container/job yang sama-sama memasang volume sumber lokal; path host yang tidak dipasang ke container tidak cukup.
 
-Untuk keputusan saat ini, alihkan `ATTACHMENT_STORAGE_DRIVER=s3` di seluruh API dan worker saat maintenance singkat; tidak ada batch migrasi yang dijalankan. Sebelum cutover, provision bucket dan uji readiness. Pertahankan volume lokal dan backup DB. Jika rollback mengalihkan provider kembali ke lokal, objek yang dibuat di RustFS setelah cutover harus direverse-sync terlebih dahulu atau upload baru akan tidak tersedia.
+Untuk keputusan saat ini, alihkan `ATTACHMENT_STORAGE_DRIVER=s3` di seluruh API dan worker saat maintenance singkat; tidak ada batch migrasi yang dijalankan. Sebelum cutover, provision bucket dan uji readiness. Pertahankan volume lokal dan backup DB. Jika rollback mengalihkan provider kembali ke lokal, objek yang dibuat di bucket S3 setelah cutover harus direverse-sync terlebih dahulu atau upload baru akan tidak tersedia.
 
 Volume lokal pada overlay production sengaja read-only selama S3 aktif. Rollback yang benar-benar kembali ke driver `local` memerlukan reverse-sync dan perubahan eksplisit mount volume menjadi writable dalam maintenance window; jangan hanya mengubah variabel driver.
 
@@ -133,12 +133,12 @@ pnpm attachments:reconcile -- --apply --older-than=2026-10-01T00:00:00.000Z --li
 
 ## Operasi dan pemulihan
 
-- `/readyz` memeriksa koneksi PostgreSQL dan akses bucket RustFS/S3.
+- `/readyz` memeriksa koneksi PostgreSQL dan akses bucket S3.
 - Bucket harus privat. API mengotorisasi record sebelum mengambil konten dan mengirim unduhan dengan cache privat.
 - Simpan access key sebagai secret deployment dan rotasi dengan prosedur terencana.
 - Pantau kegagalan/latensi storage, ukuran bucket, dan status rekonsiliasi. Error storage sementara mengembalikan 503; objek yang tidak ditemukan tetap 404.
 - Cadangkan bucket dan database. Pemulihan yang konsisten memerlukan snapshot metadata serta objek yang saling cocok.
-- Jadwalkan backup pada jendela maintenance atau gunakan snapshot konsisten: ekspor PostgreSQL (`pg_dump --format=custom`) dan salin bucket ke lokasi/bucket backup terpisah (`aws s3 sync` dengan endpoint RustFS). Simpan manifest waktu, ukuran, dan SHA-256 di luar bucket sumber.
+- Jadwalkan backup pada jendela maintenance atau gunakan snapshot konsisten: ekspor PostgreSQL (`pg_dump --format=custom`) dan salin bucket ke lokasi/bucket backup terpisah (`aws s3 sync` dengan endpoint S3 aktif). Simpan manifest waktu, ukuran, dan SHA-256 di luar bucket sumber.
 - Lakukan restore drill ke database dan object store terisolasi. Pulihkan database dengan `pg_restore` ke database baru, pulihkan objek ke bucket uji, lalu jalankan `attachments:reconcile` dan cocokkan checksum sampel. Jangan menguji pemulihan dengan menimpa database/bucket aktif.
 - Jangan hapus volume lokal sampai cutover diterima, backup tervalidasi, dan jendela rollback berakhir.
 
@@ -155,6 +155,6 @@ Simpan konfigurasi non-secret yang dipakai (endpoint tanpa credential, bucket, T
 
 Jangan mencatat access key, secret key, token, isi file, atau URL bertanda tangan pada laporan tersebut. Jika layanan harus tetap online selama copy, hentikan cutover dengan prosedur maintenance ini dan desain dual-write/replay sebagai perubahan terpisah sebelum lanjut.
 
-Pemeriksaan development terakhir pada RustFS 1.0.3 lokal berhasil untuk readiness serta put/get/list/delete melalui provider. Ini memverifikasi jalur S3-compatible dasar; pemeriksaan tersebut tidak menggantikan uji endpoint RustFS deployment, sertifikat TLS, policy, proxy, atau bucket target.
+Pemeriksaan development terakhir pada provider S3-compatible dilakukan terhadap RustFS 1.0.3 lokal, sebelum Garage dipakai, dan berhasil untuk readiness serta put/get/list/delete melalui provider. Ini memverifikasi jalur S3-compatible dasar; pemeriksaan tersebut tidak menggantikan uji endpoint Garage yang aktif, sertifikat TLS, policy, proxy, atau bucket target.
 
 Lihat [bukti penerimaan Compose development 2026-10-24](evidence/rustfs-compose-acceptance-2026-10-24.md) untuk hasil readiness, tes API/ORM live, rekonsiliasi lintas domain, volume yang dipertahankan, serta gerbang production yang belum dijalankan.

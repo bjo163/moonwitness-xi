@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   parseEnvFile,
-  validateRustfsProductionEnvironment,
-} from './verify-rustfs-production-env.mjs';
+  validateAttachmentStorageProductionEnvironment,
+} from './verify-attachment-storage-production-env.mjs';
 
 const validEnvironment = {
   ATTACHMENT_STORAGE_DRIVER: 's3',
@@ -14,18 +14,18 @@ const validEnvironment = {
 };
 
 test('accepts production configuration pointing at the hosted Garage bucket', () => {
-  assert.deepEqual(validateRustfsProductionEnvironment(validEnvironment), []);
+  assert.deepEqual(validateAttachmentStorageProductionEnvironment(validEnvironment), []);
 });
 
 test('rejects missing credentials and does not include secret values in diagnostics', () => {
   const invalid = { ...validEnvironment, ATTACHMENT_S3_SECRET_KEY: '' };
-  const errors = validateRustfsProductionEnvironment(invalid);
+  const errors = validateAttachmentStorageProductionEnvironment(invalid);
   assert.ok(errors.some((error) => error.includes('ATTACHMENT_S3_SECRET_KEY')));
   assert.equal(errors.join('\n').includes('application-secret'), false);
 });
 
 test('rejects an access key that looks like a mangled copy-paste', () => {
-  const errors = validateRustfsProductionEnvironment({
+  const errors = validateAttachmentStorageProductionEnvironment({
     ...validEnvironment,
     ATTACHMENT_S3_ACCESS_KEY: 'GK00000 0000000000000000000000000/',
   });
@@ -33,7 +33,7 @@ test('rejects an access key that looks like a mangled copy-paste', () => {
 });
 
 test('rejects inline endpoint credentials, malformed bucket names, and local driver', () => {
-  const errors = validateRustfsProductionEnvironment({
+  const errors = validateAttachmentStorageProductionEnvironment({
     ...validEnvironment,
     ATTACHMENT_STORAGE_DRIVER: 'local',
     ATTACHMENT_S3_ENDPOINT: 'http://user:password@s3.example.com',
@@ -46,13 +46,13 @@ test('rejects inline endpoint credentials, malformed bucket names, and local dri
 });
 
 test('requires HTTPS for every attachment storage endpoint', () => {
-  const errors = validateRustfsProductionEnvironment({
+  const errors = validateAttachmentStorageProductionEnvironment({
     ...validEnvironment,
     ATTACHMENT_S3_ENDPOINT: 'http://10.0.0.5:3984',
   });
   assert.ok(errors.some((error) => error.includes('must use HTTPS')));
   assert.deepEqual(
-    validateRustfsProductionEnvironment({
+    validateAttachmentStorageProductionEnvironment({
       ...validEnvironment,
       ATTACHMENT_S3_ENDPOINT: 'https://garage.internal.example',
     }),

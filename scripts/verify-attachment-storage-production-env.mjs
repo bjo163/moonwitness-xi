@@ -30,7 +30,7 @@ export function parseEnvFile(source) {
   return entries;
 }
 
-export function validateRustfsProductionEnvironment(environment) {
+export function validateAttachmentStorageProductionEnvironment(environment) {
   const errors = [];
   for (const name of requiredNames) {
     if (typeof environment[name] !== 'string' || environment[name].trim().length === 0) {
@@ -79,21 +79,25 @@ export function validateRustfsProductionEnvironment(environment) {
 async function main() {
   const filePath = process.argv[2];
   const environment = filePath ? parseEnvFile(await readFile(filePath, 'utf8')) : process.env;
-  const errors = validateRustfsProductionEnvironment(environment);
+  const errors = validateAttachmentStorageProductionEnvironment(environment);
   if (errors.length > 0) {
     process.stderr.write(
-      `RustFS production environment is invalid:\n${errors.map((error) => `- ${error}`).join('\n')}\n`
+      `Attachment storage production environment is invalid:\n${errors
+        .map((error) => `- ${error}`)
+        .join('\n')}\n`
     );
     process.exitCode = 1;
     return;
   }
-  process.stdout.write('RustFS production environment is valid; secret values were not printed.\n');
+  process.stdout.write(
+    'Attachment storage production environment is valid; secret values were not printed.\n'
+  );
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((error) => {
     process.stderr.write(
-      `Could not read RustFS production environment${error?.code === 'ENOENT' ? ': file not found' : ''}.\n`
+      `Could not read the attachment storage environment${error?.code === 'ENOENT' ? ': file not found' : ''}.\n`
     );
     process.exitCode = 1;
   });
