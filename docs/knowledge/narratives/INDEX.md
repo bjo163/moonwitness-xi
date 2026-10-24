@@ -14,7 +14,14 @@ This public review pack consolidates the narrative family's **99-chapter index**
 
 **Policies:** [source rights](../source-rights-and-ingestion.md), [knowledge ownership](../../architecture/knowledge-domain-ownership.md), [privacy](../../governance/knowledge-privacy-and-safeguarding.md), [schema versioning](../schema-versioning.md), [XIV execution](../../roadmap/EXECUTION.md).
 
-### Release invariants
+### Expanded research and historical progress
+
+- [MASTER_NARRATIVE_V10_1_EXPANDED.md](MASTER_NARRATIVE_V10_1_EXPANDED.md) — deepened 16-part account preserving V10's 99 chapters, with 15 XII episodes, all 33 patch statuses, and 14 historical system concepts.
+- [PROGRESS_LEDGER_2023_2026.md](PROGRESS_LEDGER_2023_2026.md) — historical creative + engineering progress, repo/status/CI evidence, open tasks and contradictions. **Time-stamped snapshot; not a live dashboard.**
+
+**Current priority:** author-original recovery + previous-progress audit; **blueprint and new UI are deferred** pending these source stages.
+
+## Release invariants
 
 - The 99 chapters are editorial sections, not an authority grade.
 - **User-original material is never silently reconstructed from an AI synopsis.**
