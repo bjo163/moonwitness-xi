@@ -6393,6 +6393,10 @@
       "path": "/whatsapp/conversations/:id/archive"
     },
     {
+      "method": "PUT",
+      "path": "/whatsapp/conversations/:id/labels"
+    },
+    {
       "method": "GET",
       "path": "/whatsapp/conversations/:id/messages"
     },
@@ -6423,6 +6427,18 @@
     {
       "method": "POST",
       "path": "/whatsapp/gowa/webhook/:deviceId"
+    },
+    {
+      "method": "GET",
+      "path": "/whatsapp/labels"
+    },
+    {
+      "method": "POST",
+      "path": "/whatsapp/labels"
+    },
+    {
+      "method": "DELETE",
+      "path": "/whatsapp/labels/:id"
     },
     {
       "method": "GET",
@@ -6473,5 +6489,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "2579e383cc1fad28e3c660406c7e3dc9a7c56982d9d2094a5e520e209573e00d"
+  "generatedFromSha256": "1f7657d4d30567dc290670c50bfe0fc992328f1f9fb0a435390fcd97f119fc26"
 }

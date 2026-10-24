@@ -1,6 +1,6 @@
 # Generated API route reference
 
-Extracted from literal Fastify route declarations. Source fingerprint: `2579e383cc1fad28e3c660406c7e3dc9a7c56982d9d2094a5e520e209573e00d`. Generic handler request payloads are not inferred where the source does not declare a static schema.
+Extracted from literal Fastify route declarations. Source fingerprint: `1f7657d4d30567dc290670c50bfe0fc992328f1f9fb0a435390fcd97f119fc26`. Generic handler request payloads are not inferred where the source does not declare a static schema.
 
 | Method | Path                                              |
 | ------ | ------------------------------------------------- |
@@ -71,6 +71,7 @@ Extracted from literal Fastify route declarations. Source fingerprint: `2579e383
 | GET    | `/whatsapp/conversations`                         |
 | POST   | `/whatsapp/conversations`                         |
 | POST   | `/whatsapp/conversations/:id/archive`             |
+| PUT    | `/whatsapp/conversations/:id/labels`              |
 | GET    | `/whatsapp/conversations/:id/messages`            |
 | POST   | `/whatsapp/conversations/:id/messages`            |
 | GET    | `/whatsapp/conversations/:id/notes`               |
@@ -79,6 +80,9 @@ Extracted from literal Fastify route declarations. Source fingerprint: `2579e383
 | POST   | `/whatsapp/conversations/:id/read`                |
 | POST   | `/whatsapp/disconnect`                            |
 | POST   | `/whatsapp/gowa/webhook/:deviceId`                |
+| GET    | `/whatsapp/labels`                                |
+| POST   | `/whatsapp/labels`                                |
+| DELETE | `/whatsapp/labels/:id`                            |
 | GET    | `/whatsapp/media/:id`                             |
 | POST   | `/whatsapp/messages/:id/edit`                     |
 | POST   | `/whatsapp/messages/:id/forward`                  |
