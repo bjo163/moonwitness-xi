@@ -105,7 +105,7 @@ Legenda: **P0** penghambat keselamatan/keandalan; **P1** inbox v1; **P2** media 
 
 - [ ] **P2-01** Uji nyata kirim/terima gambar, dokumen, audio, video melalui GoWA.
 - [ ] **P2-02** Verifikasi format dan batas tiap tipe media terhadap GoWA aktual.
-- [x] **P2-03** Pengiriman lampiran Board → API kini memakai multipart; API memvalidasi dan hash file sambil mengalirkannya langsung ke attachment storage, tanpa Base64 atau buffer file penuh pada jalur upload. Tes meliputi multipart tepat di batas 10 MiB, penolakan lebih besar, file kosong, MIME palsu, storage gagal, idempotent retry, dan payload Base64 lama.
+- [x] **P2-03** Pengiriman lampiran Board → API kini memakai multipart; API memvalidasi dan hash file sambil mengalirkannya langsung ke attachment storage, tanpa Base64 atau buffer file penuh pada jalur upload. Tes multipart tepat di batas 10 MiB, penolakan lebih besar, file kosong, MIME palsu, storage gagal, idempotent retry, dan payload Base64 lama lulus pada SQLite/PostgreSQL (44 lulus, 1 acceptance S3 dilewati). E2E Chromium PostgreSQL memverifikasi QR, multipart boundary, caption, filename, byte file, dan draft saat API gagal (1/1 lulus).
 - [ ] **P2-04** Tentukan batas ukuran tiap tipe; saat ini semua berkas dibatasi 10 MiB.
 - [ ] **P2-05** Upload langsung ke storage memakai URL singkat bertanda tangan dan izin perusahaan.
 - [ ] **P2-06** Progress upload/download, cancel, retry, dan indikator kecepatan. (UI: `WUI-06`)
