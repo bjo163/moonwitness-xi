@@ -304,6 +304,31 @@ export function validateRoadmapIndex(input, roadmap, documents) {
     if (!taskById.has(id))
       problems.push(`${id} appears in ROADMAP.md but is missing from tasks.json.`);
   }
+  const openCards = [...roadmapEntries.entries()]
+    .filter(([, entries]) => entries.some((entry) => !entry.checked))
+    .map(([id]) => id);
+  const proseCounts = [
+    { label: '', pattern: /(\d+) kartu terbuka/gu, actual: openCards.length },
+    {
+      label: 'M-series',
+      pattern: /(\d+) kartu M-series terbuka/gu,
+      actual: openCards.filter((id) => id.startsWith('M')).length,
+    },
+    {
+      label: 'K-series',
+      pattern: /(\d+) kartu K-series terbuka/gu,
+      actual: openCards.filter((id) => id.startsWith('K')).length,
+    },
+  ];
+  for (const { label, pattern, actual } of proseCounts) {
+    for (const match of roadmap.matchAll(pattern)) {
+      if (Number(match[1]) === actual) continue;
+      const scope = label === '' ? 'open' : `open ${label}`;
+      problems.push(
+        `ROADMAP.md prose claims ${match[1]} ${scope} cards but the checklist holds ${actual}.`
+      );
+    }
+  }
   return [...new Set(problems)];
 }
 

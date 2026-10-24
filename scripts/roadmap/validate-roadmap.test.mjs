@@ -82,6 +82,24 @@ test('accepts stable unique IDs, safe cards, DAG dependencies, evidence and chec
   assert.deepEqual(validateRoadmapIndex(index, roadmap, documents), []);
 });
 
+test('rejects prose that reports an open-card count the checklist does not hold', () => {
+  const { index, roadmap, documents } = fixture();
+  assert.deepEqual(validateRoadmapIndex(index, 'semua 1 kartu terbuka\n' + roadmap, documents), []);
+  const problems = validateRoadmapIndex(
+    index,
+    'semua 49 kartu terbuka dan 34 kartu K-series terbuka\n' + roadmap,
+    documents
+  );
+  assert.ok(
+    problems.some((problem) => /claims 49 open cards but the checklist holds 1/u.test(problem))
+  );
+  assert.ok(
+    problems.some((problem) =>
+      /claims 34 open K-series cards but the checklist holds 0/u.test(problem)
+    )
+  );
+});
+
 test('rejects duplicate IDs, missing dependencies, unsafe paths, and dependency cycles', () => {
   const { index, roadmap, documents } = fixture();
   index.tasks[1].dependsOn = ['M11.02', 'M99.01'];
