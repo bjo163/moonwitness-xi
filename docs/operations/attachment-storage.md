@@ -48,14 +48,14 @@ Karena bucket berada di luar jaringan Compose, seluruh hop wajib HTTPS dengan se
 ```dotenv
 ATTACHMENT_STORAGE_DRIVER=s3
 ATTACHMENT_S3_ENDPOINT=https://s3.moonwitness.biz.id
-ATTACHMENT_S3_REGION=us-east-1
+ATTACHMENT_S3_REGION=garage
 ATTACHMENT_S3_BUCKET=moonwitness-attachments
-ATTACHMENT_S3_ACCESS_KEY=<GK... dari secret manager>
-ATTACHMENT_S3_SECRET_KEY=<secret dari secret manager>
+ATTACHMENT_S3_ACCESS_KEY=<access key Garage dari secret manager>
+ATTACHMENT_S3_SECRET_KEY=<secret key Garage dari secret manager>
 ATTACHMENT_S3_FORCE_PATH_STYLE=true
 ```
 
-`ATTACHMENT_S3_ENDPOINT` harus berupa URL HTTPS tanpa user/password di dalam URL. `ATTACHMENT_S3_REGION` harus sama dengan `region` pada `garage.toml`. Path-style addressing aktif secara default dan cocok dengan `path_style_fallback` Garage. Aplikasi memeriksa akses bucket pada readiness probe.
+`ATTACHMENT_S3_ENDPOINT` harus berupa URL HTTPS tanpa user/password di dalam URL. `ATTACHMENT_S3_REGION` harus sama dengan `region` pada `garage.toml` — pada deployment ini nilainya `garage`, bukan `us-east-1`; bila salah, Garage menolak request SigV4 dengan `AuthorizationHeaderMalformed` yang menyebut scope yang diharapkan, sehingga nilai benar dapat dibaca langsung dari error tersebut. Path-style addressing aktif secara default dan cocok dengan `path_style_fallback` Garage. Aplikasi memeriksa akses bucket pada readiness probe.
 
 Overlay `docker-compose.production.yml` mengaktifkan driver `s3` secara default untuk API serta semua worker, memakai endpoint Garage, memasang volume lokal legacy read-only, dan menolak startup jika kredensial aplikasi belum diisi. Overlay `docker-compose.development.yml` default ke driver `local` agar stack naik dengan satu perintah; isi `ATTACHMENT_STORAGE_DRIVER=s3` plus key Garage di `.env` untuk menguji bucket asli.
 
