@@ -431,10 +431,96 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       const body = req.body as {
         event?: unknown;
         session_id?: unknown;
-        payload?: { ids?: unknown; receipt_type?: unknown };
+        payload?: Record<string, unknown>;
       } | null;
       if (body?.session_id !== account.gateway_device_id)
         return reply.code(403).send({ success: false, error: 'Webhook device mismatch' });
+      if (body?.event === 'message') {
+        const payload = body.payload;
+        const externalId = typeof payload?.id === 'string' ? payload.id.slice(0, 255) : '';
+        const jid = typeof payload?.chat_id === 'string' ? payload.chat_id : '';
+        const timestamp = providerTimestamp(payload?.timestamp);
+        if (!externalId || !/^[^\s@]{1,200}@(s\.whatsapp\.net|g\.us|lid)$/u.test(jid) || !timestamp)
+          return reply.code(204).send();
+        const fromMe = payload?.is_from_me === true;
+        const mediaField = ['image', 'video', 'video_note', 'audio', 'document', 'sticker'].find((field) => {
+          const value = payload?.[field];
+          return (typeof value === 'string' && value.length > 0) || (value !== null && typeof value === 'object');
+        });
+        const messageType = mediaField === 'video_note' ? 'video' : mediaField ?? 'text';
+        const mediaValue = mediaField ? payload?.[mediaField] : null;
+        const content = typeof payload?.body === 'string' ? payload.body.slice(0, 8000) : '';
+        const senderJid = typeof payload?.from === 'string' ? payload.from.slice(0, 255) : null;
+        const isGroup = jid.endsWith('@g.us');
+        const conversationName = isGroup
+          ? (typeof payload?.chat_name === 'string' && payload.chat_name.trim()) || jid
+          : (typeof payload?.sender_display_name === 'string' && payload.sender_display_name.trim()) ||
+            (typeof payload?.from_name === 'string' && payload.from_name.trim()) ||
+            jid;
+        await app.db.transaction(async (trx) => {
+          const [conversation] = await trx('whatsapp_conversations')
+            .insert({
+              company_id: account.company_id,
+              account_id: account.id,
+              jid,
+              name: conversationName.slice(0, 255),
+              is_group: isGroup,
+              unread_count: 0,
+              last_message: content || (mediaField ? `[${mediaField}]` : ''),
+              last_message_at: timestamp,
+            })
+            .onConflict(['company_id', 'jid'])
+            .merge({
+              account_id: account.id,
+              name: isGroup && conversationName === jid
+                ? trx.raw('whatsapp_conversations.name')
+                : conversationName.slice(0, 255),
+              is_group: isGroup,
+              last_message: trx.raw(
+                'CASE WHEN whatsapp_conversations.last_message_at IS NULL OR excluded.last_message_at > whatsapp_conversations.last_message_at THEN excluded.last_message ELSE whatsapp_conversations.last_message END'
+              ),
+              last_message_at: trx.raw(
+                'CASE WHEN whatsapp_conversations.last_message_at IS NULL OR excluded.last_message_at > whatsapp_conversations.last_message_at THEN excluded.last_message_at ELSE whatsapp_conversations.last_message_at END'
+              ),
+              write_date: new Date().toISOString(),
+            })
+            .returning(['id']);
+          const storedConversation = conversation ?? (await trx('whatsapp_conversations')
+            .where({ company_id: account.company_id, jid }).first('id'));
+          if (!storedConversation) throw new Error('GoWA webhook conversation upsert failed');
+          const inserted = await trx('whatsapp_messages')
+            .insert({
+              company_id: account.company_id,
+              account_id: account.id,
+              conversation_id: storedConversation.id,
+              external_id: externalId,
+              direction: fromMe ? 'outbound' : 'inbound',
+              message_type: messageType,
+              content,
+              status: fromMe ? 'sent' : 'received',
+              media_mime_type: mediaField
+                ? typeof payload?.mime_type === 'string'
+                  ? safeMime(payload.mime_type)
+                  : mediaDefaultMime(messageType)
+                : null,
+              media_file_name: typeof payload?.filename === 'string'
+                ? payload.filename.slice(0, 255)
+                : mediaValue && typeof mediaValue === 'object' && 'filename' in mediaValue && typeof mediaValue.filename === 'string'
+                  ? mediaValue.filename.slice(0, 255)
+                  : null,
+              sender_jid: senderJid,
+            })
+            .onConflict(['company_id', 'external_id'])
+            .ignore()
+            .returning(['id']);
+          if (inserted.length && !fromMe) {
+            await trx('whatsapp_conversations')
+              .where({ id: storedConversation.id, company_id: account.company_id })
+              .increment('unread_count', 1);
+          }
+        });
+        return reply.code(204).send();
+      }
       if (body?.event !== 'message.ack') return reply.code(204).send();
       const receipt = body.payload;
       const status = receipt?.receipt_type === 'read' ? 'read' : receipt?.receipt_type === 'delivered' ? 'delivered' : null;
@@ -630,7 +716,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
             body: JSON.stringify({
               webhook_url: callback.toString(),
               webhook_secret: webhookSecret,
-              webhook_events: 'message.ack',
+              webhook_events: 'message,message.ack',
             }),
           });
         }

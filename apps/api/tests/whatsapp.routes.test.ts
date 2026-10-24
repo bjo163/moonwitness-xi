@@ -1702,7 +1702,7 @@ describe('WhatsApp API GoWA bridge', () => {
         body: {
           webhook_url: `https://api.moonwitness.test/whatsapp/gowa/webhook/moonwitness-company-${companyId}`,
           webhook_secret: process.env.WHATSAPP_WEBHOOK_SECRET,
-          webhook_events: 'message.ack',
+          webhook_events: 'message,message.ack',
         },
       },
     ]);
@@ -1783,6 +1783,75 @@ describe('WhatsApp API GoWA bridge', () => {
     expect((await sendReceipt('delivered')).statusCode).toBe(204);
     expect((await db('whatsapp_messages').where({ id: outbound.id }).first()).status).toBe('read');
     expect((await db('whatsapp_messages').where({ company_id: foreignCompanyId }).first()).status).toBe('sent');
+  });
+
+  it('ingests signed private and group message events once and keeps media on the GoWA download path', async () => {
+    const accountId = await connectAndMarkReady();
+    process.env.WHATSAPP_WEBHOOK_SECRET = 'test-gowa-webhook-secret';
+    const postMessage = async (payload: Record<string, unknown>) => {
+      const raw = JSON.stringify({
+        event: 'message',
+        session_id: `moonwitness-company-${companyId}`,
+        payload,
+      });
+      return app.inject({
+        method: 'POST',
+        url: `/whatsapp/gowa/webhook/moonwitness-company-${companyId}`,
+        headers: {
+          'content-type': 'application/json',
+          'x-hub-signature-256': `sha256=${createHmac('sha256', process.env.WHATSAPP_WEBHOOK_SECRET!).update(raw).digest('hex')}`,
+        },
+        payload: raw,
+      });
+    };
+    const privateMessage = {
+      id: 'webhook-private-1',
+      chat_id: '628111111111@s.whatsapp.net',
+      from: '628111111111@s.whatsapp.net',
+      sender_display_name: 'Webhook Contact',
+      timestamp: '2026-10-24T10:00:00Z',
+      is_from_me: false,
+      body: 'Inbound from signed webhook',
+    };
+    expect((await postMessage(privateMessage)).statusCode).toBe(204);
+    expect((await postMessage(privateMessage)).statusCode).toBe(204);
+    const privateConversation = await db('whatsapp_conversations')
+      .where({ company_id: companyId, jid: privateMessage.chat_id })
+      .first();
+    expect(privateConversation).toMatchObject({ name: 'Webhook Contact', unread_count: 1 });
+    expect(await db('whatsapp_messages').where({ company_id: companyId, external_id: privateMessage.id })).toMatchObject([
+      { account_id: accountId, conversation_id: privateConversation.id, direction: 'inbound', status: 'received', content: privateMessage.body },
+    ]);
+
+    expect((await postMessage({
+      id: 'webhook-group-image-1',
+      chat_id: '120363123456789@g.us',
+      from: '628222222222@s.whatsapp.net',
+      sender_display_name: 'Group sender',
+      timestamp: '2026-10-24T10:01:00Z',
+      is_from_me: false,
+      body: 'Group image caption',
+      image: { path: 'statics/media/provider-image.jpg', caption: 'Group image caption' },
+      filename: 'group-image.jpg',
+    })).statusCode).toBe(204);
+    const groupConversation = await db('whatsapp_conversations')
+      .where({ company_id: companyId, jid: '120363123456789@g.us' })
+      .first();
+    const groupMessage = await db('whatsapp_messages')
+      .where({ company_id: companyId, external_id: 'webhook-group-image-1' })
+      .first();
+    expect(Number(groupConversation.is_group)).toBe(1);
+    expect(groupConversation.unread_count).toBe(1);
+    expect(groupMessage).toMatchObject({
+      account_id: accountId,
+      conversation_id: groupConversation.id,
+      message_type: 'image',
+      media_mime_type: 'image/jpeg',
+      media_file_name: 'group-image.jpg',
+      sender_jid: '628222222222@s.whatsapp.net',
+      status: 'received',
+    });
+    expect(groupMessage.media_key).toBeNull();
   });
 
   it('stores one durable send per idempotency key and rejects changed content', async () => {
