@@ -1,4 +1,54 @@
 @layer components {
+  /* Sonner ships 400ms motion by default; keep toast feedback in the shared motion scale. */
+  .mw-ui-toast-host[data-sonner-toaster] {
+    --normal-bg: var(--mw-surface);
+    --normal-border: var(--mw-border);
+    --normal-text: var(--mw-foreground);
+    --success-bg: var(--mw-success);
+    --success-border: var(--mw-success);
+    --success-text: var(--mw-on-success);
+    --error-bg: var(--mw-error);
+    --error-border: var(--mw-error);
+    --error-text: var(--mw-on-error);
+    transition-duration: var(--mw-motion-normal) !important;
+    transition-timing-function: var(--mw-motion-ease) !important;
+  }
+
+  .mw-ui-toast-host [data-sonner-toast] {
+    border: 2px solid var(--mw-border) !important;
+    border-radius: 0 !important;
+    box-shadow: var(--mw-shadow-ink) !important;
+    font-family: var(--mw-font-sans) !important;
+    padding-right: 2.5rem !important;
+    transition:
+      transform var(--mw-motion-normal) var(--mw-motion-ease),
+      opacity var(--mw-motion-normal) var(--mw-motion-ease),
+      height var(--mw-motion-normal) var(--mw-motion-ease),
+      box-shadow var(--mw-motion-fast) var(--mw-motion-ease) !important;
+  }
+
+  .mw-ui-toast-host [data-sonner-toast] [data-close-button] {
+    inset: 0.3rem 0.3rem auto auto !important;
+    transform: none !important;
+    border: 1px solid currentColor !important;
+    border-radius: 0 !important;
+    background: var(--mw-surface) !important;
+  }
+
+  .mw-ui-toast-host [data-sonner-toast] [data-button] {
+    transition:
+      opacity var(--mw-motion-normal) var(--mw-motion-ease),
+      box-shadow var(--mw-motion-fast) var(--mw-motion-ease) !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mw-ui-toast-host[data-sonner-toaster],
+    .mw-ui-toast-host [data-sonner-toast],
+    .mw-ui-toast-host [data-sonner-toast] [data-button] {
+      transition-duration: 0ms !important;
+    }
+  }
+
   .mw-ui-button,
   .mw-ui-input,
   .mw-ui-select,

@@ -328,6 +328,36 @@ test('sound toggle persists preference and cues load only after explicit enabled
     });
 });
 
+test('toast entry and dismissal use shared motion timing and remain immediate with reduced motion', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('./#actions');
+  await page.getByRole('button', { name: 'Show success toast' }).click();
+
+  const toast = page.locator('[data-sonner-toast]').filter({ hasText: 'Settings saved' });
+  await expect(toast).toBeVisible();
+  await expect(toast).toHaveAttribute('data-mounted', 'true');
+  expect(
+    await toast.evaluate((element) => getComputedStyle(element).transitionDuration)
+  ).toContain('0.16s');
+  await expect(toast.getByText('Your workspace preferences are up to date.')).toBeVisible();
+  await toast.screenshot({
+    path: resolve(process.cwd(), '../../docs/design/ui-catalog/toast-motion-state.png'),
+  });
+  await toast.getByRole('button', { name: 'Close toast' }).click();
+  await expect(toast).toBeHidden();
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.getByRole('button', { name: 'Show error toast' }).click();
+  const reducedToast = page.locator('[data-sonner-toast]').filter({ hasText: 'Could not save' });
+  await expect(reducedToast).toBeVisible();
+  expect(
+    await reducedToast.evaluate((element) => getComputedStyle(element).transitionDuration)
+  ).toContain('0s');
+  await expect(reducedToast.getByText('Check the form and try again.')).toBeVisible();
+});
+
 test('shared table keeps sort, selection, pagination, and overflow accessible', async ({
   page,
 }, testInfo) => {

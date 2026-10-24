@@ -515,7 +515,7 @@ Urutan: header → hero manga → tiga panel editorial → band koneksi → film
 - [x] Gunakan feedback animasi hover/active tombol tanpa mengubah ukuran area klik atau menggeser layout; pertahankan focus-visible ring langsung terlihat. Bukti: shared Button CSS memakai motion token; tes spinner auth memastikan lebar tombol stabil.
 - [x] Animasi underline navigasi dan indikator panel aktif dengan transisi singkat. Bukti: homepage underline kini memakai motion tokens fast/ease.
 - [x] Animasi masuk/keluar Dialog, Sheet, Dropdown, Popover, dan Tooltip memakai durasi/easing shared; pertahankan tes keyboard/focus overlay.
-- [ ] Audit timing masuk/keluar Sonner Toast terhadap motion tokens; override hanya jika dismissal dan pengumuman aksesibel tetap benar.
+- [x] Audit timing masuk/keluar Sonner Toast terhadap motion tokens; override hanya jika dismissal dan pengumuman aksesibel tetap benar. Host toast memakai motion token normal/fast, warna semantic, dan tombol tutup; test Catalog memeriksa status, dismissal, durasi 160 ms, deskripsi, serta reduced motion. Screenshot direview visual: `docs/design/ui-catalog/toast-motion-state.png`.
 - [ ] Animasi reveal artwork/hero satu kali dan singkat; jangan membuat gerakan dekoratif terus-menerus.
 - [ ] Animasi kartu/panel saat hover dengan perubahan ringan pada tinta, border, atau marker; hormati perangkat tanpa hover.
 - [ ] Animasi Skeleton hanya selama request nyata; jangan memakai shimmer tanpa proses aktif.
