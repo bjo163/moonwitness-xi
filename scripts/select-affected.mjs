@@ -159,7 +159,8 @@ export async function readWorkspaceProjects(root = cwd()) {
       } catch (error) {
         if (error?.code === 'ENOENT') {
           throw new Error(
-            `Workspace directory without a package.json: ${relative(root, packagePath).replaceAll('\\', '/')}`
+            `Workspace directory without a package.json: ${relative(root, packagePath).replaceAll('\\', '/')}`,
+            { cause: error }
           );
         }
         throw error;
