@@ -256,6 +256,46 @@ function providerReplyId(value: unknown): string | null {
   return typeof id === 'string' && id.length > 0 && id.length <= 255 ? id : null;
 }
 
+const WHATSAPP_REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '🎉'] as const;
+type WhatsAppReaction = {
+  emoji: string;
+  sender_jid: string | null;
+  sender_display_name?: string | null;
+  is_from_me: boolean;
+  timestamp?: string | null;
+};
+
+function normalizedReactions(value: unknown): WhatsAppReaction[] {
+  if (typeof value === 'string') {
+    try {
+      value = JSON.parse(value) as unknown;
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(isRecord)
+    .flatMap((reaction) => {
+      if (
+        typeof reaction.emoji !== 'string' ||
+        reaction.emoji.length > 32 ||
+        reaction.emoji.trim() === '' ||
+        /[\u0000-\u001f\u007f]/u.test(reaction.emoji)
+      ) return [];
+      return [{
+        emoji: reaction.emoji,
+        sender_jid: typeof reaction.sender_jid === 'string' ? reaction.sender_jid.slice(0, 255) : null,
+        ...(typeof reaction.sender_display_name === 'string'
+          ? { sender_display_name: reaction.sender_display_name.slice(0, 255) }
+          : {}),
+        is_from_me: reaction.is_from_me === true,
+        timestamp: providerTimestamp(reaction.timestamp),
+      }];
+    })
+    .slice(-100);
+}
+
 const AMBIGUOUS_SEND_MATCH_WINDOW_MS = 2 * 60 * 1_000;
 
 async function reconcileAmbiguousOutboundMessage(input: {
@@ -1409,41 +1449,48 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
           timestamp,
         });
       }
+      const reactions = Array.isArray(item.reactions)
+        ? JSON.stringify(normalizedReactions(item.reactions))
+        : null;
+      const importedMessage = {
+        company_id: companyId,
+        account_id: account.id,
+        conversation_id: conversationId,
+        external_id: externalId,
+        direction: fromMe ? 'outbound' : 'inbound',
+        message_type: messageType,
+        content,
+        status: fromMe ? 'sent' : 'received',
+        media_mime_type:
+          item.mime_type !== undefined ? safeMime(item.mime_type) : mediaDefaultMime(messageType),
+        media_file_name:
+          typeof item.filename === 'string'
+            ? item.filename.slice(0, 255)
+            : typeof item.file_name === 'string'
+              ? item.file_name.slice(0, 255)
+              : null,
+        sender_jid:
+          typeof item.sender === 'string'
+            ? item.sender.slice(0, 255)
+            : typeof item.sender_jid === 'string'
+              ? item.sender_jid.slice(0, 255)
+              : null,
+        reply_to_external_id: replyToExternalId,
+        reactions,
+        create_date: timestamp,
+      };
+      const importedMessagePatch = {
+        content: typeof item.content === 'string' ? item.content.slice(0, 8000) : '',
+        status: fromMe ? 'sent' : 'received',
+        reply_to_external_id: replyToExternalId,
+        ...(Array.isArray(item.reactions) ? { reactions } : {}),
+        write_date: new Date().toISOString(),
+      };
       await app
         .db('whatsapp_messages')
-        .insert({
-          company_id: companyId,
-          account_id: account.id,
-          conversation_id: conversationId,
-          external_id: externalId,
-          direction: fromMe ? 'outbound' : 'inbound',
-          message_type: messageType,
-          content,
-          status: fromMe ? 'sent' : 'received',
-          media_mime_type:
-            item.mime_type !== undefined ? safeMime(item.mime_type) : mediaDefaultMime(messageType),
-          media_file_name:
-            typeof item.filename === 'string'
-              ? item.filename.slice(0, 255)
-              : typeof item.file_name === 'string'
-                ? item.file_name.slice(0, 255)
-                : null,
-          sender_jid:
-            typeof item.sender === 'string'
-              ? item.sender.slice(0, 255)
-              : typeof item.sender_jid === 'string'
-                ? item.sender_jid.slice(0, 255)
-                : null,
-          reply_to_external_id: replyToExternalId,
-          create_date: timestamp,
-        })
+        .insert(importedMessage)
         .onConflict(['company_id', 'external_id'])
-        .merge({
-          content: typeof item.content === 'string' ? item.content.slice(0, 8000) : '',
-          status: fromMe ? 'sent' : 'received',
-          reply_to_external_id: replyToExternalId,
-          write_date: new Date().toISOString(),
-        });
+        .merge(importedMessagePatch);
     }
     const messages = await WhatsappMessage.query()
       .select(
@@ -1460,6 +1507,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         'reply_to_message_id',
         'reply_to_external_id',
         'is_forwarded',
+        'reactions',
         'create_date'
       )
       .where({ conversation_id: conversationId, company_id: companyId })
@@ -1539,9 +1587,14 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
           !Number.isFinite(lastReadAt) ||
           messageAt > lastReadAt ||
           (messageAt === lastReadAt && Number(message.id) > lastReadMessageId);
-        const { reply_to_external_id: _replyToExternalId, ...publicMessage } = message;
+        const {
+          reply_to_external_id: _replyToExternalId,
+          reactions: storedReactions,
+          ...publicMessage
+        } = message;
         return {
           ...publicMessage,
+          reactions: normalizedReactions(storedReactions),
           is_last_read: Number.isFinite(lastReadAt) && Number(message.id) === lastReadMessageId,
           is_unread: message.direction === 'inbound' && afterReadCursor,
           reply_to: quoted
@@ -1559,6 +1612,75 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       }),
     };
   });
+
+  app.post<{ Params: Params }>(
+    '/whatsapp/messages/:id/reaction',
+    whatsappRateLimit(20),
+    async (req, reply) => {
+      const companyId = requireCompany(req, reply);
+      if (!companyId) return;
+      if (!requireWhatsAppAction(req, reply, 'whatsapp.message', 'create')) return;
+      const messageId = id(req.params.id);
+      const body = isRecord(req.body) ? req.body : null;
+      if (
+        !messageId ||
+        !body ||
+        Object.keys(body).some((key) => key !== 'emoji') ||
+        typeof body.emoji !== 'string' ||
+        !WHATSAPP_REACTION_EMOJIS.includes(body.emoji as (typeof WHATSAPP_REACTION_EMOJIS)[number])
+      ) {
+        return reply.code(400).send({ success: false, error: 'Choose a supported reaction emoji' });
+      }
+      const message = await WhatsappMessage.query().findOne({ id: messageId, company_id: companyId });
+      if (!message)
+        return reply.code(404).send({ success: false, error: 'Message not found' });
+      if (
+        !message.external_id ||
+        message.external_id.startsWith('pending:') ||
+        message.external_id.startsWith('gowa-') ||
+        !['received', 'sent', 'delivered', 'read'].includes(message.status)
+      ) {
+        return reply.code(409).send({ success: false, error: 'Message is not available for reactions' });
+      }
+      const [conversation, account] = await Promise.all([
+        WhatsappConversation.query().findOne({ id: message.conversation_id, company_id: companyId }),
+        WhatsappAccount.query().findOne({ company_id: companyId }),
+      ]);
+      if (!conversation)
+        return reply.code(404).send({ success: false, error: 'Conversation not found' });
+      if (!account?.gateway_device_id || account.status !== 'connected')
+        return reply.code(409).send({ success: false, error: 'WhatsApp account is not connected' });
+      try {
+        await gowaRequest(`/message/${encodeURIComponent(message.external_id)}/reaction`, {
+          method: 'POST',
+          deviceId: account.gateway_device_id,
+          contentType: 'application/json',
+          body: JSON.stringify({ phone: conversation.jid, emoji: body.emoji }),
+        });
+      } catch (error) {
+        req.log.error({ error: whatsappLogErrorContext(error) }, 'WhatsApp reaction request failed');
+        return reply.code(502).send({ success: false, error: 'Could not send reaction' });
+      }
+      const reactions = normalizedReactions(message.reactions);
+      const ownReaction: WhatsAppReaction = {
+        emoji: body.emoji,
+        sender_jid: account.phone_number
+          ? `${account.phone_number.replace(/\D/gu, '')}@s.whatsapp.net`
+          : null,
+        is_from_me: true,
+        timestamp: new Date().toISOString(),
+      };
+      const ownReactionIndex = reactions.findIndex((reaction) => reaction.is_from_me);
+      if (ownReactionIndex >= 0) reactions[ownReactionIndex] = ownReaction;
+      else reactions.push(ownReaction);
+      await WhatsappMessage.query().where({ id: messageId, company_id: companyId }).patch({
+        reactions: JSON.stringify(reactions),
+        write_date: new Date().toISOString(),
+      });
+      await recordWhatsAppAudit(req, 'whatsapp.message', 'react', messageId, companyId);
+      return reply.send({ success: true, data: { reactions } });
+    }
+  );
 
   app.post<{ Params: Params }>(
     '/whatsapp/conversations/:id/read',

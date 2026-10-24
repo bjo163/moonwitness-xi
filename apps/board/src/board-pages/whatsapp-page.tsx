@@ -85,8 +85,31 @@ type Message = {
     unavailable?: boolean;
   } | null;
   is_forwarded?: boolean;
+  reactions?: Array<{
+    emoji: string;
+    sender_jid: string | null;
+    sender_display_name?: string | null;
+    is_from_me: boolean;
+    timestamp?: string | null;
+  }>;
   create_date: string;
 };
+const reactionEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '🎉'];
+
+function summarizeReactions(reactions: Message['reactions'] = []) {
+  const summary = new Map<string, { emoji: string; count: number; includesMe: boolean }>();
+  for (const reaction of reactions) {
+    const current = summary.get(reaction.emoji) ?? {
+      emoji: reaction.emoji,
+      count: 0,
+      includesMe: false,
+    };
+    current.count++;
+    current.includesMe ||= reaction.is_from_me;
+    summary.set(reaction.emoji, current);
+  }
+  return [...summary.values()];
+}
 type ConversationFilter = 'all' | 'unread' | 'private' | 'groups';
 type WhatsAppInboxPreferences = {
   selectedConversationId: number | null;
@@ -149,6 +172,8 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
   const [markingRead, setMarkingRead] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
+  const [reactingTo, setReactingTo] = useState<Message | null>(null);
+  const [reacting, setReacting] = useState(false);
   const [forwardConversationSearch, setForwardConversationSearch] = useState('');
   const [debouncedForwardConversationSearch, setDebouncedForwardConversationSearch] = useState('');
   const [forwardShowArchived, setForwardShowArchived] = useState(false);
@@ -498,6 +523,25 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
       setForwarding(false);
     }
   };
+  const reactToMessage = async (message: Message, emoji: string) => {
+    if (reacting) return;
+    setReacting(true);
+    try {
+      await client.request(`/whatsapp/messages/${message.id}/reaction`, {
+        method: 'POST',
+        body: { emoji },
+      });
+      setReactingTo(null);
+      await queryClient.invalidateQueries({
+        queryKey: scopedQueryKey(['whatsapp', 'messages', activeConversation?.id]),
+      });
+      toast.success('Reaction sent');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not send reaction');
+    } finally {
+      setReacting(false);
+    }
+  };
   const disconnect = async () => {
     try {
       await client.request('/whatsapp/disconnect', { method: 'POST', body: {} });
@@ -745,6 +789,45 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                 </Button>
               )}
               </div>
+            </div>
+          </section>
+        </div>
+      )}
+      {reactingTo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="whatsapp-reaction-title"
+            className="w-full max-w-sm border-2 border-ink bg-cream p-5 shadow-[6px_6px_0_#171717]"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="whatsapp-reaction-title" className="font-display text-xl uppercase">
+                  React to message
+                </h2>
+                <p className="mt-1 line-clamp-2 text-sm text-ink-faint">
+                  {reactingTo.content || `[${reactingTo.message_type}]`}
+                </p>
+              </div>
+              <Button type="button" variant="outline" disabled={reacting} onClick={() => setReactingTo(null)}>
+                Cancel
+              </Button>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Choose a reaction">
+              {reactionEmojis.map((emoji) => (
+                <Button
+                  key={emoji}
+                  type="button"
+                  variant="outline"
+                  className="min-w-11 text-xl"
+                  aria-label={`React with ${emoji}`}
+                  disabled={reacting}
+                  onClick={() => void reactToMessage(reactingTo, emoji)}
+                >
+                  {emoji}
+                </Button>
+              ))}
             </div>
           </section>
         </div>
@@ -1098,6 +1181,20 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                   {message.media_file_name && (
                     <p className="mt-1 text-xs">{message.media_file_name}</p>
                   )}
+                  {summarizeReactions(message.reactions).length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1" aria-label="Message reactions">
+                      {summarizeReactions(message.reactions).map((reaction) => (
+                        <span
+                          key={reaction.emoji}
+                          role="img"
+                          aria-label={`${reaction.emoji} reaction, ${reaction.count}${reaction.includesMe ? ', includes yours' : ''}`}
+                          className={`border border-ink/50 px-2 py-0.5 text-xs ${reaction.includesMe ? 'bg-pink/40' : 'bg-paper'}`}
+                        >
+                          {reaction.emoji} {reaction.count}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {message.content && (
                     <Button
                       type="button"
@@ -1125,6 +1222,17 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                       onClick={() => setReplyingTo(message)}
                     >
                       Reply
+                    </Button>
+                  )}
+                  {canSend && ['received', 'sent', 'delivered', 'read'].includes(message.status) && (
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="mt-1 h-auto p-0 text-xs underline"
+                      aria-label="React to message"
+                      onClick={() => setReactingTo(message)}
+                    >
+                      React
                     </Button>
                   )}
                   {canSend && ['received', 'sent', 'delivered', 'read'].includes(message.status) && (

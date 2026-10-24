@@ -65,6 +65,7 @@ describe('WhatsApp API GoWA bridge', () => {
   let providerImageSendCount = 0;
   let providerImageReplyIds: string[] = [];
   let providerForwardRequests: Array<{ sourceId: string; body: Record<string, unknown> }> = [];
+  let providerReactionRequests: Array<{ messageId: string; body: Record<string, unknown> }> = [];
   let providerDownloadBytes = Buffer.alloc(0);
   let providerDownloadDeclaredLength: number | null = null;
   let providerDownloadFileName = 'incoming.png';
@@ -176,6 +177,7 @@ describe('WhatsApp API GoWA bridge', () => {
     providerImageSendCount = 0;
     providerImageReplyIds = [];
     providerForwardRequests = [];
+    providerReactionRequests = [];
     providerDownloadBytes = pngFixture();
     providerDownloadDeclaredLength = null;
     providerDownloadFileName = 'incoming.png';
@@ -292,6 +294,13 @@ describe('WhatsApp API GoWA bridge', () => {
           body: JSON.parse(String(init?.body)) as Record<string, unknown>,
         });
         return json({ message_id: `forwarded-${providerForwardRequests.length}` });
+      }
+      if (/^\/message\/[^/]+\/reaction$/u.test(url.pathname) && method === 'POST') {
+        providerReactionRequests.push({
+          messageId: decodeURIComponent(url.pathname.slice('/message/'.length).replace(/\/reaction$/u, '')),
+          body: JSON.parse(String(init?.body)) as Record<string, unknown>,
+        });
+        return json({ message_id: `reaction-${providerReactionRequests.length}` });
       }
       if (/^\/devices\/moonwitness-company-\d+\/logout$/u.test(url.pathname)) return json({});
       if (url.pathname === '/message/incoming-image/download')
@@ -1830,6 +1839,138 @@ describe('WhatsApp API GoWA bridge', () => {
     });
     expect(foreignForward.statusCode).toBe(404);
     expect(providerForwardRequests).toHaveLength(1);
+  });
+
+  it('imports message reactions and applies a company-scoped reaction through GoWA', async () => {
+    const accountId = await connectAndMarkReady();
+    const jid = '628111111111@s.whatsapp.net';
+    const groupJid = '123456@g.us';
+    providerChats = [
+      { jid, name: 'Reaction chat', last_message_time: '2026-10-24T10:00:00Z' },
+      { jid: groupJid, name: 'Reaction group', last_message_time: '2026-10-24T09:00:00Z' },
+    ];
+    providerMessages = [{
+      id: 'provider-message-to-react',
+      chat_jid: jid,
+      content: 'A message with a reaction',
+      timestamp: '2026-10-24T10:00:00Z',
+      is_from_me: false,
+      media_type: 'text',
+      reactions: [{
+        emoji: '👀',
+        sender_jid: '628222222222@s.whatsapp.net',
+        sender_display_name: 'Other participant',
+        is_from_me: false,
+        timestamp: '2026-10-24T10:01:00Z',
+      }],
+    }];
+    const inbox = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations',
+      headers: { authorization: 'Bearer test' },
+    });
+    const conversationId = inbox.json().data.find(
+      (conversation: { jid: string }) => conversation.jid === jid
+    ).id as number;
+    const history = await app.inject({
+      method: 'GET',
+      url: `/whatsapp/conversations/${conversationId}/messages`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(history.statusCode).toBe(200);
+    const source = history.json().data[0];
+    expect(source.reactions).toEqual([
+      expect.objectContaining({ emoji: '👀', is_from_me: false }),
+    ]);
+
+    const reaction = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/messages/${source.id}/reaction`,
+      headers: { authorization: 'Bearer test' },
+      payload: { emoji: '👍' },
+    });
+    expect(reaction.statusCode).toBe(200);
+    expect(reaction.json().data.reactions).toEqual([
+      expect.objectContaining({ emoji: '👀', is_from_me: false }),
+      expect.objectContaining({ emoji: '👍', is_from_me: true }),
+    ]);
+    expect(providerReactionRequests).toEqual([{
+      messageId: 'provider-message-to-react',
+      body: { phone: jid, emoji: '👍' },
+    }]);
+    const stored = await db('whatsapp_messages').where({ id: source.id, company_id: companyId }).first();
+    expect(JSON.parse(stored.reactions)).toHaveLength(2);
+
+    const groupConversationId = inbox.json().data.find(
+      (conversation: { jid: string }) => conversation.jid === groupJid
+    ).id as number;
+    const [groupMessage] = await db('whatsapp_messages')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        conversation_id: groupConversationId,
+        external_id: 'provider-group-message-to-react',
+        direction: 'outbound',
+        message_type: 'text',
+        content: 'A group message',
+        status: 'sent',
+      })
+      .returning(['id']);
+    const groupReaction = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/messages/${groupMessage.id}/reaction`,
+      headers: { authorization: 'Bearer test' },
+      payload: { emoji: '❤️' },
+    });
+    expect(groupReaction.statusCode).toBe(200);
+
+    const invalid = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/messages/${source.id}/reaction`,
+      headers: { authorization: 'Bearer test' },
+      payload: { emoji: 'not an emoji' },
+    });
+    expect(invalid.statusCode).toBe(400);
+    expect(providerReactionRequests).toHaveLength(2);
+    expect(providerReactionRequests[1]).toEqual({
+      messageId: 'provider-group-message-to-react',
+      body: { phone: groupJid, emoji: '❤️' },
+    });
+
+    const foreignAccount = await db('whatsapp_accounts')
+      .insert({ company_id: foreignCompanyId, status: 'connected', gateway_device_id: 'foreign-device' })
+      .returning(['id']);
+    const [foreignConversation] = await db('whatsapp_conversations')
+      .insert({
+        company_id: foreignCompanyId,
+        account_id: foreignAccount[0].id,
+        jid: '628999999999@s.whatsapp.net',
+        name: 'Foreign conversation',
+        is_group: false,
+        unread_count: 0,
+      })
+      .returning(['id']);
+    const [foreignMessage] = await db('whatsapp_messages')
+      .insert({
+        company_id: foreignCompanyId,
+        account_id: foreignAccount[0].id,
+        conversation_id: foreignConversation.id,
+        external_id: 'foreign-message-id',
+        direction: 'inbound',
+        message_type: 'text',
+        content: 'Foreign message',
+        status: 'received',
+      })
+      .returning(['id']);
+    const crossCompany = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/messages/${foreignMessage.id}/reaction`,
+      headers: { authorization: 'Bearer test' },
+      payload: { emoji: '❤️' },
+    });
+    expect(crossCompany.statusCode).toBe(404);
+    expect(providerReactionRequests).toHaveLength(2);
+    expect(accountId).toBeGreaterThan(0);
   });
 
   it('quotes messages within the same company conversation and forwards the provider reply id', async () => {

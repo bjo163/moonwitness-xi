@@ -75,6 +75,7 @@ export const WhatsappMessage = defineModel('whatsapp.message', {
     reply_to_external_id: fields.string({ hidden: true }),
     is_forwarded: fields.boolean({ required: true, default: false }),
     forward_from_external_id: fields.string({ hidden: true }),
+    reactions: fields.text(),
   },
 });
 

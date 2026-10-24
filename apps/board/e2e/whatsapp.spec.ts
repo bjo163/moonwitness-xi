@@ -22,6 +22,7 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   );
   let failSearchConversationLoad = false;
   let includeNewInboundMessage = false;
+  let ownReaction: { emoji: string; is_from_me: boolean } | null = null;
   const forwardDestinationQueries: Array<{ archived: string | null; offset: string | null }> = [];
   await page.route('**/whatsapp/conversations*', (route) => {
     const url = new URL(route.request().url());
@@ -107,6 +108,14 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
     });
   });
   const sentMessages: string[] = [];
+  const sentReactions: Array<{ sourceId: string; emoji: string }> = [];
+  await page.route('**/whatsapp/messages/*/reaction', async (route) => {
+    const sourceId = new URL(route.request().url()).pathname.split('/').at(-2) ?? '';
+    const body = route.request().postDataJSON() as { emoji: string };
+    sentReactions.push({ sourceId, emoji: body.emoji });
+    ownReaction = { emoji: body.emoji, is_from_me: true };
+    await route.fulfill({ status: 200, json: { success: true, data: { reactions: [{ emoji: body.emoji, is_from_me: true }] } } });
+  });
   const forwardedMessages: Array<{ sourceId: string; body: Record<string, unknown>; key: string }> = [];
   await page.route('**/whatsapp/messages/*/forward', async (route) => {
     const sourceId = new URL(route.request().url()).pathname.split('/').at(-2) ?? '';
@@ -209,6 +218,10 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
             is_last_read: false,
             content: 'Can you help?',
             status: 'received',
+            reactions: [
+              { emoji: '👀', sender_display_name: 'Rani Putri', is_from_me: false },
+              ...(ownReaction ? [ownReaction] : []),
+            ],
             message_type: 'text',
             create_date: new Date().toISOString(),
           },
@@ -311,6 +324,10 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   await page.getByRole('button', { name: 'Load more conversations' }).click();
   await expect(page.getByRole('button', { name: /Older conversation/u })).toBeVisible();
   await expect(page.locator('#whatsapp-message-50').getByText('Can you help?')).toBeVisible();
+  await page.locator('#whatsapp-message-50').getByRole('button', { name: /React/u }).click();
+  await page.getByRole('dialog', { name: 'React to message' }).getByRole('button', { name: 'React with 👍' }).click();
+  await expect.poll(() => sentReactions).toEqual([{ sourceId: '50', emoji: '👍' }]);
+  await expect(page.locator('#whatsapp-message-50').getByRole('img', { name: /👍 reaction/u })).toBeVisible();
   await expect(page.locator('article time').first()).toHaveAttribute(
     'datetime',
     /^\d{4}-\d{2}-\d{2}T/u
