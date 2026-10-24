@@ -115,6 +115,85 @@ test('brand, typography, and homepage proof use canonical assets and correct spe
   });
 });
 
+test('webfont fallback remains readable while local fonts load without a large layout shift', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.addInitScript(() => {
+    (window as Window & { __fontShiftTotal?: number }).__fontShiftTotal = 0;
+    new PerformanceObserver((entries) => {
+      for (const entry of entries.getEntries() as (PerformanceEntry & {
+        hadRecentInput: boolean;
+        value: number;
+      })[]) {
+        if (!entry.hadRecentInput) {
+          const target = window as Window & { __fontShiftTotal?: number };
+          target.__fontShiftTotal = (target.__fontShiftTotal ?? 0) + entry.value;
+        }
+      }
+    }).observe({ type: 'layout-shift', buffered: true });
+  });
+
+  let releaseFonts!: () => void;
+  const fontGate = new Promise<void>((resolveFontGate) => {
+    releaseFonts = resolveFontGate;
+  });
+  let fontRequests = 0;
+  await page.route('**/*.woff2', async (route) => {
+    fontRequests += 1;
+    await fontGate;
+    await route.continue();
+  });
+
+  await page.goto('./', { waitUntil: 'domcontentloaded' });
+  const heading = page.getByRole('heading', { name: 'One system. Every screen.', exact: true });
+  await expect(heading).toBeVisible();
+  await expect.poll(() => fontRequests).toBeGreaterThan(0);
+  expect(await page.evaluate(() => document.fonts.status)).toBe('loading');
+
+  const fallbackBox = await heading.boundingBox();
+  expect(fallbackBox).not.toBeNull();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
+  ).toBe(true);
+  releaseFonts();
+  await page.evaluate(() => document.fonts.ready);
+  const finalBox = await heading.boundingBox();
+  const shiftTotal = await page.evaluate(
+    () => (window as Window & { __fontShiftTotal?: number }).__fontShiftTotal ?? 0
+  );
+  expect(await page.evaluate(() => document.fonts.status)).toBe('loaded');
+  expect(shiftTotal).toBeLessThan(0.1);
+  expect(finalBox).not.toBeNull();
+  expect(finalBox!.height).toBeLessThanOrEqual(fallbackBox!.height + 4);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
+  ).toBe(true);
+});
+
+test('failed local fonts keep the Indonesian typography specimen readable on mobile', async ({
+  page,
+}) => {
+  let failedFontRequests = 0;
+  await page.route('**/*.woff2', async (route) => {
+    failedFontRequests += 1;
+    await route.abort();
+  });
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto('./#typography');
+  const copyStress = page.getByTestId('typography-copy-stress');
+  await expect(copyStress).toContainText('Rp1.234.567');
+  await expect(copyStress).toContainText('naïve');
+  await expect.poll(() => failedFontRequests).toBeGreaterThan(0);
+  await page.evaluate(() => document.fonts.ready);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
+  ).toBe(true);
+  await copyStress.screenshot({
+    path: resolve(process.cwd(), '../../docs/design/ui-catalog/font-fallback-320.png'),
+  });
+});
+
 test('canonical icon SVGs match generated React wrappers in a browser contact sheet', async ({
   page,
 }, testInfo) => {
