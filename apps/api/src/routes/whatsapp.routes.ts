@@ -571,7 +571,11 @@ function requireCompany(
 
 type WhatsappAction = 'create' | 'write';
 type WhatsappModel =
-  'whatsapp.account' | 'whatsapp.conversation' | 'whatsapp.internal_note' | 'whatsapp.message';
+  | 'whatsapp.account'
+  | 'whatsapp.conversation'
+  | 'whatsapp.internal_note'
+  | 'whatsapp.label'
+  | 'whatsapp.message';
 
 function canPerformWhatsAppAction(
   auth: {
@@ -1323,6 +1327,132 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
     return { success: true, data: { status: 'disconnected' } };
   });
 
+  app.get('/whatsapp/labels', async (req, reply) => {
+    const companyId = requireCompany(req, reply);
+    if (!companyId) return;
+    const data = await app
+      .db('whatsapp_labels')
+      .select('id', 'name', 'color')
+      .where({ company_id: companyId })
+      .orderBy('name', 'asc')
+      .orderBy('id', 'asc');
+    return { success: true, data };
+  });
+
+  app.post<{ Body: unknown }>('/whatsapp/labels', whatsappRateLimit(30), async (req, reply) => {
+    const companyId = requireCompany(req, reply);
+    if (!companyId) return;
+    if (!requireWhatsAppAction(req, reply, 'whatsapp.conversation', 'write')) return;
+    const body = isRecord(req.body) ? req.body : null;
+    const name = typeof body?.name === 'string' ? body.name.trim() : '';
+    const color = typeof body?.color === 'string' ? body.color : '#f1d340';
+    if (
+      !body ||
+      Object.keys(body).some((key) => !['name', 'color'].includes(key)) ||
+      name.length < 1 ||
+      name.length > 40 ||
+      !/^#[0-9a-f]{6}$/iu.test(color)
+    )
+      return reply.code(400).send({ success: false, error: 'Invalid label name or color' });
+    const normalizedName = name.toLocaleLowerCase();
+    const inserted = await app
+      .db('whatsapp_labels')
+      .insert({
+        company_id: companyId,
+        name,
+        normalized_name: normalizedName,
+        color: color.toLowerCase(),
+      })
+      .onConflict(['company_id', 'normalized_name'])
+      .ignore()
+      .returning(['id', 'name', 'color']);
+    const label = inserted[0];
+    if (!label) return reply.code(409).send({ success: false, error: 'Label already exists' });
+    await recordWhatsAppAudit(req, 'whatsapp.label', 'create', Number(label.id), companyId);
+    return reply.code(201).send({ success: true, data: label });
+  });
+
+  app.delete<{ Params: Params }>('/whatsapp/labels/:id', async (req, reply) => {
+    const companyId = requireCompany(req, reply);
+    if (!companyId) return;
+    if (!requireWhatsAppAction(req, reply, 'whatsapp.conversation', 'write')) return;
+    const labelId = id(req.params.id);
+    if (!labelId) return reply.code(400).send({ success: false, error: 'Invalid label ID' });
+    const label = await app
+      .db('whatsapp_labels')
+      .where({ id: labelId, company_id: companyId })
+      .first();
+    if (!label) return reply.code(404).send({ success: false, error: 'Label not found' });
+    await app.db.transaction(async (trx) => {
+      await trx('whatsapp_conversation_labels')
+        .where({ company_id: companyId, label_id: labelId })
+        .delete();
+      await trx('whatsapp_labels').where({ id: labelId, company_id: companyId }).delete();
+      await recordWhatsAppAudit(req, 'whatsapp.label', 'delete', labelId, companyId, trx);
+    });
+    return { success: true, data: { id: labelId } };
+  });
+
+  app.put<{ Params: Params; Body: unknown }>(
+    '/whatsapp/conversations/:id/labels',
+    whatsappRateLimit(30),
+    async (req, reply) => {
+      const companyId = requireCompany(req, reply);
+      if (!companyId) return;
+      if (!requireWhatsAppAction(req, reply, 'whatsapp.conversation', 'write')) return;
+      const conversationId = id(req.params.id);
+      const body = isRecord(req.body) ? req.body : null;
+      const labelIds = body?.label_ids;
+      if (
+        !conversationId ||
+        !body ||
+        Object.keys(body).length !== 1 ||
+        !Array.isArray(labelIds) ||
+        labelIds.length > 20 ||
+        labelIds.some((value) => !Number.isSafeInteger(value) || Number(value) < 1) ||
+        new Set(labelIds).size !== labelIds.length
+      )
+        return reply.code(400).send({ success: false, error: 'Invalid conversation labels' });
+      const conversation = await WhatsappConversation.query().findOne({
+        id: conversationId,
+        company_id: companyId,
+      });
+      if (!conversation)
+        return reply.code(404).send({ success: false, error: 'Conversation not found' });
+      const labels = labelIds.length
+        ? await app
+            .db('whatsapp_labels')
+            .select('id', 'name', 'color')
+            .where({ company_id: companyId })
+            .whereIn('id', labelIds as number[])
+        : [];
+      if (labels.length !== labelIds.length)
+        return reply.code(404).send({ success: false, error: 'One or more labels were not found' });
+      await app.db.transaction(async (trx) => {
+        await trx('whatsapp_conversation_labels')
+          .where({ company_id: companyId, conversation_id: conversationId })
+          .delete();
+        if (labels.length)
+          await trx('whatsapp_conversation_labels').insert(
+            labels.map((label) => ({
+              company_id: companyId,
+              conversation_id: conversationId,
+              label_id: label.id,
+            }))
+          );
+        await recordWhatsAppAudit(
+          req,
+          'whatsapp.conversation',
+          'labels.update',
+          conversationId,
+          companyId,
+          trx
+        );
+      });
+      return { success: true, data: labels };
+    }
+  );
+
   app.get<{
     Querystring: {
       limit?: string;
@@ -1330,6 +1460,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       search?: string;
       archived?: string;
       unread?: string;
+      label_id?: string;
     };
   }>('/whatsapp/conversations', async (req, reply) => {
     const companyId = requireCompany(req, reply);
@@ -1339,11 +1470,15 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
     const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
     const archived = req.query.archived === 'true';
     const unreadOnly = req.query.unread === 'true';
+    const labelId = req.query.label_id === undefined ? undefined : id(req.query.label_id);
     if (req.query.archived !== undefined && !['true', 'false'].includes(req.query.archived)) {
       return reply.code(400).send({ success: false, error: 'Archived must be true or false' });
     }
     if (req.query.unread !== undefined && !['true', 'false'].includes(req.query.unread)) {
       return reply.code(400).send({ success: false, error: 'Unread must be true or false' });
+    }
+    if (req.query.label_id !== undefined && !labelId) {
+      return reply.code(400).send({ success: false, error: 'Invalid label ID' });
     }
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
       return reply.code(400).send({ success: false, error: 'Limit must be between 1 and 100' });
@@ -1571,6 +1706,20 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       company_id: companyId,
       is_archived: archived,
     });
+    if (labelId) {
+      const label = await app
+        .db('whatsapp_labels')
+        .where({ id: labelId, company_id: companyId })
+        .first();
+      if (!label) return reply.code(404).send({ success: false, error: 'Label not found' });
+      query.whereIn(
+        'id',
+        app
+          .db('whatsapp_conversation_labels')
+          .select('conversation_id')
+          .where({ company_id: companyId, label_id: labelId })
+      );
+    }
     const readCursorTimestampSql =
       app.db.client.config.client === 'pg'
         ? 'read_cursor.last_read_at::timestamptz'
@@ -1620,6 +1769,29 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       .limit(limit)
       .offset(offset);
     const conversationIds = conversations.map((conversation) => conversation.id);
+    const labelRows = conversationIds.length
+      ? await app
+          .db('whatsapp_conversation_labels as conversation_label')
+          .join('whatsapp_labels as label', function joinLabel() {
+            this.on('label.id', '=', 'conversation_label.label_id').andOn(
+              'label.company_id',
+              '=',
+              'conversation_label.company_id'
+            );
+          })
+          .select('conversation_label.conversation_id', 'label.id', 'label.name', 'label.color')
+          .where({ 'conversation_label.company_id': companyId })
+          .whereIn('conversation_label.conversation_id', conversationIds)
+      : [];
+    const labelsByConversation = new Map<
+      number,
+      Array<{ id: number; name: string; color: string }>
+    >();
+    for (const label of labelRows) {
+      const current = labelsByConversation.get(Number(label.conversation_id)) ?? [];
+      current.push({ id: Number(label.id), name: label.name, color: label.color });
+      labelsByConversation.set(Number(label.conversation_id), current);
+    }
     const unreadRows = conversationIds.length
       ? await app
           .db('whatsapp_messages as unread_message')
@@ -1653,6 +1825,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       data: conversations.map((conversation) => ({
         ...conversation,
         unread_count: unreadCountByConversation.get(conversation.id) ?? 0,
+        labels: labelsByConversation.get(conversation.id) ?? [],
       })),
     };
   });

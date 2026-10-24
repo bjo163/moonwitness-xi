@@ -47,7 +47,9 @@ type Conversation = {
   unread_count: number;
   last_message?: string | null;
   last_message_at?: string | null;
+  labels?: ConversationLabel[];
 };
+type ConversationLabel = { id: number; name: string; color: string };
 type ConversationPage = {
   items: Conversation[];
   nextOffset: number;
@@ -139,12 +141,14 @@ function summarizeReactions(reactions: Message['reactions'] = []) {
 type ConversationFilter = 'all' | 'unread' | 'private' | 'groups';
 type WhatsAppInboxPreferences = {
   selectedConversationId: number | null;
+  selectedLabelId: number | null;
   conversationFilter: ConversationFilter;
   showArchived: boolean;
   sendOnEnter: boolean;
 };
 const defaultInboxPreferences: WhatsAppInboxPreferences = {
   selectedConversationId: null,
+  selectedLabelId: null,
   conversationFilter: 'all',
   showArchived: false,
   sendOnEnter: true,
@@ -179,17 +183,26 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
   const [inboxPreferences, setInboxPreferences] = useState(() =>
     readWhatsAppInboxPreferences(inboxPreferenceScope)
   );
-  const { selectedConversationId: selected, conversationFilter, showArchived } = inboxPreferences;
+  const {
+    selectedConversationId: selected,
+    selectedLabelId,
+    conversationFilter,
+    showArchived,
+  } = inboxPreferences;
   const setSelected = (selectedConversationId: number | null) => {
     setReplyingTo(null);
     setInboxPreferences((current) => ({ ...current, selectedConversationId }));
   };
   const setConversationFilter = (conversationFilter: ConversationFilter) =>
     setInboxPreferences((current) => ({ ...current, conversationFilter }));
+  const setSelectedLabelId = (selectedLabelId: number | null) =>
+    setInboxPreferences((current) => ({ ...current, selectedLabelId }));
   const setShowArchived = (showArchived: boolean) =>
     setInboxPreferences((current) => ({ ...current, showArchived }));
   const [newPhone, setNewPhone] = useState('');
   const [conversationSearch, setConversationSearch] = useState('');
+  const [newLabelName, setNewLabelName] = useState('');
+  const [pendingLabelDeleteId, setPendingLabelDeleteId] = useState<number | null>(null);
   const [debouncedConversationSearch, setDebouncedConversationSearch] = useState('');
   const [updatingConversation, setUpdatingConversation] = useState(false);
   const [startingChat, setStartingChat] = useState(false);
@@ -271,19 +284,32 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
     refetchInterval: 3000,
     refetchIntervalInBackground: false,
   });
+  const labelsQuery = useQuery({
+    queryKey: scopedQueryKey(['whatsapp', 'labels']),
+    queryFn: async () =>
+      (await client.request<{ data: ConversationLabel[] }>('/whatsapp/labels')).data,
+    enabled: accountQuery.data?.status === 'connected',
+  });
+  const effectiveSelectedLabelId =
+    selectedLabelId !== null &&
+    labelsQuery.data &&
+    !labelsQuery.data.some((label) => label.id === selectedLabelId)
+      ? null
+      : selectedLabelId;
   const conversationsQueryKey = scopedQueryKey([
     'whatsapp',
     'conversations',
     debouncedConversationSearch,
     showArchived,
     conversationFilter,
+    effectiveSelectedLabelId,
   ]);
   const conversationsQuery = useQuery({
     queryKey: conversationsQueryKey,
     queryFn: async () => {
       const page = (
         await client.request<{ data: Conversation[] }>(
-          `/whatsapp/conversations?limit=50&offset=0&archived=${showArchived}&unread=${conversationFilter === 'unread'}${debouncedConversationSearch ? `&search=${encodeURIComponent(debouncedConversationSearch)}` : ''}`
+          `/whatsapp/conversations?limit=50&offset=0&archived=${showArchived}&unread=${conversationFilter === 'unread'}${effectiveSelectedLabelId ? `&label_id=${effectiveSelectedLabelId}` : ''}${debouncedConversationSearch ? `&search=${encodeURIComponent(debouncedConversationSearch)}` : ''}`
         )
       ).data;
       const cached = queryClient.getQueryData<ConversationPage>(conversationsQueryKey);
@@ -344,7 +370,10 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
         Boolean(debouncedConversationSearch)) ||
       `${conversation.name} ${conversation.jid}`.toLocaleLowerCase().includes(query) ||
       (digits.length > 0 && conversation.jid.replace(/\D/gu, '').includes(digits));
-    return matchesFilter && matchesSearch;
+    const matchesLabel =
+      effectiveSelectedLabelId === null ||
+      conversation.labels?.some((label) => label.id === effectiveSelectedLabelId);
+    return matchesFilter && matchesSearch && matchesLabel;
   });
   const activeConversation =
     filteredConversations.find((item) => item.id === selected) ?? filteredConversations[0];
@@ -409,7 +438,7 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
     try {
       const page = (
         await client.request<{ data: Conversation[] }>(
-          `/whatsapp/conversations?limit=50&offset=${current.nextOffset}&archived=${showArchived}&unread=${conversationFilter === 'unread'}${debouncedConversationSearch ? `&search=${encodeURIComponent(debouncedConversationSearch)}` : ''}`
+          `/whatsapp/conversations?limit=50&offset=${current.nextOffset}&archived=${showArchived}&unread=${conversationFilter === 'unread'}${effectiveSelectedLabelId ? `&label_id=${effectiveSelectedLabelId}` : ''}${debouncedConversationSearch ? `&search=${encodeURIComponent(debouncedConversationSearch)}` : ''}`
         )
       ).data;
       queryClient.setQueryData<ConversationPage>(conversationsQueryKey, (latest) => {
@@ -680,6 +709,58 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
       toast.error(error instanceof Error ? error.message : 'Could not start conversation');
     } finally {
       setStartingChat(false);
+    }
+  };
+
+  const createLabel = async (event: FormEvent) => {
+    event.preventDefault();
+    const name = newLabelName.trim();
+    if (!name) return;
+    try {
+      await client.request('/whatsapp/labels', {
+        method: 'POST',
+        body: { name, color: '#f1d340' },
+      });
+      setNewLabelName('');
+      await queryClient.invalidateQueries({ queryKey: scopedQueryKey(['whatsapp', 'labels']) });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not create label');
+    }
+  };
+
+  const toggleConversationLabel = async (labelId: number) => {
+    if (!activeConversation || updatingConversation) return;
+    const current = activeConversation.labels ?? [];
+    const labelIds = current.some((label) => label.id === labelId)
+      ? current.filter((label) => label.id !== labelId).map((label) => label.id)
+      : [...current.map((label) => label.id), labelId];
+    setUpdatingConversation(true);
+    try {
+      await client.request(`/whatsapp/conversations/${activeConversation.id}/labels`, {
+        method: 'PUT',
+        body: { label_ids: labelIds },
+      });
+      await queryClient.invalidateQueries({
+        queryKey: scopedQueryKey(['whatsapp', 'conversations']),
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not update conversation labels');
+    } finally {
+      setUpdatingConversation(false);
+    }
+  };
+
+  const deleteLabel = async (label: ConversationLabel) => {
+    try {
+      await client.request(`/whatsapp/labels/${label.id}`, { method: 'DELETE' });
+      setPendingLabelDeleteId(null);
+      if (selectedLabelId === label.id) setSelectedLabelId(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: scopedQueryKey(['whatsapp', 'labels']) }),
+        queryClient.invalidateQueries({ queryKey: scopedQueryKey(['whatsapp', 'conversations']) }),
+      ]);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not delete label');
     }
   };
 
@@ -1122,6 +1203,93 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                   </Button>
                 ))}
               </div>
+              <div className="mt-2 flex flex-wrap gap-2" aria-label="Filter by conversation label">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={effectiveSelectedLabelId === null ? 'default' : 'outline'}
+                  aria-pressed={effectiveSelectedLabelId === null}
+                  onClick={() => setSelectedLabelId(null)}
+                >
+                  All labels
+                </Button>
+                {(labelsQuery.data ?? []).map((label) => (
+                  <div key={label.id} className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={effectiveSelectedLabelId === label.id ? 'default' : 'outline'}
+                      aria-pressed={effectiveSelectedLabelId === label.id}
+                      onClick={() => setSelectedLabelId(label.id)}
+                      style={{ borderColor: label.color }}
+                    >
+                      {label.name}
+                    </Button>
+                    {canManageConversations &&
+                      (pendingLabelDeleteId === label.id ? (
+                        <span className="flex items-center gap-1 text-xs">
+                          <span>Delete?</span>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            aria-label={`Confirm delete label ${label.name}`}
+                            onClick={() => void deleteLabel(label)}
+                          >
+                            Yes
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            aria-label="Cancel label deletion"
+                            onClick={() => setPendingLabelDeleteId(null)}
+                          >
+                            No
+                          </Button>
+                        </span>
+                      ) : (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          aria-label={`Delete label ${label.name}`}
+                          onClick={() => setPendingLabelDeleteId(label.id)}
+                        >
+                          ×
+                        </Button>
+                      ))}
+                  </div>
+                ))}
+              </div>
+              {labelsQuery.isError && (
+                <div className="mt-2 flex items-center gap-2 text-xs" role="alert">
+                  <span>Conversation labels could not be loaded.</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={labelsQuery.isFetching}
+                    onClick={() => void labelsQuery.refetch()}
+                  >
+                    Retry labels
+                  </Button>
+                </div>
+              )}
+              {canManageConversations && (
+                <form onSubmit={createLabel} className="mt-2 flex gap-2">
+                  <Input
+                    aria-label="New conversation label"
+                    placeholder="New label"
+                    maxLength={40}
+                    value={newLabelName}
+                    onChange={(event) => setNewLabelName(event.target.value)}
+                  />
+                  <Button type="submit" disabled={!newLabelName.trim()}>
+                    Add label
+                  </Button>
+                </form>
+              )}
               <div className="mt-2 flex gap-2" aria-label="Archive filter">
                 <Button
                   type="button"
@@ -1198,6 +1366,19 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                   <span className="truncate text-sm text-ink-faint">
                     {conversation.last_message}
                   </span>
+                  {conversation.labels?.length ? (
+                    <span className="flex flex-wrap gap-1" aria-label="Conversation labels">
+                      {conversation.labels.map((label) => (
+                        <span
+                          key={label.id}
+                          className="rounded border px-1.5 py-0.5 text-[10px]"
+                          style={{ borderColor: label.color }}
+                        >
+                          {label.name}
+                        </span>
+                      ))}
+                    </span>
+                  ) : null}
                 </Button>
               ))
             ) : (
@@ -1268,6 +1449,37 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                     )}
                   </div>
                 )}
+                {activeConversation &&
+                  canManageConversations &&
+                  (labelsQuery.data ?? []).length > 0 && (
+                    <div
+                      className="flex w-full flex-wrap items-center gap-2"
+                      aria-label="Conversation labels"
+                    >
+                      <span className="text-xs text-ink-faint">Labels</span>
+                      {labelsQuery.data!.map((label) => {
+                        const assigned =
+                          activeConversation.labels?.some((item) => item.id === label.id) ?? false;
+                        return (
+                          <Button
+                            key={label.id}
+                            type="button"
+                            size="sm"
+                            variant={assigned ? 'default' : 'outline'}
+                            aria-pressed={assigned}
+                            disabled={
+                              updatingConversation ||
+                              (!assigned && (activeConversation.labels?.length ?? 0) >= 20)
+                            }
+                            style={{ borderColor: label.color }}
+                            onClick={() => void toggleConversationLabel(label.id)}
+                          >
+                            {assigned ? `Remove ${label.name}` : `Add ${label.name}`}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  )}
                 {activeConversation &&
                   canSend &&
                   messagesQuery.data?.some((message) => message.direction === 'inbound') && (
@@ -1943,6 +2155,12 @@ function readWhatsAppInboxPreferences(key: string): WhatsAppInboxPreferences {
         Number.isSafeInteger(value.selectedConversationId) &&
         value.selectedConversationId > 0
           ? value.selectedConversationId
+          : null,
+      selectedLabelId:
+        typeof value.selectedLabelId === 'number' &&
+        Number.isSafeInteger(value.selectedLabelId) &&
+        value.selectedLabelId > 0
+          ? value.selectedLabelId
           : null,
       conversationFilter: validFilters.includes(value.conversationFilter as ConversationFilter)
         ? (value.conversationFilter as ConversationFilter)

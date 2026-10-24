@@ -365,7 +365,7 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   await page.getByRole('button', { name: 'Unread' }).click();
   await expect(page.getByRole('button', { name: /Project group/u })).toBeVisible();
   await expect(page.getByRole('button', { name: /Rani Putri/u })).toHaveCount(0);
-  await page.getByRole('button', { name: 'All' }).click();
+  await page.getByRole('button', { name: 'All', exact: true }).click();
   await page.getByRole('button', { name: 'Mark latest as read' }).click();
   await page.getByRole('button', { name: 'Load more conversations' }).click();
   await expect(page.getByRole('button', { name: /Older conversation/u })).toBeVisible();
@@ -594,6 +594,94 @@ test('internal notes stay outside the WhatsApp message timeline', async ({ page 
     page.getByRole('region', { name: 'Internal notes' }).getByText('superadmin', { exact: true })
   ).toBeVisible();
   await expect(page.locator('article')).toHaveCount(0);
+});
+
+test('creates labels, applies them to a conversation, and filters the inbox', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByLabel('Email or Username').fill('superadmin');
+  await page.getByLabel('Password', { exact: true }).fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
+  await expect(page).toHaveURL(/\/board$/u);
+
+  const conversations = [
+    {
+      id: 91,
+      name: 'Target conversation',
+      jid: '628555111222@s.whatsapp.net',
+      is_group: false,
+      is_archived: false,
+      is_pinned: false,
+      unread_count: 0,
+      labels: [] as Array<{ id: number; name: string; color: string }>,
+    },
+    {
+      id: 92,
+      name: 'Untagged conversation',
+      jid: '628555333444@s.whatsapp.net',
+      is_group: false,
+      is_archived: false,
+      is_pinned: false,
+      unread_count: 0,
+      labels: [] as Array<{ id: number; name: string; color: string }>,
+    },
+  ];
+  let labels: Array<{ id: number; name: string; color: string }> = [];
+  await page.route('**/whatsapp/account', (route) =>
+    route.fulfill({
+      json: {
+        success: true,
+        data: {
+          status: 'connected',
+          permissions: { manage: true, manageConversations: true, send: true },
+        },
+      },
+    })
+  );
+  await page.route('**/whatsapp/labels**', async (route) => {
+    if (route.request().method() === 'POST') {
+      labels = [{ id: 8, name: 'Priority', color: '#f1d340' }];
+      return route.fulfill({ status: 201, json: { success: true, data: labels[0] } });
+    }
+    if (route.request().method() === 'DELETE') {
+      labels = [];
+      conversations[0].labels = [];
+      return route.fulfill({ json: { success: true, data: { id: 8 } } });
+    }
+    return route.fulfill({ json: { success: true, data: labels } });
+  });
+  await page.route('**/whatsapp/conversations**', async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith('/labels') && route.request().method() === 'PUT') {
+      const body = route.request().postDataJSON() as { label_ids: number[] };
+      conversations[0].labels = body.label_ids.includes(8) ? [...labels] : [];
+      return route.fulfill({ json: { success: true, data: conversations[0].labels } });
+    }
+    if (url.pathname.endsWith('/messages'))
+      return route.fulfill({ json: { success: true, data: [] } });
+    const labelFilter = url.searchParams.get('label_id');
+    const matches = labelFilter
+      ? conversations.filter((conversation) => conversation.labels.some((label) => label.id === 8))
+      : conversations;
+    return route.fulfill({ json: { success: true, data: matches } });
+  });
+
+  await page.goto('/board/whatsapp');
+  await page.getByRole('textbox', { name: 'New conversation label' }).fill('Priority');
+  await page.getByRole('button', { name: 'Add label' }).click();
+  await expect(page.getByRole('button', { name: 'Add Priority' })).toBeVisible();
+  await page.getByRole('button', { name: 'Add Priority' }).click();
+  await page.getByRole('button', { name: 'Priority', exact: true }).click();
+  await expect(page.getByRole('button', { name: /Target conversation/u })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Untagged conversation/u })).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Priority', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  );
+  await expect(page.getByRole('button', { name: /Untagged conversation/u })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Delete label Priority' }).click();
+  await page.getByRole('button', { name: 'Confirm delete label Priority' }).click();
+  await expect(page.getByRole('button', { name: 'Priority', exact: true })).toHaveCount(0);
 });
 
 test('connect shows QR, media is sent, and failures preserve the draft', async ({ page }) => {

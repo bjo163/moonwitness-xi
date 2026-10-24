@@ -106,6 +106,29 @@ export const WhatsappInternalNote = defineModel('whatsapp.internal_note', {
   },
 });
 
+export const WhatsappLabel = defineModel('whatsapp.label', {
+  table: 'whatsapp_labels',
+  order: 'name asc, id asc',
+  unique: [['company', 'normalized_name']],
+  fields: {
+    company: fields.belongsTo(Company, { required: true }),
+    name: fields.string({ required: true }),
+    normalized_name: fields.string({ required: true, hidden: true }),
+    color: fields.string({ required: true, default: '#f1d340' }),
+  },
+});
+
+export const WhatsappConversationLabel = defineModel('whatsapp.conversation.label', {
+  table: 'whatsapp_conversation_labels',
+  order: 'id asc',
+  unique: [['company', 'conversation', 'label']],
+  fields: {
+    company: fields.belongsTo(Company, { required: true }),
+    conversation: fields.belongsTo(WhatsappConversation, { required: true }),
+    label: fields.belongsTo(WhatsappLabel, { required: true }),
+  },
+});
+
 export const WhatsappConversationAlias = defineModel('whatsapp.conversation.alias', {
   table: 'whatsapp_conversation_aliases',
   order: 'id asc',

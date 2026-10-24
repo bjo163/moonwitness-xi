@@ -404,12 +404,14 @@ describe('WhatsApp API GoWA bridge', () => {
     await app.close();
     for (const table of [
       'outbox_events',
+      'whatsapp_conversation_labels',
       'whatsapp_conversation_aliases',
       'whatsapp_conversation_reads',
       'whatsapp_internal_notes',
       'whatsapp_messages',
       'whatsapp_conversations',
       'whatsapp_accounts',
+      'whatsapp_labels',
       'audit_logs',
     ])
       await db(table).delete();
@@ -762,6 +764,126 @@ describe('WhatsApp API GoWA bridge', () => {
       headers: { authorization: 'Bearer test', 'x-test-company': 'foreign' },
     });
     expect(foreign.statusCode).toBe(404);
+  });
+
+  it('manages company-scoped conversation labels and filters the inbox by label', async () => {
+    const accountId = await connectAndMarkReady();
+    const [conversation] = await db('whatsapp_conversations')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        jid: '628222222222@s.whatsapp.net',
+        name: 'Label conversation',
+        is_group: false,
+        unread_count: 0,
+      })
+      .returning(['id']);
+    const [otherConversation] = await db('whatsapp_conversations')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        jid: '628333333333@s.whatsapp.net',
+        name: 'Other conversation',
+        is_group: false,
+        unread_count: 0,
+      })
+      .returning(['id']);
+    const [created, duplicate] = await Promise.all([
+      app.inject({
+        method: 'POST',
+        url: '/whatsapp/labels',
+        headers: { authorization: 'Bearer test' },
+        payload: { name: '  Priority  ', color: '#11AAFF' },
+      }),
+      app.inject({
+        method: 'POST',
+        url: '/whatsapp/labels',
+        headers: { authorization: 'Bearer test' },
+        payload: { name: 'priority' },
+      }),
+    ]);
+    expect([created.statusCode, duplicate.statusCode].sort()).toEqual([201, 409]);
+    const successfulCreate = created.statusCode === 201 ? created : duplicate;
+    const label = successfulCreate.json().data as { id: number; name: string; color: string };
+    expect(label.name.toLocaleLowerCase()).toBe('priority');
+    expect(label.color).toMatch(/^#[0-9a-f]{6}$/u);
+    expect(
+      (
+        await app.inject({
+          method: 'POST',
+          url: '/whatsapp/labels',
+          headers: { authorization: 'Bearer test' },
+          payload: { name: 'Bad color', color: 'red' },
+        })
+      ).statusCode
+    ).toBe(400);
+
+    const update = await app.inject({
+      method: 'PUT',
+      url: `/whatsapp/conversations/${conversation.id}/labels`,
+      headers: { authorization: 'Bearer test' },
+      payload: { label_ids: [label.id] },
+    });
+    expect(update.statusCode).toBe(200);
+    expect(update.json().data).toEqual([label]);
+    const page = await app.inject({
+      method: 'GET',
+      url: `/whatsapp/conversations?label_id=${label.id}`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(page.statusCode).toBe(200);
+    expect(page.json().data.map((item: { id: number }) => item.id)).toEqual([conversation.id]);
+    expect(page.json().data[0].labels).toEqual([label]);
+
+    const foreignLabel = await db('whatsapp_labels')
+      .insert({
+        company_id: foreignCompanyId,
+        name: 'Foreign',
+        normalized_name: 'foreign',
+        color: '#000000',
+      })
+      .returning(['id']);
+    expect(
+      (
+        await app.inject({
+          method: 'PUT',
+          url: `/whatsapp/conversations/${conversation.id}/labels`,
+          headers: { authorization: 'Bearer test' },
+          payload: { label_ids: [foreignLabel[0].id] },
+        })
+      ).statusCode
+    ).toBe(404);
+    expect(
+      (
+        await app.inject({
+          method: 'GET',
+          url: '/whatsapp/labels',
+          headers: { authorization: 'Bearer test', 'x-test-company': 'foreign' },
+        })
+      )
+        .json()
+        .data.map((item: { id: number }) => item.id)
+    ).toEqual([foreignLabel[0].id]);
+    const readOnlyUpdate = await app.inject({
+      method: 'PUT',
+      url: `/whatsapp/conversations/${otherConversation.id}/labels`,
+      headers: { authorization: 'Bearer test', 'x-test-role': 'user' },
+      payload: { label_ids: [label.id] },
+    });
+    expect(readOnlyUpdate.statusCode, JSON.stringify(readOnlyUpdate.json())).toBe(403);
+
+    const deleted = await app.inject({
+      method: 'DELETE',
+      url: `/whatsapp/labels/${label.id}`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(deleted.statusCode).toBe(200);
+    expect(
+      await db('whatsapp_conversation_labels').where({ company_id: companyId, label_id: label.id })
+    ).toHaveLength(0);
+    expect(
+      await db('audit_logs').where({ model: 'whatsapp.label', record_id: label.id })
+    ).toHaveLength(2);
   });
 
   it('reuses an active pairing QR and reports an expired QR so it can be refreshed', async () => {
