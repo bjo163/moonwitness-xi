@@ -257,6 +257,8 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
             is_unread: true,
             is_last_read: false,
             content: 'Can you help?',
+            sender_jid: '628222222222@s.whatsapp.net',
+            sender_display_name: 'Rani from Finance',
             status: 'received',
             reactions: [
               { emoji: '👀', sender_display_name: 'Rani Putri', is_from_me: false },
@@ -287,6 +289,8 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
             id: 61,
             direction: 'inbound',
             content: 'Download progress attachment',
+            sender_jid: '628222222222@s.whatsapp.net',
+            sender_display_name: 'Rani Finance',
             status: 'received',
             message_type: 'image',
             media_file_name: 'download.png',
@@ -436,10 +440,13 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   await page.goto('/board/whatsapp');
   await expect(page.getByText('+6281234567890')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Project group' })).toBeVisible();
+  await expect(page.locator('#whatsapp-message-50').getByText('Rani from Finance')).toBeVisible();
   await expect(
     page.getByRole('progressbar', { name: 'Download progress for download.png' })
   ).toBeVisible();
   const progressAttachment = page.locator('#whatsapp-message-61');
+  await expect(progressAttachment.getByText('Rani Finance')).toBeVisible();
+  await expect(progressAttachment.getByText('Download progress attachment')).toBeVisible();
   await expect(progressAttachment.getByRole('button', { name: 'Cancel download' })).toBeVisible();
   await progressAttachment.getByRole('button', { name: 'Cancel download' }).click();
   downloadCancelled = true;

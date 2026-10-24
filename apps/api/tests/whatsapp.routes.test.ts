@@ -3529,7 +3529,6 @@ describe('WhatsApp API GoWA bridge', () => {
           sender_display_name: 'Group sender',
           timestamp: '2026-10-24T10:01:00Z',
           is_from_me: false,
-          body: 'Group image caption',
           image: { path: 'statics/media/provider-image.jpg', caption: 'Group image caption' },
           filename: 'group-image.jpg',
         })
@@ -3550,9 +3549,25 @@ describe('WhatsApp API GoWA bridge', () => {
       media_mime_type: 'image/jpeg',
       media_file_name: 'group-image.jpg',
       sender_jid: '628222222222@s.whatsapp.net',
+      sender_display_name: 'Group sender',
+      content: 'Group image caption',
       status: 'received',
     });
     expect(groupMessage.media_key).toBeNull();
+    const groupHistory = await app.inject({
+      method: 'GET',
+      url: `/whatsapp/conversations/${groupConversation.id}/messages`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(groupHistory.statusCode).toBe(200);
+    expect(groupHistory.json().data).toContainEqual(
+      expect.objectContaining({
+        id: groupMessage.id,
+        content: 'Group image caption',
+        sender_display_name: 'Group sender',
+        sender_jid: '628222222222@s.whatsapp.net',
+      })
+    );
     expect(
       await db('whatsapp_conversation_aliases').where({
         company_id: companyId,

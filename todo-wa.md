@@ -120,11 +120,11 @@ Legenda: **P0** penghambat keselamatan/keandalan; **P1** inbox v1; **P2** media 
 - [ ] **P2-15** Uji backup/restore attachment untuk mode local dan S3/RustFS.
 - [ ] **P2-16** Beberapa lampiran per pesan jika GoWA mendukung.
 - [ ] **P2-17** Album, voice note, dokumen bercaption, dan preview audio yang benar jika didukung.
-- [ ] **P2-18** Tampilkan pengirim dan caption media grup secara konsisten. (UI: `WUI-04`)
+- [x] **P2-18** Tampilkan pengirim dan caption media grup secara konsisten. Webhook GoWA menyimpan `sender_display_name` (fallback `from_name`) dan JID; sinkronisasi riwayat menyimpan nama bila tersedia. API mengambil caption dari `body`, lalu `caption` media sebagai fallback. Board menampilkan “You” untuk pesan sendiri, nama pengirim untuk pesan grup inbound, lalu nomor JID bila nama tidak tersedia; caption tampil di bawah preview media. PostgreSQL route test memverifikasi webhook grup yang hanya memberi caption dalam objek media dan memastikan nama/caption keluar melalui endpoint history; E2E Chromium memverifikasi nama dan caption pada media grup (1/1). Format mengikuti [GoWA webhook payload](https://github.com/aldinokemal/go-whatsapp-web-multidevice/blob/main/docs/webhook-payload.md#common-payload-fields). Nama peserta historis tetap bergantung pada metadata yang GoWA sertakan (P2-22).
 - [x] **P2-19** Route tests mencakup file kosong dan payload Base64 lama yang ditolak, filename traversal serta control-character, MIME palsu, upload di atas 10 MiB, batas tepat 10 MiB, storage put gagal sebelum antrean, dan body unduhan provider yang lebih pendek dari `Content-Length`. File terpotong ditolak sebelum ditulis ke attachment storage; nama file dibersihkan sebelum disimpan/dikembalikan.
 - [ ] **P2-20** Sinkronisasi nama kontak, nomor, foto profil, dan perubahan profil jika tersedia.
 - [ ] **P2-21** Validasi nomor internasional dan cek apakah nomor terdaftar.
-- [ ] **P2-22** Nama peserta grup; sekarang sender grup hanya menampilkan bagian nomor dari JID. (UI: `WUI-04`)
+- [ ] **P2-22** Sinkronisasi nama peserta grup secara persisten dan konsisten pada daftar anggota/metadata grup. Pengirim pesan inbound kini memakai nama dinamis dari webhook (`sender_display_name`/`from_name`) dengan fallback nomor JID (P2-18), tetapi metadata nama peserta untuk riwayat lama dan daftar anggota grup belum disinkronkan. (UI: `WUI-04`)
 - [ ] **P2-23** Sinkronisasi nama, foto, deskripsi, topik, dan jumlah anggota grup.
 - [ ] **P2-24** Buat grup dan pilih peserta jika didukung GoWA.
 - [ ] **P2-25** Kelola anggota, admin, undangan, dan keluar grup jika didukung.

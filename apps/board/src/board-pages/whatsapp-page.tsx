@@ -179,6 +179,7 @@ type Message = {
   media_file_name?: string | null;
   media_scan_status?: 'not_applicable' | 'pending' | 'clean' | 'infected';
   sender_jid?: string | null;
+  sender_display_name?: string | null;
   reply_to?: {
     id?: number;
     direction?: string;
@@ -2101,13 +2102,15 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                     tabIndex={-1}
                     className={`group relative max-w-[85%] border-2 border-ink p-3 ${message.direction === 'outbound' ? 'ml-auto bg-pink/30' : 'mr-auto bg-white'}`}
                   >
-                    {activeConversation?.is_group &&
-                      message.direction === 'inbound' &&
-                      message.sender_jid && (
-                        <p className="mb-1 font-mono text-[10px] text-ink-faint">
-                          {message.sender_jid.split('@')[0]?.split(':')[0]}
-                        </p>
-                      )}
+                    {activeConversation?.is_group && (
+                      <p className="mb-1 font-mono text-[10px] text-ink-faint">
+                        {message.direction === 'outbound'
+                          ? 'You'
+                          : message.sender_display_name?.trim() ||
+                            message.sender_jid?.split('@')[0]?.split(':')[0] ||
+                            'Group participant'}
+                      </p>
+                    )}
                     <p
                       className={`whitespace-pre-wrap break-words text-sm ${message.is_deleted || message.provider_type ? 'italic text-ink-faint' : ''}`}
                     >

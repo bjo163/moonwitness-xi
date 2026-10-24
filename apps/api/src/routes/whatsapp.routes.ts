@@ -909,12 +909,24 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         const messageType = typeInfo.messageType;
         const providerType = typeInfo.providerType;
         const mediaValue = mediaField ? payload?.[mediaField] : null;
+        const mediaCaption =
+          isRecord(mediaValue) && typeof mediaValue.caption === 'string'
+            ? mediaValue.caption
+            : typeof payload?.caption === 'string'
+              ? payload.caption
+              : '';
         const content =
           providerType === 'view_once'
             ? 'View-once media'
-            : typeof payload?.body === 'string'
+            : typeof payload?.body === 'string' && payload.body.length > 0
               ? payload.body.slice(0, 8000)
-              : '';
+              : mediaCaption.slice(0, 8000);
+        const messageSenderDisplayName =
+          typeof payload?.sender_display_name === 'string' && payload.sender_display_name.trim()
+            ? payload.sender_display_name.trim().slice(0, 255)
+            : typeof payload?.from_name === 'string' && payload.from_name.trim()
+              ? payload.from_name.trim().slice(0, 255)
+              : null;
         const replyToExternalId = providerReplyId(payload?.context_metadata);
         const chatName = typeof payload?.chat_name === 'string' ? payload.chat_name.trim() : '';
         const senderDisplayName =
@@ -1033,6 +1045,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
                     ? mediaValue.filename.slice(0, 255)
                     : null,
               sender_jid: senderJid,
+              sender_display_name: messageSenderDisplayName,
               reply_to_external_id: replyToExternalId,
             })
             .onConflict(['company_id', 'external_id'])
@@ -1879,6 +1892,12 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
                     : !typeInfo.providerType && typeof item.file_name === 'string'
                       ? item.file_name.slice(0, 255)
                       : null,
+                sender_display_name:
+                  typeof item.sender_display_name === 'string'
+                    ? item.sender_display_name.trim().slice(0, 255)
+                    : typeof item.from_name === 'string'
+                      ? item.from_name.trim().slice(0, 255)
+                      : null,
                 sender_jid:
                   typeof item.sender === 'string'
                     ? item.sender.slice(0, 255)
@@ -2469,6 +2488,12 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
             : !typeInfo.providerType && typeof item.file_name === 'string'
               ? item.file_name.slice(0, 255)
               : null,
+        sender_display_name:
+          typeof item.sender_display_name === 'string'
+            ? item.sender_display_name.trim().slice(0, 255)
+            : typeof item.from_name === 'string'
+              ? item.from_name.trim().slice(0, 255)
+              : null,
         sender_jid:
           typeof item.sender === 'string'
             ? item.sender.slice(0, 255)
@@ -2483,6 +2508,12 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         content,
         provider_type: typeInfo.providerType,
         status: fromMe ? 'sent' : 'received',
+        sender_display_name:
+          typeof item.sender_display_name === 'string'
+            ? item.sender_display_name.trim().slice(0, 255)
+            : typeof item.from_name === 'string'
+              ? item.from_name.trim().slice(0, 255)
+              : null,
         reply_to_external_id: replyToExternalId,
         ...(Array.isArray(item.reactions) ? { reactions } : {}),
         write_date: new Date().toISOString(),
@@ -2507,6 +2538,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         'media_file_name',
         'media_scan_status',
         'sender_jid',
+        'sender_display_name',
         'reply_to_message_id',
         'reply_to_external_id',
         'is_forwarded',
