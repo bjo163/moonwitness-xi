@@ -86,7 +86,6 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11.17.0'
-          go-version: '1.27.3'
       - name: Install frozen workspace dependencies
         run: pnpm install --frozen-lockfile --no-runtime
       - run: pnpm lint
@@ -202,7 +201,6 @@ jobs:
         with:
           node-version: '22'
           pnpm-version: '11.17.0'
-          go-version: '1.27.3'
       - name: Install frozen workspace dependencies
         run: pnpm install --frozen-lockfile --no-runtime
       - name: Run unit tests and write JUnit reports

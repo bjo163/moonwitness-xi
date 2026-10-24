@@ -9,18 +9,9 @@ inputs:
     description: Exact pnpm version pinned by the workspace
     required: false
     default: '11.17.0'
-  go-version:
-    description: Optional Go version for packages that include Go source
-    required: false
-    default: ''
 runs:
   using: composite
   steps:
-    - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
-      if: inputs.go-version != ''
-      with:
-        go-version: ${{ inputs.go-version }}
-        cache-dependency-path: apps/whatsapp/go.sum
     - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
       with:
         version: ${{ inputs.pnpm-version }}
