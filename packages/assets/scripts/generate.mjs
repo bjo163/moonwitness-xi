@@ -419,7 +419,8 @@ const icons = [
   {
     name: 'grid',
     title: 'Grid view',
-    paths: '<rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/>',
+    paths:
+      '<rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/>',
   },
   {
     name: 'sort-ascending',
@@ -434,7 +435,8 @@ const icons = [
   {
     name: 'tag',
     title: 'Tag',
-    paths: '<path d="m20.5 13.5-7 7a2 2 0 0 1-2.8 0l-7.2-7.2V3.5h9.8l7.2 7.2a2 2 0 0 1 0 2.8Z"/><circle cx="8" cy="8" r="1.25"/>',
+    paths:
+      '<path d="m20.5 13.5-7 7a2 2 0 0 1-2.8 0l-7.2-7.2V3.5h9.8l7.2 7.2a2 2 0 0 1 0 2.8Z"/><circle cx="8" cy="8" r="1.25"/>',
   },
   {
     name: 'credit-card',

@@ -254,9 +254,7 @@ function Many2oneWidget({
               }}
             />
           )}
-          <ChevronRightIcon
-            className={cn('size-4 shrink-0 rotate-90', !value && 'ml-auto')}
-          />
+          <ChevronRightIcon className={cn('size-4 shrink-0 rotate-90', !value && 'ml-auto')} />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
