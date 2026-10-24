@@ -210,6 +210,9 @@ export async function runContainerSmoke({
     WHATSAPP_GATEWAY_PASSWORD: 'ci-only-whatsapp-password',
     ATTACHMENT_S3_ACCESS_KEY: 'GKci-only-access-key-id',
     ATTACHMENT_S3_SECRET_KEY: 'ci-only-attachment-secret-that-is-at-least-32-characters-long',
+    // The smoke network is internal, so a HeadBucket against the hosted bucket can never
+    // answer; /readyz gates on the attachment driver and must be pointed at the local one.
+    ATTACHMENT_STORAGE_DRIVER: 'local',
     SUPERADMIN_PASSWORD: 'ci-smoke-superadmin-password',
     API_PORT: String(apiPort),
     BOARD_PORT: String(boardPort),

@@ -129,6 +129,17 @@ test('declares the smoke Compose default network internal', async () => {
   assert.match(compose, /networks:\s+default:\s+internal:\s+true/u);
 });
 
+test('runs the egress-denied smoke stack on the local attachment driver', async () => {
+  const fixture = harness();
+  await fixture.run();
+
+  const environment = fixture.options.find((settings) => settings.environment)?.environment;
+  assert.equal(environment.ATTACHMENT_STORAGE_DRIVER, 'local');
+  assert.equal(environment.EXISTING_ENV, 'preserved');
+  assert.ok(environment.ATTACHMENT_S3_ACCESS_KEY);
+  assert.ok(environment.ATTACHMENT_S3_SECRET_KEY);
+});
+
 test('reports the failing phase and still cleans up after an unhealthy endpoint', async () => {
   const fixture = harness({ request: async () => ({ ok: false, body: 'unavailable' }) });
   await assert.rejects(fixture.run(), /Container smoke failed during api_readiness/u);
