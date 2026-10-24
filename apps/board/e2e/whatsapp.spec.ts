@@ -217,6 +217,11 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   await page.getByRole('button', { name: 'Load more conversations' }).click();
   await expect(page.getByRole('button', { name: /Older conversation/u })).toBeVisible();
   await expect(page.locator('article').getByText('Can you help?')).toBeVisible();
+  await expect(page.locator('article time').first()).toHaveAttribute(
+    'datetime',
+    /^\d{4}-\d{2}-\d{2}T/u
+  );
+  await expect(page.locator('article time').first()).not.toHaveText('—');
   await page.getByRole('button', { name: 'Load older messages' }).click();
   await expect(page.locator('article').getByText('Older history')).toBeVisible();
   const messageScroller = page.locator('div.overflow-y-auto').last();

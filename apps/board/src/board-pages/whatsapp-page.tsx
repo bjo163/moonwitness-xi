@@ -18,6 +18,7 @@ import { Skeleton } from '@moonwitness/ui/components/skeleton';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 import { client } from '@/lib/client';
 import { scopedQueryKey } from '@/lib/query-scope';
+import { formatDateTime } from '@/lib/date-format';
 import { MAX_ATTACHMENT_BYTES } from '@moonwitness/types';
 
 type Account = {
@@ -838,8 +839,11 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                   {message.media_file_name && (
                     <p className="mt-1 text-xs">{message.media_file_name}</p>
                   )}
-                  <p className="mt-2 text-right font-mono text-[10px] text-ink-faint">
-                    {messageStatusLabel[message.status] ?? 'Status unavailable'}
+                  <p className="mt-2 flex flex-wrap justify-end gap-x-2 text-right font-mono text-[10px] text-ink-faint">
+                    <time dateTime={message.create_date}>
+                      {formatDateTime(message.create_date, 'dateTime')}
+                    </time>
+                    <span>{messageStatusLabel[message.status] ?? 'Status unavailable'}</span>
                   </p>
                   {message.last_error && (
                     <p role="status" className="mt-1 text-xs text-red-700">

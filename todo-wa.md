@@ -88,7 +88,7 @@ Legenda: **P0** penghambat keselamatan/keandalan; **P1** inbox v1; **P2** media 
 - [ ] **P1-27** Verifikasi layout ponsel untuk daftar chat, navigasi kembali, composer, dan QR. (UI: `WUI-01`, `WUI-07`)
 - [ ] **P1-28** Receipt delivered/read kini diterapkan lewat webhook GoWA `message.ack` bertanda tangan dan Board menampilkan label Delivered/Read. Route/config tests mencakup transisi monotonic serta replay; masih perlu receipt live dari device GoWA untuk menutup.
 - [ ] **P1-29** Indikator status terkirim, diterima, dibaca, gagal pada setiap bubble pesan. (UI: `WUI-04`)
-- [ ] **P1-30** Timestamp lokal pada tiap pesan. (UI: `WUI-04`)
+- [x] **P1-30** Setiap bubble menampilkan waktu lokal dari `create_date` memakai bahasa dan zona waktu Board yang tersimpan; elemen `<time>` mempertahankan timestamp ISO untuk aksesibilitas/integrasi. E2E Chromium WhatsApp memverifikasi timestamp valid dirender.
 - [ ] **P1-31** Enter untuk kirim dan Shift+Enter untuk baris baru dengan preferensi. (UI: `WUI-05`)
 - [ ] **P1-32** Indikator sedang mengirim dan perlindungan klik ganda lintas tab/perangkat. (UI: `WUI-05`)
 - [ ] **P1-33** Balas/quote pesan dengan tautan ke pesan asal.
