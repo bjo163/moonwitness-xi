@@ -98,9 +98,9 @@ test('brand, typography, and homepage proof use canonical assets and correct spe
   await expect(copyStress).toContainText('24/10/2026');
   await expect(copyStress).toContainText('naïve');
   await expect(copyStress.getByText(/pertanggungjawaban/u)).toBeVisible();
-  expect(
-    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
-  ).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true
+  );
   const bodyCopy = copyStress.locator('p');
   const bodyMetrics = await bodyCopy.evaluate((element) => ({
     clientWidth: element.clientWidth,
@@ -153,9 +153,9 @@ test('webfont fallback remains readable while local fonts load without a large l
 
   const fallbackBox = await heading.boundingBox();
   expect(fallbackBox).not.toBeNull();
-  expect(
-    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
-  ).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true
+  );
   releaseFonts();
   await page.evaluate(() => document.fonts.ready);
   const finalBox = await heading.boundingBox();
@@ -166,9 +166,9 @@ test('webfont fallback remains readable while local fonts load without a large l
   expect(shiftTotal).toBeLessThan(0.1);
   expect(finalBox).not.toBeNull();
   expect(finalBox!.height).toBeLessThanOrEqual(fallbackBox!.height + 4);
-  expect(
-    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
-  ).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true
+  );
 });
 
 test('failed local fonts keep the Indonesian typography specimen readable on mobile', async ({
@@ -186,9 +186,9 @@ test('failed local fonts keep the Indonesian typography specimen readable on mob
   await expect(copyStress).toContainText('naïve');
   await expect.poll(() => failedFontRequests).toBeGreaterThan(0);
   await page.evaluate(() => document.fonts.ready);
-  expect(
-    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
-  ).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true
+  );
   await copyStress.screenshot({
     path: resolve(process.cwd(), '../../docs/design/ui-catalog/font-fallback-320.png'),
   });
@@ -497,9 +497,9 @@ test('toast entry and dismissal use shared motion timing and remain immediate wi
   const toast = page.locator('[data-sonner-toast]').filter({ hasText: 'Settings saved' });
   await expect(toast).toBeVisible();
   await expect(toast).toHaveAttribute('data-mounted', 'true');
-  expect(
-    await toast.evaluate((element) => getComputedStyle(element).transitionDuration)
-  ).toContain('0.16s');
+  expect(await toast.evaluate((element) => getComputedStyle(element).transitionDuration)).toContain(
+    '0.16s'
+  );
   await expect(toast.getByText('Your workspace preferences are up to date.')).toBeVisible();
   await toast.screenshot({
     path: resolve(process.cwd(), '../../docs/design/ui-catalog/toast-motion-state.png'),

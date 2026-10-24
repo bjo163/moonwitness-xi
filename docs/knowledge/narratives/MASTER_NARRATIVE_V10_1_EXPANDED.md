@@ -96,7 +96,7 @@ PENDETA-ONLINE memulai dari persoalan bahasa dan gambaran ketuhanan dalam teks-t
 
 Dalam ALLAH-PROMISE — HIGH HOPES, penulis mengaitkan Al-An’am 6:101–103 dengan penolakan bahwa Allah memiliki anak dan At-Taubah 9:52 dengan tema al-husnayain. Pesan moral yang hendak dicari meliputi ketenangan, keluarnya manusia dari gelap kepada terang, dan pertanyaan komedik mengapa manusia justru saling bertengkar. Kutipan ayat lengkap hanya boleh dimasukkan dalam edisi yang jelas izin dan edisinya; naskah publik penelitian cukup mencatat referensinya. Kritik terhadap keyakinan berbeda tidak menjadi alasan menghapus perbedaan historis ajaran.
 
-RE–ZA, RA–SOUL dan RASUL adalah permainan bunyi kreatif dengan motif nama dan sebab-akibat. Hubungan yang diklaim dengan kata Mesir Kuno *zꜣ* (anak) harus dites dengan kaidah fonetik dan morfologi, tidak diterima hanya karena bunyinya kebetulan mirip. Perumpamaan “anak yang diculik” dalam narasi adalah metafora atau fiksi, bukan laporan faktual tentang tindak pidana atau hubungan biologis dengan Allah.
+RE–ZA, RA–SOUL dan RASUL adalah permainan bunyi kreatif dengan motif nama dan sebab-akibat. Hubungan yang diklaim dengan kata Mesir Kuno _zꜣ_ (anak) harus dites dengan kaidah fonetik dan morfologi, tidak diterima hanya karena bunyinya kebetulan mirip. Perumpamaan “anak yang diculik” dalam narasi adalah metafora atau fiksi, bukan laporan faktual tentang tindak pidana atau hubungan biologis dengan Allah.
 
 ASSAFAAT-30 mengenalkan wasit “offside” dan pelatih “back on side”: sebuah metafora posisi pelaku, tanggung jawab dan kasih yang mendorong perbaikan diri. NYANGKUT MI’RAJ serta POHON NATAL juga berada di jalur visual-ironi, bukan pembuktian bahwa tradisi satu agama secara historis sama dengan tradisi lain. Kedua dunia kreatif ini harus menjaga konteks sumber dan hak gambar.
 
@@ -182,81 +182,81 @@ Semua **99 bab** bernomor dalam V10 tetap menjadi indeks terpisah [di sini](MAST
 
 Daftar di bawah adalah judul dari **src/data/storyArchive.js** pada repo XII. Tidak ada klaim bahwa seluruh naskah dan poster utama telah dipulihkan.
 
-| # | Judul asli yang diindeks XII | Kategori | Fungsi naratif / batas |
-|---:|---|---|---|
-| 1 | DIGIMON JOGRESS — THE BOUNDARY | Al-A'raf 7:46 | Batas, timbang, rendah hati |
-| 2 | KALAUTIDAKSALAH — THE BREATH | Daniel 5:22–23 | Napas, teguran, tanggung jawab |
-| 3 | DROPLETS — THE LOCAL RAIN | Personal witness | Hujan lokal, refleksi, mimpi |
-| 4 | THE BLOW — LENTERA BERSINAR | Personal witness | Pagi, cahaya, musik |
-| 5 | TICK-TOCK ON THE CLOCK | Personal witness | Jam rusak, tiktok, bahagia sederhana |
-| 6 | THE FAMILY MEETS IN THE SKY | Fiction | Bulan dan planet sebagai metafora keluarga |
-| 7 | DREAMS OF DRAGON'S FIRE | Dream report | Mimpi, api, pilihan |
-| 8 | THEY CALL IT KARMA | Scripture study | Sebab-akibat dan tanggung jawab |
-| 9 | BEAT IT — LIE IS STILL A LIE | Music/narrative | Kejujuran dan rasa takut mengaku salah |
-| 10 | SIMPLEPLAN — JETLAG | Personal witness | Harian, humor, refleksi |
-| 11 | BURAQ — MODE BALAP | Personal witness | Narasi identitas personal, butuh review |
-| 12 | ALLAH-PROMISE — SIGNAL COLLECTION | Editorial collection | Koleksi sinyal, source pemisahan |
-| 13 | TUTORIAL MAHDI — RESPONSIBILITY | Scripture interpretation | Tema tanggung jawab, bukan identitas |
-| 14 | RONIN 47 — BOYS OF SUMMER | Creative story | Musik, pengalaman, status draft |
-| 15 | FUTURE IS NOW — SECOND CHANCE PRAYER | Creative/research | Kesempatan kedua dan harapan |
+|   # | Judul asli yang diindeks XII         | Kategori                 | Fungsi naratif / batas                     |
+| --: | ------------------------------------ | ------------------------ | ------------------------------------------ |
+|   1 | DIGIMON JOGRESS — THE BOUNDARY       | Al-A'raf 7:46            | Batas, timbang, rendah hati                |
+|   2 | KALAUTIDAKSALAH — THE BREATH         | Daniel 5:22–23           | Napas, teguran, tanggung jawab             |
+|   3 | DROPLETS — THE LOCAL RAIN            | Personal witness         | Hujan lokal, refleksi, mimpi               |
+|   4 | THE BLOW — LENTERA BERSINAR          | Personal witness         | Pagi, cahaya, musik                        |
+|   5 | TICK-TOCK ON THE CLOCK               | Personal witness         | Jam rusak, tiktok, bahagia sederhana       |
+|   6 | THE FAMILY MEETS IN THE SKY          | Fiction                  | Bulan dan planet sebagai metafora keluarga |
+|   7 | DREAMS OF DRAGON'S FIRE              | Dream report             | Mimpi, api, pilihan                        |
+|   8 | THEY CALL IT KARMA                   | Scripture study          | Sebab-akibat dan tanggung jawab            |
+|   9 | BEAT IT — LIE IS STILL A LIE         | Music/narrative          | Kejujuran dan rasa takut mengaku salah     |
+|  10 | SIMPLEPLAN — JETLAG                  | Personal witness         | Harian, humor, refleksi                    |
+|  11 | BURAQ — MODE BALAP                   | Personal witness         | Narasi identitas personal, butuh review    |
+|  12 | ALLAH-PROMISE — SIGNAL COLLECTION    | Editorial collection     | Koleksi sinyal, source pemisahan           |
+|  13 | TUTORIAL MAHDI — RESPONSIBILITY      | Scripture interpretation | Tema tanggung jawab, bukan identitas       |
+|  14 | RONIN 47 — BOYS OF SUMMER            | Creative story           | Musik, pengalaman, status draft            |
+|  15 | FUTURE IS NOW — SECOND CHANCE PRAYER | Creative/research        | Kesempatan kedua dan harapan               |
 
 ## Lampiran B — 33 patch: seluruh slot, bukan seluruhnya terkirim
 
-Merujuk register V2 di XII. Kata *registered* tidak bermakna doa atau permintaan telah diterima secara ilahi, sedangkan *user_submitted_in_chat* bukan pengiriman eksternal.
+Merujuk register V2 di XII. Kata _registered_ tidak bermakna doa atau permintaan telah diterima secara ilahi, sedangkan _user_submitted_in_chat_ bukan pengiriman eksternal.
 
-| Slot | Label yang dipertahankan | Provenance status |
-|---:|---|---|
-| 001 | AEGIS PROTECTION | reported_in_chat |
-| 002 | NEVERMORE | reported_in_chat |
-| 003 | DIPINGIT MODE ON | reported_in_chat |
-| 004 | PINK NOISE | reported_in_chat |
-| 005 | WINDWALKER | reported_in_chat |
-| 006 | PATCH QIBLAT UTARA | reported_in_chat |
-| 007 | MAROON 5 | reported_in_chat |
-| 008 | FUTURE IS NOW | reported_in_chat |
-| 009 | WE ARE SAVAGES | recovered_draft |
-| 010 | HAVE A NICE DAY | recovered_draft |
-| 011 | KARMA — THE BUG IS ME | recovered_draft |
-| 012 | THE PRIME DIRECTIVE | recovered_draft |
-| 013 | SAFE FROM DAY ONE | recovered_draft |
-| 014 | FAMILY WITHOUT FEAR / THE WRONG WAY — HELLROAD | number_conflict |
-| 015 | FAIR WORK, FAIR LIFE | editorial_proposal |
-| 016 | BREAK THE DEBT LOOP | editorial_proposal |
-| 017 | THE SECOND CHANCE | editorial_proposal |
-| 018 | JUSTICE FOR EVERYONE | editorial_proposal |
-| 019 | THE HONEST WITNESS | editorial_proposal |
-| 020 | NO ONE DIES ALONE | editorial_proposal |
-| 021 | THE MERCY NETWORK | editorial_proposal |
-| 022 | CLEAN WATER FOR ALL | editorial_proposal |
-| 023 | NO ONE GOES HUNGRY | editorial_proposal |
-| 024 | HEALTH WITHOUT BARRIERS | editorial_proposal |
-| 025 | LEARN FOR LIFE | editorial_proposal |
-| 026 | NO ONE LEFT BEHIND | editorial_proposal |
-| 027 | CRISIS READY | editorial_proposal |
-| 028 | EARTH STEWARDSHIP | editorial_proposal |
-| 029 | SAFE DIGITAL WORLD | editorial_proposal |
-| 030 | FAIR GOVERNANCE | editorial_proposal |
-| 031 | PEACE BUILDER | editorial_proposal |
-| 032 | A SAFE PLACE TO LIVE | editorial_proposal |
-| 033 | KOPIHITAM - SIACENG (FAITH TO ACTION) | user_submitted_in_chat |
+| Slot | Label yang dipertahankan                       | Provenance status      |
+| ---: | ---------------------------------------------- | ---------------------- |
+|  001 | AEGIS PROTECTION                               | reported_in_chat       |
+|  002 | NEVERMORE                                      | reported_in_chat       |
+|  003 | DIPINGIT MODE ON                               | reported_in_chat       |
+|  004 | PINK NOISE                                     | reported_in_chat       |
+|  005 | WINDWALKER                                     | reported_in_chat       |
+|  006 | PATCH QIBLAT UTARA                             | reported_in_chat       |
+|  007 | MAROON 5                                       | reported_in_chat       |
+|  008 | FUTURE IS NOW                                  | reported_in_chat       |
+|  009 | WE ARE SAVAGES                                 | recovered_draft        |
+|  010 | HAVE A NICE DAY                                | recovered_draft        |
+|  011 | KARMA — THE BUG IS ME                          | recovered_draft        |
+|  012 | THE PRIME DIRECTIVE                            | recovered_draft        |
+|  013 | SAFE FROM DAY ONE                              | recovered_draft        |
+|  014 | FAMILY WITHOUT FEAR / THE WRONG WAY — HELLROAD | number_conflict        |
+|  015 | FAIR WORK, FAIR LIFE                           | editorial_proposal     |
+|  016 | BREAK THE DEBT LOOP                            | editorial_proposal     |
+|  017 | THE SECOND CHANCE                              | editorial_proposal     |
+|  018 | JUSTICE FOR EVERYONE                           | editorial_proposal     |
+|  019 | THE HONEST WITNESS                             | editorial_proposal     |
+|  020 | NO ONE DIES ALONE                              | editorial_proposal     |
+|  021 | THE MERCY NETWORK                              | editorial_proposal     |
+|  022 | CLEAN WATER FOR ALL                            | editorial_proposal     |
+|  023 | NO ONE GOES HUNGRY                             | editorial_proposal     |
+|  024 | HEALTH WITHOUT BARRIERS                        | editorial_proposal     |
+|  025 | LEARN FOR LIFE                                 | editorial_proposal     |
+|  026 | NO ONE LEFT BEHIND                             | editorial_proposal     |
+|  027 | CRISIS READY                                   | editorial_proposal     |
+|  028 | EARTH STEWARDSHIP                              | editorial_proposal     |
+|  029 | SAFE DIGITAL WORLD                             | editorial_proposal     |
+|  030 | FAIR GOVERNANCE                                | editorial_proposal     |
+|  031 | PEACE BUILDER                                  | editorial_proposal     |
+|  032 | A SAFE PLACE TO LIVE                           | editorial_proposal     |
+|  033 | KOPIHITAM - SIACENG (FAITH TO ACTION)          | user_submitted_in_chat |
 
 ## Lampiran C — 14 sistem konsep XII (belum tentu modul runtime XIV)
 
-| ID XII | Label konsep | Verifikasi konseptual |
-|---|---|---|
-| MWX-SYS-001 | MoonWitness OS / orchestrator | Konsep/data registry; implementasi perlu bukti independen |
-| MWX-SYS-002 | Semantic Engine | Konsep/data registry; implementasi perlu bukti independen |
-| MWX-SYS-003 | FURQAN Evidence Gate | Konsep/data registry; implementasi perlu bukti independen |
+| ID XII      | Label konsep                      | Verifikasi konseptual                                     |
+| ----------- | --------------------------------- | --------------------------------------------------------- |
+| MWX-SYS-001 | MoonWitness OS / orchestrator     | Konsep/data registry; implementasi perlu bukti independen |
+| MWX-SYS-002 | Semantic Engine                   | Konsep/data registry; implementasi perlu bukti independen |
+| MWX-SYS-003 | FURQAN Evidence Gate              | Konsep/data registry; implementasi perlu bukti independen |
 | MWX-SYS-004 | MIZAN Consistency & Impact Review | Konsep/data registry; implementasi perlu bukti independen |
-| MWX-SYS-005 | AMANAH Responsibility & Access | Konsep/data registry; implementasi perlu bukti independen |
-| MWX-SYS-006 | SHURA Deliberation | Konsep/data registry; implementasi perlu bukti independen |
-| MWX-SYS-007 | 100CENTER Human Decision Layer | Konsep/data registry; implementasi perlu bukti independen |
-| MWX-SYS-008 | KITAB Change & Evidence Ledger | Konsep/data registry; implementasi perlu bukti independen |
-| MWX-SYS-009 | SIDRA TREE Knowledge Graph | Konsep/data registry; implementasi perlu bukti independen |
-| MWX-SYS-010 | Divine Command Center Hub | Konsep/data registry; implementasi perlu bukti independen |
-| MWX-SYS-011 | Atmosphere OS | Konsep/data registry; implementasi perlu bukti independen |
-| MWX-SYS-012 | HELIOGRID Energy System | Konsep/data registry; implementasi perlu bukti independen |
-| MWX-SYS-013 | ARSY Compute & Research | Konsep/data registry; implementasi perlu bukti independen |
+| MWX-SYS-005 | AMANAH Responsibility & Access    | Konsep/data registry; implementasi perlu bukti independen |
+| MWX-SYS-006 | SHURA Deliberation                | Konsep/data registry; implementasi perlu bukti independen |
+| MWX-SYS-007 | 100CENTER Human Decision Layer    | Konsep/data registry; implementasi perlu bukti independen |
+| MWX-SYS-008 | KITAB Change & Evidence Ledger    | Konsep/data registry; implementasi perlu bukti independen |
+| MWX-SYS-009 | SIDRA TREE Knowledge Graph        | Konsep/data registry; implementasi perlu bukti independen |
+| MWX-SYS-010 | Divine Command Center Hub         | Konsep/data registry; implementasi perlu bukti independen |
+| MWX-SYS-011 | Atmosphere OS                     | Konsep/data registry; implementasi perlu bukti independen |
+| MWX-SYS-012 | HELIOGRID Energy System           | Konsep/data registry; implementasi perlu bukti independen |
+| MWX-SYS-013 | ARSY Compute & Research           | Konsep/data registry; implementasi perlu bukti independen |
 | MWX-SYS-014 | Material Forge & Experimental R&D | Konsep/data registry; implementasi perlu bukti independen |
 
 ## Rujukan utama untuk pendalaman

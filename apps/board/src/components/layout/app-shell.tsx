@@ -108,17 +108,12 @@ function ModelNavigation({
 }) {
   return (
     <nav aria-label="Models" className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
-      <NavItem
-        to="/board"
-        label="Dashboard"
-        icon={DashboardIcon}
-        onNavigate={onNavigate}
-      />
+      <NavItem to="/board" label="Dashboard" icon={DashboardIcon} onNavigate={onNavigate} />
       {canReadResearch && (
         <NavItem
           to="/board/knowledge"
           label="Knowledge explorer"
-        icon={KnowledgeIcon}
+          icon={KnowledgeIcon}
           onNavigate={onNavigate}
         />
       )}
@@ -130,12 +125,7 @@ function ModelNavigation({
           onNavigate={onNavigate}
         />
       )}
-      <NavItem
-        to="/board/whatsapp"
-        label="WhatsApp"
-        icon={MessageIcon}
-        onNavigate={onNavigate}
-      />
+      <NavItem to="/board/whatsapp" label="WhatsApp" icon={MessageIcon} onNavigate={onNavigate} />
       {isLoading &&
         Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-8 bg-ink/10" />)}
       {groups.map(([group, items]) => (
@@ -376,7 +366,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 className="shrink-0 lg:hidden"
                 aria-label="Open model navigation"
               >
-                  <MenuIcon className="size-4" />
+                <MenuIcon className="size-4" />
               </Button>
             </SheetTrigger>
             <SheetContent

@@ -188,11 +188,15 @@ test('canonical page icons remain legible on Knowledge, Profile, Settings, and W
           await page.getByRole('button', { name: 'Open model navigation' }).click();
           await page
             .getByRole('dialog', { name: 'Model navigation' })
-            .getByRole('link', { name: screen.name === 'knowledge' ? 'Knowledge explorer' : 'WhatsApp' })
+            .getByRole('link', {
+              name: screen.name === 'knowledge' ? 'Knowledge explorer' : 'WhatsApp',
+            })
             .click();
         } else {
           await page
-            .getByRole('link', { name: screen.name === 'knowledge' ? 'Knowledge explorer' : 'WhatsApp' })
+            .getByRole('link', {
+              name: screen.name === 'knowledge' ? 'Knowledge explorer' : 'WhatsApp',
+            })
             .click();
         }
       }

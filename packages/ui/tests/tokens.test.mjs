@@ -282,12 +282,18 @@ test('interactive surfaces expose opt-in feedback only for hover pointers withou
     new URL('../src/styles/components.css', import.meta.url),
     'utf8'
   );
-  assert.match(componentCss, /\.mw-ui-interactive-surface:focus-within\s*\{[^}]*--mw-interactive-surface-border/u);
+  assert.match(
+    componentCss,
+    /\.mw-ui-interactive-surface:focus-within\s*\{[^}]*--mw-interactive-surface-border/u
+  );
   assert.match(
     componentCss,
     /@media\s*\(hover:\s*hover\)\s*and\s*\(prefers-reduced-motion:\s*no-preference\)/u
   );
-  assert.match(componentCss, /\.mw-ui-interactive-surface:hover\s*\{[^}]*--mw-interactive-surface-border/u);
+  assert.match(
+    componentCss,
+    /\.mw-ui-interactive-surface:hover\s*\{[^}]*--mw-interactive-surface-border/u
+  );
   assert.match(componentCss, /\.mw-ui-interactive-marker[\s\S]*?var\(--mw-motion-fast\)/u);
 });
 

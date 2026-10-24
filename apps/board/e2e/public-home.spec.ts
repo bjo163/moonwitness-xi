@@ -100,9 +100,9 @@ test('homepage hero reveal is one-shot without layout shift and respects reduced
   expect(await heroCopy.evaluate((element) => getComputedStyle(element).animationDuration)).toBe(
     '0.22s'
   );
-  expect(await heroCopy.evaluate((element) => getComputedStyle(element).animationIterationCount)).toBe(
-    '1'
-  );
+  expect(
+    await heroCopy.evaluate((element) => getComputedStyle(element).animationIterationCount)
+  ).toBe('1');
   await expect
     .poll(() =>
       heroCopy.evaluate((element) =>
@@ -130,7 +130,9 @@ test('homepage hero reveal is one-shot without layout shift and respects reduced
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.reload();
   await expect(page.getByRole('heading', { level: 1, name: 'MoonWitness' })).toBeVisible();
-  expect(await heroCopy.evaluate((element) => getComputedStyle(element).animationName)).toBe('none');
+  expect(await heroCopy.evaluate((element) => getComputedStyle(element).animationName)).toBe(
+    'none'
+  );
   expect(await heroCopy.evaluate((element) => getComputedStyle(element).opacity)).toBe('1');
   expect(await heroNote.evaluate((element) => getComputedStyle(element).opacity)).toBe('1');
 
@@ -156,9 +158,9 @@ test('homepage hero reveal is one-shot without layout shift and respects reduced
     )
     .toBe(true);
   expect(await heroNote.evaluate((element) => getComputedStyle(element).opacity)).toBe('1');
-  expect(
-    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
-  ).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true
+  );
   await page.locator('.home-hero').screenshot({
     path: resolve(process.cwd(), '../../docs/design/ui-catalog/homepage-reveal-mobile-390.png'),
     animations: 'disabled',
@@ -189,7 +191,10 @@ test('editorial card feedback stays subtle, keyboard-visible, and absent on touc
     .not.toBe('none');
   await page.evaluate(() => document.querySelector('nextjs-portal')?.remove());
   await card.screenshot({
-    path: resolve(process.cwd(), '../../docs/design/ui-catalog/home-editorial-card-hover-desktop.png'),
+    path: resolve(
+      process.cwd(),
+      '../../docs/design/ui-catalog/home-editorial-card-hover-desktop.png'
+    ),
     animations: 'disabled',
   });
 

@@ -182,7 +182,7 @@ export default function HomePage() {
                 </span>
               </div>
               <div className="home-card-copy">
-                  <h2 className="mw-ui-interactive-title">{card.title}</h2>
+                <h2 className="mw-ui-interactive-title">{card.title}</h2>
                 <p>{card.body}</p>
                 <Link
                   href={card.id === 'stories' ? '/login' : '/register'}

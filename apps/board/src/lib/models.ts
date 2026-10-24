@@ -34,7 +34,9 @@ const ICONS = {
 export const DashboardIcon = HomeIcon;
 
 export function modelIcon(model: string) {
-  return ICONS[model as keyof typeof ICONS] ?? (model.startsWith('auth.') ? SecurityIcon : ModelIcon);
+  return (
+    ICONS[model as keyof typeof ICONS] ?? (model.startsWith('auth.') ? SecurityIcon : ModelIcon)
+  );
 }
 
 /** `base.partner` → `Partner`; used until the model's view title has loaded. */

@@ -251,10 +251,7 @@ export function KnowledgePage() {
 
       <section aria-labelledby="relation-heading" className="space-y-4">
         <div className="flex items-start gap-3">
-          <RelationIcon
-            aria-hidden="true"
-            className="mt-1 size-5 text-lime-700 dark:text-lime"
-          />
+          <RelationIcon aria-hidden="true" className="mt-1 size-5 text-lime-700 dark:text-lime" />
           <div>
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-ink-faint">
               Research graph

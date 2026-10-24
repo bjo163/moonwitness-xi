@@ -2,13 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  CompanyIcon,
-  MailIcon,
-  PartnerIcon,
-  SecurityIcon,
-  UserIcon,
-} from '@moonwitness/ui/icons';
+import { CompanyIcon, MailIcon, PartnerIcon, SecurityIcon, UserIcon } from '@moonwitness/ui/icons';
 import { toast } from '@moonwitness/ui/components/toast';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 import { Button } from '@moonwitness/ui/components/button';
