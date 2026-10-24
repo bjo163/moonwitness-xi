@@ -6,26 +6,25 @@ import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import type { ModelInfo } from '@moonwitness/client';
 import { ToastHost } from '@moonwitness/ui/components/toast';
-import { SettingsIcon as MoonWitnessSettingsIcon } from '@moonwitness/ui/icons/settings';
-import { UserIcon as MoonWitnessUserIcon } from '@moonwitness/ui/icons/user';
 import {
-  Building2,
-  Calendar,
-  Check,
-  Code2,
-  Globe,
-  Keyboard,
-  LogOut,
-  Menu,
-  Moon,
-  Network,
-  Search,
-  BookOpenCheck,
-  Sun,
-  User,
-  Users,
-  MessageCircle,
-} from 'lucide-react';
+  CalendarIcon,
+  CheckIcon,
+  CodeIcon,
+  CompanyIcon,
+  GlobeIcon,
+  KeyboardIcon,
+  LogoutIcon,
+  MenuIcon,
+  MoonIcon,
+  KnowledgeIcon,
+  SearchIcon,
+  StoryIcon,
+  SunIcon,
+  SettingsIcon,
+  UserIcon,
+  MessageIcon,
+  PartnerIcon,
+} from '@moonwitness/ui/icons';
 import { useQuery } from '@tanstack/react-query';
 import { client } from '@/lib/client';
 import { scopedQueryKey } from '@/lib/query-scope';
@@ -119,7 +118,7 @@ function ModelNavigation({
         <NavItem
           to="/board/knowledge"
           label="Knowledge explorer"
-          icon={Network}
+        icon={KnowledgeIcon}
           onNavigate={onNavigate}
         />
       )}
@@ -127,14 +126,14 @@ function ModelNavigation({
         <NavItem
           to="/board/stories/workbench"
           label="Story workbench"
-          icon={BookOpenCheck}
+          icon={StoryIcon}
           onNavigate={onNavigate}
         />
       )}
       <NavItem
         to="/board/whatsapp"
         label="WhatsApp"
-        icon={MessageCircle}
+        icon={MessageIcon}
         onNavigate={onNavigate}
       />
       {isLoading &&
@@ -358,7 +357,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 : 'border-ink/30 bg-transparent text-ink-soft hover:border-ink hover:text-ink'
             )}
           >
-            <Code2 className="size-4" />
+            <CodeIcon className="size-4" />
             {developmentMode ? 'Development Mode: On' : 'Development Mode'}
           </Button>
         </div>
@@ -377,7 +376,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 className="shrink-0 lg:hidden"
                 aria-label="Open model navigation"
               >
-                <Menu className="size-4" />
+                  <MenuIcon className="size-4" />
               </Button>
             </SheetTrigger>
             <SheetContent
@@ -410,7 +409,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                       : 'border-ink/30 bg-transparent text-ink-soft hover:border-ink hover:text-ink'
                   )}
                 >
-                  <Code2 className="size-4" />
+                  <CodeIcon className="size-4" />
                   {developmentMode ? 'Development Mode: On' : 'Development Mode'}
                 </Button>
               </div>
@@ -427,7 +426,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             onClick={() => setPaletteOpen(true)}
             className="press flex h-10 min-w-0 flex-1 items-center gap-2 overflow-hidden rounded-none border-2 border-ink bg-paper-raised px-2 text-left text-sm text-ink-faint shadow-ink-sm sm:max-w-md sm:px-3"
           >
-            <Search className="size-4 shrink-0 text-ink" strokeWidth={2.6} />
+            <SearchIcon className="size-4 shrink-0 text-ink" strokeWidth={2.6} />
             <span className="truncate">Search records, models, commands…</span>
             <kbd className="ml-auto hidden shrink-0 border border-ink px-1.5 font-mono text-[11px] text-ink sm:block">
               Ctrl K
@@ -446,7 +445,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                     aria-label={`Switch company. Current scope: ${currentCompany?.name ?? 'Global Scope'}`}
                     title={`Company scope: ${currentCompany?.name ?? 'Global Scope'}`}
                   >
-                    <Building2 className="size-3.5 text-lime-600 dark:text-lime" />
+                    <CompanyIcon className="size-3.5 text-lime-600 dark:text-lime" />
                     <span className="hidden sm:inline">Tenant:</span>
                     <span className="hidden max-w-[120px] truncate font-bold md:inline">
                       {currentCompany ? currentCompany.name : 'Global Scope'}
@@ -463,10 +462,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                     className="flex items-center justify-between text-xs cursor-pointer"
                   >
                     <span className="flex items-center gap-2">
-                      <Globe className="size-3.5 text-ink-faint" />
+                      <GlobeIcon className="size-3.5 text-ink-faint" />
                       Global (All Companies)
                     </span>
-                    {!activeCompanyId && <Check className="size-3.5 text-lime" />}
+                    {!activeCompanyId && <CheckIcon className="size-3.5 text-lime" />}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   {companies.map((c) => (
@@ -476,10 +475,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                       className="flex items-center justify-between text-xs cursor-pointer"
                     >
                       <span className="flex items-center gap-2 truncate">
-                        <Building2 className="size-3.5 text-ink-faint" />
+                        <CompanyIcon className="size-3.5 text-ink-faint" />
                         {c.name}
                       </span>
-                      {activeCompanyId === c.id && <Check className="size-3.5 text-lime" />}
+                      {activeCompanyId === c.id && <CheckIcon className="size-3.5 text-lime" />}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
@@ -501,7 +500,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               aria-label="Keyboard Shortcuts"
               title="Keyboard Shortcuts (Ctrl + /)"
             >
-              <Keyboard className="size-4" />
+              <KeyboardIcon className="size-4" />
             </Button>
 
             {/* Theme Toggle */}
@@ -513,7 +512,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               onClick={toggle}
               aria-label="Toggle theme"
             >
-              {theme === 'dark' ? <Sun /> : <Moon />}
+              {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
             </Button>
 
             {/* User Dropdown */}
@@ -542,21 +541,21 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link href="/board/profile" className="flex cursor-pointer items-center gap-2">
-                    <MoonWitnessUserIcon className="size-4" /> Profile
+                    <UserIcon className="size-4" /> Profile
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/board/settings" className="flex cursor-pointer items-center gap-2">
-                    <MoonWitnessSettingsIcon className="size-4" /> Settings
+                    <SettingsIcon className="size-4" /> Settings
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem className="sm:hidden" onSelect={toggle}>
-                  {theme === 'dark' ? <Sun /> : <Moon />}
+                  {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
                   Toggle theme
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem id="logout" onSelect={() => void logout()}>
-                  <LogOut /> Sign out
+                  <LogoutIcon /> Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -590,12 +589,12 @@ export function AppShell({ children }: { children: ReactNode }) {
               {searchResults.map((item) => {
                 const ItemIcon =
                   item.type === 'partner'
-                    ? Users
+                    ? PartnerIcon
                     : item.type === 'user'
-                      ? User
+                      ? UserIcon
                       : item.type === 'activity'
-                        ? Calendar
-                        : Building2;
+                        ? CalendarIcon
+                        : CompanyIcon;
 
                 return (
                   <CommandItem

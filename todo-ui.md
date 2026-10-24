@@ -189,7 +189,7 @@ Gunakan Road Rage sebagai brush display, Anton untuk judul condensed dan KPI, Sp
 
 ### Ikon interaksi
 
-- [x] Inventaris semua icon yang digunakan Home, Board, dan auth. Bukti scan: 19 consumer tersisa dan 79 nama komponen dari `lucide-react`, dicatat pada `docs/design/icons.md`; tiga icon workbench sudah dimigrasikan.
+- [x] Inventaris semua icon yang digunakan Home, Board, dan auth. Bukti scan awal: 19 file consumer dan 79 nama icon dari `lucide-react`; jumlah terbaru 15 consumer yang belum dimigrasikan, dicatat pada `docs/design/icons.md`.
 - [ ] Satukan nama semantic yang memiliki arti aksi sama.
 - [ ] Pertahankan grid canonical `24×24` dengan bobot tegas yang konsisten.
 - [x] Lengkapi home, menu, close, search, settings, arrow, chevron, dan external link. Bukti visual 16–32 px: `docs/design/assets/icon-contact-sheet-current.png`.
@@ -198,11 +198,11 @@ Gunakan Road Rage sebagai brush display, Anton untuk judul condensed dan KPI, Sp
 - [x] Lengkapi upload/download, filter/sort, calendar, workflow, check, warning, error, dan info. Bukti: `docs/design/assets/icon-contact-sheet-current.png`.
 - [ ] Uji versi stroke/filled dan ukuran optiknya.
 - [ ] Uji icon pada 16, 20, 24, dan 32 px, termasuk focus dan disabled.
-- [x] Generate React wrappers typed dari sumber SVG canonical. Bukti: `pnpm test:ui` lulus; 54 ikon typed terbangun dari inventory dan tes membaca jumlah dari manifest.
+- [x] Generate React wrappers typed dari sumber SVG canonical. Bukti: `pnpm --filter @moonwitness/ui build` berhasil; 67 ikon typed terbangun dari inventory, dan tes membaca jumlah dari manifest.
 - Selesaikan migrasi icon langsung sebelum menutup pekerjaan ini; setelah semua kelompok di bawah lulus pemeriksaan visual, tambahkan gate yang melarang import `lucide-react` dari app.
 - [x] Migrasikan icon story workbench ke `KnowledgeIcon`, `WarningIcon`, dan `SaveIcon`; periksa desktop, tablet, mobile, serta ejaan. Bukti: baseline `workbench-filled-{desktop-1440,tablet-1024,mobile-390}`.
 - [x] Migrasikan ikon auth ke ikon canonical public UI dan `LoadingSpinner` shared; label tombol menunjukkan submit aktif. Bukti: `docs/design/ui-catalog/auth-login-{desktop-1440,mobile-390,loading-mobile-390}.png`; visual audit responsif dan keyboard lulus; ejaan `MOONWITNESS` diperiksa.
-- [ ] Migrasikan icon shell, navigasi, pencarian, breadcrumbs, dan shortcut dialog.
+- [x] Migrasikan ikon shell, navigasi, pencarian, breadcrumbs, command palette, dan shortcut dialog ke public icon subpaths; tambahkan SVG canonical untuk semantik yang belum ada. E2E memeriksa desktop/mobile sidebar, icon crown, dialog shortcut, dan label `MoonWitness`; screenshot: `docs/design/ui-catalog/board-sidebar-{desktop-1440,mobile-390}.png` dan `board-shortcuts-desktop-1440.png`; manifest, wrapper, serta contact sheet diperbarui.
 - [ ] Migrasikan icon Knowledge, profile, settings, dan WhatsApp.
 - [ ] Migrasikan icon list, form, fields, tags, dan relation widgets.
 - [ ] Migrasikan icon activity bell, notification bell, dan cron/job panels.
@@ -587,7 +587,7 @@ Pertahankan satu command manual/otomatis: **`pnpm board:ui:check`**.
 - [x] Uji Button as Link dan disabled behavior. Bukti: package test mengecek semantik `aria-disabled`/tabindex; UI Catalog E2E membuktikan link enabled menavigasi, link disabled mempertahankan URL, dan keduanya memakai Button shared.
 - [x] Uji controlled/disabled/error/loading states. Bukti: `apps/ui-catalog/tests/catalog.spec.ts` menguji input dan checkbox controlled, tombol disabled, field validation dengan `aria-invalid`/`aria-describedby`, skeleton `aria-busy`, serta chart loading/error; screenshot states diperiksa visual di `test-results/ui-catalog/catalog-shared-controls-ex-32dea-lidation-and-loading-states/`.
 - [x] Uji Table sort, selection, pagination, dan overflow. Bukti: UI Catalog E2E menguji sort keyboard, seleksi semua/baris, pagination terkendali, region overflow bernama/focusable dengan Arrow Left/Right dan Home/End, serta body tanpa overflow; screenshot mobile diperiksa di `test-results/ui-catalog/catalog-shared-table-keeps-90b7b-ion-and-overflow-accessible/table-mobile.png`.
-- [x] Uji canonical SVG dan generated React wrapper. Bukti: `packages/ui/tests/icons.test.mjs` membandingkan atribut pada seluruh 54 wrapper sesuai manifest; UI Catalog merender semua pasangan di browser dan memeriksa ukuran render, lalu contact sheet diperiksa visual dan disimpan di `docs/design/ui-catalog/canonical-vs-react-icons.png`.
+- [x] Uji canonical SVG dan generated React wrapper. Bukti: `packages/ui/tests/icons.test.mjs` membandingkan atribut semua 67 wrapper sesuai manifest; UI Catalog merender pasangan ikon dan memeriksa ukuran render, lalu contact sheet 67 ikon diperiksa visual di `docs/design/assets/icon-contact-sheet-current.png`.
 - [x] Uji inventory, lisensi, package exports, dan generator deterministik. Bukti: `pnpm test:assets` (24/24) memeriksa exact inventory, provenance/hash font, dan isi tarball; `pnpm assets:generate` dijalankan dua kali dan hash seluruh media tetap identik.
 - [x] Uji mute persistence, lazy load, dan playback failure. `packages/ui/tests/audio.test.mjs` mencakup preference, gating, constructor/reject, dan overlap; UI Catalog E2E membuktikan default mute, toggle tersimpan setelah reload, tanpa request audio saat muted, dan request baru saat cue eksplisit dimainkan. Screenshot label ditinjau dan disimpan di `docs/design/ui-catalog/sound-toggle-enabled-state.png`.
 - [x] Uji reduced-motion tanpa kehilangan informasi state. Bukti: UI Catalog E2E mengonfirmasi animasi dekoratif berhenti pada `prefers-reduced-motion: reduce` sementara label “Story saved” dan “Loading preview…” tetap terlihat; screenshot diperiksa visual dan ejaan di `docs/design/ui-catalog/reduced-motion-states.png`.

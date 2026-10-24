@@ -133,6 +133,18 @@ test('desktop Board shell uses the compact crown lockup and a magenta active nav
     fullPage: false,
     animations: 'disabled',
   });
+  await page.keyboard.press('Escape');
+  await expect(mobileSidebar).toBeHidden();
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.getByRole('button', { name: 'Keyboard Shortcuts' }).click();
+  const shortcutsDialog = page.getByRole('dialog', { name: 'Keyboard Mastery Cheatsheet' });
+  await expect(shortcutsDialog.getByText('Manual', { exact: true })).toBeVisible();
+  await expect(shortcutsDialog.getByText(/MoonWitness workflow/u)).toBeVisible();
+  await page.screenshot({
+    path: path.join(root, 'docs/design/ui-catalog/board-shortcuts-desktop-1440.png'),
+    fullPage: false,
+    animations: 'disabled',
+  });
 });
 
 test('ordinary-user dashboard has a verified visual baseline', async ({ page }) => {

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRightIcon } from '@moonwitness/ui/icons';
 
 export interface BreadcrumbItem {
   label: string;
@@ -19,7 +19,7 @@ export function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
         const isLast = idx === items.length - 1;
         return (
           <div key={idx} className="flex items-center gap-1.5">
-            <ChevronRight className="size-3.5 opacity-40 text-ink" />
+            <ChevronRightIcon className="size-3.5 opacity-40 text-ink" />
             {isLast || !item.to ? (
               <span className="border-2 border-ink bg-paper-raised px-2 py-0.5 font-bold text-ink shadow-[2px_2px_0_0_var(--ink)]">
                 {item.label}

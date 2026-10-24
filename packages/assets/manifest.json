@@ -272,6 +272,14 @@
       "height": 24
     },
     {
+      "path": "icons/bank.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
       "path": "icons/book-open.svg",
       "kind": "icon",
       "variant": "currentColor",
@@ -312,7 +320,31 @@
       "height": 24
     },
     {
+      "path": "icons/code.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
       "path": "icons/company.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/credit-card.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/currency.svg",
       "kind": "icon",
       "variant": "currentColor",
       "format": "svg",
@@ -392,6 +424,14 @@
       "height": 24
     },
     {
+      "path": "icons/hash.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
       "path": "icons/home.svg",
       "kind": "icon",
       "variant": "currentColor",
@@ -424,7 +464,31 @@
       "height": 24
     },
     {
+      "path": "icons/key.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/keyboard.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
       "path": "icons/knowledge.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/language.svg",
       "kind": "icon",
       "variant": "currentColor",
       "format": "svg",
@@ -440,6 +504,14 @@
       "height": 24
     },
     {
+      "path": "icons/logout.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
       "path": "icons/mail.svg",
       "kind": "icon",
       "variant": "currentColor",
@@ -448,7 +520,23 @@
       "height": 24
     },
     {
+      "path": "icons/map-pin.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
       "path": "icons/menu.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/message.svg",
       "kind": "icon",
       "variant": "currentColor",
       "format": "svg",
@@ -568,7 +656,23 @@
       "height": 24
     },
     {
+      "path": "icons/sparkle.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
       "path": "icons/story.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/sun.svg",
       "kind": "icon",
       "variant": "currentColor",
       "format": "svg",

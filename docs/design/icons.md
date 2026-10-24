@@ -20,10 +20,17 @@
 | `jobs.svg`         | Background jobs/queue               |
 | `workflow.svg`     | Workflow/state transition           |
 | `security.svg`     | Security policy/access              |
+| `bank.svg`         | Bank or financial institution       |
+| `credit-card.svg`  | Payment or bank card                 |
+| `currency.svg`     | Currency or monetary value          |
+| `hash.svg`         | Sequence or numbered identifier    |
+| `key.svg`          | Access token or key                 |
+| `language.svg`     | Language                            |
+| `map-pin.svg`      | Geographic location                 |
 
 ## Common actions
 
-`search`, `add`, `edit`, `delete`, `settings`, `calendar`, `filter`, `refresh`, `external-link`, and `menu` provide reusable actions. Keep labels and accessible names in the consuming UI so each symbol is interpreted in its real context.
+`search`, `add`, `edit`, `delete`, `settings`, `calendar`, `filter`, `refresh`, `external-link`, `menu`, `message`, `keyboard`, `code`, `logout`, `sun`, and `sparkle` provide reusable actions or status marks. Keep labels and accessible names in the consuming UI so each symbol is interpreted in its real context.
 
 The [current contact sheet](assets/icon-contact-sheet-current.png) renders all canonical symbols at 16, 20, 24 and 32 px on light and dark surfaces. Icons are built from original geometric paths; the current set uses no IDs, gradients, masks, scripts, external URLs, or borrowed artwork. The package validator rejects those executable/external SVG constructs and checks any future local reference IDs.
 
@@ -31,7 +38,7 @@ SVG roots include a descriptive title for static image consumers. For theme-awar
 
 ## Board and Home migration inventory
 
-The baseline scan on 2026-10-24 found **19 TSX files importing directly from `lucide-react`**, with **79 distinct icon component names**. The current scan finds **18 remaining consumers**; auth and story workbench are listed under migrated consumers below. Prefer an existing semantic export when its silhouette and meaning match. Add a canonical SVG for missing actions or concepts, then migrate and visually compare the source and generated wrapper before removing the direct import.
+The baseline scan on 2026-10-24 found **19 TSX files importing directly from `lucide-react`**, with **79 distinct icon component names**. The current scan finds **15 remaining consumers**; auth, story workbench, Board shell/navigation, breadcrumbs, and shortcuts dialog are listed under migrated consumers below. Prefer an existing semantic export when its silhouette and meaning match. Add a canonical SVG for missing actions or concepts, then migrate and visually compare the source and generated wrapper before removing the direct import.
 
 | Consumer                                                    | Directly imported icon components                                                                                                                                                                                            |
 | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -40,11 +47,8 @@ The baseline scan on 2026-10-24 found **19 TSX files importing directly from `lu
 | `apps/board/src/board-pages/settings-page.tsx`              | `Check`, `MonitorCog`, `Moon`, `Sun`                                                                                                                                                                                         |
 | `apps/board/src/board-pages/whatsapp-page.tsx`              | `Paperclip`, `Send`, `Smartphone`, `Users`, `Wifi`, `WifiOff`                                                                                                                                                                |
 | `apps/board/src/components/layout/activity-bell.tsx`        | `Calendar`, `CalendarClock`, `Check`, `CheckSquare`, `ExternalLink`, `Mail`, `Phone`                                                                                                                                         |
-| `apps/board/src/components/layout/app-shell.tsx`            | `BookOpenCheck`, `Building2`, `Calendar`, `Check`, `Code2`, `Globe`, `Keyboard`, `LogOut`, `Menu`, `MessageCircle`, `Moon`, `Network`, `Search`, `Sun`, `User`, `Users`                                                      |
-| `apps/board/src/components/layout/breadcrumbs.tsx`          | `ChevronRight`                                                                                                                                                                                                               |
 | `apps/board/src/components/layout/cron-scheduler-panel.tsx` | `AlertTriangle`, `Calendar`, `CheckCircle2`, `Clock`, `Pause`, `Play`, `Plus`, `RefreshCw`, `Server`                                                                                                                         |
 | `apps/board/src/components/layout/notification-bell.tsx`    | `Bell`, `Check`, `Inbox`                                                                                                                                                                                                     |
-| `apps/board/src/components/manga/shortcuts-dialog.tsx`      | `Keyboard`, `Sparkles`                                                                                                                                                                                                       |
 | `apps/board/src/components/views/chatter.tsx`               | `Calendar`, `CheckCircle2`, `Clock`, `Download`, `File`, `FileArchive`, `FileCode`, `FileImage`, `FileText`, `History`, `Mail`, `MessageSquare`, `Paperclip`, `Phone`, `Plus`, `Trash2`, `UploadCloud`, `UserCheck`, `Zap`   |
 | `apps/board/src/components/views/fields.tsx`                | `Check`, `ChevronsUpDown`, `X`                                                                                                                                                                                               |
 | `apps/board/src/components/views/form-view.tsx`             | `Archive`, `ArrowLeft`, `Check`, `Loader2`, `Save`, `Trash2`, `Zap`                                                                                                                                                          |
@@ -60,5 +64,6 @@ The baseline scan on 2026-10-24 found **19 TSX files importing directly from `lu
 | ----------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
 | `apps/board/src/board-pages/auth-page.tsx`            | `ArrowRightIcon`, `LoadingSpinner`         | `ui-catalog/auth-login-desktop-1440.png` and `ui-catalog/auth-login-mobile-375.png`; responsive visual + keyboard audit passed. |
 | `apps/board/src/board-pages/story-workbench-page.tsx` | `KnowledgeIcon`, `WarningIcon`, `SaveIcon` | Desktop/tablet/mobile populated-workbench Playwright baselines; text and `MoonWitness` spelling reviewed after the icon change. |
+| Board shell, `lib/models.ts`, breadcrumbs, shortcuts dialog | Canonical icons from `@moonwitness/ui/icons`, generated from `packages/assets/icons/*.svg` | Desktop/mobile sidebar and keyboard-dialog screenshots; contact sheet and `MOONWITNESS` spelling reviewed. |
 
-The existing canonical set already covers several common meanings (`ArrowRight`, `Archive`, `BookOpen`, `Building2` via company, `Calendar`, `Check`, `ExternalLink`, `Filter`, `Globe`, `Menu`, `Moon`, `Paperclip` via attachment, `Pause`, `Play`, `Plus`, `RefreshCw` via refresh, `Save`, `Search`, `ShieldCheck` via security, `Tag`, `Trash2` via delete, `Upload`, `User`, and `Users`). These are mapping candidates only: confirm the actual use and visual silhouette at each call site. Remaining concepts such as keyboard shortcuts, file types, messaging, device/network states, and layout controls need an explicit keep/add decision during migration rather than silent substitution.
+The canonical set covers common product and shell semantics. A fallback to `ModelIcon` is reserved for dynamic models without a matching icon; use a specific symbol only when its meaning and silhouette fit. Remaining consumers still need their source review and visual acceptance before enabling a global import gate.

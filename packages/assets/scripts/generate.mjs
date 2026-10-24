@@ -341,6 +341,71 @@ const icons = [
     title: 'Signal',
     paths: '<path d="M4 18a11 11 0 0 1 16 0M7 15a7 7 0 0 1 10 0m-7-3a3 3 0 0 1 4 0m-2 6v.1"/>',
   },
+  {
+    name: 'message',
+    title: 'Message',
+    paths: '<path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 8.8 8.8 0 0 1-3.4-.7L4 20l1.5-3.6A7.1 7.1 0 0 1 4 11.5 7.5 7.5 0 0 1 12 4a7.5 7.5 0 0 1 8 7.5Z"/><path d="M8.5 12h.01m3.5 0h.01m3.5 0h.01"/>',
+  },
+  {
+    name: 'code',
+    title: 'Code',
+    paths: '<path d="m8 6-6 6 6 6m8-12 6 6-6 6m-2-15-4 18"/>',
+  },
+  {
+    name: 'keyboard',
+    title: 'Keyboard shortcuts',
+    paths: '<rect x="2.5" y="5" width="19" height="14" rx="1.5"/><path d="M6 9h.01m3 0h.01m3 0h.01m3 0h.01m3 0h.01M6 12h.01m3 0h.01m3 0h.01m3 0h.01m3 0h.01M7 15h10"/>',
+  },
+  {
+    name: 'logout',
+    title: 'Sign out',
+    paths: '<path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5m4-4 4-4-4-4m4 4H8"/>',
+  },
+  {
+    name: 'sun',
+    title: 'Sun',
+    paths: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/>',
+  },
+  {
+    name: 'sparkle',
+    title: 'Sparkle',
+    paths: '<path d="m12 2 1.8 7.2L21 12l-7.2 1.8L12 21l-1.8-7.2L3 12l7.2-2.8L12 2Z"/><path d="m19 14 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Z"/>',
+  },
+  {
+    name: 'bank',
+    title: 'Bank',
+    paths: '<path d="m3 9 9-5 9 5M4 10h16M5 10v9m4-9v9m6-9v9m4-9v9M3 20h18M2.5 22h19"/>',
+  },
+  {
+    name: 'credit-card',
+    title: 'Credit card',
+    paths: '<rect x="2.5" y="5" width="19" height="14" rx="1.5"/><path d="M3 9h18m-15 6h4m-4 2h2"/>',
+  },
+  {
+    name: 'currency',
+    title: 'Currency',
+    paths: '<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5c-.7-.7-1.8-1-3-1-1.8 0-3 .9-3 2.2 0 3.2 5.8 1.2 5.8 4.4 0 1.3-1.2 2.4-3.2 2.4-1.2 0-2.5-.4-3.4-1.3M12 6v12"/>',
+  },
+  {
+    name: 'hash',
+    title: 'Sequence number',
+    paths: '<path d="M9 3 6.5 21M17.5 3 15 21M4 9h16M3 15h16"/>',
+  },
+  {
+    name: 'language',
+    title: 'Language',
+    paths: '<circle cx="12" cy="12" r="9"/><path d="M3.5 9h17M3.5 15h17M12 3c2.5 2.4 3.8 5.4 3.8 9S14.5 18.6 12 21c-2.5-2.4-3.8-5.4-3.8-9S9.5 5.4 12 3Z"/><path d="m16 4 4 4m-1-4-4 4"/>',
+  },
+  {
+    name: 'key',
+    title: 'Access token',
+    paths: '<circle cx="8" cy="15.5" r="4.5"/><path d="m11.2 12.3 9.3-9.3m-3.5 3.5 2.5 2.5m-5-0 2.5 2.5"/>',
+  },
+  {
+    name: 'map-pin',
+    title: 'Location',
+    paths: '<path d="M19 10c0 5-7 12-7 12S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2.5"/>',
+  },
 ];
 
 const generated = [];
