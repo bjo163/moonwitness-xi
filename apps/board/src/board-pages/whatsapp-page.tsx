@@ -49,6 +49,17 @@ type ConversationPage = {
   nextOffset: number;
   hasMore: boolean;
 };
+
+function formatConversationAddress(conversation: Conversation): string {
+  const [localPart, domain] = conversation.jid.split('@');
+  const identifier = localPart?.split(':')[0]?.trim();
+  if (!identifier) return conversation.jid;
+
+  if (conversation.is_group || domain === 'g.us') return `Group ID: ${identifier}`;
+  if (domain === 's.whatsapp.net' && /^\d+$/.test(identifier)) return `+${identifier}`;
+  if (domain === 'lid') return `WhatsApp ID: ${identifier}`;
+  return conversation.jid;
+}
 type Message = {
   id: number;
   direction: string;
@@ -650,9 +661,16 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
           <div className="flex min-h-[55vh] flex-col">
             <div className="border-b-2 border-ink p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="font-display text-lg uppercase">
-                  {activeConversation?.name ?? 'Select a conversation'}
-                </h2>
+                <div className="min-w-0">
+                  <h2 className="font-display text-lg uppercase">
+                    {activeConversation?.name ?? 'Select a conversation'}
+                  </h2>
+                  {activeConversation && (
+                    <p className="break-all text-xs text-ink-faint">
+                      {formatConversationAddress(activeConversation)}
+                    </p>
+                  )}
+                </div>
                 {activeConversation && canManageConversations && (
                   <div className="flex flex-wrap gap-2">
                     <Button

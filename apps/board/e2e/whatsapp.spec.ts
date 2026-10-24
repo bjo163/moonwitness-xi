@@ -184,6 +184,7 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   await page.goto('/board/whatsapp');
   await expect(page.getByText('+6281234567890')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Project group' })).toBeVisible();
+  await expect(page.getByText('Group ID: 120363000')).toBeVisible();
   await expect(
     page.locator('article').getByText('Attachment storage is temporarily unavailable. Try again.')
   ).toBeVisible();
@@ -227,6 +228,7 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   await page.getByRole('button', { name: 'Private' }).click();
   await page.getByRole('button', { name: /Contact 0/u }).click();
   await expect(page.getByRole('heading', { name: 'Contact 0' })).toBeVisible();
+  await expect(page.getByText('+628200000000')).toBeVisible();
   await page.reload();
   await expect(page.getByRole('button', { name: 'Private' })).toHaveAttribute(
     'aria-pressed',
