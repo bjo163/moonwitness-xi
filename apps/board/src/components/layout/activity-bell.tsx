@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  Calendar,
-  CalendarClock,
-  Check,
-  CheckSquare,
-  ExternalLink,
-  Mail,
-  Phone,
-} from 'lucide-react';
+  CalendarClockIcon,
+  CalendarIcon,
+  CheckIcon,
+  CheckSquareIcon,
+  ExternalLinkIcon,
+  MailIcon,
+  PhoneIcon,
+} from '@moonwitness/ui/icons';
 import { client } from '@/lib/client';
 import { scopedQueryKey } from '@/lib/query-scope';
 import { useAuth } from '@/hooks/use-auth-context';
@@ -88,13 +88,13 @@ export function ActivityBell() {
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'call':
-        return <Phone className="size-3.5 text-lime" />;
+        return <PhoneIcon className="size-3.5 text-lime" />;
       case 'meeting':
-        return <Calendar className="size-3.5 text-pink" />;
+        return <CalendarIcon className="size-3.5 text-pink" />;
       case 'email':
-        return <Mail className="size-3.5 text-lime" />;
+        return <MailIcon className="size-3.5 text-lime" />;
       default:
-        return <CheckSquare className="size-3.5 text-ink-faint" />;
+        return <CheckSquareIcon className="size-3.5 text-ink-faint" />;
     }
   };
 
@@ -114,7 +114,7 @@ export function ActivityBell() {
           aria-label="Pending activities"
           title="Pending activities"
         >
-          <CalendarClock className="size-4" />
+          <CalendarClockIcon className="size-4" />
           {overdue.length > 0 ? (
             <span className="absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center border-2 border-ink bg-pink text-[10px] font-bold text-on-pink shadow-[1px_1px_0_0_var(--ink)] animate-pulse">
               {overdue.length}
@@ -252,7 +252,7 @@ export function ActivityBell() {
                       onClick={() => markDoneMutation.mutate(act.id)}
                       className="size-6 hover:border-lime hover:bg-lime hover:text-on-accent"
                     >
-                      <Check className="size-3" />
+                      <CheckIcon className="size-3" />
                     </Button>
                     <Button
                       variant="ghost"
@@ -261,7 +261,7 @@ export function ActivityBell() {
                       onClick={() => handleOpenRecord(act.resource_model, act.resource_id)}
                       className="size-6 text-ink-faint hover:text-ink"
                     >
-                      <ExternalLink className="size-3" />
+                      <ExternalLinkIcon className="size-3" />
                     </Button>
                   </div>
                 </div>

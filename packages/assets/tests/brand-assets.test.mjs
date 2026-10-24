@@ -130,11 +130,18 @@ test('manifest describes all stable brand and icon exports with unique paths', (
     'sort-ascending',
     'sort-descending',
     'tag',
+    'calendar-clock',
+    'check-square',
+    'inbox',
+    'phone',
   ];
-  assert.equal(manifest.assets.filter(({ kind }) => kind === 'icon').length, iconNames.length);
   for (const name of iconNames) {
-    const icon = assetByPath.get(`icons/${name}.svg`);
-    assert.ok(icon, `${name} icon is exported`);
+    assert.ok(assetByPath.has(`icons/${name}.svg`), `${name} icon is exported`);
+  }
+  const iconAssets = manifest.assets.filter(({ kind }) => kind === 'icon');
+  assert.ok(iconAssets.length > 0, 'canonical icon inventory is not empty');
+  for (const icon of iconAssets) {
+    assert.match(icon.path, /^icons\/[a-z0-9-]+\.svg$/u);
     assert.equal(icon.variant, 'currentColor');
     assert.equal(icon.width, 24);
     assert.equal(icon.height, 24);

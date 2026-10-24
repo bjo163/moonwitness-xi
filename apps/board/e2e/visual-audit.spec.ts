@@ -287,6 +287,230 @@ test('canonical data-view icons remain legible on lists, forms, tags, and relati
   }
 });
 
+test('canonical activity, notification, and cron icons remain usable on desktop and mobile', async ({
+  page,
+}) => {
+  await mkdir(catalogDirectory, { recursive: true });
+  await page.clock.install({ time: new Date('2026-10-24T12:00:00.000Z') });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      'mw-board-session',
+      JSON.stringify({
+        access_token: 'visual-audit-only',
+        refresh_token: 'visual-audit-only',
+        token_type: 'Bearer',
+        expires_in: 3600,
+        user: { id: 9001, login: 'ui.visual.audit', role: 'superadmin', company_id: 1 },
+      })
+    );
+  });
+
+  const activities = [
+    {
+      id: 1,
+      summary: 'Call the partner about the draft',
+      activity_type: 'call',
+      state: 'planned',
+      deadline: '2026-10-24',
+      resource_model: 'base.partner',
+      resource_id: 3,
+    },
+    {
+      id: 2,
+      summary: 'Prepare the editorial review',
+      activity_type: 'meeting',
+      state: 'planned',
+      deadline: '2026-10-25',
+      resource_model: 'base.partner',
+      resource_id: 3,
+    },
+    {
+      id: 3,
+      summary: 'Send the review notes',
+      activity_type: 'email',
+      state: 'planned',
+      deadline: '2026-10-26',
+      resource_model: 'base.partner',
+      resource_id: 3,
+    },
+  ];
+  const browserErrors: string[] = [];
+  page.on('pageerror', (error) => browserErrors.push(error.message));
+  await page.route('**/*', async (route) => {
+    const url = new URL(route.request().url());
+    const { pathname, searchParams } = url;
+    const respond = (data: unknown) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(data) });
+
+    if (pathname === '/api/models') return respond({ models: [] });
+    if (pathname === '/api/base.activity') {
+      return respond({ data: activities, total: activities.length });
+    }
+    if (pathname.startsWith('/api/')) return respond({ data: [], total: 0 });
+    if (pathname === '/notifications/inbox') {
+      return respond({
+        success: true,
+        data: {
+          notifications: [
+            {
+              id: 1,
+              title: 'Editorial review is ready',
+              body: 'Please review the latest story draft.',
+              state: 'unread',
+              delivered_at: '2026-10-24T08:00:00Z',
+            },
+          ],
+          unreadCount: 1,
+        },
+      });
+    }
+    if (pathname === '/admin/crons') {
+      return respond({
+        success: true,
+        data: [
+          {
+            id: 1,
+            code: 'story-review',
+            name: 'Story review reminders',
+            handler: 'notify_story_review',
+            cron_expression: '0 9 * * 1-5',
+            timezone: 'UTC',
+            enabled: true,
+            next_run_at: '2026-10-26T09:00:00Z',
+            misfire_policy: 'skip',
+            concurrency_policy: 'forbid',
+          },
+        ],
+      });
+    }
+    if (pathname === '/admin/jobs' && searchParams.has('limit')) {
+      return respond({
+        success: true,
+        data: [
+          {
+            id: 1,
+            handler: 'notify_story_review',
+            status: 'succeeded',
+            priority: 3,
+            attempts: 1,
+            max_attempts: 3,
+            lease_owner: 'worker-a',
+            create_date: '2026-10-24T08:00:00Z',
+          },
+        ],
+      });
+    }
+    if (pathname === '/admin/jobs/health') {
+      return respond({
+        success: true,
+        data: {
+          queued: 1,
+          running: 0,
+          dead: 0,
+          outboxPending: 0,
+          outboxDead: 0,
+          oldestQueuedAt: null,
+        },
+      });
+    }
+    if (pathname.startsWith('/admin/')) return respond({ success: true, data: [] });
+    return route.continue();
+  });
+
+  await page.goto('/board');
+  await expect(page.getByRole('heading', { name: 'Command center' })).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+  await expect(page.getByText('MoonWitness', { exact: true }).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Pending activities' }).click();
+  await expect(page.getByText('Call the partner about the draft')).toBeVisible();
+  await page.locator('nextjs-portal').evaluateAll((elements) => {
+    elements.forEach((element) => element.remove());
+  });
+  await page.screenshot({
+    path: path.join(catalogDirectory, 'board-activity-bell-icons-desktop-1440.png'),
+    animations: 'disabled',
+  });
+  await expectNoHorizontalOverflow(page, 'activity-bell/icons/desktop-1440');
+
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: /Notifications/u }).click();
+  await expect(page.getByText('Editorial review is ready')).toBeVisible();
+  await page.locator('nextjs-portal').evaluateAll((elements) => {
+    elements.forEach((element) => element.remove());
+  });
+  await page.screenshot({
+    path: path.join(catalogDirectory, 'board-notification-bell-icons-desktop-1440.png'),
+    animations: 'disabled',
+  });
+
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Cron Scheduler & Queue' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Cron Scheduler & Background Workers' })
+  ).toBeVisible();
+  await expect(page.getByText('Story review reminders')).toBeVisible();
+  await page.locator('nextjs-portal').evaluateAll((elements) => {
+    elements.forEach((element) => element.remove());
+  });
+  await page.screenshot({
+    path: path.join(catalogDirectory, 'board-cron-panel-icons-desktop-1440.png'),
+    fullPage: true,
+    animations: 'disabled',
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({
+    path: path.join(catalogDirectory, 'board-cron-panel-icons-mobile-390.png'),
+    fullPage: true,
+    animations: 'disabled',
+  });
+  await expectNoHorizontalOverflow(page, 'cron-panel/icons/mobile-390');
+  for (const label of ['Cron schedules', 'Recent job dispatches']) {
+    const region = page.getByRole('region', { name: label });
+    const dimensions = await region.evaluate((element) => ({
+      scrollWidth: element.scrollWidth,
+      clientWidth: element.clientWidth,
+      tabIndex: element.tabIndex,
+    }));
+    expect(dimensions.tabIndex).toBe(0);
+    expect(dimensions.scrollWidth).toBeGreaterThan(dimensions.clientWidth);
+  }
+  const cronRegion = page.getByRole('region', { name: 'Cron schedules' });
+  await cronRegion.focus();
+  const scrollBefore = await cronRegion.evaluate((element) => element.scrollLeft);
+  await page.keyboard.press('ArrowRight');
+  const scrollAfter = await cronRegion.evaluate((element) => element.scrollLeft);
+  expect(scrollAfter).toBeGreaterThan(scrollBefore);
+
+  await page.goto('/board');
+  await expect(page.getByRole('heading', { name: 'Command center' })).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+  await page.getByRole('button', { name: 'Pending activities' }).click();
+  await expect(page.getByText('Call the partner about the draft')).toBeVisible();
+  await page.locator('nextjs-portal').evaluateAll((elements) => {
+    elements.forEach((element) => element.remove());
+  });
+  await page.screenshot({
+    path: path.join(catalogDirectory, 'board-activity-bell-icons-mobile-390.png'),
+    animations: 'disabled',
+  });
+  await expectNoHorizontalOverflow(page, 'activity-bell/icons/mobile-390');
+
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: /Notifications/u }).click();
+  await expect(page.getByText('Editorial review is ready')).toBeVisible();
+  await page.locator('nextjs-portal').evaluateAll((elements) => {
+    elements.forEach((element) => element.remove());
+  });
+  await page.screenshot({
+    path: path.join(catalogDirectory, 'board-notification-bell-icons-mobile-390.png'),
+    animations: 'disabled',
+  });
+  await expectNoHorizontalOverflow(page, 'notification-bell/icons/mobile-390');
+  expect(browserErrors).toEqual([]);
+});
+
 test('ordinary-user dashboard has a verified visual baseline', async ({ page }) => {
   await mkdir(auditDirectory, { recursive: true });
   await page.setViewportSize({ width: 1440, height: 1000 });

@@ -121,6 +121,12 @@ const icons = [
     paths: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2m-11-9 2-1.5m13 1.5-2-1.5"/>',
   },
   {
+    name: 'calendar-clock',
+    title: 'Scheduled activity',
+    paths:
+      '<rect x="3.5" y="5" width="17" height="16" rx="1.5"/><path d="M7.5 3v4m9-4v4m-13 2h8"/><circle cx="16.5" cy="16" r="3.5"/><path d="M16.5 14.5V16l1.1.7"/>',
+  },
+  {
     name: 'attachment',
     title: 'Attachment',
     paths:
@@ -131,6 +137,11 @@ const icons = [
     title: 'Notification',
     paths:
       '<path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Zm-8 12h4"/><path d="M12 3V1.8"/>',
+  },
+  {
+    name: 'inbox',
+    title: 'Notification inbox',
+    paths: '<path d="M4 4.5h16l2 10v5H2v-5l2-10Z"/><path d="M2.5 14h5l1.7 3h5.6l1.7-3h5"/>',
   },
   {
     name: 'jobs',
@@ -156,6 +167,12 @@ const icons = [
     paths: '<rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="m4 6 8 6 8-6"/>',
   },
   {
+    name: 'phone',
+    title: 'Phone call',
+    paths:
+      '<path d="M7.2 3.5h3l1.4 4.1-2.1 1.8a15.6 15.6 0 0 0 5.1 5.1l1.8-2.1 4.1 1.4v3a2 2 0 0 1-2.2 2A16.8 16.8 0 0 1 5.2 5.7a2 2 0 0 1 2-2.2Z"/>',
+  },
+  {
     name: 'lock',
     title: 'Password',
     paths:
@@ -177,6 +194,11 @@ const icons = [
     name: 'check',
     title: 'Check',
     paths: '<path d="m5 12.5 4.5 4.5L19 7"/>',
+  },
+  {
+    name: 'check-square',
+    title: 'Task complete',
+    paths: '<rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><path d="m7.5 12.5 3 3 6-7"/>',
   },
   {
     name: 'warning',
