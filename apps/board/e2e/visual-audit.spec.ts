@@ -565,7 +565,8 @@ test('homepage spelling, responsive layout, and reference screenshots', async ({
     expect(await brandLockup.evaluate((image: HTMLImageElement) => image.naturalWidth > 0)).toBe(
       true
     );
-    await expect(page.getByRole('heading', { name: 'MOONWITNESS', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'MoonWitness', exact: true })).toBeVisible();
+    await expect(page.locator('.home-title')).toHaveText('MOONWITNESS');
     await expect(
       page.getByText('People. Places. Stories. Another side of reality.', { exact: true })
     ).toBeVisible();
