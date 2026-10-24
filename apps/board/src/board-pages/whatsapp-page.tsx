@@ -44,12 +44,26 @@ type Conversation = {
   is_group: boolean;
   is_archived: boolean;
   is_pinned: boolean;
+  assigned_user_id?: number | null;
+  assigned_user_name?: string | null;
+  assigned_team_id?: number | null;
+  assigned_team_name?: string | null;
+  work_state?: 'open' | 'closed';
   unread_count: number;
   last_message?: string | null;
   last_message_at?: string | null;
   labels?: ConversationLabel[];
 };
 type ConversationLabel = { id: number; name: string; color: string };
+type ConversationAgent = {
+  id: number;
+  login: string;
+  team_id: number | null;
+  team_name: string | null;
+};
+type ConversationTeam = { id: number; name: string };
+type QueueFilter = 'all' | 'mine' | 'unassigned';
+type WorkStateFilter = 'all' | 'open' | 'closed';
 type ConversationPage = {
   items: Conversation[];
   nextOffset: number;
@@ -143,6 +157,9 @@ type WhatsAppInboxPreferences = {
   selectedConversationId: number | null;
   selectedLabelId: number | null;
   conversationFilter: ConversationFilter;
+  queueFilter: QueueFilter;
+  teamId: number | null;
+  workStateFilter: WorkStateFilter;
   showArchived: boolean;
   sendOnEnter: boolean;
 };
@@ -150,6 +167,9 @@ const defaultInboxPreferences: WhatsAppInboxPreferences = {
   selectedConversationId: null,
   selectedLabelId: null,
   conversationFilter: 'all',
+  queueFilter: 'all',
+  teamId: null,
+  workStateFilter: 'open',
   showArchived: false,
   sendOnEnter: true,
 };
@@ -187,6 +207,9 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
     selectedConversationId: selected,
     selectedLabelId,
     conversationFilter,
+    queueFilter,
+    teamId,
+    workStateFilter,
     showArchived,
   } = inboxPreferences;
   const setSelected = (selectedConversationId: number | null) => {
@@ -197,12 +220,19 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
     setInboxPreferences((current) => ({ ...current, conversationFilter }));
   const setSelectedLabelId = (selectedLabelId: number | null) =>
     setInboxPreferences((current) => ({ ...current, selectedLabelId }));
+  const setQueueFilter = (queueFilter: QueueFilter) =>
+    setInboxPreferences((current) => ({ ...current, queueFilter }));
+  const setTeamId = (teamId: number | null) =>
+    setInboxPreferences((current) => ({ ...current, teamId }));
+  const setWorkStateFilter = (workStateFilter: WorkStateFilter) =>
+    setInboxPreferences((current) => ({ ...current, workStateFilter }));
   const setShowArchived = (showArchived: boolean) =>
     setInboxPreferences((current) => ({ ...current, showArchived }));
   const [newPhone, setNewPhone] = useState('');
   const [conversationSearch, setConversationSearch] = useState('');
   const [newLabelName, setNewLabelName] = useState('');
   const [pendingLabelDeleteId, setPendingLabelDeleteId] = useState<number | null>(null);
+  const [assignmentPanelOpen, setAssignmentPanelOpen] = useState(false);
   const [debouncedConversationSearch, setDebouncedConversationSearch] = useState('');
   const [updatingConversation, setUpdatingConversation] = useState(false);
   const [startingChat, setStartingChat] = useState(false);
@@ -290,6 +320,22 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
       (await client.request<{ data: ConversationLabel[] }>('/whatsapp/labels')).data,
     enabled: accountQuery.data?.status === 'connected',
   });
+  const agentsQuery = useQuery({
+    queryKey: scopedQueryKey(['whatsapp', 'agents']),
+    queryFn: async () =>
+      (
+        await client.request<{
+          data: { members: ConversationAgent[]; teams: ConversationTeam[] };
+        }>('/whatsapp/agents')
+      ).data,
+    enabled: accountQuery.data?.status === 'connected',
+  });
+  const effectiveTeamId =
+    teamId !== null &&
+    agentsQuery.data &&
+    !agentsQuery.data.teams.some((team) => team.id === teamId)
+      ? null
+      : teamId;
   const effectiveSelectedLabelId =
     selectedLabelId !== null &&
     labelsQuery.data &&
@@ -302,6 +348,9 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
     debouncedConversationSearch,
     showArchived,
     conversationFilter,
+    queueFilter,
+    effectiveTeamId,
+    workStateFilter,
     effectiveSelectedLabelId,
   ]);
   const conversationsQuery = useQuery({
@@ -309,18 +358,22 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
     queryFn: async () => {
       const page = (
         await client.request<{ data: Conversation[] }>(
-          `/whatsapp/conversations?limit=50&offset=0&archived=${showArchived}&unread=${conversationFilter === 'unread'}${effectiveSelectedLabelId ? `&label_id=${effectiveSelectedLabelId}` : ''}${debouncedConversationSearch ? `&search=${encodeURIComponent(debouncedConversationSearch)}` : ''}`
+          `/whatsapp/conversations?limit=50&offset=0&archived=${showArchived}&unread=${conversationFilter === 'unread'}&queue=${queueFilter}&work_state=${workStateFilter}${effectiveTeamId ? `&team_id=${effectiveTeamId}` : ''}${effectiveSelectedLabelId ? `&label_id=${effectiveSelectedLabelId}` : ''}${debouncedConversationSearch ? `&search=${encodeURIComponent(debouncedConversationSearch)}` : ''}`
         )
       ).data;
       const cached = queryClient.getQueryData<ConversationPage>(conversationsQueryKey);
       const pageIds = new Set(page.map((conversation) => conversation.id));
+      const preserveCachedConversations =
+        queueFilter === 'all' && effectiveTeamId === null && workStateFilter === 'all';
       const cachedItems =
-        cached?.items.filter(
-          (item) =>
-            item.is_archived === showArchived &&
-            (conversationFilter !== 'unread' || item.unread_count > 0) &&
-            !pageIds.has(item.id)
-        ) ?? [];
+        preserveCachedConversations && cached?.items
+          ? cached.items.filter(
+              (item) =>
+                item.is_archived === showArchived &&
+                (conversationFilter !== 'unread' || item.unread_count > 0) &&
+                !pageIds.has(item.id)
+            )
+          : [];
       const items = [...page, ...cachedItems];
       return {
         items,
@@ -373,7 +426,19 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
     const matchesLabel =
       effectiveSelectedLabelId === null ||
       conversation.labels?.some((label) => label.id === effectiveSelectedLabelId);
-    return matchesFilter && matchesSearch && matchesLabel;
+    const matchesQueue =
+      queueFilter === 'all' ||
+      (queueFilter === 'mine' && conversation.assigned_user_id === client.currentUser?.id) ||
+      (queueFilter === 'unassigned' &&
+        !conversation.assigned_user_id &&
+        !conversation.assigned_team_id);
+    const matchesTeam =
+      effectiveTeamId === null || conversation.assigned_team_id === effectiveTeamId;
+    const matchesState =
+      workStateFilter === 'all' || (conversation.work_state ?? 'open') === workStateFilter;
+    return (
+      matchesFilter && matchesSearch && matchesLabel && matchesQueue && matchesTeam && matchesState
+    );
   });
   const activeConversation =
     filteredConversations.find((item) => item.id === selected) ?? filteredConversations[0];
@@ -438,7 +503,7 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
     try {
       const page = (
         await client.request<{ data: Conversation[] }>(
-          `/whatsapp/conversations?limit=50&offset=${current.nextOffset}&archived=${showArchived}&unread=${conversationFilter === 'unread'}${effectiveSelectedLabelId ? `&label_id=${effectiveSelectedLabelId}` : ''}${debouncedConversationSearch ? `&search=${encodeURIComponent(debouncedConversationSearch)}` : ''}`
+          `/whatsapp/conversations?limit=50&offset=${current.nextOffset}&archived=${showArchived}&unread=${conversationFilter === 'unread'}&queue=${queueFilter}&work_state=${workStateFilter}${effectiveTeamId ? `&team_id=${effectiveTeamId}` : ''}${effectiveSelectedLabelId ? `&label_id=${effectiveSelectedLabelId}` : ''}${debouncedConversationSearch ? `&search=${encodeURIComponent(debouncedConversationSearch)}` : ''}`
         )
       ).data;
       queryClient.setQueryData<ConversationPage>(conversationsQueryKey, (latest) => {
@@ -745,6 +810,47 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
       });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not update conversation labels');
+    } finally {
+      setUpdatingConversation(false);
+    }
+  };
+
+  const updateConversationAssignment = async (
+    assignedUserId: number | null,
+    assignedTeamId: number | null
+  ) => {
+    if (!activeConversation || updatingConversation) return;
+    setUpdatingConversation(true);
+    try {
+      await client.request(`/whatsapp/conversations/${activeConversation.id}/assignment`, {
+        method: 'PUT',
+        body: { assigned_user_id: assignedUserId, assigned_team_id: assignedTeamId },
+      });
+      setAssignmentPanelOpen(false);
+      await queryClient.invalidateQueries({
+        queryKey: scopedQueryKey(['whatsapp', 'conversations']),
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not update assignment');
+    } finally {
+      setUpdatingConversation(false);
+    }
+  };
+
+  const updateConversationWorkState = async () => {
+    if (!activeConversation || updatingConversation) return;
+    const workState = activeConversation.work_state === 'closed' ? 'open' : 'closed';
+    setUpdatingConversation(true);
+    try {
+      await client.request(`/whatsapp/conversations/${activeConversation.id}/state`, {
+        method: 'PUT',
+        body: { work_state: workState },
+      });
+      await queryClient.invalidateQueries({
+        queryKey: scopedQueryKey(['whatsapp', 'conversations']),
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not update conversation state');
     } finally {
       setUpdatingConversation(false);
     }
@@ -1203,6 +1309,60 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                   </Button>
                 ))}
               </div>
+              <div className="mt-2 flex flex-wrap gap-2" aria-label="Agent queue filter">
+                {(['all', 'mine', 'unassigned'] as const).map((filter) => (
+                  <Button
+                    key={filter}
+                    type="button"
+                    size="sm"
+                    variant={queueFilter === filter ? 'default' : 'outline'}
+                    aria-pressed={queueFilter === filter}
+                    onClick={() => setQueueFilter(filter)}
+                  >
+                    {filter === 'all' ? 'Queue: All' : filter === 'mine' ? 'Mine' : 'Unassigned'}
+                  </Button>
+                ))}
+              </div>
+              <div
+                className="mt-2 flex flex-wrap gap-2"
+                aria-label="Conversation work state filter"
+              >
+                {(['open', 'closed', 'all'] as const).map((state) => (
+                  <Button
+                    key={state}
+                    type="button"
+                    size="sm"
+                    variant={workStateFilter === state ? 'default' : 'outline'}
+                    aria-pressed={workStateFilter === state}
+                    onClick={() => setWorkStateFilter(state)}
+                  >
+                    {state === 'all' ? 'All states' : state === 'open' ? 'Open' : 'Closed'}
+                  </Button>
+                ))}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2" aria-label="Team queue filter">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={effectiveTeamId === null ? 'default' : 'outline'}
+                  aria-pressed={effectiveTeamId === null}
+                  onClick={() => setTeamId(null)}
+                >
+                  All teams
+                </Button>
+                {(agentsQuery.data?.teams ?? []).map((team) => (
+                  <Button
+                    key={team.id}
+                    type="button"
+                    size="sm"
+                    variant={effectiveTeamId === team.id ? 'default' : 'outline'}
+                    aria-pressed={effectiveTeamId === team.id}
+                    onClick={() => setTeamId(team.id)}
+                  >
+                    {team.name}
+                  </Button>
+                ))}
+              </div>
               <div className="mt-2 flex flex-wrap gap-2" aria-label="Filter by conversation label">
                 <Button
                   type="button"
@@ -1379,6 +1539,19 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                       ))}
                     </span>
                   ) : null}
+                  {(conversation.assigned_user_name ||
+                    conversation.assigned_team_name ||
+                    conversation.work_state === 'closed') && (
+                    <span className="flex flex-wrap gap-2 text-[10px] text-ink-faint">
+                      {conversation.assigned_user_name && (
+                        <span>Assigned to {conversation.assigned_user_name}</span>
+                      )}
+                      {conversation.assigned_team_name && (
+                        <span>Team {conversation.assigned_team_name}</span>
+                      )}
+                      {conversation.work_state === 'closed' && <span>Closed</span>}
+                    </span>
+                  )}
                 </Button>
               ))
             ) : (
@@ -1430,6 +1603,27 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                         <Button
                           type="button"
                           size="sm"
+                          variant={assignmentPanelOpen ? 'default' : 'outline'}
+                          aria-expanded={assignmentPanelOpen}
+                          aria-controls="whatsapp-assignment-panel"
+                          onClick={() => setAssignmentPanelOpen((open) => !open)}
+                        >
+                          Assign chat
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={updatingConversation}
+                          onClick={() => void updateConversationWorkState()}
+                        >
+                          {activeConversation.work_state === 'closed'
+                            ? 'Reopen chat'
+                            : 'Close chat'}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
                           variant="outline"
                           disabled={updatingConversation}
                           onClick={() => void updateConversationPin()}
@@ -1448,6 +1642,108 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                       </>
                     )}
                   </div>
+                )}
+                {activeConversation && assignmentPanelOpen && canManageConversations && (
+                  <section
+                    id="whatsapp-assignment-panel"
+                    className="w-full border border-ink/30 p-3"
+                    aria-label="Assign conversation"
+                  >
+                    <p className="mb-2 text-xs text-ink-faint">
+                      {activeConversation.assigned_user_name
+                        ? `Assigned to ${activeConversation.assigned_user_name}`
+                        : activeConversation.assigned_team_name
+                          ? `Queued for ${activeConversation.assigned_team_name}`
+                          : 'No agent or team assigned'}
+                    </p>
+                    {agentsQuery.isLoading ? (
+                      <p role="status" className="text-sm">
+                        Loading agents…
+                      </p>
+                    ) : agentsQuery.isError ? (
+                      <div role="alert" className="flex items-center gap-2 text-sm">
+                        <span>Agents could not be loaded.</span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={agentsQuery.isFetching}
+                          onClick={() => void agentsQuery.refetch()}
+                        >
+                          Retry agents
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap gap-2" aria-label="Assign to agent">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={updatingConversation}
+                            onClick={() => void updateConversationAssignment(null, null)}
+                          >
+                            Unassign
+                          </Button>
+                          {(agentsQuery.data?.members ?? []).map((agent) => {
+                            const teamIdForAgent =
+                              activeConversation.assigned_team_id &&
+                              agent.team_id === activeConversation.assigned_team_id
+                                ? activeConversation.assigned_team_id
+                                : null;
+                            return (
+                              <Button
+                                key={agent.id}
+                                type="button"
+                                size="sm"
+                                variant={
+                                  activeConversation.assigned_user_id === agent.id
+                                    ? 'default'
+                                    : 'outline'
+                                }
+                                aria-pressed={activeConversation.assigned_user_id === agent.id}
+                                disabled={updatingConversation}
+                                onClick={() =>
+                                  void updateConversationAssignment(agent.id, teamIdForAgent)
+                                }
+                              >
+                                Assign to{' '}
+                                {agent.id === client.currentUser?.id ? 'you' : agent.login}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                        <div className="flex flex-wrap gap-2" aria-label="Assign to team">
+                          {(agentsQuery.data?.teams ?? []).map((team) => {
+                            const assignedAgent = agentsQuery.data?.members.find(
+                              (agent) => agent.id === activeConversation.assigned_user_id
+                            );
+                            const userIdForTeam =
+                              assignedAgent?.team_id === team.id ? assignedAgent.id : null;
+                            return (
+                              <Button
+                                key={team.id}
+                                type="button"
+                                size="sm"
+                                variant={
+                                  activeConversation.assigned_team_id === team.id
+                                    ? 'default'
+                                    : 'outline'
+                                }
+                                aria-pressed={activeConversation.assigned_team_id === team.id}
+                                disabled={updatingConversation}
+                                onClick={() =>
+                                  void updateConversationAssignment(userIdForTeam, team.id)
+                                }
+                              >
+                                Assign to team {team.name}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </section>
                 )}
                 {activeConversation &&
                   canManageConversations &&
@@ -2149,6 +2445,8 @@ function readWhatsAppInboxPreferences(key: string): WhatsAppInboxPreferences {
     if (!raw) return { ...defaultInboxPreferences };
     const value = JSON.parse(raw) as Partial<WhatsAppInboxPreferences>;
     const validFilters: ConversationFilter[] = ['all', 'unread', 'private', 'groups'];
+    const validQueueFilters: QueueFilter[] = ['all', 'mine', 'unassigned'];
+    const validWorkStates: WorkStateFilter[] = ['all', 'open', 'closed'];
     return {
       selectedConversationId:
         typeof value.selectedConversationId === 'number' &&
@@ -2165,6 +2463,16 @@ function readWhatsAppInboxPreferences(key: string): WhatsAppInboxPreferences {
       conversationFilter: validFilters.includes(value.conversationFilter as ConversationFilter)
         ? (value.conversationFilter as ConversationFilter)
         : defaultInboxPreferences.conversationFilter,
+      queueFilter: validQueueFilters.includes(value.queueFilter as QueueFilter)
+        ? (value.queueFilter as QueueFilter)
+        : defaultInboxPreferences.queueFilter,
+      teamId:
+        typeof value.teamId === 'number' && Number.isSafeInteger(value.teamId) && value.teamId > 0
+          ? value.teamId
+          : null,
+      workStateFilter: validWorkStates.includes(value.workStateFilter as WorkStateFilter)
+        ? (value.workStateFilter as WorkStateFilter)
+        : defaultInboxPreferences.workStateFilter,
       showArchived: typeof value.showArchived === 'boolean' ? value.showArchived : false,
       sendOnEnter: typeof value.sendOnEnter === 'boolean' ? value.sendOnEnter : true,
     };

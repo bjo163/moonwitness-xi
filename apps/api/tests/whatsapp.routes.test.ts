@@ -17,6 +17,7 @@ import { Readable } from 'node:stream';
 import { MAX_ATTACHMENT_BYTES } from '@moonwitness/types';
 import { dispatchOneOutboxEvent, jobsManifest } from '@moonwitness/jobs';
 import { manifest as notificationManifest } from '@moonwitness/orm-notification';
+import { manifest as organizationManifest } from '@moonwitness/orm-organization';
 import {
   dispatchQueuedWhatsAppMessage,
   registerWhatsAppOutboxConsumer,
@@ -174,7 +175,13 @@ describe('WhatsApp API GoWA bridge', () => {
         });
     if (postgres) await db.raw(`CREATE SCHEMA "${schema}"`);
     Model.knex(db);
-    await installAddons(db, [baseManifest, jobsManifest, notificationManifest, whatsappManifest]);
+    await installAddons(db, [
+      baseManifest,
+      jobsManifest,
+      notificationManifest,
+      organizationManifest,
+      whatsappManifest,
+    ]);
     companyId = Number((await db('companies').first('id'))?.id);
     const [foreignCompany] = await db('companies')
       .insert({ name: `WhatsApp isolation ${randomUUID()}`, timezone: 'UTC' })
@@ -884,6 +891,148 @@ describe('WhatsApp API GoWA bridge', () => {
     expect(
       await db('audit_logs').where({ model: 'whatsapp.label', record_id: label.id })
     ).toHaveLength(2);
+  });
+
+  it('assigns chats to company agents and teams and filters open, closed, and queue views', async () => {
+    const accountId = await connectAndMarkReady();
+    const superadmin = await db('users').where({ login: 'superadmin' }).first('id', 'login');
+    const team = await db('organization_teams')
+      .where({ company_id: companyId, code: 'api' })
+      .first();
+    expect(superadmin).toBeDefined();
+    expect(team).toBeDefined();
+    const [conversation] = await db('whatsapp_conversations')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        jid: '628444444444@s.whatsapp.net',
+        name: 'Assignment conversation',
+        is_group: false,
+        unread_count: 0,
+      })
+      .returning(['id']);
+    const auth = {
+      authorization: 'Bearer test',
+      'x-test-user-id': String(superadmin.id),
+    };
+
+    const agents = await app.inject({ method: 'GET', url: '/whatsapp/agents', headers: auth });
+    expect(agents.statusCode).toBe(200);
+    expect(agents.json().data.members).toContainEqual(
+      expect.objectContaining({
+        id: Number(superadmin.id),
+        login: 'superadmin',
+        team_id: Number(team.id),
+        team_name: 'API',
+      })
+    );
+    expect(agents.json().data.teams).toContainEqual({ id: Number(team.id), name: 'API' });
+
+    const assigned = await app.inject({
+      method: 'PUT',
+      url: `/whatsapp/conversations/${conversation.id}/assignment`,
+      headers: auth,
+      payload: { assigned_user_id: Number(superadmin.id), assigned_team_id: Number(team.id) },
+    });
+    expect(assigned.statusCode).toBe(200);
+    const mine = await app.inject({
+      method: 'GET',
+      url: `/whatsapp/conversations?queue=mine&team_id=${team.id}&work_state=open`,
+      headers: auth,
+    });
+    expect(mine.statusCode).toBe(200);
+    expect(mine.json().data).toEqual([
+      expect.objectContaining({
+        id: conversation.id,
+        assigned_user_name: 'superadmin',
+        assigned_team_name: 'API',
+        work_state: 'open',
+      }),
+    ]);
+
+    const readOnlyState = await app.inject({
+      method: 'PUT',
+      url: `/whatsapp/conversations/${conversation.id}/state`,
+      headers: { ...auth, 'x-test-role': 'user' },
+      payload: { work_state: 'closed' },
+    });
+    expect(readOnlyState.statusCode).toBe(403);
+    const closed = await app.inject({
+      method: 'PUT',
+      url: `/whatsapp/conversations/${conversation.id}/state`,
+      headers: auth,
+      payload: { work_state: 'closed' },
+    });
+    expect(closed.statusCode).toBe(200);
+    expect(closed.json().data.work_state).toBe('closed');
+    expect(
+      (
+        await app.inject({
+          method: 'GET',
+          url: '/whatsapp/conversations?work_state=open',
+          headers: auth,
+        })
+      ).json().data
+    ).toHaveLength(0);
+    expect(
+      (
+        await app.inject({
+          method: 'GET',
+          url: '/whatsapp/conversations?work_state=closed',
+          headers: auth,
+        })
+      )
+        .json()
+        .data.map((item: { id: number }) => item.id)
+    ).toEqual([conversation.id]);
+
+    const teamQueueAssignment = await app.inject({
+      method: 'PUT',
+      url: `/whatsapp/conversations/${conversation.id}/assignment`,
+      headers: auth,
+      payload: { assigned_user_id: null, assigned_team_id: Number(team.id) },
+    });
+    expect(teamQueueAssignment.statusCode).toBe(200);
+    expect(
+      (
+        await app.inject({
+          method: 'GET',
+          url: `/whatsapp/conversations?team_id=${team.id}&work_state=closed`,
+          headers: auth,
+        })
+      ).json().data
+    ).toHaveLength(1);
+    expect(
+      (
+        await app.inject({
+          method: 'GET',
+          url: '/whatsapp/conversations?queue=unassigned',
+          headers: auth,
+        })
+      ).json().data
+    ).toHaveLength(0);
+
+    const cleared = await app.inject({
+      method: 'PUT',
+      url: `/whatsapp/conversations/${conversation.id}/assignment`,
+      headers: auth,
+      payload: { assigned_user_id: null, assigned_team_id: null },
+    });
+    expect(cleared.statusCode).toBe(200);
+    expect(
+      (
+        await app.inject({
+          method: 'GET',
+          url: '/whatsapp/conversations?queue=unassigned',
+          headers: auth,
+        })
+      )
+        .json()
+        .data.map((item: { id: number }) => item.id)
+    ).toEqual([conversation.id]);
+    expect(
+      await db('audit_logs').where({ model: 'whatsapp.conversation', record_id: conversation.id })
+    ).toHaveLength(4);
   });
 
   it('reuses an active pairing QR and reports an expired QR so it can be refreshed', async () => {

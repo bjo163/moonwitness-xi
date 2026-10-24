@@ -684,6 +684,152 @@ test('creates labels, applies them to a conversation, and filters the inbox', as
   await expect(page.getByRole('button', { name: 'Priority', exact: true })).toHaveCount(0);
 });
 
+test('assigns conversations to agents and teams and closes or reopens queue items', async ({
+  page,
+}) => {
+  await page.goto('/login');
+  await page.getByLabel('Email or Username').fill('superadmin');
+  await page.getByLabel('Password', { exact: true }).fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
+  await expect(page).toHaveURL(/\/board$/u);
+
+  const conversations = [
+    {
+      id: 501,
+      name: 'My open conversation',
+      jid: '628555000501@s.whatsapp.net',
+      is_group: false,
+      is_archived: false,
+      is_pinned: false,
+      assigned_user_id: 2,
+      assigned_user_name: 'superadmin',
+      assigned_team_id: 5,
+      assigned_team_name: 'API',
+      work_state: 'open' as 'open' | 'closed',
+      unread_count: 0,
+    },
+    {
+      id: 502,
+      name: 'Unassigned conversation',
+      jid: '628555000502@s.whatsapp.net',
+      is_group: false,
+      is_archived: false,
+      is_pinned: false,
+      assigned_user_id: null as number | null,
+      assigned_user_name: null as string | null,
+      assigned_team_id: null as number | null,
+      assigned_team_name: null as string | null,
+      work_state: 'open' as 'open' | 'closed',
+      unread_count: 0,
+    },
+  ];
+  await page.route('**/whatsapp/account', (route) =>
+    route.fulfill({
+      json: {
+        success: true,
+        data: {
+          status: 'connected',
+          permissions: { manage: true, manageConversations: true, send: true },
+        },
+      },
+    })
+  );
+  await page.route('**/whatsapp/agents', (route) =>
+    route.fulfill({
+      json: {
+        success: true,
+        data: {
+          members: [
+            { id: 2, login: 'superadmin', team_id: 5, team_name: 'API' },
+            { id: 3, login: 'agent-b', team_id: 5, team_name: 'API' },
+          ],
+          teams: [{ id: 5, name: 'API' }],
+        },
+      },
+    })
+  );
+  await page.route('**/whatsapp/conversations**', async (route) => {
+    const url = new URL(route.request().url());
+    const path = url.pathname;
+    const method = route.request().method();
+    if (path.endsWith('/assignment') && method === 'PUT') {
+      const body = route.request().postDataJSON() as {
+        assigned_user_id: number | null;
+        assigned_team_id: number | null;
+      };
+      const conversationId = Number(path.split('/').at(-2));
+      const conversation = conversations.find((item) => item.id === conversationId)!;
+      conversation.assigned_user_id = body.assigned_user_id;
+      conversation.assigned_team_id = body.assigned_team_id;
+      conversation.assigned_user_name =
+        body.assigned_user_id === 2 ? 'superadmin' : body.assigned_user_id === 3 ? 'agent-b' : null;
+      conversation.assigned_team_name = body.assigned_team_id === 5 ? 'API' : null;
+      return route.fulfill({
+        json: {
+          success: true,
+          data: {
+            id: conversationId,
+            assigned_user_id: body.assigned_user_id,
+            assigned_team_id: body.assigned_team_id,
+          },
+        },
+      });
+    }
+    if (path.endsWith('/state') && method === 'PUT') {
+      const body = route.request().postDataJSON() as { work_state: 'open' | 'closed' };
+      const conversationId = Number(path.split('/').at(-2));
+      const conversation = conversations.find((item) => item.id === conversationId)!;
+      conversation.work_state = body.work_state;
+      return route.fulfill({ json: { success: true, data: { work_state: body.work_state } } });
+    }
+    if (path.endsWith('/messages')) return route.fulfill({ json: { success: true, data: [] } });
+    const queue = url.searchParams.get('queue') ?? 'all';
+    const teamId = url.searchParams.get('team_id');
+    const workState = url.searchParams.get('work_state') ?? 'all';
+    const matches = conversations.filter(
+      (conversation) =>
+        (queue === 'all' ||
+          (queue === 'mine' && conversation.assigned_user_id === 2) ||
+          (queue === 'unassigned' &&
+            conversation.assigned_user_id === null &&
+            conversation.assigned_team_id === null)) &&
+        (!teamId || conversation.assigned_team_id === Number(teamId)) &&
+        (workState === 'all' || conversation.work_state === workState)
+    );
+    return route.fulfill({ json: { success: true, data: matches } });
+  });
+
+  await page.goto('/board/whatsapp');
+  await expect(page.getByRole('button', { name: /My open conversation/u })).toBeVisible();
+  await page.getByRole('button', { name: 'Unassigned', exact: true }).click();
+  await expect(page.getByRole('button', { name: /Unassigned conversation/u })).toBeVisible();
+  await page.getByRole('button', { name: 'Assign chat' }).click();
+  await page.getByRole('button', { name: 'Assign to team API' }).click();
+  await expect(page.getByRole('button', { name: /Unassigned conversation/u })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Queue: All', exact: true }).click();
+  await page.getByRole('button', { name: 'API', exact: true }).click();
+  await expect(page.getByRole('button', { name: /Unassigned conversation/u })).toBeVisible();
+  await page.getByRole('button', { name: /Unassigned conversation/u }).click();
+  await page.getByRole('button', { name: 'Assign chat' }).click();
+  await page.getByRole('button', { name: 'Assign to agent-b' }).click();
+  await page.getByRole('button', { name: 'Assign chat' }).click();
+  await expect(
+    page.getByRole('region', { name: 'Assign conversation' }).getByText('Assigned to agent-b')
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Mine', exact: true }).click();
+  await expect(page.getByRole('button', { name: /My open conversation/u })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Unassigned conversation/u })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Close chat' }).click();
+  await page.getByRole('button', { name: 'Closed', exact: true }).click();
+  await expect(page.getByRole('button', { name: /My open conversation/u })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: /My open conversation/u }).getByText('Closed', { exact: true })
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Reopen chat' }).click();
+  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await expect(page.getByRole('button', { name: /My open conversation/u })).toBeVisible();
+});
+
 test('connect shows QR, media is sent, and failures preserve the draft', async ({ page }) => {
   await page.goto('/login');
   await page.getByLabel('Email or Username').fill('superadmin');

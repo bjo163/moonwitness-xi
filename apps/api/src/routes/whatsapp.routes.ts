@@ -1339,6 +1339,176 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
     return { success: true, data };
   });
 
+  app.get('/whatsapp/agents', async (req, reply) => {
+    const companyId = requireCompany(req, reply);
+    if (!companyId) return;
+    const members = await app
+      .db('company_memberships as company_member')
+      .join('users as agent', 'agent.id', 'company_member.user_id')
+      .leftJoin(
+        'organization_memberships as organization_member',
+        function joinOrganizationMember() {
+          this.on('organization_member.company_id', '=', 'company_member.company_id').andOn(
+            'organization_member.user_id',
+            '=',
+            'company_member.user_id'
+          );
+        }
+      )
+      .leftJoin('organization_teams as team', function joinTeam() {
+        this.on('team.id', '=', 'organization_member.team_id').andOn(
+          'team.company_id',
+          '=',
+          'company_member.company_id'
+        );
+      })
+      .select('agent.id', 'agent.login', 'team.id as team_id', 'team.name as team_name')
+      .where('company_member.company_id', companyId)
+      .whereNot('agent.role', 'system')
+      .orderBy('agent.login', 'asc');
+    const teams = await app
+      .db('organization_teams')
+      .select('id', 'name')
+      .where({ company_id: companyId })
+      .orderBy('name', 'asc');
+    return {
+      success: true,
+      data: {
+        members: members.map((member) => ({
+          id: Number(member.id),
+          login: member.login,
+          team_id: member.team_id === null ? null : Number(member.team_id),
+          team_name: member.team_name ?? null,
+        })),
+        teams: teams.map((team) => ({ id: Number(team.id), name: team.name })),
+      },
+    };
+  });
+
+  app.put<{ Params: Params; Body: unknown }>(
+    '/whatsapp/conversations/:id/assignment',
+    whatsappRateLimit(30),
+    async (req, reply) => {
+      const companyId = requireCompany(req, reply);
+      if (!companyId) return;
+      if (!requireWhatsAppAction(req, reply, 'whatsapp.conversation', 'write')) return;
+      const conversationId = id(req.params.id);
+      const body = isRecord(req.body) ? req.body : null;
+      const assignedUserId = body?.assigned_user_id;
+      const assignedTeamId = body?.assigned_team_id;
+      if (
+        !conversationId ||
+        !body ||
+        Object.keys(body).length !== 2 ||
+        !Object.hasOwn(body, 'assigned_user_id') ||
+        !Object.hasOwn(body, 'assigned_team_id') ||
+        (assignedUserId !== null &&
+          (!Number.isSafeInteger(assignedUserId) || Number(assignedUserId) < 1)) ||
+        (assignedTeamId !== null &&
+          (!Number.isSafeInteger(assignedTeamId) || Number(assignedTeamId) < 1))
+      )
+        return reply.code(400).send({ success: false, error: 'Invalid conversation assignment' });
+      const conversation = await WhatsappConversation.query().findOne({
+        id: conversationId,
+        company_id: companyId,
+      });
+      if (!conversation)
+        return reply.code(404).send({ success: false, error: 'Conversation not found' });
+      if (assignedUserId !== null) {
+        const membership = await app
+          .db('company_memberships')
+          .where({ company_id: companyId, user_id: assignedUserId })
+          .first();
+        if (!membership)
+          return reply.code(404).send({ success: false, error: 'Assigned agent not found' });
+      }
+      if (assignedTeamId !== null) {
+        const team = await app
+          .db('organization_teams')
+          .where({ company_id: companyId, id: assignedTeamId })
+          .first();
+        if (!team)
+          return reply.code(404).send({ success: false, error: 'Assigned team not found' });
+      }
+      if (assignedUserId !== null && assignedTeamId !== null) {
+        const teamMember = await app
+          .db('organization_memberships')
+          .where({
+            company_id: companyId,
+            user_id: assignedUserId,
+            team_id: assignedTeamId,
+          })
+          .first();
+        if (!teamMember)
+          return reply
+            .code(400)
+            .send({ success: false, error: 'Agent is not a member of that team' });
+      }
+      const assigned = {
+        assigned_user_id: assignedUserId === null ? null : Number(assignedUserId),
+        assigned_team_id: assignedTeamId === null ? null : Number(assignedTeamId),
+        write_date: new Date().toISOString(),
+      };
+      await app.db.transaction(async (trx) => {
+        await WhatsappConversation.query(trx)
+          .where({ id: conversationId, company_id: companyId })
+          .patch(assigned);
+        await recordWhatsAppAudit(
+          req,
+          'whatsapp.conversation',
+          'assignment.update',
+          conversationId,
+          companyId,
+          trx
+        );
+      });
+      return { success: true, data: { id: conversationId, ...assigned } };
+    }
+  );
+
+  app.put<{ Params: Params; Body: unknown }>(
+    '/whatsapp/conversations/:id/state',
+    whatsappRateLimit(30),
+    async (req, reply) => {
+      const companyId = requireCompany(req, reply);
+      if (!companyId) return;
+      if (!requireWhatsAppAction(req, reply, 'whatsapp.conversation', 'write')) return;
+      const conversationId = id(req.params.id);
+      const body = isRecord(req.body) ? req.body : null;
+      const workState = body?.work_state;
+      if (
+        !conversationId ||
+        !body ||
+        Object.keys(body).length !== 1 ||
+        !['open', 'closed'].includes(String(workState))
+      )
+        return reply.code(400).send({ success: false, error: 'Invalid conversation work state' });
+      const conversation = await WhatsappConversation.query().findOne({
+        id: conversationId,
+        company_id: companyId,
+      });
+      if (!conversation)
+        return reply.code(404).send({ success: false, error: 'Conversation not found' });
+      await app.db.transaction(async (trx) => {
+        await WhatsappConversation.query(trx)
+          .where({ id: conversationId, company_id: companyId })
+          .patch({
+            work_state: workState as 'open' | 'closed',
+            write_date: new Date().toISOString(),
+          });
+        await recordWhatsAppAudit(
+          req,
+          'whatsapp.conversation',
+          `state.${workState}`,
+          conversationId,
+          companyId,
+          trx
+        );
+      });
+      return { success: true, data: { id: conversationId, work_state: workState } };
+    }
+  );
+
   app.post<{ Body: unknown }>('/whatsapp/labels', whatsappRateLimit(30), async (req, reply) => {
     const companyId = requireCompany(req, reply);
     if (!companyId) return;
@@ -1461,6 +1631,9 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       archived?: string;
       unread?: string;
       label_id?: string;
+      queue?: string;
+      team_id?: string;
+      work_state?: string;
     };
   }>('/whatsapp/conversations', async (req, reply) => {
     const companyId = requireCompany(req, reply);
@@ -1471,6 +1644,9 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
     const archived = req.query.archived === 'true';
     const unreadOnly = req.query.unread === 'true';
     const labelId = req.query.label_id === undefined ? undefined : id(req.query.label_id);
+    const teamId = req.query.team_id === undefined ? undefined : id(req.query.team_id);
+    const queue = req.query.queue ?? 'all';
+    const workState = req.query.work_state ?? 'all';
     if (req.query.archived !== undefined && !['true', 'false'].includes(req.query.archived)) {
       return reply.code(400).send({ success: false, error: 'Archived must be true or false' });
     }
@@ -1479,6 +1655,15 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
     }
     if (req.query.label_id !== undefined && !labelId) {
       return reply.code(400).send({ success: false, error: 'Invalid label ID' });
+    }
+    if (!['all', 'mine', 'unassigned'].includes(queue)) {
+      return reply.code(400).send({ success: false, error: 'Invalid queue filter' });
+    }
+    if (req.query.team_id !== undefined && !teamId) {
+      return reply.code(400).send({ success: false, error: 'Invalid team ID' });
+    }
+    if (!['all', 'open', 'closed'].includes(workState)) {
+      return reply.code(400).send({ success: false, error: 'Invalid work state' });
     }
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
       return reply.code(400).send({ success: false, error: 'Limit must be between 1 and 100' });
@@ -1720,6 +1905,17 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
           .where({ company_id: companyId, label_id: labelId })
       );
     }
+    if (queue === 'mine') query.where('assigned_user_id', req.auth!.userId);
+    if (queue === 'unassigned') query.whereNull('assigned_user_id').whereNull('assigned_team_id');
+    if (teamId) {
+      const team = await app
+        .db('organization_teams')
+        .where({ id: teamId, company_id: companyId })
+        .first();
+      if (!team) return reply.code(404).send({ success: false, error: 'Team not found' });
+      query.where('assigned_team_id', teamId);
+    }
+    if (workState !== 'all') query.where('work_state', workState);
     const readCursorTimestampSql =
       app.db.client.config.client === 'pg'
         ? 'read_cursor.last_read_at::timestamptz'
@@ -1769,6 +1965,37 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       .limit(limit)
       .offset(offset);
     const conversationIds = conversations.map((conversation) => conversation.id);
+    const assignmentRows = conversationIds.length
+      ? await app
+          .db('whatsapp_conversations as conversation')
+          .leftJoin('company_memberships as assigned_membership', function joinMember() {
+            this.on('assigned_membership.user_id', '=', 'conversation.assigned_user_id').andOn(
+              'assigned_membership.company_id',
+              '=',
+              'conversation.company_id'
+            );
+          })
+          .leftJoin('users as assigned_agent', 'assigned_agent.id', 'assigned_membership.user_id')
+          .leftJoin('organization_teams as assigned_team', function joinTeam() {
+            this.on('assigned_team.id', '=', 'conversation.assigned_team_id').andOn(
+              'assigned_team.company_id',
+              '=',
+              'conversation.company_id'
+            );
+          })
+          .select(
+            'conversation.id as conversation_id',
+            'assigned_membership.user_id as assigned_user_id',
+            'assigned_agent.login as assigned_user_name',
+            'assigned_team.id as assigned_team_id',
+            'assigned_team.name as assigned_team_name'
+          )
+          .where({ 'conversation.company_id': companyId })
+          .whereIn('conversation.id', conversationIds)
+      : [];
+    const assignmentsByConversation = new Map(
+      assignmentRows.map((row) => [Number(row.conversation_id), row])
+    );
     const labelRows = conversationIds.length
       ? await app
           .db('whatsapp_conversation_labels as conversation_label')
@@ -1824,6 +2051,10 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       success: true,
       data: conversations.map((conversation) => ({
         ...conversation,
+        assigned_user_name:
+          assignmentsByConversation.get(conversation.id)?.assigned_user_name ?? null,
+        assigned_team_name:
+          assignmentsByConversation.get(conversation.id)?.assigned_team_name ?? null,
         unread_count: unreadCountByConversation.get(conversation.id) ?? 0,
         labels: labelsByConversation.get(conversation.id) ?? [],
       })),
