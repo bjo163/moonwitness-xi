@@ -3022,12 +3022,10 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
             .code(422)
             .send({ success: false, error: 'Attachment blocked by malware scan' });
         if (error instanceof MalwareScannerUnavailableError)
-          return reply
-            .code(503)
-            .send({
-              success: false,
-              error: 'Attachment malware scanning is temporarily unavailable',
-            });
+          return reply.code(503).send({
+            success: false,
+            error: 'Attachment malware scanning is temporarily unavailable',
+          });
         const status =
           isRecord(error) && typeof error.statusCode === 'number' ? error.statusCode : 400;
         return reply.code(status).send({
@@ -3596,12 +3594,10 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         message.media_scan_status = 'clean';
       } catch (error) {
         req.log.error({ error: whatsappLogErrorContext(error) }, 'WhatsApp malware scan failed');
-        return reply
-          .code(503)
-          .send({
-            success: false,
-            error: 'Attachment malware scanning is temporarily unavailable',
-          });
+        return reply.code(503).send({
+          success: false,
+          error: 'Attachment malware scanning is temporarily unavailable',
+        });
       }
     }
     let content: Buffer | null = null;

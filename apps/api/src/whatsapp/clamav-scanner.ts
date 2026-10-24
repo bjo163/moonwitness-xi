@@ -1,9 +1,7 @@
 import net from 'node:net';
 import type { Readable } from 'node:stream';
 
-export type MalwareScanResult =
-  | { status: 'clean' }
-  | { status: 'infected'; signature: string };
+export type MalwareScanResult = { status: 'clean' } | { status: 'infected'; signature: string };
 
 export interface AttachmentScanner {
   scan(content: Readable): Promise<MalwareScanResult>;
@@ -21,7 +19,10 @@ export class ClamAvScanner implements AttachmentScanner {
   private readonly hostname: string;
   private readonly port: number;
 
-  constructor(address: string, private readonly timeoutMs = 30_000) {
+  constructor(
+    address: string,
+    private readonly timeoutMs = 30_000
+  ) {
     let parsed: URL;
     try {
       parsed = new URL(address);
@@ -167,11 +168,8 @@ export class ClamAvScanner implements AttachmentScanner {
 }
 
 export function createAttachmentScanner(
-  address =
-    process.env.WHATSAPP_CLAMAV_URL ||
+  address = process.env.WHATSAPP_CLAMAV_URL ||
     (process.env.NODE_ENV === 'production' ? undefined : 'tcp://127.0.0.1:3310')
-):
-  | AttachmentScanner
-  | null {
+): AttachmentScanner | null {
   return address ? new ClamAvScanner(address) : null;
 }

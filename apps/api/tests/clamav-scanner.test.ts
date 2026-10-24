@@ -46,9 +46,7 @@ async function createClamServer(scanResult = 'stream: OK'): Promise<string> {
 
 afterEach(async () => {
   await Promise.all(
-    servers.splice(0).map(
-      (server) => new Promise<void>((resolve) => server.close(() => resolve()))
-    )
+    servers.splice(0).map((server) => new Promise<void>((resolve) => server.close(() => resolve())))
   );
 });
 
@@ -62,9 +60,7 @@ describe('ClamAV INSTREAM scanner', () => {
   });
 
   it('returns the detected signature without treating it as a scanner error', async () => {
-    const scanner = new ClamAvScanner(
-      await createClamServer('stream: Eicar-Signature FOUND')
-    );
+    const scanner = new ClamAvScanner(await createClamServer('stream: Eicar-Signature FOUND'));
     await expect(scanner.scan(Readable.from(['malware fixture']))).resolves.toEqual({
       status: 'infected',
       signature: 'Eicar-Signature',
