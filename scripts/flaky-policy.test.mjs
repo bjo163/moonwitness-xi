@@ -63,3 +63,15 @@ test('caps retries at one and rejects duplicate quarantine IDs', () => {
   assert.match(errors, /maxRetries/u);
   assert.match(errors, /unique/u);
 });
+
+test('accepts the GitHub login shapes an owner can actually have', () => {
+  for (const owner of ['@bjo163', '@Maintainer-2', '@a']) {
+    assert.deepEqual(validateFlakyPolicy(policy([{ ...validEntry, owner }]), '2026-10-04'), []);
+  }
+  for (const owner of ['bjo163', '@_leading', '@trailing-hyphen-', '@a'.padEnd(45, 'b')]) {
+    assert.match(
+      validateFlakyPolicy(policy([{ ...validEntry, owner }]), '2026-10-04').join('\n'),
+      /GitHub login/u
+    );
+  }
+});
