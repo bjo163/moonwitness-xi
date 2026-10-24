@@ -80,7 +80,7 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
 
 test('connect shows QR, media is sent, and failures preserve the draft', async ({ page }) => {
   await page.goto('/login');
-  await page.getByLabel('Login', { exact: true }).fill('superadmin');
+  await page.getByLabel('Email or Username').fill('superadmin');
   await page.getByLabel('Password', { exact: true }).fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the Shadow' }).click();
   await expect(page).toHaveURL(/\/board$/u);
