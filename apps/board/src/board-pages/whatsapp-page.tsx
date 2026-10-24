@@ -62,6 +62,17 @@ type Message = {
   sender_jid?: string | null;
   create_date: string;
 };
+type ConversationFilter = 'all' | 'unread' | 'private' | 'groups';
+type WhatsAppInboxPreferences = {
+  selectedConversationId: number | null;
+  conversationFilter: ConversationFilter;
+  showArchived: boolean;
+};
+const defaultInboxPreferences: WhatsAppInboxPreferences = {
+  selectedConversationId: null,
+  conversationFilter: 'all',
+  showArchived: false,
+};
 const statusLabel: Record<string, string> = {
   disconnected: 'Not connected',
   connecting: 'Connecting',
@@ -83,15 +94,25 @@ const messageStatusLabel: Record<string, string> = {
 };
 
 export function WhatsappPage() {
+  const inboxPreferenceScope = `mw-whatsapp-inbox:${client.currentUser?.id ?? 'anonymous'}:${client.getCompanyId() ?? 'none'}`;
+  return <WhatsappInbox key={inboxPreferenceScope} inboxPreferenceScope={inboxPreferenceScope} />;
+}
+
+function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string }) {
   const queryClient = useQueryClient();
-  const [selected, setSelected] = useState<number | null>(null);
+  const [inboxPreferences, setInboxPreferences] = useState(() =>
+    readWhatsAppInboxPreferences(inboxPreferenceScope)
+  );
+  const { selectedConversationId: selected, conversationFilter, showArchived } = inboxPreferences;
+  const setSelected = (selectedConversationId: number | null) =>
+    setInboxPreferences((current) => ({ ...current, selectedConversationId }));
+  const setConversationFilter = (conversationFilter: ConversationFilter) =>
+    setInboxPreferences((current) => ({ ...current, conversationFilter }));
+  const setShowArchived = (showArchived: boolean) =>
+    setInboxPreferences((current) => ({ ...current, showArchived }));
   const [newPhone, setNewPhone] = useState('');
   const [conversationSearch, setConversationSearch] = useState('');
   const [debouncedConversationSearch, setDebouncedConversationSearch] = useState('');
-  const [conversationFilter, setConversationFilter] = useState<
-    'all' | 'unread' | 'private' | 'groups'
-  >('all');
-  const [showArchived, setShowArchived] = useState(false);
   const [updatingConversation, setUpdatingConversation] = useState(false);
   const [startingChat, setStartingChat] = useState(false);
   const [loadingMoreConversations, setLoadingMoreConversations] = useState(false);
@@ -107,6 +128,13 @@ export function WhatsappPage() {
   const loadingOlderRef = useRef<number | null>(null);
   const activeConversationIdRef = useRef<number | undefined>(undefined);
   const [qr, setQr] = useState<{ code: string; image: string } | null>(null);
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(inboxPreferenceScope, JSON.stringify(inboxPreferences));
+    } catch {
+      // The inbox remains usable when browser storage is unavailable.
+    }
+  }, [inboxPreferenceScope, inboxPreferences]);
   useEffect(() => {
     const timer = window.setTimeout(
       () => setDebouncedConversationSearch(conversationSearch.trim()),
@@ -155,12 +183,6 @@ export function WhatsappPage() {
     refetchInterval: 5000,
     refetchIntervalInBackground: false,
   });
-  const activeConversation =
-    conversationsQuery.data?.items.find((item) => item.id === selected) ??
-    conversationsQuery.data?.items[0];
-  useEffect(() => {
-    activeConversationIdRef.current = activeConversation?.id;
-  }, [activeConversation?.id]);
   const filteredConversations = (conversationsQuery.data?.items ?? []).filter((conversation) => {
     const matchesFilter =
       conversationFilter === 'all' ||
@@ -176,6 +198,11 @@ export function WhatsappPage() {
       (digits.length > 0 && conversation.jid.replace(/\D/gu, '').includes(digits));
     return matchesFilter && matchesSearch;
   });
+  const activeConversation =
+    filteredConversations.find((item) => item.id === selected) ?? filteredConversations[0];
+  useEffect(() => {
+    activeConversationIdRef.current = activeConversation?.id;
+  }, [activeConversation?.id]);
   const messagesQuery = useQuery({
     queryKey: scopedQueryKey(['whatsapp', 'messages', activeConversation?.id]),
     queryFn: async () =>
@@ -985,4 +1012,28 @@ function mediaLoadFailureMessage(error: unknown): string {
   if (error instanceof ApiError && error.status === 503)
     return 'WhatsApp services are temporarily busy. Try again.';
   return 'Attachment could not be loaded. Try again.';
+}
+
+function readWhatsAppInboxPreferences(key: string): WhatsAppInboxPreferences {
+  try {
+    if (typeof window === 'undefined') return { ...defaultInboxPreferences };
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return { ...defaultInboxPreferences };
+    const value = JSON.parse(raw) as Partial<WhatsAppInboxPreferences>;
+    const validFilters: ConversationFilter[] = ['all', 'unread', 'private', 'groups'];
+    return {
+      selectedConversationId:
+        typeof value.selectedConversationId === 'number' &&
+        Number.isSafeInteger(value.selectedConversationId) &&
+        value.selectedConversationId > 0
+          ? value.selectedConversationId
+          : null,
+      conversationFilter: validFilters.includes(value.conversationFilter as ConversationFilter)
+        ? (value.conversationFilter as ConversationFilter)
+        : defaultInboxPreferences.conversationFilter,
+      showArchived: typeof value.showArchived === 'boolean' ? value.showArchived : false,
+    };
+  } catch {
+    return { ...defaultInboxPreferences };
+  }
 }

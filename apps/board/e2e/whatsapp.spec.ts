@@ -162,6 +162,9 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
       },
     });
   });
+  await page.route('**/whatsapp/conversations/100/messages*', (route) =>
+    route.fulfill({ json: { success: true, data: [] } })
+  );
   await page.route('**/whatsapp/conversations/42/read', (route) =>
     route.fulfill({ json: { success: true, data: { marked: true, message_id: 50 } } })
   );
@@ -221,6 +224,15 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   await page.getByLabel('Search conversations by name, number, or message').fill('');
   await page.getByRole('button', { name: 'All', exact: true }).click();
   await expect(page.getByRole('button', { name: /Rani Putri/u })).toBeVisible();
+  await page.getByRole('button', { name: 'Private' }).click();
+  await page.getByRole('button', { name: /Contact 0/u }).click();
+  await expect(page.getByRole('heading', { name: 'Contact 0' })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Private' })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  );
+  await expect(page.getByRole('heading', { name: 'Contact 0' })).toBeVisible();
   await page.screenshot({ path: '../../test-results/whatsapp-board.png', fullPage: true });
 });
 
