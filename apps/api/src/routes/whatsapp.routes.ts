@@ -13,6 +13,7 @@ import { gowaBinary, gowaOriginPath, gowaRequest, GowaError } from '../whatsapp/
 import { whatsappLogErrorContext } from '../whatsapp/log-redaction.js';
 import { OutboxEvent } from '@moonwitness/jobs';
 import { WHATSAPP_SEND_EVENT } from '../whatsapp/outbox-consumer.js';
+import { enqueueNotification } from '@moonwitness/orm-notification';
 
 type Options = { attachmentStorage: AttachmentStorage };
 type Params = { id: string };
@@ -861,6 +862,25 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
             await trx('whatsapp_conversations')
               .where({ id: conversationId, company_id: account.company_id })
               .increment('unread_count', 1);
+            const recipients = await trx('company_memberships as membership')
+              .join('users', 'users.id', 'membership.user_id')
+              .where('membership.company_id', account.company_id)
+              .where('users.active', true)
+              .select('membership.user_id');
+            for (const recipient of recipients) {
+              await enqueueNotification(
+                {
+                  recipientId: Number(recipient.user_id),
+                  companyId: Number(account.company_id),
+                  templateCode: 'whatsapp.inbound_message',
+                  resource: {
+                    model: WhatsappConversation.modelName,
+                    id: Number(conversationId),
+                  },
+                },
+                trx
+              );
+            }
           }
         });
         return reply.code(204).send();

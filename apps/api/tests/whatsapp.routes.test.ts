@@ -16,6 +16,7 @@ import { createHmac, randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
 import { MAX_ATTACHMENT_BYTES } from '@moonwitness/types';
 import { dispatchOneOutboxEvent, jobsManifest } from '@moonwitness/jobs';
+import { manifest as notificationManifest } from '@moonwitness/orm-notification';
 import {
   dispatchQueuedWhatsAppMessage,
   registerWhatsAppOutboxConsumer,
@@ -145,7 +146,7 @@ describe('WhatsApp API GoWA bridge', () => {
         });
     if (postgres) await db.raw(`CREATE SCHEMA "${schema}"`);
     Model.knex(db);
-    await installAddons(db, [baseManifest, jobsManifest, whatsappManifest]);
+    await installAddons(db, [baseManifest, jobsManifest, notificationManifest, whatsappManifest]);
     companyId = Number((await db('companies').first('id'))?.id);
     const [foreignCompany] = await db('companies')
       .insert({ name: `WhatsApp isolation ${randomUUID()}`, timezone: 'UTC' })
@@ -2688,6 +2689,24 @@ describe('WhatsApp API GoWA bridge', () => {
         content: privateMessage.body,
       },
     ]);
+    const activeMembers = await db('company_memberships as membership')
+      .join('users', 'users.id', 'membership.user_id')
+      .where('membership.company_id', companyId)
+      .where('users.active', true)
+      .select('membership.user_id');
+    const firstNotificationEvents = await db('outbox_events').where({
+      company_id: companyId,
+      event_type: 'notification.deliver',
+    });
+    expect(firstNotificationEvents).toHaveLength(activeMembers.length);
+    for (const event of firstNotificationEvents) {
+      const notificationPayload =
+        typeof event.payload === 'string' ? JSON.parse(event.payload) : event.payload;
+      expect(notificationPayload).toMatchObject({
+        templateCode: 'whatsapp.inbound_message',
+        resource: { model: 'whatsapp.conversation', id: privateConversation.id },
+      });
+    }
 
     expect(
       (
@@ -2922,6 +2941,10 @@ describe('WhatsApp API GoWA bridge', () => {
       })
     ).toHaveLength(1);
 
+    const notificationCountBeforeOutboundEcho = await db('outbox_events')
+      .where({ company_id: companyId, event_type: 'notification.deliver' })
+      .count({ count: '*' })
+      .first();
     const sentAt = new Date().toISOString();
     const [pendingMessage] = await db('whatsapp_messages')
       .insert({
@@ -2962,6 +2985,13 @@ describe('WhatsApp API GoWA bridge', () => {
     expect(
       (await db('whatsapp_conversations').where({ id: privateConversation.id }).first()).name
     ).toBe('Webhook Contact');
+    const notificationCountAfterOutboundEcho = await db('outbox_events')
+      .where({ company_id: companyId, event_type: 'notification.deliver' })
+      .count({ count: '*' })
+      .first();
+    expect(Number(notificationCountAfterOutboundEcho?.count)).toBe(
+      Number(notificationCountBeforeOutboundEcho?.count)
+    );
   });
 
   it('stores one durable send per idempotency key and rejects changed content', async () => {
