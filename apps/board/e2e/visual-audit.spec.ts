@@ -7,6 +7,7 @@ import { E2E_SUPERADMIN_PASSWORD } from './constants.js';
 
 const root = path.resolve(import.meta.dirname, '../../..');
 const auditDirectory = path.join(root, 'test-results/visual-audit');
+const catalogDirectory = path.join(root, 'docs/design/ui-catalog');
 const sizes = [
   { name: 'mobile-375', width: 375, height: 812 },
   { name: 'tablet-768', width: 768, height: 1024 },
@@ -32,7 +33,6 @@ test('command shortcut stays inactive while typing in an editable control', asyn
   await page.getByLabel('Password', { exact: true }).fill(E2E_SUPERADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Enter the Shadow' }).click();
   await expect(page).toHaveURL(/\/board$/u);
-
   const search = page.getByRole('button', { name: /Search records, models, commands/u });
   await search.click();
   const commandSearch = page.getByPlaceholder(
@@ -145,6 +145,78 @@ test('desktop Board shell uses the compact crown lockup and a magenta active nav
     fullPage: false,
     animations: 'disabled',
   });
+});
+
+test('canonical page icons remain legible on Knowledge, Profile, Settings, and WhatsApp', async ({
+  page,
+}) => {
+  await mkdir(catalogDirectory, { recursive: true });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/login');
+  await page.getByLabel('Email or Username').fill('superadmin');
+  await page.getByLabel('Password', { exact: true }).fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
+  await expect(page).toHaveURL(/\/board$/u);
+  await page.getByRole('button', { name: /Switch company/u }).click();
+  const companyOptions = page.getByRole('menuitem');
+  await expect(companyOptions.nth(1)).toBeVisible();
+  await companyOptions.nth(1).click();
+  await expect(
+    page.getByRole('button', { name: /Switch company\. Current scope: (?!Global Scope)/u })
+  ).toBeVisible();
+
+  const screens = [
+    { name: 'knowledge', path: '/board/knowledge', heading: 'Knowledge explorer' },
+    { name: 'profile', path: '/board/profile', heading: 'Profile' },
+    { name: 'settings', path: '/board/settings', heading: 'Settings' },
+    { name: 'whatsapp', path: '/board/whatsapp', heading: 'WhatsApp' },
+  ] as const;
+
+  for (const viewport of [
+    { name: 'desktop-1440', width: 1440, height: 1000 },
+    { name: 'mobile-390', width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    for (const screen of screens) {
+      if (screen.name === 'profile' || screen.name === 'settings') {
+        await page.getByRole('button', { name: /^User menu for/u }).click();
+        await page
+          .getByRole('menuitem', { name: screen.name === 'profile' ? 'Profile' : 'Settings' })
+          .click();
+      } else {
+        if (viewport.name === 'mobile-390') {
+          await page.getByRole('button', { name: 'Open model navigation' }).click();
+          await page
+            .getByRole('dialog', { name: 'Model navigation' })
+            .getByRole('link', { name: screen.name === 'knowledge' ? 'Knowledge explorer' : 'WhatsApp' })
+            .click();
+        } else {
+          await page
+            .getByRole('link', { name: screen.name === 'knowledge' ? 'Knowledge explorer' : 'WhatsApp' })
+            .click();
+        }
+      }
+      await expect(page.getByRole('heading', { name: screen.heading }).first()).toBeVisible();
+      if (viewport.name === 'mobile-390') {
+        await page.getByRole('button', { name: 'Open model navigation' }).click();
+        const mobileNavigation = page.getByRole('dialog', { name: 'Model navigation' });
+        await expect(mobileNavigation.getByText('MoonWitness', { exact: true })).toBeVisible();
+        await page.keyboard.press('Escape');
+        await expect(mobileNavigation).toBeHidden();
+      } else {
+        await expect(page.locator('aside').getByText('MoonWitness', { exact: true })).toBeVisible();
+      }
+      await expectNoHorizontalOverflow(page, `${screen.name}/${viewport.name}`);
+      await page.locator('nextjs-portal').evaluateAll((elements) => {
+        elements.forEach((element) => element.remove());
+      });
+      await page.screenshot({
+        path: path.join(catalogDirectory, `board-${screen.name}-icons-${viewport.name}.png`),
+        fullPage: true,
+        animations: 'disabled',
+      });
+    }
+  }
 });
 
 test('ordinary-user dashboard has a verified visual baseline', async ({ page }) => {

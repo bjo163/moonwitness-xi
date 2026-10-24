@@ -632,6 +632,14 @@
       "height": 24
     },
     {
+      "path": "icons/send.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
       "path": "icons/settings.svg",
       "kind": "icon",
       "variant": "currentColor",
@@ -640,7 +648,23 @@
       "height": 24
     },
     {
+      "path": "icons/signal-off.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
       "path": "icons/signal.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/smartphone.svg",
       "kind": "icon",
       "variant": "currentColor",
       "format": "svg",

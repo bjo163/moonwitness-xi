@@ -342,6 +342,21 @@ const icons = [
     paths: '<path d="M4 18a11 11 0 0 1 16 0M7 15a7 7 0 0 1 10 0m-7-3a3 3 0 0 1 4 0m-2 6v.1"/>',
   },
   {
+    name: 'signal-off',
+    title: 'Signal disconnected',
+    paths: '<path d="m3 3 18 18M8.5 8.5A11 11 0 0 0 4 18m5.5-5.5a7 7 0 0 0-2.4 2.4m6.2-6.2a7 7 0 0 1 4.7 2.2m-1.5-5.4A11 11 0 0 1 20 18m-8-1v.1"/>',
+  },
+  {
+    name: 'smartphone',
+    title: 'Smartphone',
+    paths: '<rect x="6" y="2.5" width="12" height="19" rx="2"/><path d="M10 5h4m-4 13h4"/>',
+  },
+  {
+    name: 'send',
+    title: 'Send message',
+    paths: '<path d="m21.5 2.5-7 19-4-8-8-4 19-7Z"/><path d="m10.5 13.5 5-5"/>',
+  },
+  {
     name: 'message',
     title: 'Message',
     paths: '<path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 8.8 8.8 0 0 1-3.4-.7L4 20l1.5-3.6A7.1 7.1 0 0 1 4 11.5 7.5 7.5 0 0 1 12 4a7.5 7.5 0 0 1 8 7.5Z"/><path d="M8.5 12h.01m3.5 0h.01m3.5 0h.01"/>',

@@ -28,6 +28,8 @@ Complex manga scenes and collage art are optimized raster assets. Keep editable 
 
 Material assets include torn edges, ink frames, paper notes, tape, halftone, speckle, and hand-drawn arrows. Keep texture on a decorative layer with `pointer-events: none`; it must not lower text contrast, cover a focus ring, or make a control's click target irregular. Prefer deterministic SVG/CSS pattern assets and restrained opacity over repeated expensive filters. Rendered brand marks, interface icons, and other SVG content must remain inside their `viewBox`; intentional decorative bleed must be named and documented, as with the orbit rings on the social card.
 
+Interaction icons have one canonical vector source in `@moonwitness/assets/icons`; `@moonwitness/ui/icons/*` wrappers are generated from those SVGs and must never be hand-maintained copies. Choose an icon by meaning and silhouette, use a public typed export, and add a canonical source only when the existing set has no appropriate symbol. Icons are decorative by default; controls still need visible text or an accessible name. Keep decorative doodles out of interaction icon slots. Review the icon contact sheet at 16, 20, 24, and 32 px on both light and dark surfaces before accepting a new symbol.
+
 ## Decoration intensity
 
 | Surface                             | Intensity        | Allowed treatment                                                             |

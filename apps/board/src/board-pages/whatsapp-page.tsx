@@ -2,7 +2,14 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Paperclip, Send, Smartphone, Users, Wifi, WifiOff } from 'lucide-react';
+import {
+  AttachmentIcon,
+  SendIcon,
+  SignalIcon,
+  SignalOffIcon,
+  SmartphoneIcon,
+  UsersIcon,
+} from '@moonwitness/ui/icons';
 import { toast } from '@moonwitness/ui/components/toast';
 import { Button } from '@moonwitness/ui/components/button';
 import { Input } from '@moonwitness/ui/components/input';
@@ -137,7 +144,11 @@ export function WhatsappPage() {
   const account = accountQuery.data;
   const status = account?.status ?? 'disconnected';
   const connected = status === 'connected';
-  const statusIcon = connected ? <Wifi className="size-4" /> : <WifiOff className="size-4" />;
+  const statusIcon = connected ? (
+    <SignalIcon className="size-4" />
+  ) : (
+    <SignalOffIcon className="size-4" />
+  );
   const messageList = messagesQuery.data ?? [];
   const qrImage = account?.qr_code?.startsWith('data:image/')
     ? account.qr_code
@@ -176,7 +187,7 @@ export function WhatsappPage() {
             onClick={connect}
             disabled={['connecting', 'qr', 'reconnecting'].includes(status)}
           >
-            <Smartphone className="mr-2 size-4" />
+            <SmartphoneIcon className="mr-2 size-4" />
             Connect WhatsApp
           </Button>
         )}
@@ -226,7 +237,7 @@ export function WhatsappPage() {
                   className={`h-auto w-full justify-start border-b border-ink/20 p-4 text-left hover:bg-pink/20 ${activeConversation?.id === conversation.id ? 'bg-pink/30' : ''}`}
                 >
                   <span className="flex items-center gap-2 font-semibold">
-                    {conversation.is_group && <Users className="size-4" />}
+                    {conversation.is_group && <UsersIcon className="size-4" />}
                     {conversation.name}
                     {conversation.unread_count > 0 && (
                       <span className="ml-auto rounded-full bg-pink px-2 text-xs">
@@ -284,7 +295,7 @@ export function WhatsappPage() {
       )}
       {!connected && status !== 'qr' && (
         <section className="border-2 border-ink bg-white p-8 text-center">
-          <Smartphone className="mx-auto size-10" />
+          <SmartphoneIcon className="mx-auto size-10" />
           <h2 className="mt-3 font-display text-xl uppercase">Connect a WhatsApp account</h2>
           <p className="mt-1 text-sm text-ink-faint">
             One WhatsApp account is available for this company.
@@ -353,7 +364,7 @@ function MessageComposer({ conversationId }: { conversationId: number }) {
           title="Attach media"
         >
           <span className="sr-only">Attach media</span>
-          <Paperclip className="size-4" />
+          <AttachmentIcon className="size-4" />
           <Input
             type="file"
             ref={fileInput}
@@ -376,7 +387,7 @@ function MessageComposer({ conversationId }: { conversationId: number }) {
           disabled={sending || (!draft.trim() && !file)}
           aria-label="Send message"
         >
-          <Send className="size-4" />
+          <SendIcon className="size-4" />
         </Button>
       </div>
       {file && (

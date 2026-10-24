@@ -2,7 +2,13 @@
 
 import { useState, type FormEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Building2, Contact, Mail, ShieldCheck, UserRound } from 'lucide-react';
+import {
+  CompanyIcon,
+  MailIcon,
+  PartnerIcon,
+  SecurityIcon,
+  UserIcon,
+} from '@moonwitness/ui/icons';
 import { toast } from '@moonwitness/ui/components/toast';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 import { Button } from '@moonwitness/ui/components/button';
@@ -86,7 +92,7 @@ export function ProfilePage() {
       <section className="ink-panel overflow-hidden bg-card">
         <div className="grid grid-cols-[4rem_minmax(0,1fr)] items-center gap-4 border-b-2 border-ink bg-lime/20 p-6 sm:flex sm:flex-wrap sm:p-8">
           <div className="grid size-16 place-items-center border-2 border-ink bg-lime shadow-ink-sm">
-            <UserRound className="size-8" />
+            <UserIcon className="size-8" />
           </div>
           <div className="min-w-0 flex-1">
             <h2 className="break-words font-display text-2xl uppercase sm:text-3xl">
@@ -95,7 +101,7 @@ export function ProfilePage() {
             <p className="font-mono text-sm text-ink-soft">@{user?.login}</p>
           </div>
           <span className="col-start-2 inline-flex w-fit items-center gap-1.5 border-2 border-ink bg-paper-raised px-3 py-1.5 font-mono text-xs font-bold uppercase sm:ml-auto">
-            <ShieldCheck className="size-4" /> {user?.role}
+            <SecurityIcon className="size-4" /> {user?.role}
           </span>
         </div>
 
@@ -110,13 +116,17 @@ export function ProfilePage() {
           <p className="p-6 text-sm text-pink">Could not load the linked contact profile.</p>
         ) : (
           <dl className="grid gap-px bg-ink/15 sm:grid-cols-2">
-            <ProfileDetail icon={Contact} label="Contact name" value={data?.name} />
-            <ProfileDetail icon={Mail} label="Email" value={data?.email} />
-            <ProfileDetail icon={UserRound} label="Job title" value={data?.job_title} />
-            <ProfileDetail icon={Building2} label="Company" value={relationLabel(data?.company)} />
-            <ProfileDetail icon={Contact} label="Phone" value={data?.phone ?? data?.mobile} />
+            <ProfileDetail icon={PartnerIcon} label="Contact name" value={data?.name} />
+            <ProfileDetail icon={MailIcon} label="Email" value={data?.email} />
+            <ProfileDetail icon={UserIcon} label="Job title" value={data?.job_title} />
             <ProfileDetail
-              icon={Building2}
+              icon={CompanyIcon}
+              label="Company"
+              value={relationLabel(data?.company)}
+            />
+            <ProfileDetail icon={PartnerIcon} label="Phone" value={data?.phone ?? data?.mobile} />
+            <ProfileDetail
+              icon={CompanyIcon}
               label="Location"
               value={[data?.city, relationLabel(data?.country)].filter(Boolean).join(', ')}
             />
@@ -186,7 +196,7 @@ function ProfileDetail({
   label,
   value,
 }: {
-  icon: typeof Contact;
+  icon: typeof PartnerIcon;
   label: string;
   value?: string;
 }) {

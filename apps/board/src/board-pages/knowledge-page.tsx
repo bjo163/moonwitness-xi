@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen, GitBranch, Search } from 'lucide-react';
+import { BookOpenIcon, RelationIcon, SearchIcon } from '@moonwitness/ui/icons';
 import type { CorpusPassage, ResearchGraphSearchResult, SourceCitation } from '@moonwitness/client';
 import { useAuth } from '@/hooks/use-auth-context';
 import { client } from '@/lib/client';
@@ -38,7 +38,7 @@ function SourceCard({ citation, passage }: { citation: SourceCitation; passage: 
   return (
     <article className="ink-panel min-w-0 space-y-4 bg-card p-5 sm:p-6">
       <div className="flex items-start gap-3">
-        <BookOpen
+        <BookOpenIcon
           aria-hidden="true"
           className="mt-1 size-5 shrink-0 text-lime-700 dark:text-lime"
         />
@@ -220,7 +220,7 @@ export function KnowledgePage() {
             className="min-w-0 flex-1 border-2 border-ink bg-paper px-3 py-2 text-ink outline-none focus-visible:ring-2 focus-visible:ring-lime-700"
           />
           <Button type="submit" disabled={graphSearchInput.trim().length < 2}>
-            <Search aria-hidden="true" className="size-4" />
+            <SearchIcon aria-hidden="true" className="size-4" />
             Search graph
           </Button>
         </form>
@@ -251,7 +251,10 @@ export function KnowledgePage() {
 
       <section aria-labelledby="relation-heading" className="space-y-4">
         <div className="flex items-start gap-3">
-          <GitBranch aria-hidden="true" className="mt-1 size-5 text-lime-700 dark:text-lime" />
+          <RelationIcon
+            aria-hidden="true"
+            className="mt-1 size-5 text-lime-700 dark:text-lime"
+          />
           <div>
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-ink-faint">
               Research graph
@@ -274,7 +277,7 @@ export function KnowledgePage() {
             className="min-w-0 flex-1 border-2 border-ink bg-paper px-3 py-2 text-ink outline-none focus-visible:ring-2 focus-visible:ring-lime-700"
           />
           <Button type="submit" disabled={!relationInput.trim()}>
-            <Search aria-hidden="true" className="size-4" />
+            <SearchIcon aria-hidden="true" className="size-4" />
             Explain
           </Button>
         </form>

@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, MonitorCog, Moon, Sun } from 'lucide-react';
+import { CheckIcon, MoonIcon, SettingsIcon, SunIcon } from '@moonwitness/ui/icons';
 import { toast } from '@moonwitness/ui/components/toast';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 import { NotificationPreferences } from '@/components/settings/notification-preferences';
@@ -145,7 +145,7 @@ export function SettingsPage() {
       <section className="ink-panel space-y-6 bg-card p-5 sm:p-8">
         <div className="flex items-start gap-3">
           <span className="grid size-10 shrink-0 place-items-center border-2 border-ink bg-lime shadow-ink-sm">
-            <MonitorCog className="size-5" />
+            <SettingsIcon className="size-5" />
           </span>
           <div>
             <h2 className="font-display text-xl uppercase tracking-wide">Appearance</h2>
@@ -154,7 +154,7 @@ export function SettingsPage() {
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           {(['light', 'dark'] as const).map((theme) => {
-            const Icon = theme === 'light' ? Sun : Moon;
+            const Icon = theme === 'light' ? SunIcon : MoonIcon;
             const selected = preferences.theme === theme;
             return (
               <Button
@@ -166,7 +166,7 @@ export function SettingsPage() {
               >
                 <Icon className="size-5" />
                 <span className="font-display uppercase">{theme} theme</span>
-                {selected && <Check className="ml-auto size-4" />}
+                {selected && <CheckIcon className="ml-auto size-4" />}
               </Button>
             );
           })}
@@ -239,7 +239,7 @@ export function SettingsPage() {
             disabled={userLoading || languagesLoading}
             className="gap-2"
           >
-            {saved ? <Check className="size-4" /> : null}
+            {saved ? <CheckIcon className="size-4" /> : null}
             {saved ? 'Saved' : 'Save settings'}
           </Button>
         </div>
