@@ -133,8 +133,34 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
           {
             id: 52,
             direction: 'outbound',
-            content: 'A failed reply',
+            content: 'A sent reply',
             status: 'sent',
+            message_type: 'text',
+            create_date: new Date().toISOString(),
+          },
+          {
+            id: 56,
+            direction: 'outbound',
+            content: 'A delivered reply',
+            status: 'delivered',
+            message_type: 'text',
+            create_date: new Date().toISOString(),
+          },
+          {
+            id: 57,
+            direction: 'outbound',
+            content: 'A read reply',
+            status: 'read',
+            message_type: 'text',
+            create_date: new Date().toISOString(),
+          },
+          {
+            id: 58,
+            direction: 'outbound',
+            content: 'A failed reply',
+            status: 'failed',
+            retryable: true,
+            last_error: 'Gateway rejected the message',
             message_type: 'text',
             create_date: new Date().toISOString(),
           },
@@ -166,7 +192,7 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
             message_type: 'image',
             create_date: new Date(Date.now() - 250).toISOString(),
           },
-          ...Array.from({ length: 46 }, (_, index) => ({
+          ...Array.from({ length: 43 }, (_, index) => ({
             id: 49 - index,
             direction: 'inbound',
             is_unread: true,
@@ -204,6 +230,35 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   await expect(page.getByText('Group ID: 120363000')).toBeVisible();
   await expect(page.getByRole('separator', { name: 'New messages' })).toBeVisible();
   await expect(
+    page.locator('article').filter({ hasText: 'A sent reply' }).getByText('Sent', { exact: true })
+  ).toBeVisible();
+  await expect(
+    page
+      .locator('article')
+      .filter({ hasText: 'A delivered reply' })
+      .getByText('Delivered', { exact: true })
+  ).toBeVisible();
+  await expect(
+    page.locator('article').filter({ hasText: 'A read reply' }).getByText('Read', { exact: true })
+  ).toBeVisible();
+  await expect(
+    page
+      .locator('article')
+      .filter({ hasText: 'A failed reply' })
+      .getByText('Failed', { exact: true })
+  ).toBeVisible();
+  await expect(
+    page
+      .locator('article')
+      .filter({ hasText: 'Can you help?' })
+      .getByText('Received', { exact: true })
+  ).toBeVisible();
+  await expect(
+    page.locator('article').filter({ hasText: 'A failed reply' }).getByRole('button', {
+      name: 'Retry send',
+    })
+  ).toBeVisible();
+  await expect(
     page.locator('article').getByText('Attachment storage is temporarily unavailable. Try again.')
   ).toBeVisible();
   await expect(
@@ -235,7 +290,7 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   await page.getByPlaceholder('Write a message…').fill('Thanks, I will take a look.');
   await page.getByRole('button', { name: 'Send message' }).click();
   await expect(page.getByPlaceholder('Write a message…')).toHaveValue('');
-  await expect(page.locator('article').getByText('sent')).toBeVisible();
+  await expect(page.locator('article').getByText('Sent', { exact: true })).toBeVisible();
   await page.getByLabel('Search conversations by name, number, or message').fill('Rani');
   await expect(page.getByRole('button', { name: /Rani Putri/u })).toBeVisible();
   await page.getByLabel('Search conversations by name, number, or message').fill('');
