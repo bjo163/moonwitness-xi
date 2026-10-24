@@ -194,6 +194,62 @@ test('failed local fonts keep the Indonesian typography specimen readable on mob
   });
 });
 
+test('shared animated effects pause offscreen and resume when visible', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('./');
+  const speedLines = page.locator('.mw-ui-speed-lines-pulse');
+  const progress = page.locator('.mw-ui-loading-progress > span:first-child');
+  const spinner = page.locator('.mw-ui-loading-spinner');
+  const skeleton = page.locator('.catalog-skeleton');
+
+  await expect
+    .poll(() => speedLines.evaluate((element) => getComputedStyle(element).animationPlayState))
+    .toBe('paused');
+  await expect
+    .poll(() => progress.evaluate((element) => getComputedStyle(element).animationPlayState))
+    .toBe('paused');
+  await expect
+    .poll(() => spinner.evaluate((element) => getComputedStyle(element).animationPlayState))
+    .toBe('paused');
+  await expect
+    .poll(() => skeleton.evaluate((element) => getComputedStyle(element).animationPlayState))
+    .toBe('paused');
+
+  await page.locator('.catalog-motion-grid').scrollIntoViewIfNeeded();
+  await page.locator('.catalog-motion-grid').screenshot({
+    path: resolve(process.cwd(), '../../docs/design/ui-catalog/offscreen-animation-visible.png'),
+    animations: 'disabled',
+  });
+  await expect
+    .poll(() => speedLines.evaluate((element) => getComputedStyle(element).animationPlayState))
+    .toBe('running');
+  await expect
+    .poll(() => progress.evaluate((element) => getComputedStyle(element).animationPlayState))
+    .toBe('running');
+  await expect
+    .poll(() => spinner.evaluate((element) => getComputedStyle(element).animationPlayState))
+    .toBe('running');
+
+  await skeleton.scrollIntoViewIfNeeded();
+  await expect
+    .poll(() => skeleton.evaluate((element) => getComputedStyle(element).animationPlayState))
+    .toBe('running');
+
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expect
+    .poll(() => speedLines.evaluate((element) => getComputedStyle(element).animationPlayState))
+    .toBe('paused');
+  await expect
+    .poll(() => progress.evaluate((element) => getComputedStyle(element).animationPlayState))
+    .toBe('paused');
+  await expect
+    .poll(() => spinner.evaluate((element) => getComputedStyle(element).animationPlayState))
+    .toBe('paused');
+  await expect
+    .poll(() => skeleton.evaluate((element) => getComputedStyle(element).animationPlayState))
+    .toBe('paused');
+});
+
 test('canonical icon SVGs match generated React wrappers in a browser contact sheet', async ({
   page,
 }, testInfo) => {

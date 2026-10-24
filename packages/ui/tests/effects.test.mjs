@@ -24,13 +24,13 @@ test('ink effects render as decorative shared primitives', () => {
     )
   );
 
-  assert.match(html, /class="mw-ui-speed-lines"/u);
+  assert.match(html, /class="mw-ui-speed-lines(?:\s|")/u);
   assert.match(html, /class="mw-ui-speed-lines-pulse"/u);
-  assert.match(html, /class="mw-ui-ink-underline"/u);
+  assert.match(html, /class="mw-ui-ink-underline(?:\s|")/u);
   assert.match(html, /class="mw-ui-ink-underline-path"/u);
   assert.match(html, /pathLength="1"/u);
   assert.match(html, /class="mw-ui-doodle"/u);
-  assert.match(html, /class="mw-ui-speech-bubble"/u);
+  assert.match(html, /class="mw-ui-speech-bubble(?:\s|")/u);
   assert.match(html, /class="mw-ui-ink-frame"/u);
   assert.match(html, /aria-hidden="true"/u);
 });
@@ -38,7 +38,7 @@ test('ink effects render as decorative shared primitives', () => {
 test('loading spinner is compact and decorative while button text carries the action status', () => {
   const html = renderToStaticMarkup(React.createElement(LoadingSpinner));
 
-  assert.match(html, /class="mw-ui-loading-spinner"/u);
+  assert.match(html, /class="mw-ui-loading-spinner(?:\s|")/u);
   assert.match(html, /aria-hidden="true"/u);
 });
 

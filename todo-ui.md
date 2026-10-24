@@ -523,7 +523,7 @@ Urutan: header → hero manga → tiga panel editorial → band koneksi → film
 - [x] Periksa secara visual spinner auth saat submit: ukuran, alignment dengan label tombol, kontras pada treatment brush, dan tidak mengubah lebar tombol. Bukti: `docs/design/ui-catalog/auth-login-loading-mobile-390.png`; E2E mengukur lebar tombol sebelum/saat proses.
 - [x] Periksa label tombol saat submit tetap menyatakan proses yang berjalan, termasuk pada login dan registrasi. Bukti: `apps/board/e2e/auth.spec.ts` menguji label busy login; implementasi memakai label tersendiri untuk login dan registrasi.
 - [ ] Periksa success, warning, dan error feedback dengan transisi yang tidak bergantung pada warna atau gerakan saja.
-- [ ] Pastikan animasi dekoratif berhenti saat elemen keluar viewport dan tidak berjalan terus di halaman kerja.
+- [x] Pastikan animasi dekoratif berhenti saat elemen keluar viewport dan tidak berjalan terus di halaman kerja. Hook `useAnimationVisibility` menahan animasi CSS offscreen untuk spinner, progress, skeleton, speed lines, underline, dan speech bubble; uji browser memverifikasi pause/resume saat scroll. Bukti: `packages/ui/src/lib/use-animation-visibility.ts`, `apps/ui-catalog/tests/catalog.spec.ts`, `docs/design/ui-catalog/offscreen-animation-visible.png`.
 - [x] Pastikan `prefers-reduced-motion` mematikan putaran, shimmer, parallax, dan perpindahan non-esensial; sediakan state statis yang tetap jelas. Bukti: UI package, global CSS Board, `MotionConfig`, dan tes Catalog.
 - [x] Uji keyboard dan pointer untuk memastikan animasi tidak menunda input, menutup focus ring, atau menghalangi aksi. Bukti: UI Catalog menguji hover/pressed/focus ring; Board E2E menguji keyboard/dismiss/focus return overlay.
 - [x] Ambil screenshot state animasi pada frame deterministik; nonaktifkan/selesaikan animasi pada screenshot regression. Bukti: `docs/design/ui-catalog/button-pressed-motion.png`, `command-palette-motion-mobile-375.png`, dan `reduced-motion-states.png`.
@@ -533,7 +533,7 @@ Urutan: header → hero manga → tiga panel editorial → band koneksi → film
 - [ ] Gunakan texture statis untuk speckle, halftone, dan tinta.
 - [x] Gunakan motion singkat hanya untuk feedback yang membantu. Token shared: 120/160/220 ms; indikator pending memakai durasi khusus.
 - [x] Jadikan orbit dekoratif statis sebagai default. `SignalOrbit` hanya menggambar ring statis; specimen katalog menunjukkan efek motion terpisah.
-- [ ] Hentikan animasi saat elemen tidak terlihat.
+- [x] Hentikan animasi saat elemen tidak terlihat. Bukti browser untuk spinner, progress, skeleton, dan speed lines: `apps/ui-catalog/tests/catalog.spec.ts`; screenshot specimen: `docs/design/ui-catalog/offscreen-animation-visible.png`.
 - [x] Hindari parallax atau animasi berulang pada workbench. Pemeriksaan source Board tidak menemukan efek berulang/parallax pada story workbench.
 - [ ] Hindari filter berat yang diterapkan ke setiap panel.
 - [x] Hormati `prefers-reduced-motion` pada CSS dan JS. Bukti: token durasi berubah jadi nol, keyframe spinner/progress/orbit dihentikan, dan UI Catalog E2E menguji status tetap terlihat.

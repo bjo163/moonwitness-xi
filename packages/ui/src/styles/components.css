@@ -1176,6 +1176,11 @@
 }
 
 @layer components {
+  .mw-ui-motion-paused,
+  .mw-ui-motion-paused * {
+    animation-play-state: paused !important;
+  }
+
   .mw-ui-speed-lines {
     position: absolute;
     inset: 0;

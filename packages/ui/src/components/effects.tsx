@@ -2,6 +2,7 @@
 
 import { useId, useMemo, type CSSProperties, type HTMLAttributes, type ReactNode } from 'react';
 import { cn } from '../lib/cn.js';
+import { useAnimationVisibility } from '../lib/use-animation-visibility.js';
 
 export function EditorialTexture({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return <div aria-hidden="true" className={cn('mw-ui-editorial-texture', className)} {...props} />;
@@ -35,8 +36,14 @@ export function LoadingProgress({
   label?: string;
   className?: string;
 }) {
+  const motion = useAnimationVisibility<HTMLDivElement>();
   return (
-    <div className={cn('mw-ui-loading-progress', className)} role="status" aria-label={label}>
+    <div
+      ref={motion.ref}
+      className={cn('mw-ui-loading-progress', motion.visibilityClass, className)}
+      role="status"
+      aria-label={label}
+    >
       <span aria-hidden="true" />
       <span className="mw-ui-sr-only">{label}</span>
     </div>
@@ -45,7 +52,14 @@ export function LoadingProgress({
 
 /** Compact inline indicator for buttons while their associated action is pending. */
 export function LoadingSpinner({ className }: { className?: string }) {
-  return <span aria-hidden="true" className={cn('mw-ui-loading-spinner', className)} />;
+  const motion = useAnimationVisibility<HTMLSpanElement>();
+  return (
+    <span
+      ref={motion.ref}
+      aria-hidden="true"
+      className={cn('mw-ui-loading-spinner', motion.visibilityClass, className)}
+    />
+  );
 }
 
 /** Deterministic PRNG so the ink pattern is identical on every render (no layout jitter). */
@@ -80,6 +94,7 @@ export function SpeedLines({
   seed?: number;
   animate?: boolean;
 }) {
+  const motion = useAnimationVisibility<SVGSVGElement>();
   const originX = origin[0];
   const originY = origin[1];
   const paths = useMemo(() => {
@@ -106,9 +121,10 @@ export function SpeedLines({
   return (
     <svg
       aria-hidden
+      ref={motion.ref}
       viewBox="0 0 1000 1000"
       preserveAspectRatio="none"
-      className={cn('mw-ui-speed-lines', className)}
+      className={cn('mw-ui-speed-lines', motion.visibilityClass, className)}
     >
       <g fill="currentColor" className={animate ? 'mw-ui-speed-lines-pulse' : undefined}>
         {paths.map((d, i) => (
@@ -127,12 +143,14 @@ export function InkUnderline({
   className?: string;
   color?: string;
 }) {
+  const motion = useAnimationVisibility<SVGSVGElement>();
   return (
     <svg
       aria-hidden
+      ref={motion.ref}
       viewBox="0 0 200 16"
       preserveAspectRatio="none"
-      className={cn('mw-ui-ink-underline', className)}
+      className={cn('mw-ui-ink-underline', motion.visibilityClass, className)}
     >
       <path
         className="mw-ui-ink-underline-path"
@@ -217,5 +235,10 @@ export function InkFrame({ children, className }: { children: ReactNode; classNa
 
 /** Comic speech bubble for playful hints like record counts. */
 export function SpeechBubble({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn('mw-ui-speech-bubble', className)}>{children}</div>;
+  const motion = useAnimationVisibility<HTMLDivElement>();
+  return (
+    <div ref={motion.ref} className={cn('mw-ui-speech-bubble', motion.visibilityClass, className)}>
+      {children}
+    </div>
+  );
 }
