@@ -157,11 +157,10 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
     readWhatsAppInboxPreferences(inboxPreferenceScope)
   );
   const { selectedConversationId: selected, conversationFilter, showArchived } = inboxPreferences;
-  const setSelected = (selectedConversationId: number | null) =>
-    {
-      setReplyingTo(null);
-      setInboxPreferences((current) => ({ ...current, selectedConversationId }));
-    };
+  const setSelected = (selectedConversationId: number | null) => {
+    setReplyingTo(null);
+    setInboxPreferences((current) => ({ ...current, selectedConversationId }));
+  };
   const setConversationFilter = (conversationFilter: ConversationFilter) =>
     setInboxPreferences((current) => ({ ...current, conversationFilter }));
   const setShowArchived = (showArchived: boolean) =>
@@ -202,7 +201,10 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
   const loadingOlderRef = useRef<number | null>(null);
   const activeConversationIdRef = useRef<number | undefined>(undefined);
   const messageContainerRef = useRef<HTMLDivElement | null>(null);
-  const latestMessageRef = useRef<{ conversationId: number | undefined; messageId: number | undefined }>({
+  const latestMessageRef = useRef<{
+    conversationId: number | undefined;
+    messageId: number | undefined;
+  }>({
     conversationId: undefined,
     messageId: undefined,
   });
@@ -292,7 +294,11 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
           `/whatsapp/conversations?limit=50&offset=0&archived=${forwardShowArchived}&unread=false${debouncedForwardConversationSearch ? `&search=${encodeURIComponent(debouncedForwardConversationSearch)}` : ''}`
         )
       ).data;
-      return { items: page, nextOffset: page.length, hasMore: page.length === 50 } satisfies ConversationPage;
+      return {
+        items: page,
+        nextOffset: page.length,
+        hasMore: page.length === 50,
+      } satisfies ConversationPage;
     },
     enabled: Boolean(forwardingMessage) && accountQuery.data?.status === 'connected',
     refetchInterval: false,
@@ -308,7 +314,8 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
     const digits = query.replace(/\D/gu, '');
     const matchesSearch =
       !query ||
-      (conversationSearch.trim() === debouncedConversationSearch && Boolean(debouncedConversationSearch)) ||
+      (conversationSearch.trim() === debouncedConversationSearch &&
+        Boolean(debouncedConversationSearch)) ||
       `${conversation.name} ${conversation.jid}`.toLocaleLowerCase().includes(query) ||
       (digits.length > 0 && conversation.jid.replace(/\D/gu, '').includes(digits));
     return matchesFilter && matchesSearch;
@@ -446,7 +453,9 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
       );
       setSelected(null);
       await queryClient.invalidateQueries({ queryKey: scopedQueryKey(['whatsapp']) });
-      toast.success(activeConversation.is_archived ? 'Conversation unarchived' : 'Conversation archived');
+      toast.success(
+        activeConversation.is_archived ? 'Conversation unarchived' : 'Conversation archived'
+      );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not update archive state');
     } finally {
@@ -562,7 +571,8 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
     setUpdatingMessage(true);
     try {
       await client.request(`/whatsapp/messages/${editingMessage.id}/edit`, {
-        method: 'POST', body: { content: editText },
+        method: 'POST',
+        body: { content: editText },
       });
       setEditingMessage(null);
       await queryClient.invalidateQueries({ queryKey: scopedQueryKey(['whatsapp']) });
@@ -629,8 +639,7 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
   ) : (
     <SignalOffIcon className="size-4" />
   );
-  const currentOlderPage =
-    olderPage?.conversationId === activeConversation?.id ? olderPage : null;
+  const currentOlderPage = olderPage?.conversationId === activeConversation?.id ? olderPage : null;
   const olderMessages = currentOlderPage?.messages ?? [];
   const olderMessageOffset = currentOlderPage?.nextOffset ?? messagesQuery.data?.length ?? 50;
   const hasOlderMessages = currentOlderPage?.hasMore ?? messagesQuery.data?.length === 50;
@@ -646,11 +655,7 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
     -1
   );
   const newMessagesDividerIndex =
-    readCursorIndex >= 0
-      ? readCursorIndex
-      : oldestUnreadIndex >= 0
-        ? oldestUnreadIndex + 1
-        : -1;
+    readCursorIndex >= 0 ? readCursorIndex : oldestUnreadIndex >= 0 ? oldestUnreadIndex + 1 : -1;
   const loadOlderMessages = async () => {
     if (!activeConversation || !hasOlderMessages) return;
     const requestedConversationId = activeConversation.id;
@@ -665,9 +670,8 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
       ).data;
       if (activeConversationIdRef.current !== requestedConversationId) return;
       setOlderPage((current) => {
-        const currentMessages = current?.conversationId === requestedConversationId
-          ? current.messages
-          : [];
+        const currentMessages =
+          current?.conversationId === requestedConversationId ? current.messages : [];
         const byId = new Map(currentMessages.map((message) => [message.id, message]));
         for (const message of page) byId.set(message.id, message);
         return {
@@ -799,41 +803,46 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
               {forwardDestinationsQuery.isError && (
                 <div role="alert" className="flex items-center justify-between gap-3 text-sm">
                   <span>Destinations could not be loaded.</span>
-                  <Button type="button" variant="link" onClick={() => void forwardDestinationsQuery.refetch()}>
+                  <Button
+                    type="button"
+                    variant="link"
+                    onClick={() => void forwardDestinationsQuery.refetch()}
+                  >
                     Retry
                   </Button>
                 </div>
               )}
               <div className="max-h-72 space-y-2 overflow-y-auto" aria-label="Forward destinations">
-              {(forwardDestinationsQuery.data?.items ?? []).map((conversation) => (
-                <Button
-                  key={conversation.id}
-                  type="button"
-                  variant="outline"
-                  className="w-full justify-start text-left"
-                  disabled={forwarding}
-                  aria-label={`Forward to ${conversation.name}`}
-                  onClick={() => void forwardTo(conversation)}
-                >
-                  {conversation.name}
-                  {conversation.is_group ? ' · Group' : ''}
-                </Button>
-              ))}
-              {forwardDestinationsQuery.isLoading && <Skeleton className="h-10 w-full" />}
-              {!forwardDestinationsQuery.isLoading && !forwardDestinationsQuery.data?.items.length && (
-                <p className="p-3 text-sm text-ink-faint">No matching conversations.</p>
-              )}
-              {forwardDestinationsQuery.data?.hasMore && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  disabled={loadingMoreForwardDestinations}
-                  onClick={() => void loadMoreForwardDestinations()}
-                >
-                  {loadingMoreForwardDestinations ? 'Loading…' : 'Load more destinations'}
-                </Button>
-              )}
+                {(forwardDestinationsQuery.data?.items ?? []).map((conversation) => (
+                  <Button
+                    key={conversation.id}
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-start text-left"
+                    disabled={forwarding}
+                    aria-label={`Forward to ${conversation.name}`}
+                    onClick={() => void forwardTo(conversation)}
+                  >
+                    {conversation.name}
+                    {conversation.is_group ? ' · Group' : ''}
+                  </Button>
+                ))}
+                {forwardDestinationsQuery.isLoading && <Skeleton className="h-10 w-full" />}
+                {!forwardDestinationsQuery.isLoading &&
+                  !forwardDestinationsQuery.data?.items.length && (
+                    <p className="p-3 text-sm text-ink-faint">No matching conversations.</p>
+                  )}
+                {forwardDestinationsQuery.data?.hasMore && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    disabled={loadingMoreForwardDestinations}
+                    onClick={() => void loadMoreForwardDestinations()}
+                  >
+                    {loadingMoreForwardDestinations ? 'Loading…' : 'Load more destinations'}
+                  </Button>
+                )}
               </div>
             </div>
           </section>
@@ -856,7 +865,12 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                   {reactingTo.content || `[${reactingTo.message_type}]`}
                 </p>
               </div>
-              <Button type="button" variant="outline" disabled={reacting} onClick={() => setReactingTo(null)}>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={reacting}
+                onClick={() => setReactingTo(null)}
+              >
                 Cancel
               </Button>
             </div>
@@ -880,31 +894,78 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
       )}
       {editingMessage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
-          <form role="dialog" aria-modal="true" aria-labelledby="whatsapp-edit-title" onSubmit={(event) => void editMessage(event)} className="w-full max-w-lg border-2 border-ink bg-cream p-5 shadow-[6px_6px_0_#171717]">
-            <h2 id="whatsapp-edit-title" className="font-display text-xl uppercase">Edit message</h2>
-            <Textarea aria-label="Edited message text" value={editText} onChange={(event) => setEditText(event.target.value)} maxLength={8000} required autoFocus />
-            <p className="mt-2 text-xs text-ink-faint">WhatsApp only allows editing recent text messages, usually within 15 minutes.</p>
+          <form
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="whatsapp-edit-title"
+            onSubmit={(event) => void editMessage(event)}
+            className="w-full max-w-lg border-2 border-ink bg-cream p-5 shadow-[6px_6px_0_#171717]"
+          >
+            <h2 id="whatsapp-edit-title" className="font-display text-xl uppercase">
+              Edit message
+            </h2>
+            <Textarea
+              aria-label="Edited message text"
+              value={editText}
+              onChange={(event) => setEditText(event.target.value)}
+              maxLength={8000}
+              required
+              autoFocus
+            />
+            <p className="mt-2 text-xs text-ink-faint">
+              WhatsApp only allows editing recent text messages, usually within 15 minutes.
+            </p>
             <div className="mt-4 flex justify-end gap-2">
-              <Button type="button" variant="outline" disabled={updatingMessage} onClick={() => setEditingMessage(null)}>Cancel</Button>
-              <Button type="submit" disabled={updatingMessage || !editText.trim()}>{updatingMessage ? 'Saving…' : 'Save edit'}</Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={updatingMessage}
+                onClick={() => setEditingMessage(null)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={updatingMessage || !editText.trim()}>
+                {updatingMessage ? 'Saving…' : 'Save edit'}
+              </Button>
             </div>
           </form>
         </div>
       )}
       {revokingMessage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
-          <section role="alertdialog" aria-modal="true" aria-labelledby="whatsapp-revoke-title" className="w-full max-w-md border-2 border-ink bg-cream p-5 shadow-[6px_6px_0_#171717]">
-            <h2 id="whatsapp-revoke-title" className="font-display text-xl uppercase">Delete for everyone?</h2>
-            <p className="mt-2 text-sm">WhatsApp will try to remove this message for everyone in the conversation.</p>
+          <section
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="whatsapp-revoke-title"
+            className="w-full max-w-md border-2 border-ink bg-cream p-5 shadow-[6px_6px_0_#171717]"
+          >
+            <h2 id="whatsapp-revoke-title" className="font-display text-xl uppercase">
+              Delete for everyone?
+            </h2>
+            <p className="mt-2 text-sm">
+              WhatsApp will try to remove this message for everyone in the conversation.
+            </p>
             <div className="mt-4 flex justify-end gap-2">
-              <Button type="button" variant="outline" disabled={updatingMessage} onClick={() => setRevokingMessage(null)}>Cancel</Button>
-              <Button type="button" disabled={updatingMessage} onClick={() => void revokeMessage()}>{updatingMessage ? 'Deleting…' : 'Delete message'}</Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={updatingMessage}
+                onClick={() => setRevokingMessage(null)}
+              >
+                Cancel
+              </Button>
+              <Button type="button" disabled={updatingMessage} onClick={() => void revokeMessage()}>
+                {updatingMessage ? 'Deleting…' : 'Delete message'}
+              </Button>
             </div>
           </section>
         </div>
       )}
       {(accountQuery.isError || conversationsQuery.isError || messagesQuery.isError) && (
-        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 border-2 border-ink bg-pink p-3 text-sm">
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 border-2 border-ink bg-pink p-3 text-sm"
+        >
           <p>
             WhatsApp data could not be refreshed.
             {conversationsQuery.data && lastInboxSyncLabel
@@ -915,7 +976,9 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
             type="button"
             size="sm"
             variant="outline"
-            disabled={accountQuery.isFetching || conversationsQuery.isFetching || messagesQuery.isFetching}
+            disabled={
+              accountQuery.isFetching || conversationsQuery.isFetching || messagesQuery.isFetching
+            }
             onClick={retryWhatsAppData}
           >
             Retry
@@ -1134,7 +1197,8 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                     </Button>
                   </div>
                 )}
-                {activeConversation && canSend &&
+                {activeConversation &&
+                  canSend &&
                   messagesQuery.data?.some((message) => message.direction === 'inbound') && (
                     <Button
                       type="button"
@@ -1224,147 +1288,187 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                     tabIndex={-1}
                     className={`group relative max-w-[85%] border-2 border-ink p-3 ${message.direction === 'outbound' ? 'ml-auto bg-pink/30' : 'mr-auto bg-white'}`}
                   >
-                  {activeConversation?.is_group &&
-                    message.direction === 'inbound' &&
-                    message.sender_jid && (
-                      <p className="mb-1 font-mono text-[10px] text-ink-faint">
-                        {message.sender_jid.split('@')[0]?.split(':')[0]}
+                    {activeConversation?.is_group &&
+                      message.direction === 'inbound' &&
+                      message.sender_jid && (
+                        <p className="mb-1 font-mono text-[10px] text-ink-faint">
+                          {message.sender_jid.split('@')[0]?.split(':')[0]}
+                        </p>
+                      )}
+                    <p
+                      className={`whitespace-pre-wrap break-words text-sm ${message.is_deleted ? 'italic text-ink-faint' : ''}`}
+                    >
+                      {message.content}
+                    </p>
+                    {message.is_edited && !message.is_deleted && (
+                      <span className="ml-2 text-[10px] italic text-ink-faint">Edited</span>
+                    )}
+                    {message.is_forwarded && (
+                      <p className="mb-1 font-mono text-[10px] italic text-ink-faint">Forwarded</p>
+                    )}
+                    {message.reply_to && (
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="mb-2 block h-auto w-full border-l-2 border-magenta pl-2 text-left text-xs text-ink-faint hover:text-ink"
+                        onClick={() => void jumpToQuotedMessage(message)}
+                        aria-label="Jump to quoted message"
+                      >
+                        {message.reply_to.unavailable
+                          ? 'Quoted message unavailable'
+                          : message.reply_to.content ||
+                            `[${message.reply_to.message_type || 'media'}]`}
+                      </Button>
+                    )}
+                    {!message.is_deleted && message.message_type !== 'text' && (
+                      <MediaPreview message={message} />
+                    )}
+                    {message.media_file_name && (
+                      <p className="mt-1 text-xs">{message.media_file_name}</p>
+                    )}
+                    {summarizeReactions(message.reactions).length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1" aria-label="Message reactions">
+                        {summarizeReactions(message.reactions).map((reaction) => (
+                          <span
+                            key={reaction.emoji}
+                            role="img"
+                            aria-label={`${reaction.emoji} reaction, ${reaction.count}${reaction.includesMe ? ', includes yours' : ''}`}
+                            className={`border border-ink/50 px-2 py-0.5 text-xs ${reaction.includesMe ? 'bg-pink/40' : 'bg-paper'}`}
+                          >
+                            {reaction.emoji} {reaction.count}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {message.content && !message.is_deleted && (
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="absolute right-2 top-2 z-10 h-auto p-1 text-xs underline md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+                        aria-label="Copy message"
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(message.content ?? '');
+                            toast.success('Message copied');
+                          } catch {
+                            toast.error('Could not copy message text');
+                          }
+                        }}
+                      >
+                        Copy
+                      </Button>
+                    )}
+                    {canSend &&
+                      !message.is_deleted &&
+                      !['queued', 'sending', 'unknown'].includes(message.status) && (
+                        <Button
+                          type="button"
+                          variant="link"
+                          className="mt-1 h-auto p-0 text-xs underline"
+                          aria-label="Reply to message"
+                          onClick={() => setReplyingTo(message)}
+                        >
+                          Reply
+                        </Button>
+                      )}
+                    {canSend &&
+                      !message.is_deleted &&
+                      ['received', 'sent', 'delivered', 'read'].includes(message.status) && (
+                        <Button
+                          type="button"
+                          variant="link"
+                          className="mt-1 h-auto p-0 text-xs underline"
+                          aria-label="React to message"
+                          onClick={() => setReactingTo(message)}
+                        >
+                          React
+                        </Button>
+                      )}
+                    {canSend &&
+                      !message.is_deleted &&
+                      ['received', 'sent', 'delivered', 'read'].includes(message.status) && (
+                        <Button
+                          type="button"
+                          variant="link"
+                          className="ml-3 mt-1 h-auto p-0 text-xs underline"
+                          aria-label="Forward message"
+                          onClick={() => {
+                            setForwardConversationSearch('');
+                            setDebouncedForwardConversationSearch('');
+                            setForwardShowArchived(false);
+                            setForwardingMessage(message);
+                          }}
+                        >
+                          Forward
+                        </Button>
+                      )}
+                    {canManageMessages &&
+                      message.direction === 'outbound' &&
+                      !message.is_deleted &&
+                      ['sent', 'delivered', 'read'].includes(message.status) && (
+                        <>
+                          {message.message_type === 'text' &&
+                            clockNow > 0 &&
+                            clockNow - Date.parse(message.create_date) >= 0 &&
+                            clockNow - Date.parse(message.create_date) <= 15 * 60_000 && (
+                              <Button
+                                type="button"
+                                variant="link"
+                                className="ml-3 mt-1 h-auto p-0 text-xs underline"
+                                aria-label="Edit message"
+                                onClick={() => {
+                                  setEditText(message.content ?? '');
+                                  setEditingMessage(message);
+                                }}
+                              >
+                                Edit
+                              </Button>
+                            )}
+                          <Button
+                            type="button"
+                            variant="link"
+                            className="ml-3 mt-1 h-auto p-0 text-xs underline"
+                            aria-label="Delete message for everyone"
+                            onClick={() => setRevokingMessage(message)}
+                          >
+                            Delete
+                          </Button>
+                        </>
+                      )}
+                    <p className="mt-2 flex flex-wrap justify-end gap-x-2 text-right font-mono text-[10px] text-ink-faint">
+                      <time dateTime={message.create_date}>
+                        {formatDateTime(message.create_date, 'dateTime')}
+                      </time>
+                      <span>{messageStatusLabel[message.status] ?? 'Status unavailable'}</span>
+                    </p>
+                    {message.last_error && (
+                      <p role="status" className="mt-1 text-xs text-red-700">
+                        {message.last_error}
                       </p>
                     )}
-                  <p className={`whitespace-pre-wrap break-words text-sm ${message.is_deleted ? 'italic text-ink-faint' : ''}`}>{message.content}</p>
-                  {message.is_edited && !message.is_deleted && <span className="ml-2 text-[10px] italic text-ink-faint">Edited</span>}
-                  {message.is_forwarded && (
-                    <p className="mb-1 font-mono text-[10px] italic text-ink-faint">Forwarded</p>
-                  )}
-                  {message.reply_to && (
-                    <Button
-                      type="button"
-                      variant="link"
-                      className="mb-2 block h-auto w-full border-l-2 border-magenta pl-2 text-left text-xs text-ink-faint hover:text-ink"
-                      onClick={() => void jumpToQuotedMessage(message)}
-                      aria-label="Jump to quoted message"
-                    >
-                      {message.reply_to.unavailable
-                        ? 'Quoted message unavailable'
-                        : message.reply_to.content || `[${message.reply_to.message_type || 'media'}]`}
-                    </Button>
-                  )}
-                  {!message.is_deleted && message.message_type !== 'text' && <MediaPreview message={message} />}
-                  {message.media_file_name && (
-                    <p className="mt-1 text-xs">{message.media_file_name}</p>
-                  )}
-                  {summarizeReactions(message.reactions).length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1" aria-label="Message reactions">
-                      {summarizeReactions(message.reactions).map((reaction) => (
-                        <span
-                          key={reaction.emoji}
-                          role="img"
-                          aria-label={`${reaction.emoji} reaction, ${reaction.count}${reaction.includesMe ? ', includes yours' : ''}`}
-                          className={`border border-ink/50 px-2 py-0.5 text-xs ${reaction.includesMe ? 'bg-pink/40' : 'bg-paper'}`}
-                        >
-                          {reaction.emoji} {reaction.count}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {message.content && !message.is_deleted && (
-                    <Button
-                      type="button"
-                      variant="link"
-                      className="absolute right-2 top-2 z-10 h-auto p-1 text-xs underline md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
-                      aria-label="Copy message"
-                      onClick={async () => {
-                        try {
-                          await navigator.clipboard.writeText(message.content ?? '');
-                          toast.success('Message copied');
-                        } catch {
-                          toast.error('Could not copy message text');
-                        }
-                      }}
-                    >
-                      Copy
-                    </Button>
-                  )}
-                  {canSend && !message.is_deleted && !['queued', 'sending', 'unknown'].includes(message.status) && (
-                    <Button
-                      type="button"
-                      variant="link"
-                      className="mt-1 h-auto p-0 text-xs underline"
-                      aria-label="Reply to message"
-                      onClick={() => setReplyingTo(message)}
-                    >
-                      Reply
-                    </Button>
-                  )}
-                  {canSend && !message.is_deleted && ['received', 'sent', 'delivered', 'read'].includes(message.status) && (
-                    <Button
-                      type="button"
-                      variant="link"
-                      className="mt-1 h-auto p-0 text-xs underline"
-                      aria-label="React to message"
-                      onClick={() => setReactingTo(message)}
-                    >
-                      React
-                    </Button>
-                  )}
-                  {canSend && !message.is_deleted && ['received', 'sent', 'delivered', 'read'].includes(message.status) && (
-                    <Button
-                      type="button"
-                      variant="link"
-                      className="ml-3 mt-1 h-auto p-0 text-xs underline"
-                      aria-label="Forward message"
-                      onClick={() => {
-                        setForwardConversationSearch('');
-                        setDebouncedForwardConversationSearch('');
-                        setForwardShowArchived(false);
-                        setForwardingMessage(message);
-                      }}
-                    >
-                      Forward
-                    </Button>
-                  )}
-                  {canManageMessages && message.direction === 'outbound' && !message.is_deleted && ['sent', 'delivered', 'read'].includes(message.status) && (
-                    <>
-                      {message.message_type === 'text' && clockNow > 0 && clockNow - Date.parse(message.create_date) >= 0 && clockNow - Date.parse(message.create_date) <= 15 * 60_000 && (
-                        <Button type="button" variant="link" className="ml-3 mt-1 h-auto p-0 text-xs underline" aria-label="Edit message" onClick={() => { setEditText(message.content ?? ''); setEditingMessage(message); }}>Edit</Button>
-                      )}
-                      <Button type="button" variant="link" className="ml-3 mt-1 h-auto p-0 text-xs underline" aria-label="Delete message for everyone" onClick={() => setRevokingMessage(message)}>Delete</Button>
-                    </>
-                  )}
-                  <p className="mt-2 flex flex-wrap justify-end gap-x-2 text-right font-mono text-[10px] text-ink-faint">
-                    <time dateTime={message.create_date}>
-                      {formatDateTime(message.create_date, 'dateTime')}
-                    </time>
-                    <span>{messageStatusLabel[message.status] ?? 'Status unavailable'}</span>
-                  </p>
-                  {message.last_error && (
-                    <p role="status" className="mt-1 text-xs text-red-700">
-                      {message.last_error}
-                    </p>
-                  )}
-                  {message.status === 'failed' && message.retryable && (
-                    <Button
-                      type="button"
-                      variant="link"
-                      className="mt-1 h-auto p-0 text-xs underline"
-                      onClick={async () => {
-                        try {
-                          await client.request(`/whatsapp/messages/${message.id}/retry`, {
-                            method: 'POST',
-                          });
-                          await queryClient.invalidateQueries({
-                            queryKey: scopedQueryKey(['whatsapp']),
-                          });
-                        } catch (error) {
-                          toast.error(
-                            error instanceof Error ? error.message : 'Retry could not be queued'
-                          );
-                        }
-                      }}
-                    >
-                      Retry send
-                    </Button>
-                  )}
+                    {message.status === 'failed' && message.retryable && (
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="mt-1 h-auto p-0 text-xs underline"
+                        onClick={async () => {
+                          try {
+                            await client.request(`/whatsapp/messages/${message.id}/retry`, {
+                              method: 'POST',
+                            });
+                            await queryClient.invalidateQueries({
+                              queryKey: scopedQueryKey(['whatsapp']),
+                            });
+                          } catch (error) {
+                            toast.error(
+                              error instanceof Error ? error.message : 'Retry could not be queued'
+                            );
+                          }
+                        }}
+                      >
+                        Retry send
+                      </Button>
+                    )}
                   </article>
                 </div>
               ))}
@@ -1496,7 +1600,12 @@ function MessageComposer({
           <p className="min-w-0 truncate">
             Replying to: {replyTo.content || `[${replyTo.message_type}]`}
           </p>
-          <Button type="button" variant="link" className="h-auto p-0 underline" onClick={onCancelReply}>
+          <Button
+            type="button"
+            variant="link"
+            className="h-auto p-0 underline"
+            onClick={onCancelReply}
+          >
             Cancel reply
           </Button>
         </div>
@@ -1560,7 +1669,8 @@ function MessageComposer({
           Press Enter to send
         </label>
         <p className="text-[10px] text-ink-faint">
-          {sendOnEnter ? 'Shift+Enter for a new line' : 'Ctrl+Enter to send'} · Media files up to 10 MiB
+          {sendOnEnter ? 'Shift+Enter for a new line' : 'Ctrl+Enter to send'} · Media files up to 10
+          MiB
         </p>
       </div>
       {file && (

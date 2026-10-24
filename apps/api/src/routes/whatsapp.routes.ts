@@ -43,7 +43,11 @@ const rawWebhookBodies = new WeakMap<FastifyRequest, Buffer>();
 const MAX_GOWA_WEBHOOK_BYTES = 256 * 1024;
 
 function captureGowaWebhookBody() {
-  return async function captureRawBody(request: FastifyRequest, _reply: unknown, payload: Readable): Promise<Readable> {
+  return async function captureRawBody(
+    request: FastifyRequest,
+    _reply: unknown,
+    payload: Readable
+  ): Promise<Readable> {
     const chunks: Buffer[] = [];
     let total = 0;
     for await (const chunk of payload) {
@@ -64,7 +68,8 @@ function captureGowaWebhookBody() {
 
 function validGowaWebhookSignature(raw: Buffer, signature: unknown): boolean {
   const secret = process.env.WHATSAPP_WEBHOOK_SECRET;
-  if (!secret || typeof signature !== 'string' || !/^sha256=[a-f0-9]{64}$/iu.test(signature)) return false;
+  if (!secret || typeof signature !== 'string' || !/^sha256=[a-f0-9]{64}$/iu.test(signature))
+    return false;
   const supplied = Buffer.from(signature.slice('sha256='.length), 'hex');
   const expected = createHmac('sha256', secret).update(raw).digest();
   return supplied.length === expected.length && timingSafeEqual(supplied, expected);
@@ -72,7 +77,7 @@ function validGowaWebhookSignature(raw: Buffer, signature: unknown): boolean {
 
 function safeFileName(value: unknown): string | null {
   if (typeof value !== 'string') return null;
-  const sanitized = value.replace(/[\\/\r\n"\u0000-\u001f\u007f]/gu, '_').slice(0, 255);
+  const sanitized = value.replace(/[\\/"\p{Cc}]/gu, '_').slice(0, 255);
   return sanitized || null;
 }
 
@@ -156,7 +161,9 @@ async function streamResponseToStorage(
   key: string
 ): Promise<{ mime: string }> {
   if (!response.body) throw new Error('WhatsApp gateway returned an empty media body');
-  const readable = Readable.fromWeb(response.body as import('node:stream/web').ReadableStream<Uint8Array>);
+  const readable = Readable.fromWeb(
+    response.body as import('node:stream/web').ReadableStream<Uint8Array>
+  );
   let inspector: ReturnType<typeof createMediaInspector>;
   try {
     inspector = createMediaInspector(response.headers);
@@ -224,8 +231,7 @@ function limitReadable(source: Readable, maxBytes: number): Readable {
       let totalBytes = 0;
       for await (const chunk of source) {
         totalBytes += chunk.byteLength;
-        if (totalBytes > maxBytes)
-          throw new MediaTooLargeError('Media exceeds the 10 MiB limit');
+        if (totalBytes > maxBytes) throw new MediaTooLargeError('Media exceeds the 10 MiB limit');
         yield chunk;
       }
     })()
@@ -281,17 +287,21 @@ function normalizedReactions(value: unknown): WhatsAppReaction[] {
         typeof reaction.emoji !== 'string' ||
         reaction.emoji.length > 32 ||
         reaction.emoji.trim() === '' ||
-        /[\u0000-\u001f\u007f]/u.test(reaction.emoji)
-      ) return [];
-      return [{
-        emoji: reaction.emoji,
-        sender_jid: typeof reaction.sender_jid === 'string' ? reaction.sender_jid.slice(0, 255) : null,
-        ...(typeof reaction.sender_display_name === 'string'
-          ? { sender_display_name: reaction.sender_display_name.slice(0, 255) }
-          : {}),
-        is_from_me: reaction.is_from_me === true,
-        timestamp: providerTimestamp(reaction.timestamp),
-      }];
+        /\p{Cc}/u.test(reaction.emoji)
+      )
+        return [];
+      return [
+        {
+          emoji: reaction.emoji,
+          sender_jid:
+            typeof reaction.sender_jid === 'string' ? reaction.sender_jid.slice(0, 255) : null,
+          ...(typeof reaction.sender_display_name === 'string'
+            ? { sender_display_name: reaction.sender_display_name.slice(0, 255) }
+            : {}),
+          is_from_me: reaction.is_from_me === true,
+          timestamp: providerTimestamp(reaction.timestamp),
+        },
+      ];
     })
     .slice(-100);
 }
@@ -309,10 +319,12 @@ async function reconcileAmbiguousOutboundMessage(input: {
 }): Promise<boolean> {
   const timestampMs = Date.parse(input.timestamp);
   if (!Number.isFinite(timestampMs)) return false;
-  const existing = await input.db('whatsapp_messages')
+  const existing = await input
+    .db('whatsapp_messages')
     .where({ company_id: input.companyId, external_id: input.externalId })
     .first();
-  const pending = await input.db('whatsapp_messages')
+  const pending = await input
+    .db('whatsapp_messages')
     .where({
       company_id: input.companyId,
       conversation_id: input.conversationId,
@@ -480,7 +492,9 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       const raw = rawWebhookBodies.get(req);
       if (!raw || !validGowaWebhookSignature(raw, req.headers['x-hub-signature-256']))
         return reply.code(401).send({ success: false, error: 'Invalid webhook signature' });
-      const account = await WhatsappAccount.query().findOne({ gateway_device_id: req.params.deviceId });
+      const account = await WhatsappAccount.query().findOne({
+        gateway_device_id: req.params.deviceId,
+      });
       if (!account) return reply.code(404).send({ success: false, error: 'Unknown device' });
       const body = req.body as {
         event?: unknown;
@@ -491,21 +505,39 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         return reply.code(403).send({ success: false, error: 'Webhook device mismatch' });
       if (body?.event === 'message.edited') {
         const payload = body.payload;
-        const originalId = typeof payload?.original_message_id === 'string'
-          ? payload.original_message_id.slice(0, 255)
-          : '';
+        const originalId =
+          typeof payload?.original_message_id === 'string'
+            ? payload.original_message_id.slice(0, 255)
+            : '';
         const editedText = typeof payload?.body === 'string' ? payload.body.slice(0, 8000) : null;
         if (originalId && editedText !== null) {
-          const target = await app.db('whatsapp_messages')
+          const target = (await app
+            .db('whatsapp_messages')
             .select('id', 'conversation_id', 'content')
-            .where({ company_id: account.company_id, account_id: account.id, external_id: originalId })
+            .where({
+              company_id: account.company_id,
+              account_id: account.id,
+              external_id: originalId,
+            })
             .where({ message_type: 'text', is_deleted: false })
-            .first() as { id: number; conversation_id: number; content: string | null } | undefined;
+            .first()) as
+            { id: number; conversation_id: number; content: string | null } | undefined;
           if (target) {
-            await app.db('whatsapp_messages').where({ id: target.id, company_id: account.company_id })
-              .update({ content: editedText, is_edited: true, write_date: new Date().toISOString() });
-            await app.db('whatsapp_conversations')
-              .where({ id: target.conversation_id, company_id: account.company_id, last_message: target.content })
+            await app
+              .db('whatsapp_messages')
+              .where({ id: target.id, company_id: account.company_id })
+              .update({
+                content: editedText,
+                is_edited: true,
+                write_date: new Date().toISOString(),
+              });
+            await app
+              .db('whatsapp_conversations')
+              .where({
+                id: target.conversation_id,
+                company_id: account.company_id,
+                last_message: target.content,
+              })
               .update({ last_message: editedText, write_date: new Date().toISOString() });
           }
         }
@@ -513,36 +545,79 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       }
       if (body?.event === 'message.revoked' || body?.event === 'message.deleted') {
         const payload = body.payload;
-        const targetId = typeof payload?.revoked_message_id === 'string'
-          ? payload.revoked_message_id.slice(0, 255)
-          : typeof payload?.deleted_message_id === 'string'
-            ? payload.deleted_message_id.slice(0, 255)
-            : '';
+        const targetId =
+          typeof payload?.revoked_message_id === 'string'
+            ? payload.revoked_message_id.slice(0, 255)
+            : typeof payload?.deleted_message_id === 'string'
+              ? payload.deleted_message_id.slice(0, 255)
+              : '';
         if (targetId) {
-          const target = await app.db('whatsapp_messages')
-            .select('id', 'media_key', 'conversation_id', 'content', 'media_file_name', 'message_type')
-            .where({ company_id: account.company_id, account_id: account.id, external_id: targetId })
-            .first() as { id: number; media_key: string | null; conversation_id: number; content: string | null; media_file_name: string | null; message_type: string } | undefined;
+          const target = (await app
+            .db('whatsapp_messages')
+            .select(
+              'id',
+              'media_key',
+              'conversation_id',
+              'content',
+              'media_file_name',
+              'message_type'
+            )
+            .where({
+              company_id: account.company_id,
+              account_id: account.id,
+              external_id: targetId,
+            })
+            .first()) as
+            | {
+                id: number;
+                media_key: string | null;
+                conversation_id: number;
+                content: string | null;
+                media_file_name: string | null;
+                message_type: string;
+              }
+            | undefined;
           if (target) {
-            await app.db('whatsapp_messages').where({ id: target.id, company_id: account.company_id }).update({
-              is_deleted: true,
-              content: 'This message was deleted',
-              media_mime_type: null,
-              media_file_name: null,
-              reactions: '[]',
-              write_date: new Date().toISOString(),
-            });
-            await app.db('whatsapp_conversations')
-              .where({ id: target.conversation_id, company_id: account.company_id })
-              .whereIn('last_message', [...new Set([target.content, target.media_file_name, `[${target.message_type}]`].filter((value): value is string => Boolean(value)))])
-              .update({ last_message: 'This message was deleted', write_date: new Date().toISOString() });
-            if (target.media_key) {
-              await options.attachmentStorage.delete(target.media_key).then(async () => {
-                await app.db('whatsapp_messages').where({ id: target.id, company_id: account.company_id, is_deleted: true })
-                  .update({ media_key: null, write_date: new Date().toISOString() });
-              }).catch((error: unknown) => {
-                req.log.warn({ error: whatsappLogErrorContext(error) }, 'WhatsApp revoked media cleanup failed');
+            await app
+              .db('whatsapp_messages')
+              .where({ id: target.id, company_id: account.company_id })
+              .update({
+                is_deleted: true,
+                content: 'This message was deleted',
+                media_mime_type: null,
+                media_file_name: null,
+                reactions: '[]',
+                write_date: new Date().toISOString(),
               });
+            await app
+              .db('whatsapp_conversations')
+              .where({ id: target.conversation_id, company_id: account.company_id })
+              .whereIn('last_message', [
+                ...new Set(
+                  [target.content, target.media_file_name, `[${target.message_type}]`].filter(
+                    (value): value is string => Boolean(value)
+                  )
+                ),
+              ])
+              .update({
+                last_message: 'This message was deleted',
+                write_date: new Date().toISOString(),
+              });
+            if (target.media_key) {
+              await options.attachmentStorage
+                .delete(target.media_key)
+                .then(async () => {
+                  await app
+                    .db('whatsapp_messages')
+                    .where({ id: target.id, company_id: account.company_id, is_deleted: true })
+                    .update({ media_key: null, write_date: new Date().toISOString() });
+                })
+                .catch((error: unknown) => {
+                  req.log.warn(
+                    { error: whatsappLogErrorContext(error) },
+                    'WhatsApp revoked media cleanup failed'
+                  );
+                });
             }
           }
         }
@@ -556,36 +631,57 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         const fromMe = payload?.is_from_me === true;
         const senderJid = typeof payload?.from === 'string' ? payload.from.slice(0, 255) : null;
         const isGroup = providerJid.endsWith('@g.us');
-        const jid = !isGroup && !fromMe && typeof senderJid === 'string' &&
-          /^[^\s@]{1,200}@s\.whatsapp\.net$/u.test(senderJid) && providerJid.endsWith('@lid')
-          ? senderJid
-          : providerJid;
-        const fromLid = typeof payload?.from_lid === 'string' && /^[^\s@]{1,200}@lid$/u.test(payload.from_lid)
-          ? payload.from_lid
-          : null;
-        const chatLid = typeof payload?.chat_lid === 'string' && /^[^\s@]{1,200}@lid$/u.test(payload.chat_lid)
-          ? payload.chat_lid
-          : null;
-        const lidAliasJids = !isGroup && !fromMe && senderJid === jid
-          ? [...new Set([fromLid, chatLid, providerJid.endsWith('@lid') ? providerJid : null].filter((value): value is string => Boolean(value)))]
-          : [];
+        const jid =
+          !isGroup &&
+          !fromMe &&
+          typeof senderJid === 'string' &&
+          /^[^\s@]{1,200}@s\.whatsapp\.net$/u.test(senderJid) &&
+          providerJid.endsWith('@lid')
+            ? senderJid
+            : providerJid;
+        const fromLid =
+          typeof payload?.from_lid === 'string' && /^[^\s@]{1,200}@lid$/u.test(payload.from_lid)
+            ? payload.from_lid
+            : null;
+        const chatLid =
+          typeof payload?.chat_lid === 'string' && /^[^\s@]{1,200}@lid$/u.test(payload.chat_lid)
+            ? payload.chat_lid
+            : null;
+        const lidAliasJids =
+          !isGroup && !fromMe && senderJid === jid
+            ? [
+                ...new Set(
+                  [fromLid, chatLid, providerJid.endsWith('@lid') ? providerJid : null].filter(
+                    (value): value is string => Boolean(value)
+                  )
+                ),
+              ]
+            : [];
         if (!externalId || !/^[^\s@]{1,200}@(s\.whatsapp\.net|g\.us|lid)$/u.test(jid) || !timestamp)
           return reply.code(204).send();
-        const mediaField = ['image', 'video', 'video_note', 'audio', 'document', 'sticker'].find((field) => {
-          const value = payload?.[field];
-          return (typeof value === 'string' && value.length > 0) || (value !== null && typeof value === 'object');
-        });
-        const messageType = mediaField === 'video_note' ? 'video' : mediaField ?? 'text';
+        const mediaField = ['image', 'video', 'video_note', 'audio', 'document', 'sticker'].find(
+          (field) => {
+            const value = payload?.[field];
+            return (
+              (typeof value === 'string' && value.length > 0) ||
+              (value !== null && typeof value === 'object')
+            );
+          }
+        );
+        const messageType = mediaField === 'video_note' ? 'video' : (mediaField ?? 'text');
         const mediaValue = mediaField ? payload?.[mediaField] : null;
         const content = typeof payload?.body === 'string' ? payload.body.slice(0, 8000) : '';
         const replyToExternalId = providerReplyId(payload?.context_metadata);
         const chatName = typeof payload?.chat_name === 'string' ? payload.chat_name.trim() : '';
         const preserveConversationName = isGroup || fromMe;
-        const conversationName = chatName || (preserveConversationName
-          ? jid
-          : (typeof payload?.sender_display_name === 'string' && payload.sender_display_name.trim()) ||
-            (typeof payload?.from_name === 'string' && payload.from_name.trim()) ||
-            jid);
+        const conversationName =
+          chatName ||
+          (preserveConversationName
+            ? jid
+            : (typeof payload?.sender_display_name === 'string' &&
+                payload.sender_display_name.trim()) ||
+              (typeof payload?.from_name === 'string' && payload.from_name.trim()) ||
+              jid);
         await app.db.transaction(async (trx) => {
           let conversationJid = jid;
           if (!isGroup && jid.endsWith('@lid')) {
@@ -598,7 +694,10 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
                 .select('jid')
                 .where({ company_id: account.company_id, id: knownAlias.conversation_id })
                 .first()) as { jid: string } | undefined;
-              if (knownConversation && /^[^\s@]{1,200}@s\.whatsapp\.net$/u.test(knownConversation.jid)) {
+              if (
+                knownConversation &&
+                /^[^\s@]{1,200}@s\.whatsapp\.net$/u.test(knownConversation.jid)
+              ) {
                 conversationJid = knownConversation.jid;
               }
             }
@@ -617,9 +716,10 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
             .onConflict(['company_id', 'jid'])
             .merge({
               account_id: account.id,
-              name: preserveConversationName && !chatName
-                ? trx.raw('whatsapp_conversations.name')
-                : conversationName.slice(0, 255),
+              name:
+                preserveConversationName && !chatName
+                  ? trx.raw('whatsapp_conversations.name')
+                  : conversationName.slice(0, 255),
               is_group: isGroup,
               last_message: trx.raw(
                 'CASE WHEN whatsapp_conversations.last_message_at IS NULL OR excluded.last_message_at > whatsapp_conversations.last_message_at THEN excluded.last_message ELSE whatsapp_conversations.last_message END'
@@ -630,8 +730,11 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
               write_date: new Date().toISOString(),
             })
             .returning(['id']);
-          const storedConversation = conversation ?? (await trx('whatsapp_conversations')
-            .where({ company_id: account.company_id, jid: conversationJid }).first('id'));
+          const storedConversation =
+            conversation ??
+            (await trx('whatsapp_conversations')
+              .where({ company_id: account.company_id, jid: conversationJid })
+              .first('id'));
           if (!storedConversation) throw new Error('GoWA webhook conversation upsert failed');
           let conversationId = Number(storedConversation.id);
           for (const aliasJid of lidAliasJids) {
@@ -643,15 +746,19 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
               aliasJid
             );
           }
-          if (fromMe && await reconcileAmbiguousOutboundMessage({
-            db: trx,
-            companyId: account.company_id,
-            conversationId,
-            externalId,
-            content,
-            messageType,
-            timestamp,
-          })) return;
+          if (
+            fromMe &&
+            (await reconcileAmbiguousOutboundMessage({
+              db: trx,
+              companyId: account.company_id,
+              conversationId,
+              externalId,
+              content,
+              messageType,
+              timestamp,
+            }))
+          )
+            return;
           const inserted = await trx('whatsapp_messages')
             .insert({
               company_id: account.company_id,
@@ -667,11 +774,15 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
                   ? safeMime(payload.mime_type)
                   : mediaDefaultMime(messageType)
                 : null,
-              media_file_name: typeof payload?.filename === 'string'
-                ? payload.filename.slice(0, 255)
-                : mediaValue && typeof mediaValue === 'object' && 'filename' in mediaValue && typeof mediaValue.filename === 'string'
-                  ? mediaValue.filename.slice(0, 255)
-                  : null,
+              media_file_name:
+                typeof payload?.filename === 'string'
+                  ? payload.filename.slice(0, 255)
+                  : mediaValue &&
+                      typeof mediaValue === 'object' &&
+                      'filename' in mediaValue &&
+                      typeof mediaValue.filename === 'string'
+                    ? mediaValue.filename.slice(0, 255)
+                    : null,
               sender_jid: senderJid,
               reply_to_external_id: replyToExternalId,
             })
@@ -688,14 +799,26 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       }
       if (body?.event !== 'message.ack') return reply.code(204).send();
       const receipt = body.payload;
-      const status = receipt?.receipt_type === 'read' ? 'read' : receipt?.receipt_type === 'delivered' ? 'delivered' : null;
+      const status =
+        receipt?.receipt_type === 'read'
+          ? 'read'
+          : receipt?.receipt_type === 'delivered'
+            ? 'delivered'
+            : null;
       const ids = Array.isArray(receipt?.ids)
-        ? [...new Set(receipt.ids.filter((value): value is string => typeof value === 'string' && value.length > 0))].slice(0, 100)
+        ? [
+            ...new Set(
+              receipt.ids.filter(
+                (value): value is string => typeof value === 'string' && value.length > 0
+              )
+            ),
+          ].slice(0, 100)
         : [];
       if (!status || ids.length === 0) return reply.code(204).send();
       const eligibleStatuses = status === 'read' ? ['sent', 'delivered'] : ['sent'];
       for (const externalId of ids) {
-        await app.db('whatsapp_messages')
+        await app
+          .db('whatsapp_messages')
           .where({ company_id: account.company_id, external_id: externalId, direction: 'outbound' })
           .whereIn('status', eligibleStatuses)
           .update({ status, write_date: new Date().toISOString() });
@@ -718,16 +841,17 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
           permissions: whatsappPermissions(req.auth!),
         },
       };
-    let status = account.status;
+    let status: typeof account.status;
     let phoneNumber = account.phone_number;
     let lastError = account.last_error;
     let qrCode: string | null = null;
     if (!account.gateway_device_id) {
       status = 'disconnected';
       phoneNumber = null;
-      lastError = account.status === 'disconnected'
-        ? account.last_error
-        : 'WhatsApp device mapping is missing. Connect again.';
+      lastError =
+        account.status === 'disconnected'
+          ? account.last_error
+          : 'WhatsApp device mapping is missing. Connect again.';
       await WhatsappAccount.query()
         .where({ id: account.id, company_id: companyId })
         .patch({ status, phone_number: null, qr_code: null, last_error: lastError });
@@ -833,7 +957,14 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
                 qr_code: null,
                 last_error: null,
               });
-            await recordWhatsAppAudit(req, 'whatsapp.account', 'connect', account.id, companyId, trx);
+            await recordWhatsAppAudit(
+              req,
+              'whatsapp.account',
+              'connect',
+              account.id,
+              companyId,
+              trx
+            );
             return {
               statusCode: 200,
               body: {
@@ -874,16 +1005,25 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         }
         const webhookOrigin = process.env.WHATSAPP_WEBHOOK_URL;
         const webhookSecret = process.env.WHATSAPP_WEBHOOK_SECRET;
-        if (Boolean(webhookOrigin) !== Boolean(webhookSecret)) throw new Error('GoWA webhook URL and secret must be configured together');
+        if (Boolean(webhookOrigin) !== Boolean(webhookSecret))
+          throw new Error('GoWA webhook URL and secret must be configured together');
         if (webhookOrigin && webhookSecret) {
           const origin = new URL(webhookOrigin);
           if (
             webhookSecret.length < 32 ||
             !['http:', 'https:'].includes(origin.protocol) ||
-            origin.username || origin.password || origin.pathname !== '/' || origin.search || origin.hash ||
+            origin.username ||
+            origin.password ||
+            origin.pathname !== '/' ||
+            origin.search ||
+            origin.hash ||
             (process.env.NODE_ENV === 'production' && origin.protocol !== 'https:')
-          ) throw new Error('Invalid GoWA webhook configuration');
-          const callback = new URL(`/whatsapp/gowa/webhook/${encodeURIComponent(deviceId)}`, origin);
+          )
+            throw new Error('Invalid GoWA webhook configuration');
+          const callback = new URL(
+            `/whatsapp/gowa/webhook/${encodeURIComponent(deviceId)}`,
+            origin
+          );
           await gowaRequest(`/devices/${encodeURIComponent(deviceId)}/webhook`, {
             method: 'PATCH',
             contentType: 'application/json',
@@ -938,7 +1078,14 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
           status: 'error',
           last_error: 'WhatsApp gateway is temporarily unavailable',
         });
-        await recordWhatsAppAudit(req, 'whatsapp.account', 'connect_failed', account.id, companyId, trx);
+        await recordWhatsAppAudit(
+          req,
+          'whatsapp.account',
+          'connect_failed',
+          account.id,
+          companyId,
+          trx
+        );
         return {
           statusCode: 502,
           body: { success: false, error: 'Could not start WhatsApp pairing' },
@@ -969,7 +1116,8 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       last_error: null,
       write_date: new Date().toISOString(),
     });
-    if (account) await recordWhatsAppAudit(req, 'whatsapp.account', 'disconnect', account.id, companyId);
+    if (account)
+      await recordWhatsAppAudit(req, 'whatsapp.account', 'disconnect', account.id, companyId);
     return { success: true, data: { status: 'disconnected' } };
   });
 
@@ -1002,7 +1150,9 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       return reply.code(400).send({ success: false, error: 'Offset must be between 0 and 10000' });
     }
     if (search.length > 100) {
-      return reply.code(400).send({ success: false, error: 'Search must be 100 characters or fewer' });
+      return reply
+        .code(400)
+        .send({ success: false, error: 'Search must be 100 characters or fewer' });
     }
     const account = await WhatsappAccount.query().findOne({ company_id: companyId });
     if (!account?.gateway_device_id) return { success: true, data: [] };
@@ -1030,14 +1180,11 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
           .where({ company_id: companyId })
           .whereIn('jid', primaryJids)
       : [];
-    const existingPreviewByJid = new Map(
-      existingPreviewRows.map((row) => [String(row.jid), row])
-    );
+    const existingPreviewByJid = new Map(existingPreviewRows.map((row) => [String(row.jid), row]));
     for (const chat of chats.values()) {
       const jid = typeof chat.jid === 'string' ? chat.jid : '';
       if (!/^[^\s@]{1,200}@(s\.whatsapp\.net|g\.us|lid)$/u.test(jid)) continue;
-      const lastMessageAt =
-        providerTimestamp(chat.last_message_time);
+      const lastMessageAt = providerTimestamp(chat.last_message_time);
       await app
         .db('whatsapp_conversations')
         .insert({
@@ -1092,7 +1239,8 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
               timestamp: string;
             } | null>((current, item) => {
               const timestamp = providerTimestamp(item.timestamp);
-              return timestamp && (!current || Date.parse(timestamp) > Date.parse(current.timestamp))
+              return timestamp &&
+                (!current || Date.parse(timestamp) > Date.parse(current.timestamp))
                 ? { item, timestamp }
                 : current;
             }, null);
@@ -1102,7 +1250,10 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
                 await app
                   .db('whatsapp_conversations')
                   .where({ company_id: companyId, jid })
-                  .update({ last_message_sync_at: providerTime, write_date: new Date().toISOString() });
+                  .update({
+                    last_message_sync_at: providerTime,
+                    write_date: new Date().toISOString(),
+                  });
               }
               continue;
             }
@@ -1183,10 +1334,10 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
                 write_date: new Date().toISOString(),
               });
             if (providerTime) {
-              await app
-                .db('whatsapp_conversations')
-                .where({ company_id: companyId, jid })
-                .update({ last_message_sync_at: providerTime, write_date: new Date().toISOString() });
+              await app.db('whatsapp_conversations').where({ company_id: companyId, jid }).update({
+                last_message_sync_at: providerTime,
+                write_date: new Date().toISOString(),
+              });
             }
           } catch (error) {
             req.log.warn(
@@ -1310,21 +1461,20 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       if (!account?.gateway_device_id)
         return reply.code(409).send({ success: false, error: 'WhatsApp account is not connected' });
       try {
-        await gowaRequest(
-          `/chat/${encodeURIComponent(conversation.jid)}/archive`,
-          {
-            method: 'POST',
-            deviceId: account.gateway_device_id,
-            contentType: 'application/json',
-            body: JSON.stringify({ archived }),
-          }
-        );
+        await gowaRequest(`/chat/${encodeURIComponent(conversation.jid)}/archive`, {
+          method: 'POST',
+          deviceId: account.gateway_device_id,
+          contentType: 'application/json',
+          body: JSON.stringify({ archived }),
+        });
       } catch (error) {
         req.log.warn(
           { error: whatsappLogErrorContext(error) },
           'WhatsApp conversation archive request failed'
         );
-        return reply.code(502).send({ success: false, error: 'Could not update conversation archive' });
+        return reply
+          .code(502)
+          .send({ success: false, error: 'Could not update conversation archive' });
       }
       const updated = await app.db.transaction(async (trx) => {
         await WhatsappConversation.query(trx)
@@ -1369,15 +1519,12 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       if (!account?.gateway_device_id)
         return reply.code(409).send({ success: false, error: 'WhatsApp account is not connected' });
       try {
-        await gowaRequest(
-          `/chat/${encodeURIComponent(conversation.jid)}/pin`,
-          {
-            method: 'POST',
-            deviceId: account.gateway_device_id,
-            contentType: 'application/json',
-            body: JSON.stringify({ pinned }),
-          }
-        );
+        await gowaRequest(`/chat/${encodeURIComponent(conversation.jid)}/pin`, {
+          method: 'POST',
+          deviceId: account.gateway_device_id,
+          contentType: 'application/json',
+          body: JSON.stringify({ pinned }),
+        });
       } catch (error) {
         req.log.warn(
           { error: whatsappLogErrorContext(error) },
@@ -1486,11 +1633,12 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
     );
     for (const item of upstream.data ?? []) {
       if (typeof item.id !== 'string' || !item.id) continue;
-        const tombstone = await app.db('whatsapp_messages')
-          .select('id')
-          .where({ company_id: companyId, external_id: item.id, is_deleted: true })
-          .first();
-        if (tombstone) continue;
+      const tombstone = await app
+        .db('whatsapp_messages')
+        .select('id')
+        .where({ company_id: companyId, external_id: item.id, is_deleted: true })
+        .first();
+      if (tombstone) continue;
       const fromMe = item.is_from_me === true;
       const rawType = typeof item.media_type === 'string' ? item.media_type : 'text';
       const messageType = ['text', 'image', 'video', 'audio', 'document', 'sticker'].includes(
@@ -1582,17 +1730,22 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       .orderBy('id', 'desc')
       .limit(limit)
       .offset(offset);
-    for (const deletedMedia of await app.db('whatsapp_messages')
+    for (const deletedMedia of await app
+      .db('whatsapp_messages')
       .select('id', 'media_key')
       .where({ company_id: companyId, conversation_id: conversationId, is_deleted: true })
       .whereNotNull('media_key')) {
       try {
         await options.attachmentStorage.delete(String(deletedMedia.media_key));
-        await app.db('whatsapp_messages')
+        await app
+          .db('whatsapp_messages')
           .where({ id: deletedMedia.id, company_id: companyId, is_deleted: true })
           .update({ media_key: null, write_date: new Date().toISOString() });
       } catch (error) {
-        req.log.warn({ error: whatsappLogErrorContext(error) }, 'WhatsApp deleted media cleanup retry failed');
+        req.log.warn(
+          { error: whatsappLogErrorContext(error) },
+          'WhatsApp deleted media cleanup retry failed'
+        );
       }
     }
     const quotedInternalIds = messages
@@ -1601,18 +1754,20 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
     const quotedExternalIds = messages
       .map((message) => message.reply_to_external_id)
       .filter((value): value is string => typeof value === 'string' && value.length > 0);
-    const quotedRows = quotedInternalIds.length || quotedExternalIds.length
-      ? await app.db('whatsapp_messages')
-          .select('id', 'external_id', 'direction', 'content', 'message_type', 'media_file_name')
-          .where({ company_id: companyId, conversation_id: conversationId })
-          .andWhere((query) => {
-            if (quotedInternalIds.length) query.whereIn('id', quotedInternalIds);
-            if (quotedExternalIds.length) {
-              if (quotedInternalIds.length) query.orWhereIn('external_id', quotedExternalIds);
-              else query.whereIn('external_id', quotedExternalIds);
-            }
-          })
-      : [];
+    const quotedRows =
+      quotedInternalIds.length || quotedExternalIds.length
+        ? await app
+            .db('whatsapp_messages')
+            .select('id', 'external_id', 'direction', 'content', 'message_type', 'media_file_name')
+            .where({ company_id: companyId, conversation_id: conversationId })
+            .andWhere((query) => {
+              if (quotedInternalIds.length) query.whereIn('id', quotedInternalIds);
+              if (quotedExternalIds.length) {
+                if (quotedInternalIds.length) query.orWhereIn('external_id', quotedExternalIds);
+                else query.whereIn('external_id', quotedExternalIds);
+              }
+            })
+        : [];
     const quoteById = new Map(quotedRows.map((row) => [String(row.id), row]));
     const quoteByExternalId = new Map(quotedRows.map((row) => [String(row.external_id), row]));
     const readCursor = (await app
@@ -1620,15 +1775,15 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       .select('last_read_message_id', 'last_read_at')
       .where({ company_id: companyId, conversation_id: conversationId, user_id: req.auth!.userId })
       .first()) as
-      | { last_read_message_id?: number | string; last_read_at?: string | Date }
-      | undefined;
+      { last_read_message_id?: number | string; last_read_at?: string | Date } | undefined;
     const lastReadMessageId = Number(readCursor?.last_read_message_id);
     const lastReadAt = Date.parse(String(readCursor?.last_read_at ?? ''));
     const latestProviderMessage = (upstream.data ?? []).reduce<Record<string, unknown> | null>(
       (latest, item) => {
         const timestamp = providerTimestamp(item.timestamp);
         const latestTimestamp = providerTimestamp(latest?.timestamp);
-        return timestamp && (!latestTimestamp || Date.parse(timestamp) > Date.parse(latestTimestamp))
+        return timestamp &&
+          (!latestTimestamp || Date.parse(timestamp) > Date.parse(latestTimestamp))
           ? item
           : latest;
       },
@@ -1640,20 +1795,24 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       (!conversation.last_message_at ||
         !Number.isFinite(Date.parse(conversation.last_message_at)) ||
         Date.parse(latestTime) > Date.parse(conversation.last_message_at));
-    const latestProviderId = typeof latestProviderMessage?.id === 'string' ? latestProviderMessage.id : null;
+    const latestProviderId =
+      typeof latestProviderMessage?.id === 'string' ? latestProviderMessage.id : null;
     const latestIsTombstoned = latestProviderId
-      ? Boolean(await app.db('whatsapp_messages')
-          .select('id')
-          .where({ company_id: companyId, external_id: latestProviderId, is_deleted: true })
-          .first())
+      ? Boolean(
+          await app
+            .db('whatsapp_messages')
+            .select('id')
+            .where({ company_id: companyId, external_id: latestProviderId, is_deleted: true })
+            .first()
+        )
       : false;
     const latestContent = latestIsTombstoned
       ? 'This message was deleted'
       : latestProviderMessage
-      ? typeof latestProviderMessage.content === 'string' && latestProviderMessage.content
-        ? latestProviderMessage.content.slice(0, 2000)
-        : `[${String(latestProviderMessage.media_type ?? 'message')}]`
-      : null;
+        ? typeof latestProviderMessage.content === 'string' && latestProviderMessage.content
+          ? latestProviderMessage.content.slice(0, 2000)
+          : `[${String(latestProviderMessage.media_type ?? 'message')}]`
+        : null;
     if (offset === 0) {
       await WhatsappConversation.query()
         .where({ id: conversationId, company_id: companyId })
@@ -1666,11 +1825,13 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
     return {
       success: true,
       data: messages.map((message) => {
-        const quoted = (message.reply_to_message_id != null
-          ? quoteById.get(String(message.reply_to_message_id))
-          : undefined) ?? (message.reply_to_external_id
-          ? quoteByExternalId.get(String(message.reply_to_external_id))
-          : undefined);
+        const quoted =
+          (message.reply_to_message_id != null
+            ? quoteById.get(String(message.reply_to_message_id))
+            : undefined) ??
+          (message.reply_to_external_id
+            ? quoteByExternalId.get(String(message.reply_to_external_id))
+            : undefined);
         const messageAt = Date.parse(String(message.create_date));
         const afterReadCursor =
           !Number.isFinite(lastReadAt) ||
@@ -1720,19 +1881,26 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       ) {
         return reply.code(400).send({ success: false, error: 'Choose a supported reaction emoji' });
       }
-      const message = await WhatsappMessage.query().findOne({ id: messageId, company_id: companyId });
-      if (!message)
-        return reply.code(404).send({ success: false, error: 'Message not found' });
+      const message = await WhatsappMessage.query().findOne({
+        id: messageId,
+        company_id: companyId,
+      });
+      if (!message) return reply.code(404).send({ success: false, error: 'Message not found' });
       if (
         !message.external_id ||
         message.external_id.startsWith('pending:') ||
         message.external_id.startsWith('gowa-') ||
         !['received', 'sent', 'delivered', 'read'].includes(message.status)
       ) {
-        return reply.code(409).send({ success: false, error: 'Message is not available for reactions' });
+        return reply
+          .code(409)
+          .send({ success: false, error: 'Message is not available for reactions' });
       }
       const [conversation, account] = await Promise.all([
-        WhatsappConversation.query().findOne({ id: message.conversation_id, company_id: companyId }),
+        WhatsappConversation.query().findOne({
+          id: message.conversation_id,
+          company_id: companyId,
+        }),
         WhatsappAccount.query().findOne({ company_id: companyId }),
       ]);
       if (!conversation)
@@ -1747,7 +1915,10 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
           body: JSON.stringify({ phone: conversation.jid, emoji: body.emoji }),
         });
       } catch (error) {
-        req.log.error({ error: whatsappLogErrorContext(error) }, 'WhatsApp reaction request failed');
+        req.log.error(
+          { error: whatsappLogErrorContext(error) },
+          'WhatsApp reaction request failed'
+        );
         return reply.code(502).send({ success: false, error: 'Could not send reaction' });
       }
       const reactions = normalizedReactions(message.reactions);
@@ -1762,10 +1933,12 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       const ownReactionIndex = reactions.findIndex((reaction) => reaction.is_from_me);
       if (ownReactionIndex >= 0) reactions[ownReactionIndex] = ownReaction;
       else reactions.push(ownReaction);
-      await WhatsappMessage.query().where({ id: messageId, company_id: companyId }).patch({
-        reactions: JSON.stringify(reactions),
-        write_date: new Date().toISOString(),
-      });
+      await WhatsappMessage.query()
+        .where({ id: messageId, company_id: companyId })
+        .patch({
+          reactions: JSON.stringify(reactions),
+          write_date: new Date().toISOString(),
+        });
       await recordWhatsAppAudit(req, 'whatsapp.message', 'react', messageId, companyId);
       return reply.send({ success: true, data: { reactions } });
     }
@@ -1781,27 +1954,53 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       const messageId = id(req.params.id);
       const body = isRecord(req.body) ? req.body : null;
       const content = typeof body?.content === 'string' ? body.content.trim() : '';
-      if (!messageId || !body || Object.keys(body).some((key) => key !== 'content') || !content || content.length > 8000)
-        return reply.code(400).send({ success: false, error: 'Message text is required and must be at most 8000 characters' });
-      const message = await WhatsappMessage.query().findOne({ id: messageId, company_id: companyId });
+      if (
+        !messageId ||
+        !body ||
+        Object.keys(body).some((key) => key !== 'content') ||
+        !content ||
+        content.length > 8000
+      )
+        return reply.code(400).send({
+          success: false,
+          error: 'Message text is required and must be at most 8000 characters',
+        });
+      const message = await WhatsappMessage.query().findOne({
+        id: messageId,
+        company_id: companyId,
+      });
       if (!message) return reply.code(404).send({ success: false, error: 'Message not found' });
       const messageAge = Date.now() - Date.parse(String(message.create_date));
       if (
-        message.direction !== 'outbound' || message.message_type !== 'text' || message.is_deleted ||
-        !message.external_id || /^(pending:|gowa-)/u.test(message.external_id) ||
+        message.direction !== 'outbound' ||
+        message.message_type !== 'text' ||
+        message.is_deleted ||
+        !message.external_id ||
+        /^(pending:|gowa-)/u.test(message.external_id) ||
         !['sent', 'delivered', 'read'].includes(message.status) ||
-        !Number.isFinite(messageAge) || messageAge < 0 || messageAge > 15 * 60_000
-      ) return reply.code(409).send({ success: false, error: 'Only your recent sent text messages can be edited' });
+        !Number.isFinite(messageAge) ||
+        messageAge < 0 ||
+        messageAge > 15 * 60_000
+      )
+        return reply
+          .code(409)
+          .send({ success: false, error: 'Only your recent sent text messages can be edited' });
       const [conversation, account] = await Promise.all([
-        WhatsappConversation.query().findOne({ id: message.conversation_id, company_id: companyId }),
+        WhatsappConversation.query().findOne({
+          id: message.conversation_id,
+          company_id: companyId,
+        }),
         WhatsappAccount.query().findOne({ company_id: companyId }),
       ]);
-      if (!conversation) return reply.code(404).send({ success: false, error: 'Conversation not found' });
+      if (!conversation)
+        return reply.code(404).send({ success: false, error: 'Conversation not found' });
       if (!account?.gateway_device_id || account.status !== 'connected')
         return reply.code(409).send({ success: false, error: 'WhatsApp account is not connected' });
       try {
         await gowaRequest(`/message/${encodeURIComponent(message.external_id)}/update`, {
-          method: 'POST', deviceId: account.gateway_device_id, contentType: 'application/json',
+          method: 'POST',
+          deviceId: account.gateway_device_id,
+          contentType: 'application/json',
           body: JSON.stringify({ phone: conversation.jid, message: content }),
         });
       } catch (error) {
@@ -1809,9 +2008,12 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         return reply.code(502).send({ success: false, error: 'Could not edit message' });
       }
       await WhatsappMessage.query().where({ id: messageId, company_id: companyId }).patch({
-        content, is_edited: true, write_date: new Date().toISOString(),
+        content,
+        is_edited: true,
+        write_date: new Date().toISOString(),
       });
-      await app.db('whatsapp_conversations')
+      await app
+        .db('whatsapp_conversations')
         .where({ id: conversation.id, company_id: companyId, last_message: message.content })
         .update({ last_message: content, write_date: new Date().toISOString() });
       await recordWhatsAppAudit(req, 'whatsapp.message', 'edit', messageId, companyId);
@@ -1828,41 +2030,77 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       if (!requireWhatsAppAction(req, reply, 'whatsapp.message', 'write')) return;
       const messageId = id(req.params.id);
       if (!messageId) return reply.code(400).send({ success: false, error: 'Invalid message ID' });
-      const message = await WhatsappMessage.query().findOne({ id: messageId, company_id: companyId });
+      const message = await WhatsappMessage.query().findOne({
+        id: messageId,
+        company_id: companyId,
+      });
       if (!message) return reply.code(404).send({ success: false, error: 'Message not found' });
       if (
-        message.direction !== 'outbound' || message.is_deleted || !message.external_id ||
-        /^(pending:|gowa-)/u.test(message.external_id) || !['sent', 'delivered', 'read'].includes(message.status)
-      ) return reply.code(409).send({ success: false, error: 'Only your sent messages can be deleted for everyone' });
+        message.direction !== 'outbound' ||
+        message.is_deleted ||
+        !message.external_id ||
+        /^(pending:|gowa-)/u.test(message.external_id) ||
+        !['sent', 'delivered', 'read'].includes(message.status)
+      )
+        return reply
+          .code(409)
+          .send({ success: false, error: 'Only your sent messages can be deleted for everyone' });
       const [conversation, account] = await Promise.all([
-        WhatsappConversation.query().findOne({ id: message.conversation_id, company_id: companyId }),
+        WhatsappConversation.query().findOne({
+          id: message.conversation_id,
+          company_id: companyId,
+        }),
         WhatsappAccount.query().findOne({ company_id: companyId }),
       ]);
-      if (!conversation) return reply.code(404).send({ success: false, error: 'Conversation not found' });
+      if (!conversation)
+        return reply.code(404).send({ success: false, error: 'Conversation not found' });
       if (!account?.gateway_device_id || account.status !== 'connected')
         return reply.code(409).send({ success: false, error: 'WhatsApp account is not connected' });
       try {
         await gowaRequest(`/message/${encodeURIComponent(message.external_id)}/revoke`, {
-          method: 'POST', deviceId: account.gateway_device_id, contentType: 'application/json',
+          method: 'POST',
+          deviceId: account.gateway_device_id,
+          contentType: 'application/json',
           body: JSON.stringify({ phone: conversation.jid }),
         });
       } catch (error) {
         req.log.error({ error: whatsappLogErrorContext(error) }, 'WhatsApp message revoke failed');
-        return reply.code(502).send({ success: false, error: 'Could not delete message for everyone' });
+        return reply
+          .code(502)
+          .send({ success: false, error: 'Could not delete message for everyone' });
       }
       await WhatsappMessage.query().where({ id: messageId, company_id: companyId }).patch({
-        is_deleted: true, content: 'This message was deleted',
-        media_mime_type: null, media_file_name: null, reactions: '[]', write_date: new Date().toISOString(),
+        is_deleted: true,
+        content: 'This message was deleted',
+        media_mime_type: null,
+        media_file_name: null,
+        reactions: '[]',
+        write_date: new Date().toISOString(),
       });
-      if (message.media_key) await options.attachmentStorage.delete(message.media_key).then(async () => {
-        await WhatsappMessage.query().where({ id: messageId, company_id: companyId, is_deleted: true })
-          .patch({ media_key: null, write_date: new Date().toISOString() });
-      }).catch((error: unknown) => {
-        req.log.warn({ error: whatsappLogErrorContext(error) }, 'WhatsApp revoked media cleanup failed');
-      });
-      await app.db('whatsapp_conversations')
+      if (message.media_key)
+        await options.attachmentStorage
+          .delete(message.media_key)
+          .then(async () => {
+            await WhatsappMessage.query()
+              .where({ id: messageId, company_id: companyId, is_deleted: true })
+              .patch({ media_key: null, write_date: new Date().toISOString() });
+          })
+          .catch((error: unknown) => {
+            req.log.warn(
+              { error: whatsappLogErrorContext(error) },
+              'WhatsApp revoked media cleanup failed'
+            );
+          });
+      await app
+        .db('whatsapp_conversations')
         .where({ id: conversation.id, company_id: companyId })
-        .whereIn('last_message', [...new Set([message.content, message.media_file_name, `[${message.message_type}]`].filter((value): value is string => Boolean(value)))])
+        .whereIn('last_message', [
+          ...new Set(
+            [message.content, message.media_file_name, `[${message.message_type}]`].filter(
+              (value): value is string => Boolean(value)
+            )
+          ),
+        ])
         .update({ last_message: 'This message was deleted', write_date: new Date().toISOString() });
       await recordWhatsAppAudit(req, 'whatsapp.message', 'revoke', messageId, companyId);
       return reply.send({ success: true, data: { id: messageId, is_deleted: true } });
@@ -1873,72 +2111,74 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
     '/whatsapp/conversations/:id/read',
     whatsappRateLimit(30),
     async (req, reply) => {
-    const companyId = requireCompany(req, reply);
-    if (!companyId) return;
-    if (!requireWhatsAppAction(req, reply, 'whatsapp.message', 'create')) return;
-    const conversationId = id(req.params.id);
-    if (!conversationId)
-      return reply.code(400).send({ success: false, error: 'Invalid conversation ID' });
-    const conversation = await WhatsappConversation.query().findOne({
-      id: conversationId,
-      company_id: companyId,
-    });
-    if (!conversation)
-      return reply.code(404).send({ success: false, error: 'Conversation not found' });
-    const account = await WhatsappAccount.query().findOne({ company_id: companyId });
-    if (!account?.gateway_device_id)
-      return reply.code(409).send({ success: false, error: 'WhatsApp account is not connected' });
-    const latestInbound = await WhatsappMessage.query()
-      .findOne({ conversation_id: conversationId, company_id: companyId, direction: 'inbound' })
-      .orderBy('create_date', 'desc')
-      .orderBy('id', 'desc');
-    if (!latestInbound) {
-      return { success: true, data: { marked: false } };
-    }
-    const latestInboundAt = new Date(String(latestInbound.create_date)).toISOString();
-    try {
-      await gowaRequest(`/message/${encodeURIComponent(latestInbound.external_id)}/read`, {
-        method: 'POST',
-        deviceId: account.gateway_device_id,
-        contentType: 'application/json',
-        body: JSON.stringify({ phone: conversation.jid }),
+      const companyId = requireCompany(req, reply);
+      if (!companyId) return;
+      if (!requireWhatsAppAction(req, reply, 'whatsapp.message', 'create')) return;
+      const conversationId = id(req.params.id);
+      if (!conversationId)
+        return reply.code(400).send({ success: false, error: 'Invalid conversation ID' });
+      const conversation = await WhatsappConversation.query().findOne({
+        id: conversationId,
+        company_id: companyId,
       });
-    } catch (error) {
-      req.log.error(
-        { error: whatsappLogErrorContext(error) },
-        'WhatsApp mark-read request failed'
-      );
-      return reply.code(502).send({ success: false, error: 'Could not mark conversation as read' });
-    }
-    await app.db.transaction(async (trx) => {
-      await trx('whatsapp_conversation_reads')
-        .insert({
-          company_id: companyId,
-          conversation_id: conversationId,
-          user_id: req.auth!.userId,
-          last_read_message_id: latestInbound.id,
-          last_read_at: latestInboundAt,
-        })
-        .onConflict(['company_id', 'conversation_id', 'user_id'])
-        .merge({
-          last_read_message_id: trx.raw(
-            'CASE WHEN excluded.last_read_at > whatsapp_conversation_reads.last_read_at OR (excluded.last_read_at = whatsapp_conversation_reads.last_read_at AND excluded.last_read_message_id > whatsapp_conversation_reads.last_read_message_id) THEN excluded.last_read_message_id ELSE whatsapp_conversation_reads.last_read_message_id END'
-          ),
-          last_read_at: trx.raw(
-            'CASE WHEN excluded.last_read_at > whatsapp_conversation_reads.last_read_at OR (excluded.last_read_at = whatsapp_conversation_reads.last_read_at AND excluded.last_read_message_id > whatsapp_conversation_reads.last_read_message_id) THEN excluded.last_read_at ELSE whatsapp_conversation_reads.last_read_at END'
-          ),
-          write_date: new Date().toISOString(),
+      if (!conversation)
+        return reply.code(404).send({ success: false, error: 'Conversation not found' });
+      const account = await WhatsappAccount.query().findOne({ company_id: companyId });
+      if (!account?.gateway_device_id)
+        return reply.code(409).send({ success: false, error: 'WhatsApp account is not connected' });
+      const latestInbound = await WhatsappMessage.query()
+        .findOne({ conversation_id: conversationId, company_id: companyId, direction: 'inbound' })
+        .orderBy('create_date', 'desc')
+        .orderBy('id', 'desc');
+      if (!latestInbound) {
+        return { success: true, data: { marked: false } };
+      }
+      const latestInboundAt = new Date(String(latestInbound.create_date)).toISOString();
+      try {
+        await gowaRequest(`/message/${encodeURIComponent(latestInbound.external_id)}/read`, {
+          method: 'POST',
+          deviceId: account.gateway_device_id,
+          contentType: 'application/json',
+          body: JSON.stringify({ phone: conversation.jid }),
         });
-      await recordWhatsAppAudit(
-        req,
-        'whatsapp.message',
-        'mark_read',
-        latestInbound.id,
-        companyId,
-        trx
-      );
-    });
-    return { success: true, data: { marked: true, message_id: latestInbound.id } };
+      } catch (error) {
+        req.log.error(
+          { error: whatsappLogErrorContext(error) },
+          'WhatsApp mark-read request failed'
+        );
+        return reply
+          .code(502)
+          .send({ success: false, error: 'Could not mark conversation as read' });
+      }
+      await app.db.transaction(async (trx) => {
+        await trx('whatsapp_conversation_reads')
+          .insert({
+            company_id: companyId,
+            conversation_id: conversationId,
+            user_id: req.auth!.userId,
+            last_read_message_id: latestInbound.id,
+            last_read_at: latestInboundAt,
+          })
+          .onConflict(['company_id', 'conversation_id', 'user_id'])
+          .merge({
+            last_read_message_id: trx.raw(
+              'CASE WHEN excluded.last_read_at > whatsapp_conversation_reads.last_read_at OR (excluded.last_read_at = whatsapp_conversation_reads.last_read_at AND excluded.last_read_message_id > whatsapp_conversation_reads.last_read_message_id) THEN excluded.last_read_message_id ELSE whatsapp_conversation_reads.last_read_message_id END'
+            ),
+            last_read_at: trx.raw(
+              'CASE WHEN excluded.last_read_at > whatsapp_conversation_reads.last_read_at OR (excluded.last_read_at = whatsapp_conversation_reads.last_read_at AND excluded.last_read_message_id > whatsapp_conversation_reads.last_read_message_id) THEN excluded.last_read_at ELSE whatsapp_conversation_reads.last_read_at END'
+            ),
+            write_date: new Date().toISOString(),
+          });
+        await recordWhatsAppAudit(
+          req,
+          'whatsapp.message',
+          'mark_read',
+          latestInbound.id,
+          companyId,
+          trx
+        );
+      });
+      return { success: true, data: { marked: true, message_id: latestInbound.id } };
     }
   );
 
@@ -2098,7 +2338,14 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
               last_message: (body.content as string) || (fileName ?? '[media]'),
               last_message_at: new Date().toISOString(),
             });
-          await recordWhatsAppAudit(req, 'whatsapp.message', 'send_queued', inserted.id, companyId, trx);
+          await recordWhatsAppAudit(
+            req,
+            'whatsapp.message',
+            'send_queued',
+            inserted.id,
+            companyId,
+            trx
+          );
           return inserted;
         });
         return reply.code(202).send({ success: true, data: message });
@@ -2164,9 +2411,16 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       if (!source)
         return reply.code(404).send({ success: false, error: 'Source message not found' });
       if (!destination)
-        return reply.code(404).send({ success: false, error: 'Destination conversation not found' });
+        return reply
+          .code(404)
+          .send({ success: false, error: 'Destination conversation not found' });
       const requestHash = createHash('sha256')
-        .update(JSON.stringify({ source_message_id: source.id, destination_conversation_id: destination.id }))
+        .update(
+          JSON.stringify({
+            source_message_id: source.id,
+            destination_conversation_id: destination.id,
+          })
+        )
         .digest('hex');
       const existing = await WhatsappMessage.query().findOne({
         company_id: companyId,
@@ -2179,10 +2433,18 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
             .send({ success: false, error: 'Idempotency key was used for another message' });
         return reply.code(202).send({ success: true, data: existing });
       }
-      if (!source.external_id || source.external_id.startsWith('pending:') || source.external_id.startsWith('gowa-'))
-        return reply.code(409).send({ success: false, error: 'Source message is not available to forward' });
+      if (
+        !source.external_id ||
+        source.external_id.startsWith('pending:') ||
+        source.external_id.startsWith('gowa-')
+      )
+        return reply
+          .code(409)
+          .send({ success: false, error: 'Source message is not available to forward' });
       if (!['received', 'sent', 'delivered', 'read'].includes(source.status))
-        return reply.code(409).send({ success: false, error: 'Source message is not available to forward' });
+        return reply
+          .code(409)
+          .send({ success: false, error: 'Source message is not available to forward' });
       if (!account?.gateway_device_id || account.status !== 'connected')
         return reply.code(409).send({ success: false, error: 'WhatsApp account is not connected' });
       try {
@@ -2222,7 +2484,14 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
               last_message: source.content || source.media_file_name || `[${source.message_type}]`,
               last_message_at: new Date().toISOString(),
             });
-          await recordWhatsAppAudit(req, 'whatsapp.message', 'forward_queued', inserted.id, companyId, trx);
+          await recordWhatsAppAudit(
+            req,
+            'whatsapp.message',
+            'forward_queued',
+            inserted.id,
+            companyId,
+            trx
+          );
           return inserted;
         });
         return reply.code(202).send({ success: true, data: forwarded });
@@ -2238,7 +2507,9 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
           return reply
             .code(409)
             .send({ success: false, error: 'Idempotency key was used for another message' });
-        return reply.code(503).send({ success: false, error: 'Message could not be queued. Try again.' });
+        return reply
+          .code(503)
+          .send({ success: false, error: 'Message could not be queued. Try again.' });
       }
     }
   );
@@ -2284,7 +2555,14 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
           max_attempts: 4,
           available_at: new Date().toISOString(),
         });
-        await recordWhatsAppAudit(req, 'whatsapp.message', 'retry_queued', messageId, companyId, trx);
+        await recordWhatsAppAudit(
+          req,
+          'whatsapp.message',
+          'retry_queued',
+          messageId,
+          companyId,
+          trx
+        );
         return WhatsappMessage.query(trx).findOne({ id: messageId, company_id: companyId });
       });
       if (!message) {
@@ -2358,15 +2636,23 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       if (options.attachmentStorage.putStream && options.attachmentStorage.getStream) {
         const mediaKey = randomUUID();
         try {
-          const streamed = await streamResponseToStorage(downloaded, options.attachmentStorage, mediaKey);
+          const streamed = await streamResponseToStorage(
+            downloaded,
+            options.attachmentStorage,
+            mediaKey
+          );
           verifiedMime = streamed.mime;
         } catch (error) {
           await options.attachmentStorage.delete(mediaKey).catch(() => undefined);
           if (error instanceof MediaTooLargeError) {
-            return reply.code(413).send({ success: false, error: 'Media exceeds the 10 MiB limit' });
+            return reply
+              .code(413)
+              .send({ success: false, error: 'Media exceeds the 10 MiB limit' });
           }
           if (error instanceof MediaIncompleteError) {
-            return reply.code(502).send({ success: false, error: 'WhatsApp gateway returned incomplete media' });
+            return reply
+              .code(502)
+              .send({ success: false, error: 'WhatsApp gateway returned incomplete media' });
           }
           if (error instanceof MediaEmptyError) {
             return reply.code(404).send({ success: false, error: 'Media not found' });
@@ -2376,7 +2662,9 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         const storedStream = await options.attachmentStorage.getStream(mediaKey);
         if (!storedStream) {
           await options.attachmentStorage.delete(mediaKey).catch(() => undefined);
-          return reply.code(503).send({ success: false, error: 'Media storage is temporarily unavailable' });
+          return reply
+            .code(503)
+            .send({ success: false, error: 'Media storage is temporarily unavailable' });
         }
         mediaStream = limitReadable(storedStream, MAX_ATTACHMENT_BYTES);
         await WhatsappMessage.query()
@@ -2394,10 +2682,14 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
           content = await readLimitedMedia(downloaded);
         } catch (error) {
           if (error instanceof MediaTooLargeError) {
-            return reply.code(413).send({ success: false, error: 'Media exceeds the 10 MiB limit' });
+            return reply
+              .code(413)
+              .send({ success: false, error: 'Media exceeds the 10 MiB limit' });
           }
           if (error instanceof MediaIncompleteError) {
-            return reply.code(502).send({ success: false, error: 'WhatsApp gateway returned incomplete media' });
+            return reply
+              .code(502)
+              .send({ success: false, error: 'WhatsApp gateway returned incomplete media' });
           }
           throw error;
         }
@@ -2418,7 +2710,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         message.media_file_name = safeFileName(metadata.filename) ?? message.media_file_name;
       }
     }
-    verifiedMime ??= content ? sniffMime(content) ?? 'application/octet-stream' : null;
+    verifiedMime ??= content ? (sniffMime(content) ?? 'application/octet-stream') : null;
     if (!content && !mediaStream)
       return reply.code(404).send({ success: false, error: 'Media not found' });
     if (message.media_mime_type !== verifiedMime) {

@@ -147,9 +147,7 @@ describe('WhatsApp gateway configuration', () => {
     vi.stubEnv('NODE_ENV', 'development');
     vi.stubEnv('WHATSAPP_GATEWAY_URL', 'http://concurrency.test');
     const pending: Array<(response: Response) => void> = [];
-    const fetchMock = vi.fn(
-      () => new Promise<Response>((resolve) => pending.push(resolve))
-    );
+    const fetchMock = vi.fn(() => new Promise<Response>((resolve) => pending.push(resolve)));
     vi.stubGlobal('fetch', fetchMock);
 
     const requests = Array.from({ length: 8 }, () => gowaRequest('/health'));

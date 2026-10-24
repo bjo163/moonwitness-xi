@@ -66,7 +66,11 @@ describe('WhatsApp API GoWA bridge', () => {
   let providerImageReplyIds: string[] = [];
   let providerForwardRequests: Array<{ sourceId: string; body: Record<string, unknown> }> = [];
   let providerReactionRequests: Array<{ messageId: string; body: Record<string, unknown> }> = [];
-  let providerMessageMutationRequests: Array<{ operation: string; messageId: string; body: Record<string, unknown> }> = [];
+  let providerMessageMutationRequests: Array<{
+    operation: string;
+    messageId: string;
+    body: Record<string, unknown>;
+  }> = [];
   let providerDownloadBytes = Buffer.alloc(0);
   let providerDownloadDeclaredLength: number | null = null;
   let providerDownloadFileName = 'incoming.png';
@@ -205,7 +209,10 @@ describe('WhatsApp API GoWA bridge', () => {
         return json({ device_id: 'moonwitness-company-' + companyId });
       }
       if (/^\/devices\/[^/]+\/webhook$/u.test(url.pathname) && method === 'PATCH') {
-        providerWebhookUpdates.push({ path: url.pathname, body: JSON.parse(String(init?.body)) as Record<string, unknown> });
+        providerWebhookUpdates.push({
+          path: url.pathname,
+          body: JSON.parse(String(init?.body)) as Record<string, unknown>,
+        });
         return json({});
       }
       if (/^\/devices\/[^/]+$/u.test(url.pathname) && method === 'GET')
@@ -240,12 +247,17 @@ describe('WhatsApp API GoWA bridge', () => {
         const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
         const path = url.pathname.endsWith('/archive') ? 'archive' : 'pin';
         providerChatActions.push({ path, body });
-        const jid = decodeURIComponent(url.pathname.slice('/chat/'.length).replace(/\/(archive|pin)$/u, ''));
+        const jid = decodeURIComponent(
+          url.pathname.slice('/chat/'.length).replace(/\/(archive|pin)$/u, '')
+        );
         if (path === 'archive') {
           const chat = providerChats.find((item) => item.jid === jid);
           if (chat) chat.archived = body.archived;
         }
-        return json({ [path === 'archive' ? 'archived' : 'pinned']: body[path === 'archive' ? 'archived' : 'pinned'] });
+        return json({
+          [path === 'archive' ? 'archived' : 'pinned']:
+            body[path === 'archive' ? 'archived' : 'pinned'],
+        });
       }
       if (url.pathname.startsWith('/chat/') && url.pathname.endsWith('/messages')) {
         providerMessageRequests.push(url);
@@ -292,14 +304,18 @@ describe('WhatsApp API GoWA bridge', () => {
       }
       if (/^\/message\/.+\/forward$/u.test(url.pathname) && method === 'POST') {
         providerForwardRequests.push({
-          sourceId: decodeURIComponent(url.pathname.slice('/message/'.length).replace(/\/forward$/u, '')),
+          sourceId: decodeURIComponent(
+            url.pathname.slice('/message/'.length).replace(/\/forward$/u, '')
+          ),
           body: JSON.parse(String(init?.body)) as Record<string, unknown>,
         });
         return json({ message_id: `forwarded-${providerForwardRequests.length}` });
       }
       if (/^\/message\/[^/]+\/reaction$/u.test(url.pathname) && method === 'POST') {
         providerReactionRequests.push({
-          messageId: decodeURIComponent(url.pathname.slice('/message/'.length).replace(/\/reaction$/u, '')),
+          messageId: decodeURIComponent(
+            url.pathname.slice('/message/'.length).replace(/\/reaction$/u, '')
+          ),
           body: JSON.parse(String(init?.body)) as Record<string, unknown>,
         });
         return json({ message_id: `reaction-${providerReactionRequests.length}` });
@@ -308,14 +324,19 @@ describe('WhatsApp API GoWA bridge', () => {
         const operation = url.pathname.endsWith('/update') ? 'update' : 'revoke';
         providerMessageMutationRequests.push({
           operation,
-          messageId: decodeURIComponent(url.pathname.slice('/message/'.length).replace(/\/(update|revoke)$/u, '')),
+          messageId: decodeURIComponent(
+            url.pathname.slice('/message/'.length).replace(/\/(update|revoke)$/u, '')
+          ),
           body: JSON.parse(String(init?.body)) as Record<string, unknown>,
         });
         return json({ message_id: `mutated-${providerMessageMutationRequests.length}` });
       }
       if (/^\/devices\/moonwitness-company-\d+\/logout$/u.test(url.pathname)) return json({});
       if (url.pathname === '/message/incoming-image/download')
-        return json({ file_path: '/statics/media/incoming.png', filename: providerDownloadFileName });
+        return json({
+          file_path: '/statics/media/incoming.png',
+          filename: providerDownloadFileName,
+        });
       if (url.pathname === '/statics/media/incoming.png')
         return new Response(providerDownloadBytes, {
           headers: {
@@ -495,12 +516,14 @@ describe('WhatsApp API GoWA bridge', () => {
   });
 
   it('repairs a connected account with a missing GoWA device mapping and allows pairing again', async () => {
-    const [account] = await db('whatsapp_accounts').insert({
-      company_id: companyId,
-      status: 'connected',
-      phone_number: '6281234567890',
-      gateway_device_id: null,
-    }).returning(['id']);
+    const [account] = await db('whatsapp_accounts')
+      .insert({
+        company_id: companyId,
+        status: 'connected',
+        phone_number: '6281234567890',
+        gateway_device_id: null,
+      })
+      .returning(['id']);
     const headers = { authorization: 'Bearer test' };
     const stale = await app.inject({ method: 'GET', url: '/whatsapp/account', headers });
     expect(stale.statusCode).toBe(200);
@@ -511,18 +534,25 @@ describe('WhatsApp API GoWA bridge', () => {
       qr_code: null,
       last_error: 'WhatsApp device mapping is missing. Connect again.',
     });
-    await expect(db('whatsapp_accounts').where({ id: account.id }).first())
-      .resolves.toMatchObject({ status: 'disconnected', phone_number: null, gateway_device_id: null });
+    await expect(db('whatsapp_accounts').where({ id: account.id }).first()).resolves.toMatchObject({
+      status: 'disconnected',
+      phone_number: null,
+      gateway_device_id: null,
+    });
 
-    const reconnect = await app.inject({ method: 'POST', url: '/whatsapp/connect', headers, payload: {} });
+    const reconnect = await app.inject({
+      method: 'POST',
+      url: '/whatsapp/connect',
+      headers,
+      payload: {},
+    });
     expect(reconnect.statusCode).toBe(202);
     expect(reconnect.json().data.status).toBe('qr');
     expect(deviceCreateCount).toBe(1);
-    await expect(db('whatsapp_accounts').where({ id: account.id }).first())
-      .resolves.toMatchObject({
-        status: 'qr',
-        gateway_device_id: `moonwitness-company-${companyId}`,
-      });
+    await expect(db('whatsapp_accounts').where({ id: account.id }).first()).resolves.toMatchObject({
+      status: 'qr',
+      gateway_device_id: `moonwitness-company-${companyId}`,
+    });
   });
 
   it('distinguishes a logged-out WhatsApp account from an unreachable GoWA gateway', async () => {
@@ -540,7 +570,12 @@ describe('WhatsApp API GoWA bridge', () => {
     const loggedOut = await app.inject({ method: 'GET', url: '/whatsapp/account', headers });
     expect(loggedOut.json().data.status).toBe('disconnected');
 
-    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('gateway offline'); }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('gateway offline');
+      })
+    );
     const gatewayDown = await app.inject({ method: 'GET', url: '/whatsapp/account', headers });
     expect(gatewayDown.json().data).toMatchObject({
       status: 'error',
@@ -878,7 +913,9 @@ describe('WhatsApp API GoWA bridge', () => {
           url: '/whatsapp/conversations',
           headers: { authorization: 'Bearer test', 'x-test-company': 'foreign' },
         })
-      ).json().data.map((chat: { id: number }) => chat.id)
+      )
+        .json()
+        .data.map((chat: { id: number }) => chat.id)
     ).toContain(foreignConversation.id);
     expect(
       (
@@ -931,10 +968,12 @@ describe('WhatsApp API GoWA bridge', () => {
       url: '/whatsapp/conversations',
       headers: { authorization: 'Bearer test' },
     });
-    expect(inbox.json().data.slice(0, 2).map((item: { id: number }) => item.id)).toEqual([
-      secondConversation[0].id,
-      firstConversation[0].id,
-    ]);
+    expect(
+      inbox
+        .json()
+        .data.slice(0, 2)
+        .map((item: { id: number }) => item.id)
+    ).toEqual([secondConversation[0].id, firstConversation[0].id]);
 
     const conversationId = Number(firstConversation[0].id);
     const firstMessage = await db('whatsapp_messages')
@@ -1013,7 +1052,9 @@ describe('WhatsApp API GoWA bridge', () => {
       (await db('whatsapp_conversations').where({ id: conversation.id }).first()).unread_count
     ).toBe(2);
     expect(
-      await db('audit_logs').where({ model: 'whatsapp.message', record_id: inbound.id, operation: 'mark_read' }).first()
+      await db('audit_logs')
+        .where({ model: 'whatsapp.message', record_id: inbound.id, operation: 'mark_read' })
+        .first()
     ).toBeTruthy();
 
     await db('whatsapp_conversation_reads')
@@ -1213,7 +1254,9 @@ describe('WhatsApp API GoWA bridge', () => {
     expect(inbox.json().data[0]).toMatchObject({ name: 'New inbound chat', unread_count: 1 });
     expect(providerMessageRequests[0]?.searchParams.get('limit')).toBe('100');
     await expect(
-      db('whatsapp_messages').where({ company_id: companyId, external_id: 'provider-unread-message' }).first()
+      db('whatsapp_messages')
+        .where({ company_id: companyId, external_id: 'provider-unread-message' })
+        .first()
     ).resolves.toMatchObject({ direction: 'inbound', content: 'New message from provider' });
   });
 
@@ -1240,7 +1283,10 @@ describe('WhatsApp API GoWA bridge', () => {
     });
     expect(failed.statusCode).toBe(200);
     expect(providerMessageRequests).toHaveLength(1);
-    const [failedConversation] = await db('whatsapp_conversations').where({ company_id: companyId, jid });
+    const [failedConversation] = await db('whatsapp_conversations').where({
+      company_id: companyId,
+      jid,
+    });
     expect(failedConversation.last_message_sync_at).toBeNull();
 
     failPreviewFetch = false;
@@ -1251,7 +1297,10 @@ describe('WhatsApp API GoWA bridge', () => {
     });
     expect(retried.statusCode).toBe(200);
     expect(providerMessageRequests).toHaveLength(2);
-    expect(retried.json().data[0]).toMatchObject({ unread_count: 1, last_message: 'Retry should sync me' });
+    expect(retried.json().data[0]).toMatchObject({
+      unread_count: 1,
+      last_message: 'Retry should sync me',
+    });
     expect(
       await db('whatsapp_conversations').where({ company_id: companyId, jid }).first()
     ).toMatchObject({ last_message_sync_at: timestamp });
@@ -1426,9 +1475,9 @@ describe('WhatsApp API GoWA bridge', () => {
       'Noted',
       'See this',
     ]);
-    const incomingImage = messages.json().data.find(
-      (item: { content: string }) => item.content === 'See this'
-    );
+    const incomingImage = messages
+      .json()
+      .data.find((item: { content: string }) => item.content === 'See this');
     expect(incomingImage).toMatchObject({ is_unread: true, is_last_read: false });
     await db('whatsapp_conversation_reads').insert({
       company_id: companyId,
@@ -1443,12 +1492,14 @@ describe('WhatsApp API GoWA bridge', () => {
       headers: { authorization: 'Bearer test' },
     });
     expect(
-      messagesWithReadCursor.json().data.find(
-        (item: { id: number }) => item.id === incomingImage.id
-      )
+      messagesWithReadCursor
+        .json()
+        .data.find((item: { id: number }) => item.id === incomingImage.id)
     ).toMatchObject({ is_unread: false, is_last_read: true });
     expect(
-      messagesWithReadCursor.json().data.find((item: { content: string }) => item.content === 'Noted')
+      messagesWithReadCursor
+        .json()
+        .data.find((item: { content: string }) => item.content === 'Noted')
     ).toMatchObject({ is_unread: false, is_last_read: false });
     providerMessages.push(
       {
@@ -1536,8 +1587,8 @@ describe('WhatsApp API GoWA bridge', () => {
       url: `/whatsapp/conversations/${conversationId}/messages?limit=50&offset=0`,
       headers: { authorization: 'Bearer test' },
     });
-    const incrementalHistoryRequest = providerMessageRequests.find(
-      (url) => url.searchParams.has('start_time')
+    const incrementalHistoryRequest = providerMessageRequests.find((url) =>
+      url.searchParams.has('start_time')
     );
     expect(incrementalHistoryRequest?.searchParams.get('start_time')).toBe(
       '2026-10-23T10:56:00.000Z'
@@ -1560,11 +1611,13 @@ describe('WhatsApp API GoWA bridge', () => {
     expect(image.headers['content-security-policy']).toContain("default-src 'none'; sandbox");
     expect(image.headers['x-content-type-options']).toBe('nosniff');
     expect(image.body).toBe(pngFixture().toString());
-    const mediaAudit = await db('audit_logs').where({
-      model: 'whatsapp.message',
-      record_id: imageId,
-      operation: 'media_access',
-    }).first();
+    const mediaAudit = await db('audit_logs')
+      .where({
+        model: 'whatsapp.message',
+        record_id: imageId,
+        operation: 'media_access',
+      })
+      .first();
     expect(JSON.parse(mediaAudit.changes)).toEqual({ area: 'whatsapp', company_id: companyId });
     expect(mediaAudit.changes).not.toContain('628');
 
@@ -1614,8 +1667,9 @@ describe('WhatsApp API GoWA bridge', () => {
       last_message: 'Preview from latest message',
       last_message_at: timestamp,
     });
-    expect(providerMessageRequests.filter((url) => url.searchParams.get('limit') === '100'))
-      .toHaveLength(1);
+    expect(
+      providerMessageRequests.filter((url) => url.searchParams.get('limit') === '100')
+    ).toHaveLength(1);
 
     const second = await app.inject({
       method: 'GET',
@@ -1623,8 +1677,9 @@ describe('WhatsApp API GoWA bridge', () => {
       headers: { authorization: 'Bearer test' },
     });
     expect(second.json().data[0].last_message).toBe('Preview from latest message');
-    expect(providerMessageRequests.filter((url) => url.searchParams.get('limit') === '100'))
-      .toHaveLength(1);
+    expect(
+      providerMessageRequests.filter((url) => url.searchParams.get('limit') === '100')
+    ).toHaveLength(1);
   });
 
   it('sends text to a group and media to a private chat through GoWA, and reports upstream failures', async () => {
@@ -1678,7 +1733,10 @@ describe('WhatsApp API GoWA bridge', () => {
     const [imageQuoteTarget] = await db('whatsapp_messages')
       .insert({
         company_id: companyId,
-        account_id: await db('whatsapp_accounts').where({ company_id: companyId }).first().then((row) => row.id),
+        account_id: await db('whatsapp_accounts')
+          .where({ company_id: companyId })
+          .first()
+          .then((row) => row.id),
         conversation_id: privateId,
         external_id: 'private-image-quote-target',
         direction: 'inbound',
@@ -1761,12 +1819,10 @@ describe('WhatsApp API GoWA bridge', () => {
       url: '/whatsapp/conversations',
       headers: { authorization: 'Bearer test' },
     });
-    const sourceConversationId = inbox.json().data.find(
-      (chat: { is_group: boolean }) => chat.is_group
-    ).id as number;
-    const destination = inbox.json().data.find(
-      (chat: { is_group: boolean }) => !chat.is_group
-    );
+    const sourceConversationId = inbox
+      .json()
+      .data.find((chat: { is_group: boolean }) => chat.is_group).id as number;
+    const destination = inbox.json().data.find((chat: { is_group: boolean }) => !chat.is_group);
     const [source] = await db('whatsapp_messages')
       .insert({
         company_id: companyId,
@@ -1819,7 +1875,11 @@ describe('WhatsApp API GoWA bridge', () => {
     expect((await db('whatsapp_messages').where({ id: forwardedId }).first()).status).toBe('sent');
 
     const [foreignAccount] = await db('whatsapp_accounts')
-      .insert({ company_id: foreignCompanyId, status: 'connected', gateway_device_id: 'foreign-device' })
+      .insert({
+        company_id: foreignCompanyId,
+        status: 'connected',
+        gateway_device_id: 'foreign-device',
+      })
       .returning(['id']);
     const [foreignConversation] = await db('whatsapp_conversations')
       .insert({
@@ -1861,29 +1921,33 @@ describe('WhatsApp API GoWA bridge', () => {
       { jid, name: 'Reaction chat', last_message_time: '2026-10-24T10:00:00Z' },
       { jid: groupJid, name: 'Reaction group', last_message_time: '2026-10-24T09:00:00Z' },
     ];
-    providerMessages = [{
-      id: 'provider-message-to-react',
-      chat_jid: jid,
-      content: 'A message with a reaction',
-      timestamp: '2026-10-24T10:00:00Z',
-      is_from_me: false,
-      media_type: 'text',
-      reactions: [{
-        emoji: '👀',
-        sender_jid: '628222222222@s.whatsapp.net',
-        sender_display_name: 'Other participant',
+    providerMessages = [
+      {
+        id: 'provider-message-to-react',
+        chat_jid: jid,
+        content: 'A message with a reaction',
+        timestamp: '2026-10-24T10:00:00Z',
         is_from_me: false,
-        timestamp: '2026-10-24T10:01:00Z',
-      }],
-    }];
+        media_type: 'text',
+        reactions: [
+          {
+            emoji: '👀',
+            sender_jid: '628222222222@s.whatsapp.net',
+            sender_display_name: 'Other participant',
+            is_from_me: false,
+            timestamp: '2026-10-24T10:01:00Z',
+          },
+        ],
+      },
+    ];
     const inbox = await app.inject({
       method: 'GET',
       url: '/whatsapp/conversations',
       headers: { authorization: 'Bearer test' },
     });
-    const conversationId = inbox.json().data.find(
-      (conversation: { jid: string }) => conversation.jid === jid
-    ).id as number;
+    const conversationId = inbox
+      .json()
+      .data.find((conversation: { jid: string }) => conversation.jid === jid).id as number;
     const history = await app.inject({
       method: 'GET',
       url: `/whatsapp/conversations/${conversationId}/messages`,
@@ -1892,9 +1956,7 @@ describe('WhatsApp API GoWA bridge', () => {
     expect(history.statusCode).toBe(200);
     const source = history.json().data[0];
     expect(source, JSON.stringify(history.json())).toBeDefined();
-    expect(source.reactions).toEqual([
-      expect.objectContaining({ emoji: '👀', is_from_me: false }),
-    ]);
+    expect(source.reactions).toEqual([expect.objectContaining({ emoji: '👀', is_from_me: false })]);
 
     const reaction = await app.inject({
       method: 'POST',
@@ -1907,16 +1969,20 @@ describe('WhatsApp API GoWA bridge', () => {
       expect.objectContaining({ emoji: '👀', is_from_me: false }),
       expect.objectContaining({ emoji: '👍', is_from_me: true }),
     ]);
-    expect(providerReactionRequests).toEqual([{
-      messageId: 'provider-message-to-react',
-      body: { phone: jid, emoji: '👍' },
-    }]);
-    const stored = await db('whatsapp_messages').where({ id: source.id, company_id: companyId }).first();
+    expect(providerReactionRequests).toEqual([
+      {
+        messageId: 'provider-message-to-react',
+        body: { phone: jid, emoji: '👍' },
+      },
+    ]);
+    const stored = await db('whatsapp_messages')
+      .where({ id: source.id, company_id: companyId })
+      .first();
     expect(JSON.parse(stored.reactions)).toHaveLength(2);
 
-    const groupConversationId = inbox.json().data.find(
-      (conversation: { jid: string }) => conversation.jid === groupJid
-    ).id as number;
+    const groupConversationId = inbox
+      .json()
+      .data.find((conversation: { jid: string }) => conversation.jid === groupJid).id as number;
     const [groupMessage] = await db('whatsapp_messages')
       .insert({
         company_id: companyId,
@@ -1951,7 +2017,11 @@ describe('WhatsApp API GoWA bridge', () => {
     });
 
     const foreignAccount = await db('whatsapp_accounts')
-      .insert({ company_id: foreignCompanyId, status: 'connected', gateway_device_id: 'foreign-device' })
+      .insert({
+        company_id: foreignCompanyId,
+        status: 'connected',
+        gateway_device_id: 'foreign-device',
+      })
       .returning(['id']);
     const [foreignConversation] = await db('whatsapp_conversations')
       .insert({
@@ -1988,24 +2058,42 @@ describe('WhatsApp API GoWA bridge', () => {
 
   it('edits recent own text and revokes own messages only within the active company', async () => {
     const accountId = await connectAndMarkReady();
-    const [conversation] = await db('whatsapp_conversations').insert({
-      company_id: companyId, account_id: accountId, jid: '628111111111@s.whatsapp.net',
-      name: 'Mutation chat', is_group: false, unread_count: 0, last_message: 'Before edit',
-    }).returning(['id']);
-    const [message] = await db('whatsapp_messages').insert({
-      company_id: companyId, account_id: accountId, conversation_id: conversation.id,
-      external_id: 'provider-message-edit-revoke', direction: 'outbound', message_type: 'text',
-      content: 'Before edit', status: 'sent', create_date: new Date().toISOString(),
-    }).returning(['id']);
+    const [conversation] = await db('whatsapp_conversations')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        jid: '628111111111@s.whatsapp.net',
+        name: 'Mutation chat',
+        is_group: false,
+        unread_count: 0,
+        last_message: 'Before edit',
+      })
+      .returning(['id']);
+    const [message] = await db('whatsapp_messages')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        conversation_id: conversation.id,
+        external_id: 'provider-message-edit-revoke',
+        direction: 'outbound',
+        message_type: 'text',
+        content: 'Before edit',
+        status: 'sent',
+        create_date: new Date().toISOString(),
+      })
+      .returning(['id']);
 
     const edited = await app.inject({
-      method: 'POST', url: `/whatsapp/messages/${message.id}/edit`,
-      headers: { authorization: 'Bearer test' }, payload: { content: 'After edit' },
+      method: 'POST',
+      url: `/whatsapp/messages/${message.id}/edit`,
+      headers: { authorization: 'Bearer test' },
+      payload: { content: 'After edit' },
     });
     expect(edited.statusCode).toBe(200);
     expect(edited.json().data).toMatchObject({ content: 'After edit', is_edited: true });
     expect(providerMessageMutationRequests[0]).toEqual({
-      operation: 'update', messageId: 'provider-message-edit-revoke',
+      operation: 'update',
+      messageId: 'provider-message-edit-revoke',
       body: { phone: '628111111111@s.whatsapp.net', message: 'After edit' },
     });
     const editedRecord = await db('whatsapp_messages').where({ id: message.id }).first();
@@ -2014,72 +2102,118 @@ describe('WhatsApp API GoWA bridge', () => {
     expect(Boolean(editedRecord.is_deleted)).toBe(false);
 
     const revoked = await app.inject({
-      method: 'POST', url: `/whatsapp/messages/${message.id}/revoke`,
+      method: 'POST',
+      url: `/whatsapp/messages/${message.id}/revoke`,
       headers: { authorization: 'Bearer test' },
     });
     expect(revoked.statusCode).toBe(200);
     expect(providerMessageMutationRequests[1]).toEqual({
-      operation: 'revoke', messageId: 'provider-message-edit-revoke', body: { phone: '628111111111@s.whatsapp.net' },
+      operation: 'revoke',
+      messageId: 'provider-message-edit-revoke',
+      body: { phone: '628111111111@s.whatsapp.net' },
     });
     const revokedRecord = await db('whatsapp_messages').where({ id: message.id }).first();
     expect(revokedRecord.content).toBe('This message was deleted');
     expect(Boolean(revokedRecord.is_deleted)).toBe(true);
-    expect((await db('whatsapp_conversations').where({ id: conversation.id }).first()).last_message)
-      .toBe('This message was deleted');
+    expect(
+      (await db('whatsapp_conversations').where({ id: conversation.id }).first()).last_message
+    ).toBe('This message was deleted');
 
-    const [inbound] = await db('whatsapp_messages').insert({
-      company_id: companyId, account_id: accountId, conversation_id: conversation.id,
-      external_id: 'provider-inbound-cannot-edit', direction: 'inbound', message_type: 'text',
-      content: 'Customer message', status: 'received',
-    }).returning(['id']);
+    const [inbound] = await db('whatsapp_messages')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        conversation_id: conversation.id,
+        external_id: 'provider-inbound-cannot-edit',
+        direction: 'inbound',
+        message_type: 'text',
+        content: 'Customer message',
+        status: 'received',
+      })
+      .returning(['id']);
     const inboundEdit = await app.inject({
-      method: 'POST', url: `/whatsapp/messages/${inbound.id}/edit`,
-      headers: { authorization: 'Bearer test' }, payload: { content: 'Attempted edit' },
+      method: 'POST',
+      url: `/whatsapp/messages/${inbound.id}/edit`,
+      headers: { authorization: 'Bearer test' },
+      payload: { content: 'Attempted edit' },
     });
     const inboundRevoke = await app.inject({
-      method: 'POST', url: `/whatsapp/messages/${inbound.id}/revoke`,
+      method: 'POST',
+      url: `/whatsapp/messages/${inbound.id}/revoke`,
       headers: { authorization: 'Bearer test' },
     });
     expect(inboundEdit.statusCode).toBe(409);
     expect(inboundRevoke.statusCode).toBe(409);
 
-    const [expired] = await db('whatsapp_messages').insert({
-      company_id: companyId, account_id: accountId, conversation_id: conversation.id,
-      external_id: 'provider-old-text', direction: 'outbound', message_type: 'text',
-      content: 'Too old', status: 'sent', create_date: new Date(Date.now() - 16 * 60_000).toISOString(),
-    }).returning(['id']);
+    const [expired] = await db('whatsapp_messages')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        conversation_id: conversation.id,
+        external_id: 'provider-old-text',
+        direction: 'outbound',
+        message_type: 'text',
+        content: 'Too old',
+        status: 'sent',
+        create_date: new Date(Date.now() - 16 * 60_000).toISOString(),
+      })
+      .returning(['id']);
     const expiredEdit = await app.inject({
-      method: 'POST', url: `/whatsapp/messages/${expired.id}/edit`,
-      headers: { authorization: 'Bearer test' }, payload: { content: 'Too late' },
+      method: 'POST',
+      url: `/whatsapp/messages/${expired.id}/edit`,
+      headers: { authorization: 'Bearer test' },
+      payload: { content: 'Too late' },
     });
     expect(expiredEdit.statusCode).toBe(409);
 
-    const foreignAccount = await db('whatsapp_accounts').insert({
-      company_id: foreignCompanyId, status: 'connected', gateway_device_id: 'foreign-device',
-    }).returning(['id']);
-    const [foreignConversation] = await db('whatsapp_conversations').insert({
-      company_id: foreignCompanyId, account_id: foreignAccount[0].id,
-      jid: '628999999999@s.whatsapp.net', name: 'Foreign mutation', is_group: false, unread_count: 0,
-    }).returning(['id']);
-    const [foreignMessage] = await db('whatsapp_messages').insert({
-      company_id: foreignCompanyId, account_id: foreignAccount[0].id,
-      conversation_id: foreignConversation.id, external_id: 'foreign-own-message', direction: 'outbound',
-      message_type: 'text', content: 'Foreign message', status: 'sent',
-    }).returning(['id']);
+    const foreignAccount = await db('whatsapp_accounts')
+      .insert({
+        company_id: foreignCompanyId,
+        status: 'connected',
+        gateway_device_id: 'foreign-device',
+      })
+      .returning(['id']);
+    const [foreignConversation] = await db('whatsapp_conversations')
+      .insert({
+        company_id: foreignCompanyId,
+        account_id: foreignAccount[0].id,
+        jid: '628999999999@s.whatsapp.net',
+        name: 'Foreign mutation',
+        is_group: false,
+        unread_count: 0,
+      })
+      .returning(['id']);
+    const [foreignMessage] = await db('whatsapp_messages')
+      .insert({
+        company_id: foreignCompanyId,
+        account_id: foreignAccount[0].id,
+        conversation_id: foreignConversation.id,
+        external_id: 'foreign-own-message',
+        direction: 'outbound',
+        message_type: 'text',
+        content: 'Foreign message',
+        status: 'sent',
+      })
+      .returning(['id']);
     const foreignEdit = await app.inject({
-      method: 'POST', url: `/whatsapp/messages/${foreignMessage.id}/edit`,
-      headers: { authorization: 'Bearer test' }, payload: { content: 'Cross-tenant attempt' },
+      method: 'POST',
+      url: `/whatsapp/messages/${foreignMessage.id}/edit`,
+      headers: { authorization: 'Bearer test' },
+      payload: { content: 'Cross-tenant attempt' },
     });
     const foreignRevoke = await app.inject({
-      method: 'POST', url: `/whatsapp/messages/${foreignMessage.id}/revoke`,
+      method: 'POST',
+      url: `/whatsapp/messages/${foreignMessage.id}/revoke`,
       headers: { authorization: 'Bearer test' },
     });
     expect(foreignEdit.statusCode).toBe(404);
     expect(foreignRevoke.statusCode).toBe(404);
 
     const deniedEdit = await app.inject({
-      method: 'POST', url: `/whatsapp/messages/${message.id}/edit`,
-      headers: { authorization: 'Bearer test' }, payload: { content: 'Restore it' },
+      method: 'POST',
+      url: `/whatsapp/messages/${message.id}/edit`,
+      headers: { authorization: 'Bearer test' },
+      payload: { content: 'Restore it' },
     });
     expect(deniedEdit.statusCode).toBe(409);
     expect(providerMessageMutationRequests).toHaveLength(2);
@@ -2088,54 +2222,102 @@ describe('WhatsApp API GoWA bridge', () => {
   it('applies signed GoWA edit and revoke events idempotently and redacts deleted media', async () => {
     const accountId = await connectAndMarkReady();
     process.env.WHATSAPP_WEBHOOK_SECRET = 'test-gowa-webhook-secret';
-    const [conversation] = await db('whatsapp_conversations').insert({
-      company_id: companyId, account_id: accountId, jid: '628222222222@s.whatsapp.net',
-      name: 'Webhook mutation', is_group: false, unread_count: 0,
-    }).returning(['id']);
-    const [message] = await db('whatsapp_messages').insert({
-      company_id: companyId, account_id: accountId, conversation_id: conversation.id,
-      external_id: 'provider-message-webhook-mutation', direction: 'outbound', message_type: 'text',
-      content: 'Before edit', status: 'sent',
-    }).returning(['id']);
+    const [conversation] = await db('whatsapp_conversations')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        jid: '628222222222@s.whatsapp.net',
+        name: 'Webhook mutation',
+        is_group: false,
+        unread_count: 0,
+      })
+      .returning(['id']);
+    const [message] = await db('whatsapp_messages')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        conversation_id: conversation.id,
+        external_id: 'provider-message-webhook-mutation',
+        direction: 'outbound',
+        message_type: 'text',
+        content: 'Before edit',
+        status: 'sent',
+      })
+      .returning(['id']);
     const mediaKey = `webhook-revoked-${randomUUID()}`;
     await storage.put(mediaKey, pngFixture());
-    const [mediaMessage] = await db('whatsapp_messages').insert({
-      company_id: companyId, account_id: accountId, conversation_id: conversation.id,
-      external_id: 'provider-message-webhook-delete', direction: 'outbound', message_type: 'image',
-      content: 'An image', status: 'sent', media_key: mediaKey, media_mime_type: 'image/png',
-      media_file_name: 'secret.png',
-    }).returning(['id']);
+    const [mediaMessage] = await db('whatsapp_messages')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        conversation_id: conversation.id,
+        external_id: 'provider-message-webhook-delete',
+        direction: 'outbound',
+        message_type: 'image',
+        content: 'An image',
+        status: 'sent',
+        media_key: mediaKey,
+        media_mime_type: 'image/png',
+        media_file_name: 'secret.png',
+      })
+      .returning(['id']);
     const postEvent = async (event: string, payload: Record<string, unknown>) => {
-      const raw = JSON.stringify({ event, session_id: `moonwitness-company-${companyId}`, payload });
+      const raw = JSON.stringify({
+        event,
+        session_id: `moonwitness-company-${companyId}`,
+        payload,
+      });
       return app.inject({
-        method: 'POST', url: `/whatsapp/gowa/webhook/moonwitness-company-${companyId}`,
+        method: 'POST',
+        url: `/whatsapp/gowa/webhook/moonwitness-company-${companyId}`,
         headers: {
           'content-type': 'application/json',
           'x-hub-signature-256': `sha256=${createHmac('sha256', process.env.WHATSAPP_WEBHOOK_SECRET!).update(raw).digest('hex')}`,
-        }, payload: raw,
+        },
+        payload: raw,
       });
     };
-    expect((await postEvent('message.edited', {
-      id: 'edit-event-id', original_message_id: 'provider-message-webhook-mutation', body: 'Edited caption',
-    })).statusCode).toBe(204);
+    expect(
+      (
+        await postEvent('message.edited', {
+          id: 'edit-event-id',
+          original_message_id: 'provider-message-webhook-mutation',
+          body: 'Edited caption',
+        })
+      ).statusCode
+    ).toBe(204);
     const edited = await db('whatsapp_messages').where({ id: message.id }).first();
     expect(edited.content).toBe('Edited caption');
     expect(Boolean(edited.is_edited)).toBe(true);
 
-    expect((await postEvent('message.revoked', {
-      id: 'revoke-event-id', revoked_message_id: 'provider-message-webhook-delete',
-    })).statusCode).toBe(204);
-    expect((await postEvent('message.revoked', {
-      id: 'revoke-event-id', revoked_message_id: 'provider-message-webhook-delete',
-    })).statusCode).toBe(204);
+    expect(
+      (
+        await postEvent('message.revoked', {
+          id: 'revoke-event-id',
+          revoked_message_id: 'provider-message-webhook-delete',
+        })
+      ).statusCode
+    ).toBe(204);
+    expect(
+      (
+        await postEvent('message.revoked', {
+          id: 'revoke-event-id',
+          revoked_message_id: 'provider-message-webhook-delete',
+        })
+      ).statusCode
+    ).toBe(204);
     const revoked = await db('whatsapp_messages').where({ id: mediaMessage.id }).first();
     expect(Boolean(revoked.is_deleted)).toBe(true);
     expect(revoked).toMatchObject({
-      content: 'This message was deleted', media_key: null, media_mime_type: null, media_file_name: null,
+      content: 'This message was deleted',
+      media_key: null,
+      media_mime_type: null,
+      media_file_name: null,
     });
     expect(await storage.get(mediaKey)).toBeNull();
     const mediaRead = await app.inject({
-      method: 'GET', url: `/whatsapp/media/${mediaMessage.id}`,
+      method: 'GET',
+      url: `/whatsapp/media/${mediaMessage.id}`,
       headers: { authorization: 'Bearer test' },
     });
     expect(mediaRead.statusCode).toBe(404);
@@ -2172,12 +2354,12 @@ describe('WhatsApp API GoWA bridge', () => {
       url: `/whatsapp/conversations/${conversationId}/messages`,
       headers: { authorization: 'Bearer test' },
     });
-    const original = history.json().data.find(
-      (item: { content: string }) => item.content === 'Original group message'
-    );
-    const existingReply = history.json().data.find(
-      (item: { content: string }) => item.content === 'Existing quote reply'
-    );
+    const original = history
+      .json()
+      .data.find((item: { content: string }) => item.content === 'Original group message');
+    const existingReply = history
+      .json()
+      .data.find((item: { content: string }) => item.content === 'Existing quote reply');
     expect(existingReply.reply_to).toMatchObject({
       id: original.id,
       content: 'Original group message',
@@ -2308,37 +2490,45 @@ describe('WhatsApp API GoWA bridge', () => {
   it('authenticates GoWA receipts and applies delivery states monotonically within one company', async () => {
     const accountId = await connectAndMarkReady();
     process.env.WHATSAPP_WEBHOOK_SECRET = 'test-gowa-webhook-secret';
-    const [conversation] = await db('whatsapp_conversations').insert({
-      company_id: companyId,
-      account_id: accountId,
-      jid: '628111111111@s.whatsapp.net',
-      name: 'Receipt test',
-      is_group: false,
-      unread_count: 0,
-    }).returning(['id']);
-    const [outbound] = await db('whatsapp_messages').insert({
-      company_id: companyId,
-      account_id: accountId,
-      conversation_id: conversation.id,
-      external_id: 'receipt-test-message',
-      direction: 'outbound',
-      message_type: 'text',
-      content: 'receipt test',
-      status: 'sent',
-    }).returning(['id']);
-    const [foreignAccount] = await db('whatsapp_accounts').insert({
-      company_id: foreignCompanyId,
-      gateway_device_id: 'moonwitness-company-foreign',
-      status: 'connected',
-    }).returning(['id']);
-    const [foreignConversation] = await db('whatsapp_conversations').insert({
-      company_id: foreignCompanyId,
-      account_id: foreignAccount.id,
-      jid: '628222222222@s.whatsapp.net',
-      name: 'Foreign receipt test',
-      is_group: false,
-      unread_count: 0,
-    }).returning(['id']);
+    const [conversation] = await db('whatsapp_conversations')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        jid: '628111111111@s.whatsapp.net',
+        name: 'Receipt test',
+        is_group: false,
+        unread_count: 0,
+      })
+      .returning(['id']);
+    const [outbound] = await db('whatsapp_messages')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        conversation_id: conversation.id,
+        external_id: 'receipt-test-message',
+        direction: 'outbound',
+        message_type: 'text',
+        content: 'receipt test',
+        status: 'sent',
+      })
+      .returning(['id']);
+    const [foreignAccount] = await db('whatsapp_accounts')
+      .insert({
+        company_id: foreignCompanyId,
+        gateway_device_id: 'moonwitness-company-foreign',
+        status: 'connected',
+      })
+      .returning(['id']);
+    const [foreignConversation] = await db('whatsapp_conversations')
+      .insert({
+        company_id: foreignCompanyId,
+        account_id: foreignAccount.id,
+        jid: '628222222222@s.whatsapp.net',
+        name: 'Foreign receipt test',
+        is_group: false,
+        unread_count: 0,
+      })
+      .returning(['id']);
     await db('whatsapp_messages').insert({
       company_id: foreignCompanyId,
       account_id: foreignAccount.id,
@@ -2372,14 +2562,20 @@ describe('WhatsApp API GoWA bridge', () => {
     };
 
     expect((await sendReceipt('read', 'wrong-secret')).statusCode).toBe(401);
-    expect((await sendReceipt('read', process.env.WHATSAPP_WEBHOOK_SECRET!, 'another-device')).statusCode).toBe(403);
+    expect(
+      (await sendReceipt('read', process.env.WHATSAPP_WEBHOOK_SECRET!, 'another-device')).statusCode
+    ).toBe(403);
     expect((await db('whatsapp_messages').where({ id: outbound.id }).first()).status).toBe('sent');
     expect((await sendReceipt('delivered')).statusCode).toBe(204);
-    expect((await db('whatsapp_messages').where({ id: outbound.id }).first()).status).toBe('delivered');
+    expect((await db('whatsapp_messages').where({ id: outbound.id }).first()).status).toBe(
+      'delivered'
+    );
     expect((await sendReceipt('read')).statusCode).toBe(204);
     expect((await sendReceipt('delivered')).statusCode).toBe(204);
     expect((await db('whatsapp_messages').where({ id: outbound.id }).first()).status).toBe('read');
-    expect((await db('whatsapp_messages').where({ company_id: foreignCompanyId }).first()).status).toBe('sent');
+    expect(
+      (await db('whatsapp_messages').where({ company_id: foreignCompanyId }).first()).status
+    ).toBe('sent');
   });
 
   it('ingests signed private and group message events once and keeps media on the GoWA download path', async () => {
@@ -2416,19 +2612,31 @@ describe('WhatsApp API GoWA bridge', () => {
       .where({ company_id: companyId, jid: privateMessage.chat_id })
       .first();
     expect(privateConversation).toMatchObject({ name: 'Webhook Contact', unread_count: 1 });
-    expect(await db('whatsapp_messages').where({ company_id: companyId, external_id: privateMessage.id })).toMatchObject([
-      { account_id: accountId, conversation_id: privateConversation.id, direction: 'inbound', status: 'received', content: privateMessage.body },
+    expect(
+      await db('whatsapp_messages').where({ company_id: companyId, external_id: privateMessage.id })
+    ).toMatchObject([
+      {
+        account_id: accountId,
+        conversation_id: privateConversation.id,
+        direction: 'inbound',
+        status: 'received',
+        content: privateMessage.body,
+      },
     ]);
 
     const contactLid = '251556368777322@lid';
-    expect((await postMessage({
-      id: 'webhook-private-lid-before-map',
-      chat_id: contactLid,
-      from: contactLid,
-      timestamp: '2026-10-24T10:00:30Z',
-      is_from_me: false,
-      body: 'First seen as a LID',
-    })).statusCode).toBe(204);
+    expect(
+      (
+        await postMessage({
+          id: 'webhook-private-lid-before-map',
+          chat_id: contactLid,
+          from: contactLid,
+          timestamp: '2026-10-24T10:00:30Z',
+          is_from_me: false,
+          body: 'First seen as a LID',
+        })
+      ).statusCode
+    ).toBe(204);
     const lidConversation = await db('whatsapp_conversations')
       .where({ company_id: companyId, jid: contactLid })
       .first();
@@ -2443,15 +2651,19 @@ describe('WhatsApp API GoWA bridge', () => {
       last_read_at: lidMessage.create_date,
     });
     const canonicalPhoneJid = '628333444555@s.whatsapp.net';
-    expect((await postMessage({
-      id: 'webhook-private-lid-after-map',
-      chat_id: canonicalPhoneJid,
-      from: canonicalPhoneJid,
-      from_lid: contactLid,
-      timestamp: '2026-10-24T10:00:45Z',
-      is_from_me: false,
-      body: 'Resolved to a phone JID',
-    })).statusCode).toBe(204);
+    expect(
+      (
+        await postMessage({
+          id: 'webhook-private-lid-after-map',
+          chat_id: canonicalPhoneJid,
+          from: canonicalPhoneJid,
+          from_lid: contactLid,
+          timestamp: '2026-10-24T10:00:45Z',
+          is_from_me: false,
+          body: 'Resolved to a phone JID',
+        })
+      ).statusCode
+    ).toBe(204);
     const conversationsAfterLidResolution = await db('whatsapp_conversations')
       .where({ company_id: companyId })
       .whereIn('jid', [contactLid, canonicalPhoneJid]);
@@ -2459,42 +2671,49 @@ describe('WhatsApp API GoWA bridge', () => {
     expect(conversationsAfterLidResolution[0]).toMatchObject({ jid: canonicalPhoneJid });
     const mergedMessages = await db('whatsapp_messages')
       .where({ company_id: companyId })
-      .whereIn('external_id', [
-        'webhook-private-lid-before-map',
-        'webhook-private-lid-after-map',
-      ]);
+      .whereIn('external_id', ['webhook-private-lid-before-map', 'webhook-private-lid-after-map']);
     expect(new Set(mergedMessages.map((message) => message.conversation_id))).toEqual(
       new Set([conversationsAfterLidResolution[0].id])
     );
-    expect(await db('whatsapp_conversation_aliases').where({
-      company_id: companyId,
-      alias_jid: contactLid,
-      conversation_id: conversationsAfterLidResolution[0].id,
-    })).toHaveLength(1);
-    expect(await db('whatsapp_conversation_reads').where({
-      company_id: companyId,
-      conversation_id: conversationsAfterLidResolution[0].id,
-      user_id: 1,
-      last_read_message_id: lidMessage.id,
-    })).toHaveLength(1);
-    expect((await postMessage({
-      id: 'webhook-private-lid-after-known-map',
-      chat_id: contactLid,
-      from: contactLid,
-      timestamp: '2026-10-24T10:00:48Z',
-      is_from_me: false,
-      body: 'Still grouped after the LID mapping is known',
-    })).statusCode).toBe(204);
+    expect(
+      await db('whatsapp_conversation_aliases').where({
+        company_id: companyId,
+        alias_jid: contactLid,
+        conversation_id: conversationsAfterLidResolution[0].id,
+      })
+    ).toHaveLength(1);
+    expect(
+      await db('whatsapp_conversation_reads').where({
+        company_id: companyId,
+        conversation_id: conversationsAfterLidResolution[0].id,
+        user_id: 1,
+        last_read_message_id: lidMessage.id,
+      })
+    ).toHaveLength(1);
+    expect(
+      (
+        await postMessage({
+          id: 'webhook-private-lid-after-known-map',
+          chat_id: contactLid,
+          from: contactLid,
+          timestamp: '2026-10-24T10:00:48Z',
+          is_from_me: false,
+          body: 'Still grouped after the LID mapping is known',
+        })
+      ).statusCode
+    ).toBe(204);
     const conversationsAfterKnownLid = await db('whatsapp_conversations')
       .where({ company_id: companyId })
       .whereIn('jid', [contactLid, canonicalPhoneJid]);
     expect(conversationsAfterKnownLid).toHaveLength(1);
     expect(conversationsAfterKnownLid[0].jid).toBe(canonicalPhoneJid);
-    expect(await db('whatsapp_messages').where({
-      company_id: companyId,
-      external_id: 'webhook-private-lid-after-known-map',
-      conversation_id: conversationsAfterLidResolution[0].id,
-    })).toHaveLength(1);
+    expect(
+      await db('whatsapp_messages').where({
+        company_id: companyId,
+        external_id: 'webhook-private-lid-after-known-map',
+        conversation_id: conversationsAfterLidResolution[0].id,
+      })
+    ).toHaveLength(1);
     const foreignDeviceId = 'moonwitness-company-foreign-lid-test';
     await db('whatsapp_accounts').insert({
       company_id: foreignCompanyId,
@@ -2535,24 +2754,32 @@ describe('WhatsApp API GoWA bridge', () => {
       .where({ company_id: foreignCompanyId, alias_jid: contactLid })
       .first();
     expect(Number(mainCompanyAlias.conversation_id)).toBe(conversationsAfterLidResolution[0].id);
-    expect(Number(foreignCompanyAlias.conversation_id)).not.toBe(conversationsAfterLidResolution[0].id);
-    expect(await db('whatsapp_conversations').where({
-      company_id: foreignCompanyId,
-      jid: foreignJid,
-    })).toHaveLength(1);
+    expect(Number(foreignCompanyAlias.conversation_id)).not.toBe(
+      conversationsAfterLidResolution[0].id
+    );
+    expect(
+      await db('whatsapp_conversations').where({
+        company_id: foreignCompanyId,
+        jid: foreignJid,
+      })
+    ).toHaveLength(1);
 
-    expect((await postMessage({
-      id: 'webhook-group-image-1',
-      chat_id: '120363123456789@g.us',
-      from: '628222222222@s.whatsapp.net',
-      from_lid: '251556368777322@lid',
-      sender_display_name: 'Group sender',
-      timestamp: '2026-10-24T10:01:00Z',
-      is_from_me: false,
-      body: 'Group image caption',
-      image: { path: 'statics/media/provider-image.jpg', caption: 'Group image caption' },
-      filename: 'group-image.jpg',
-    })).statusCode).toBe(204);
+    expect(
+      (
+        await postMessage({
+          id: 'webhook-group-image-1',
+          chat_id: '120363123456789@g.us',
+          from: '628222222222@s.whatsapp.net',
+          from_lid: '251556368777322@lid',
+          sender_display_name: 'Group sender',
+          timestamp: '2026-10-24T10:01:00Z',
+          is_from_me: false,
+          body: 'Group image caption',
+          image: { path: 'statics/media/provider-image.jpg', caption: 'Group image caption' },
+          filename: 'group-image.jpg',
+        })
+      ).statusCode
+    ).toBe(204);
     const groupConversation = await db('whatsapp_conversations')
       .where({ company_id: companyId, jid: '120363123456789@g.us' })
       .first();
@@ -2571,40 +2798,53 @@ describe('WhatsApp API GoWA bridge', () => {
       status: 'received',
     });
     expect(groupMessage.media_key).toBeNull();
-    expect(await db('whatsapp_conversation_aliases').where({
-      company_id: companyId,
-      alias_jid: '251556368777322@lid',
-    })).toHaveLength(1);
+    expect(
+      await db('whatsapp_conversation_aliases').where({
+        company_id: companyId,
+        alias_jid: '251556368777322@lid',
+      })
+    ).toHaveLength(1);
 
     const sentAt = new Date().toISOString();
-    const [pendingMessage] = await db('whatsapp_messages').insert({
-      company_id: companyId,
-      account_id: accountId,
-      conversation_id: privateConversation.id,
-      external_id: `pending:${randomUUID()}`,
-      direction: 'outbound',
-      message_type: 'text',
-      content: 'Echo before HTTP acknowledgement',
-      status: 'sending',
-      create_date: sentAt,
-    }).returning(['id']);
-    expect((await postMessage({
-      id: 'webhook-outbound-echo-1',
-      chat_id: privateMessage.chat_id,
-      from: '6281234567890@s.whatsapp.net',
-      sender_display_name: 'My WhatsApp account',
-      timestamp: sentAt,
-      is_from_me: true,
-      body: 'Echo before HTTP acknowledgement',
-    })).statusCode).toBe(204);
+    const [pendingMessage] = await db('whatsapp_messages')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        conversation_id: privateConversation.id,
+        external_id: `pending:${randomUUID()}`,
+        direction: 'outbound',
+        message_type: 'text',
+        content: 'Echo before HTTP acknowledgement',
+        status: 'sending',
+        create_date: sentAt,
+      })
+      .returning(['id']);
+    expect(
+      (
+        await postMessage({
+          id: 'webhook-outbound-echo-1',
+          chat_id: privateMessage.chat_id,
+          from: '6281234567890@s.whatsapp.net',
+          sender_display_name: 'My WhatsApp account',
+          timestamp: sentAt,
+          is_from_me: true,
+          body: 'Echo before HTTP acknowledgement',
+        })
+      ).statusCode
+    ).toBe(204);
     const reconciled = await db('whatsapp_messages')
       .where({ company_id: companyId, id: pendingMessage.id })
       .first();
     expect(reconciled).toMatchObject({ external_id: 'webhook-outbound-echo-1', status: 'sent' });
-    expect(await db('whatsapp_messages')
-      .where({ company_id: companyId, external_id: 'webhook-outbound-echo-1' })).toHaveLength(1);
-    expect((await db('whatsapp_conversations').where({ id: privateConversation.id }).first()).name)
-      .toBe('Webhook Contact');
+    expect(
+      await db('whatsapp_messages').where({
+        company_id: companyId,
+        external_id: 'webhook-outbound-echo-1',
+      })
+    ).toHaveLength(1);
+    expect(
+      (await db('whatsapp_conversations').where({ id: privateConversation.id }).first()).name
+    ).toBe('Webhook Contact');
   });
 
   it('stores one durable send per idempotency key and rejects changed content', async () => {
@@ -2751,15 +2991,11 @@ describe('WhatsApp API GoWA bridge', () => {
 
     const olderDeliveryAt = new Date(Date.now() - 60_000).toISOString();
     const newerDeliveryAt = new Date().toISOString();
-    await db('whatsapp_messages')
-      .where({ id: messageId })
-      .update({ write_date: olderDeliveryAt });
-    await db('whatsapp_conversations')
-      .where({ id: conversation.id })
-      .update({
-        last_message: 'A newer provider message',
-        last_message_at: newerDeliveryAt,
-      });
+    await db('whatsapp_messages').where({ id: messageId }).update({ write_date: olderDeliveryAt });
+    await db('whatsapp_conversations').where({ id: conversation.id }).update({
+      last_message: 'A newer provider message',
+      last_message_at: newerDeliveryAt,
+    });
     await dispatchQueuedWhatsAppMessage(messageId, companyId, event.id, storage);
     const afterOldEventReplay = await db('whatsapp_conversations')
       .where({ id: conversation.id })
@@ -2815,8 +3051,9 @@ describe('WhatsApp API GoWA bridge', () => {
       persistedPayload.provider_ack
     );
     expect((await db('whatsapp_messages').where({ id: messageId }).first()).status).toBe('sent');
-    expect((await db('whatsapp_conversations').where({ id: conversationId }).first()).last_message)
-      .toBe('Persist provider acknowledgement');
+    expect(
+      (await db('whatsapp_conversations').where({ id: conversationId }).first()).last_message
+    ).toBe('Persist provider acknowledgement');
     expect(providerTextSendCount).toBe(sendsBefore + 1);
   });
 
@@ -2878,9 +3115,11 @@ describe('WhatsApp API GoWA bridge', () => {
       status: 'sent',
     });
     expect(Boolean(reconciled.retryable)).toBe(false);
-    expect(refreshed.json().data.filter((item: { content: string }) =>
-      item.content === 'Delivery response was lost'
-    )).toHaveLength(1);
+    expect(
+      refreshed
+        .json()
+        .data.filter((item: { content: string }) => item.content === 'Delivery response was lost')
+    ).toHaveLength(1);
     const reconciledCount = await db('whatsapp_messages')
       .where({ company_id: companyId, external_id: 'gowa-reconciled-message' })
       .count('* as count')
@@ -2924,9 +3163,13 @@ describe('WhatsApp API GoWA bridge', () => {
       status: 'sent',
     });
     expect(Boolean(reconciled.retryable)).toBe(false);
-    expect(refreshed.json().data.filter((item: { content: string }) =>
-      item.content === 'Accepted despite response loss'
-    )).toHaveLength(1);
+    expect(
+      refreshed
+        .json()
+        .data.filter(
+          (item: { content: string }) => item.content === 'Accepted despite response loss'
+        )
+    ).toHaveLength(1);
     expect(providerTextSendCount).toBe(1);
   });
 
@@ -3000,7 +3243,9 @@ describe('WhatsApp API GoWA bridge', () => {
     const event = await db('outbox_events')
       .where({ aggregate_id: messageId, event_type: 'whatsapp.message.send' })
       .first();
-    await db('whatsapp_accounts').where({ company_id: companyId }).update({ status: 'disconnected' });
+    await db('whatsapp_accounts')
+      .where({ company_id: companyId })
+      .update({ status: 'disconnected' });
     await db('whatsapp_messages').where({ id: messageId }).update({ attempt_count: 4 });
 
     await dispatchQueuedWhatsAppMessage(messageId, companyId, event.id, storage);

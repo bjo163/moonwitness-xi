@@ -294,13 +294,7 @@ export async function dispatchQueuedWhatsAppMessage(
     providerAccepted = true;
     const acceptedAt = new Date().toISOString();
     providerAckAcceptedAt = acceptedAt;
-    await persistProviderAcknowledgement(
-      eventId,
-      companyId,
-      messageId,
-      externalId,
-      acceptedAt
-    );
+    await persistProviderAcknowledgement(eventId, companyId, messageId, externalId, acceptedAt);
     await patchMessage(messageId, companyId, {
       external_id: externalId.slice(0, 255),
       status: 'sent',

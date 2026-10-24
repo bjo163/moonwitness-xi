@@ -97,9 +97,9 @@ describe('S3AttachmentStorage', () => {
 
   it('aborts streamed uploads that exceed the configured byte limit', async () => {
     const { storage, sendMock } = provider(async () => ({}));
-    await expect(
-      storage.putStream(keyA, Readable.from([Buffer.alloc(5)]), 4)
-    ).rejects.toThrow(/size limit/u);
+    await expect(storage.putStream(keyA, Readable.from([Buffer.alloc(5)]), 4)).rejects.toThrow(
+      /size limit/u
+    );
     expect(sendMock).not.toHaveBeenCalled();
   });
 

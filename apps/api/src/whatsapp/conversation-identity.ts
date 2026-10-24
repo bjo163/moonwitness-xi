@@ -69,8 +69,7 @@ export async function mergeWhatsappConversations(
         user_id: cursor.user_id,
       })
       .first()) as
-      | { id: number; last_read_message_id: number; last_read_at: string | Date }
-      | undefined;
+      { id: number; last_read_message_id: number; last_read_at: string | Date } | undefined;
     if (!existing) {
       await trx('whatsapp_conversation_reads')
         .where({

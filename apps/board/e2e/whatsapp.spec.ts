@@ -41,14 +41,16 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
       return route.fulfill({
         json: {
           success: true,
-          data: [{
-            id: 99,
-            jid: '628999000111@s.whatsapp.net',
-            name: 'Older destination',
-            is_group: false,
-            is_archived: false,
-            unread_count: 0,
-          }],
+          data: [
+            {
+              id: 99,
+              jid: '628999000111@s.whatsapp.net',
+              name: 'Older destination',
+              is_group: false,
+              is_archived: false,
+              unread_count: 0,
+            },
+          ],
         },
       });
     }
@@ -116,17 +118,23 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
     const body = route.request().postDataJSON() as { emoji: string };
     sentReactions.push({ sourceId, emoji: body.emoji });
     ownReaction = { emoji: body.emoji, is_from_me: true };
-    await route.fulfill({ status: 200, json: { success: true, data: { reactions: [{ emoji: body.emoji, is_from_me: true }] } } });
+    await route.fulfill({
+      status: 200,
+      json: { success: true, data: { reactions: [{ emoji: body.emoji, is_from_me: true }] } },
+    });
   });
   await page.route('**/whatsapp/messages/*/edit', async (route) => {
     editedMessageContent = (route.request().postDataJSON() as { content: string }).content;
-    await route.fulfill({ json: { success: true, data: { content: editedMessageContent, is_edited: true } } });
+    await route.fulfill({
+      json: { success: true, data: { content: editedMessageContent, is_edited: true } },
+    });
   });
   await page.route('**/whatsapp/messages/*/revoke', async (route) => {
     messageDeleted = true;
     await route.fulfill({ json: { success: true, data: { is_deleted: true } } });
   });
-  const forwardedMessages: Array<{ sourceId: string; body: Record<string, unknown>; key: string }> = [];
+  const forwardedMessages: Array<{ sourceId: string; body: Record<string, unknown>; key: string }> =
+    [];
   await page.route('**/whatsapp/messages/*/forward', async (route) => {
     const sourceId = new URL(route.request().url()).pathname.split('/').at(-2) ?? '';
     forwardedMessages.push({
@@ -176,15 +184,17 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
         success: true,
         data: [
           ...(includeNewInboundMessage
-            ? [{
-                id: 55,
-                direction: 'inbound',
-                content: 'New inbound message',
-                status: 'received',
-                is_unread: true,
-                message_type: 'text',
-                create_date: new Date(Date.now() + 1000).toISOString(),
-              }]
+            ? [
+                {
+                  id: 55,
+                  direction: 'inbound',
+                  content: 'New inbound message',
+                  status: 'received',
+                  is_unread: true,
+                  message_type: 'text',
+                  create_date: new Date(Date.now() + 1000).toISOString(),
+                },
+              ]
             : []),
           {
             id: 52,
@@ -337,9 +347,14 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   await expect(page.getByRole('button', { name: /Older conversation/u })).toBeVisible();
   await expect(page.locator('#whatsapp-message-50').getByText('Can you help?')).toBeVisible();
   await page.locator('#whatsapp-message-50').getByRole('button', { name: /React/u }).click();
-  await page.getByRole('dialog', { name: 'React to message' }).getByRole('button', { name: 'React with 👍' }).click();
+  await page
+    .getByRole('dialog', { name: 'React to message' })
+    .getByRole('button', { name: 'React with 👍' })
+    .click();
   await expect.poll(() => sentReactions).toEqual([{ sourceId: '50', emoji: '👍' }]);
-  await expect(page.locator('#whatsapp-message-50').getByRole('img', { name: /👍 reaction/u })).toBeVisible();
+  await expect(
+    page.locator('#whatsapp-message-50').getByRole('img', { name: /👍 reaction/u })
+  ).toBeVisible();
   await expect(page.locator('article time').first()).toHaveAttribute(
     'datetime',
     /^\d{4}-\d{2}-\d{2}T/u
@@ -350,24 +365,30 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   await expect(page.locator('article').getByText('Older history')).toBeVisible();
   const inboundMessage = page.locator('#whatsapp-message-50');
   await inboundMessage.getByRole('button', { name: 'Copy message' }).click();
-  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('Can you help?');
+  await expect
+    .poll(() => page.evaluate(() => navigator.clipboard.readText()))
+    .toBe('Can you help?');
   await page.getByRole('button', { name: 'Jump to quoted message' }).click();
   await expect(page.locator('#whatsapp-message-50')).toBeFocused();
   const messageScroller = page.locator('div.overflow-y-auto').last();
-  await expect.poll(() => messageScroller.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+  await expect
+    .poll(() => messageScroller.evaluate((element) => element.scrollHeight > element.clientHeight))
+    .toBe(true);
   await page.locator('article').last().scrollIntoViewIfNeeded();
-  await expect.poll(() => messageScroller.evaluate((element) => element.scrollTop)).toBeLessThan(-48);
+  await expect
+    .poll(() => messageScroller.evaluate((element) => element.scrollTop))
+    .toBeLessThan(-48);
   includeNewInboundMessage = true;
-  await expect(page.getByRole('button', { name: 'New messages · Jump to latest' })).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole('button', { name: 'New messages · Jump to latest' })).toBeVisible({
+    timeout: 10_000,
+  });
   await page.getByRole('button', { name: 'New messages · Jump to latest' }).click();
   await expect(page.locator('article').getByText('New inbound message')).toBeVisible();
   const composer = page.getByPlaceholder('Write a message…');
   await composer.fill('Thanks, I will take a look.');
   await composer.press('Shift+Enter');
   await composer.pressSequentially('Checking this multiline reply.');
-  await expect(composer).toHaveValue(
-    'Thanks, I will take a look.\nChecking this multiline reply.'
-  );
+  await expect(composer).toHaveValue('Thanks, I will take a look.\nChecking this multiline reply.');
   await composer.press('Enter');
   await expect(composer).toHaveValue('');
   await expect(page.locator('article').getByText('Sent', { exact: true })).toBeVisible();
@@ -390,9 +411,14 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
     'Draft before newline',
     'Quoted response',
   ]);
-  await page.locator('#whatsapp-message-50').getByRole('button', { name: 'Forward message' }).click();
+  await page
+    .locator('#whatsapp-message-50')
+    .getByRole('button', { name: 'Forward message' })
+    .click();
   const forwardDialog = page.getByRole('dialog', { name: 'Forward message' });
-  await forwardDialog.getByRole('textbox', { name: 'Search forward destinations' }).fill('Older destination');
+  await forwardDialog
+    .getByRole('textbox', { name: 'Search forward destinations' })
+    .fill('Older destination');
   await forwardDialog.getByRole('button', { name: 'Forward to Older destination' }).click();
   await expect(page.getByText('Forward queued')).toBeVisible();
   expect(forwardedMessages).toHaveLength(1);
@@ -408,16 +434,30 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   await expect(ownReply.getByText('Edited')).toBeVisible();
   await expect(ownReply.getByText('Edited reply text')).toBeVisible();
   await ownReply.getByRole('button', { name: 'Delete message for everyone' }).click();
-  await page.getByRole('alertdialog', { name: 'Delete for everyone?' }).getByRole('button', { name: 'Delete message' }).click();
+  await page
+    .getByRole('alertdialog', { name: 'Delete for everyone?' })
+    .getByRole('button', { name: 'Delete message' })
+    .click();
   await expect(ownReply.getByText('This message was deleted')).toBeVisible();
   await expect(ownReply.getByRole('button', { name: 'Edit message' })).toHaveCount(0);
-  await page.locator('#whatsapp-message-50').getByRole('button', { name: 'Forward message' }).click();
+  await page
+    .locator('#whatsapp-message-50')
+    .getByRole('button', { name: 'Forward message' })
+    .click();
   const secondForwardDialog = page.getByRole('dialog', { name: 'Forward message' });
-  await expect(secondForwardDialog.getByRole('button', { name: 'Load more destinations' })).toBeVisible();
+  await expect(
+    secondForwardDialog.getByRole('button', { name: 'Load more destinations' })
+  ).toBeVisible();
   await secondForwardDialog.getByRole('button', { name: 'Load more destinations' }).click();
-  await expect(secondForwardDialog.getByRole('button', { name: 'Forward to Older conversation' })).toBeVisible();
-  await secondForwardDialog.getByRole('checkbox', { name: 'Include archived conversations' }).check();
-  await expect.poll(() => forwardDestinationQueries.some((query) => query.archived === 'true')).toBe(true);
+  await expect(
+    secondForwardDialog.getByRole('button', { name: 'Forward to Older conversation' })
+  ).toBeVisible();
+  await secondForwardDialog
+    .getByRole('checkbox', { name: 'Include archived conversations' })
+    .check();
+  await expect
+    .poll(() => forwardDestinationQueries.some((query) => query.archived === 'true'))
+    .toBe(true);
   await secondForwardDialog.getByRole('button', { name: 'Cancel' }).click();
   await page.getByLabel('Search conversations by name, number, or message').fill('Rani');
   await expect(page.getByRole('button', { name: /Rani Putri/u })).toBeVisible();
