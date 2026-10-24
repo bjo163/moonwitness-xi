@@ -99,6 +99,13 @@ type Message = {
   }>;
   create_date: string;
 };
+type InternalNote = {
+  id: number;
+  user_id: number;
+  author_name: string;
+  body: string;
+  create_date: string;
+};
 const reactionEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '🎉'];
 const providerTypeLabels: Record<string, string> = {
   contact: 'Contact card',
@@ -188,6 +195,9 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
   const [startingChat, setStartingChat] = useState(false);
   const [loadingMoreConversations, setLoadingMoreConversations] = useState(false);
   const [markingRead, setMarkingRead] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [noteDraft, setNoteDraft] = useState('');
+  const [creatingNote, setCreatingNote] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
   const [reactingTo, setReactingTo] = useState<Message | null>(null);
@@ -353,6 +363,18 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
     refetchInterval: 2500,
     refetchIntervalInBackground: false,
   });
+  const notesQuery = useQuery({
+    queryKey: scopedQueryKey(['whatsapp', 'notes', activeConversation?.id]),
+    queryFn: async () =>
+      (
+        await client.request<{ data: InternalNote[] }>(
+          `/whatsapp/conversations/${activeConversation!.id}/notes?limit=50&offset=0`
+        )
+      ).data,
+    enabled: notesOpen && accountQuery.data?.status === 'connected' && Boolean(activeConversation),
+    refetchInterval: false,
+    refetchIntervalInBackground: false,
+  });
   const latestMessageId = messagesQuery.data?.[0]?.id;
   useEffect(() => {
     const conversationId = activeConversation?.id;
@@ -447,6 +469,25 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
       toast.error(error instanceof Error ? error.message : 'Could not mark conversation as read');
     } finally {
       setMarkingRead(false);
+    }
+  };
+  const addInternalNote = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!activeConversation || creatingNote || !noteDraft.trim()) return;
+    setCreatingNote(true);
+    try {
+      await client.request(`/whatsapp/conversations/${activeConversation.id}/notes`, {
+        method: 'POST',
+        body: { content: noteDraft.trim() },
+      });
+      setNoteDraft('');
+      await queryClient.invalidateQueries({
+        queryKey: scopedQueryKey(['whatsapp', 'notes', activeConversation.id]),
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Internal note could not be saved');
+    } finally {
+      setCreatingNote(false);
     }
   };
 
@@ -1191,26 +1232,40 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                     </p>
                   )}
                 </div>
-                {activeConversation && canManageConversations && (
+                {activeConversation && (
                   <div className="flex flex-wrap gap-2">
                     <Button
                       type="button"
                       size="sm"
-                      variant="outline"
-                      disabled={updatingConversation}
-                      onClick={() => void updateConversationPin()}
+                      variant={notesOpen ? 'default' : 'outline'}
+                      aria-expanded={notesOpen}
+                      aria-controls="whatsapp-internal-notes"
+                      onClick={() => setNotesOpen((open) => !open)}
                     >
-                      {activeConversation.is_pinned ? 'Unpin chat' : 'Pin chat'}
+                      Internal notes ({notesQuery.data?.length ?? 0})
                     </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={updatingConversation}
-                      onClick={() => void updateConversationArchive()}
-                    >
-                      {activeConversation.is_archived ? 'Unarchive chat' : 'Archive chat'}
-                    </Button>
+                    {canManageConversations && (
+                      <>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={updatingConversation}
+                          onClick={() => void updateConversationPin()}
+                        >
+                          {activeConversation.is_pinned ? 'Unpin chat' : 'Pin chat'}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={updatingConversation}
+                          onClick={() => void updateConversationArchive()}
+                        >
+                          {activeConversation.is_archived ? 'Unarchive chat' : 'Archive chat'}
+                        </Button>
+                      </>
+                    )}
                   </div>
                 )}
                 {activeConversation &&
@@ -1231,6 +1286,79 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                 <span className="text-xs text-ink-faint">Group conversation</span>
               )}
             </div>
+            {notesOpen && activeConversation && (
+              <section
+                id="whatsapp-internal-notes"
+                aria-label="Internal notes"
+                className="border-b-2 border-l-4 border-ink bg-paper p-3"
+                style={{ borderLeftColor: 'var(--mw-yellow)' }}
+              >
+                <h3 className="font-display text-sm uppercase">Internal notes · team only</h3>
+                {notesQuery.isLoading ? (
+                  <div className="mt-2 space-y-2" aria-label="Loading internal notes">
+                    <Skeleton className="h-12" />
+                  </div>
+                ) : notesQuery.isError ? (
+                  <div className="mt-2 flex items-center gap-3" role="alert">
+                    <p className="text-sm">Internal notes could not be loaded.</p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={notesQuery.isFetching}
+                      onClick={() => void notesQuery.refetch()}
+                    >
+                      Retry notes
+                    </Button>
+                  </div>
+                ) : notesQuery.data?.length ? (
+                  <ol className="mt-2 max-h-40 space-y-2 overflow-y-auto" aria-live="polite">
+                    {notesQuery.data.map((note) => (
+                      <li key={note.id} className="border border-ink/40 bg-paper p-2 text-sm">
+                        <p className="whitespace-pre-wrap break-words">{note.body}</p>
+                        <p className="mt-1 flex flex-wrap justify-between gap-2 font-mono text-[10px] text-ink-faint">
+                          <span>{note.author_name || `User ${note.user_id}`}</span>
+                          <time dateTime={note.create_date}>
+                            {formatDateTime(note.create_date, 'dateTime')}
+                          </time>
+                        </p>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="mt-2 text-sm text-ink-faint">No internal notes yet.</p>
+                )}
+                {canManageConversations ? (
+                  <form onSubmit={addInternalNote} className="mt-2 flex flex-col gap-2">
+                    <Textarea
+                      aria-label="Internal note"
+                      placeholder="Write a note for your team…"
+                      value={noteDraft}
+                      onChange={(event) => setNoteDraft(event.target.value)}
+                      maxLength={4000}
+                      rows={2}
+                      disabled={creatingNote}
+                    />
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-[10px] text-ink-faint">
+                        {noteDraft.length}/4000
+                      </span>
+                      <Button
+                        type="submit"
+                        size="sm"
+                        disabled={creatingNote || !noteDraft.trim() || noteDraft.length > 4000}
+                      >
+                        {creatingNote ? 'Saving note…' : 'Add internal note'}
+                      </Button>
+                    </div>
+                  </form>
+                ) : (
+                  <p className="mt-2 text-xs text-ink-faint">
+                    You can view notes but cannot add one.
+                  </p>
+                )}
+              </section>
+            )}
             {hasOlderMessages && (
               <Button
                 type="button"

@@ -95,6 +95,17 @@ export const WhatsappConversationRead = defineModel('whatsapp.conversation.read'
   },
 });
 
+export const WhatsappInternalNote = defineModel('whatsapp.internal_note', {
+  table: 'whatsapp_internal_notes',
+  order: 'create_date asc, id asc',
+  fields: {
+    company: fields.belongsTo(Company, { required: true }),
+    conversation: fields.belongsTo(WhatsappConversation, { required: true }),
+    user_id: fields.integer({ required: true }),
+    body: fields.text({ required: true }),
+  },
+});
+
 export const WhatsappConversationAlias = defineModel('whatsapp.conversation.alias', {
   table: 'whatsapp_conversation_aliases',
   order: 'id asc',

@@ -517,6 +517,85 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   await page.screenshot({ path: '../../test-results/whatsapp-board.png', fullPage: true });
 });
 
+test('internal notes stay outside the WhatsApp message timeline', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByLabel('Email or Username').fill('superadmin');
+  await page.getByLabel('Password', { exact: true }).fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
+  await expect(page).toHaveURL(/\/board$/u);
+
+  const conversation = {
+    id: 81,
+    name: 'Internal notes test',
+    jid: '628555111222@s.whatsapp.net',
+    is_group: false,
+    is_archived: false,
+    is_pinned: false,
+    unread_count: 0,
+  };
+  let notes: Array<{
+    id: number;
+    user_id: number;
+    author_name: string;
+    body: string;
+    create_date: string;
+  }> = [];
+  await page.route('**/whatsapp/account', (route) =>
+    route.fulfill({
+      json: {
+        success: true,
+        data: {
+          status: 'connected',
+          permissions: {
+            manage: true,
+            manageConversations: true,
+            createConversation: true,
+            send: true,
+            manageMessages: true,
+          },
+        },
+      },
+    })
+  );
+  await page.route('**/whatsapp/conversations**', async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith('/notes')) {
+      if (route.request().method() === 'POST') {
+        const { content } = route.request().postDataJSON();
+        notes = [
+          {
+            id: 101,
+            user_id: 1,
+            author_name: 'superadmin',
+            body: content,
+            create_date: new Date().toISOString(),
+          },
+        ];
+        return route.fulfill({ status: 201, json: { success: true, data: notes[0] } });
+      }
+      return route.fulfill({ json: { success: true, data: notes } });
+    }
+    if (url.pathname.endsWith('/messages'))
+      return route.fulfill({ json: { success: true, data: [] } });
+    return route.fulfill({ json: { success: true, data: [conversation] } });
+  });
+
+  await page.goto('/board/whatsapp');
+  const internalNotesButton = page.getByRole('button', { name: /^Internal notes \(0\)$/u });
+  await expect(internalNotesButton).toBeVisible();
+  await internalNotesButton.click();
+  await expect(page.getByText('No internal notes yet.')).toBeVisible();
+  await page
+    .getByRole('textbox', { name: 'Internal note' })
+    .fill('Call back tomorrow; never send this note.');
+  await page.getByRole('button', { name: 'Add internal note' }).click();
+  await expect(page.getByText('Call back tomorrow; never send this note.')).toBeVisible();
+  await expect(
+    page.getByRole('region', { name: 'Internal notes' }).getByText('superadmin', { exact: true })
+  ).toBeVisible();
+  await expect(page.locator('article')).toHaveCount(0);
+});
+
 test('connect shows QR, media is sent, and failures preserve the draft', async ({ page }) => {
   await page.goto('/login');
   await page.getByLabel('Email or Username').fill('superadmin');

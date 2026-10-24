@@ -570,7 +570,8 @@ function requireCompany(
 }
 
 type WhatsappAction = 'create' | 'write';
-type WhatsappModel = 'whatsapp.account' | 'whatsapp.conversation' | 'whatsapp.message';
+type WhatsappModel =
+  'whatsapp.account' | 'whatsapp.conversation' | 'whatsapp.internal_note' | 'whatsapp.message';
 
 function canPerformWhatsAppAction(
   auth: {
@@ -617,7 +618,7 @@ function whatsappPermissions(auth: {
 
 async function recordWhatsAppAudit(
   req: FastifyRequest,
-  model: 'whatsapp.account' | 'whatsapp.conversation' | 'whatsapp.message',
+  model: WhatsappModel,
   operation: string,
   recordId: number,
   companyId: number,
@@ -1805,6 +1806,96 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         .merge({ write_date: new Date().toISOString() })
         .returning('*');
       return reply.code(201).send({ success: true, data: conversation });
+    }
+  );
+
+  app.get<{
+    Params: Params;
+    Querystring: { limit?: string; offset?: string };
+  }>('/whatsapp/conversations/:id/notes', async (req, reply) => {
+    const companyId = requireCompany(req, reply);
+    if (!companyId) return;
+    const conversationId = id(req.params.id);
+    if (!conversationId)
+      return reply.code(400).send({ success: false, error: 'Invalid conversation ID' });
+    const conversation = await WhatsappConversation.query().findOne({
+      id: conversationId,
+      company_id: companyId,
+    });
+    if (!conversation)
+      return reply.code(404).send({ success: false, error: 'Conversation not found' });
+    const limit = Number(req.query.limit ?? 50);
+    const offset = Number(req.query.offset ?? 0);
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
+      return reply.code(400).send({ success: false, error: 'Limit must be between 1 and 100' });
+    if (!Number.isSafeInteger(offset) || offset < 0 || offset > 5_000)
+      return reply.code(400).send({ success: false, error: 'Offset must be between 0 and 5000' });
+    const data = await app
+      .db('whatsapp_internal_notes as note')
+      .leftJoin('users as author', 'author.id', 'note.user_id')
+      .select(
+        'note.id',
+        'note.conversation_id',
+        'note.user_id',
+        'note.body',
+        'note.create_date',
+        'author.login as author_name'
+      )
+      .where({ 'note.company_id': companyId, 'note.conversation_id': conversationId })
+      .orderBy('note.create_date', 'desc')
+      .orderBy('note.id', 'desc')
+      .limit(limit)
+      .offset(offset);
+    return { success: true, data: data.reverse() };
+  });
+
+  app.post<{ Params: Params; Body: unknown }>(
+    '/whatsapp/conversations/:id/notes',
+    whatsappRateLimit(30),
+    async (req, reply) => {
+      const companyId = requireCompany(req, reply);
+      if (!companyId) return;
+      if (!requireWhatsAppAction(req, reply, 'whatsapp.conversation', 'write')) return;
+      const conversationId = id(req.params.id);
+      const body = isRecord(req.body) ? req.body : null;
+      const noteBody = typeof body?.content === 'string' ? body.content.trim() : '';
+      if (
+        !conversationId ||
+        !body ||
+        Object.keys(body).some((key) => key !== 'content') ||
+        noteBody.length < 1 ||
+        noteBody.length > 4_000
+      )
+        return reply
+          .code(400)
+          .send({ success: false, error: 'Note must contain 1–4000 characters' });
+      const conversation = await WhatsappConversation.query().findOne({
+        id: conversationId,
+        company_id: companyId,
+      });
+      if (!conversation)
+        return reply.code(404).send({ success: false, error: 'Conversation not found' });
+      const note = await app.db.transaction(async (trx) => {
+        const [created] = await trx('whatsapp_internal_notes')
+          .insert({
+            company_id: companyId,
+            conversation_id: conversationId,
+            user_id: req.auth!.userId,
+            body: noteBody,
+          })
+          .returning(['id', 'conversation_id', 'user_id', 'body', 'create_date']);
+        await recordWhatsAppAudit(
+          req,
+          'whatsapp.internal_note',
+          'create',
+          Number(created.id),
+          companyId,
+          trx
+        );
+        const author = await trx('users').select('login').where({ id: req.auth!.userId }).first();
+        return { ...created, author_name: author?.login ?? `User ${req.auth!.userId}` };
+      });
+      return reply.code(201).send({ success: true, data: note });
     }
   );
 

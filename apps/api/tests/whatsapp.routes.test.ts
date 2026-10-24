@@ -406,6 +406,7 @@ describe('WhatsApp API GoWA bridge', () => {
       'outbox_events',
       'whatsapp_conversation_aliases',
       'whatsapp_conversation_reads',
+      'whatsapp_internal_notes',
       'whatsapp_messages',
       'whatsapp_conversations',
       'whatsapp_accounts',
@@ -702,6 +703,65 @@ describe('WhatsApp API GoWA bridge', () => {
         })
       ).statusCode
     ).toBe(403);
+  });
+
+  it('stores private conversation notes with company scope and write authorization', async () => {
+    const accountId = await connectAndMarkReady();
+    const [conversation] = await db('whatsapp_conversations')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        jid: '628111111111@s.whatsapp.net',
+        name: 'Notes conversation',
+        is_group: false,
+        unread_count: 0,
+      })
+      .returning(['id']);
+    const url = `/whatsapp/conversations/${conversation.id}/notes`;
+    const created = await app.inject({
+      method: 'POST',
+      url,
+      headers: { authorization: 'Bearer test' },
+      payload: { content: '  Internal follow-up\nDo not send to WhatsApp.  ' },
+    });
+    expect(created.statusCode).toBe(201);
+    expect(created.json().data).toMatchObject({
+      conversation_id: conversation.id,
+      user_id: 1,
+      body: 'Internal follow-up\nDo not send to WhatsApp.',
+    });
+    const listed = await app.inject({
+      method: 'GET',
+      url,
+      headers: { authorization: 'Bearer test', 'x-test-role': 'user' },
+    });
+    expect(listed.statusCode).toBe(200);
+    expect(listed.json().data).toHaveLength(1);
+    expect(listed.json().data[0].body).toBe('Internal follow-up\nDo not send to WhatsApp.');
+    expect(await db('whatsapp_messages').where({ conversation_id: conversation.id })).toHaveLength(
+      0
+    );
+    expect(
+      await db('audit_logs').where({
+        model: 'whatsapp.internal_note',
+        record_id: created.json().data.id,
+      })
+    ).toHaveLength(1);
+
+    const forbidden = await app.inject({
+      method: 'POST',
+      url,
+      headers: { authorization: 'Bearer test', 'x-test-role': 'user' },
+      payload: { content: 'Should be denied' },
+    });
+    expect(forbidden.statusCode).toBe(403);
+
+    const foreign = await app.inject({
+      method: 'GET',
+      url,
+      headers: { authorization: 'Bearer test', 'x-test-company': 'foreign' },
+    });
+    expect(foreign.statusCode).toBe(404);
   });
 
   it('reuses an active pairing QR and reports an expired QR so it can be refreshed', async () => {
