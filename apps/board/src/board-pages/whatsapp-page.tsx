@@ -90,6 +90,36 @@ function formatTransferRate(bytesPerSecond: number): string {
   if (bytesPerSecond < 1024 * 1024) return `${(bytesPerSecond / 1024).toFixed(1)} KB/s`;
   return `${(bytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s`;
 }
+
+function formatMediaSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function safeMediaDownloadName(fileName: string | null | undefined): {
+  name: string;
+  blockedExtension: string | null;
+} {
+  const original = (fileName ?? 'attachment')
+    .normalize('NFC')
+    .replace(/[\\/\p{Cc}\u202a-\u202e\u2066-\u2069]/gu, '_')
+    .trim()
+    .replace(/[. ]+$/u, '')
+    .slice(0, 200) || 'attachment';
+  const extension = original.match(/\.([a-z0-9]{1,12})$/iu)?.[1]?.toLowerCase();
+  const blocked = new Set([
+    'ade', 'adp', 'bat', 'cmd', 'com', 'cpl', 'dll', 'docm', 'exe', 'hta', 'htm', 'html', 'jar',
+    'js', 'jse', 'lnk', 'mht', 'mhtml', 'msi', 'msp', 'ocx', 'pif', 'potm', 'ppam', 'pps', 'pptm',
+    'ps1', 'reg', 'scf', 'scr', 'sct', 'shb', 'shs', 'svg', 'url', 'vb', 'vbe', 'vbs', 'ws', 'wsc',
+    'wsf', 'wsh', 'xlsm', 'xlam', 'xll', 'xsl', 'xml',
+  ]);
+  if (extension && blocked.has(extension)) {
+    return { name: `${original}.download`, blockedExtension: `.${extension}` };
+  }
+  return { name: original, blockedExtension: null };
+}
+
 type Message = {
   id: number;
   direction: string;
@@ -2066,7 +2096,9 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                       !message.provider_type &&
                       message.message_type !== 'text' && <MediaPreview message={message} />}
                     {!message.provider_type && message.media_file_name && (
-                      <p className="mt-1 text-xs">{message.media_file_name}</p>
+                      <p className="mt-1 text-xs">
+                        {safeMediaDownloadName(message.media_file_name).name}
+                      </p>
                     )}
                     {summarizeReactions(message.reactions).length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1" aria-label="Message reactions">
@@ -2505,6 +2537,7 @@ function MessageComposer({
 function MediaPreview({ message }: { message: Message }) {
   const [url, setUrl] = useState<string | null>(null);
   const [mimeType, setMimeType] = useState<string | null>(null);
+  const [sizeBytes, setSizeBytes] = useState<number | null>(null);
   const [downloadProgress, setDownloadProgress] = useState<UploadProgressState | null>({
     percent: 0,
     bytesPerSecond: 0,
@@ -2538,6 +2571,7 @@ function MediaPreview({ message }: { message: Message }) {
           objectUrl = URL.createObjectURL(blob);
           setUrl(objectUrl);
           setMimeType(blob.type || 'application/octet-stream');
+          setSizeBytes(blob.size);
         }
       })
       .catch((error: unknown) => {
@@ -2569,6 +2603,7 @@ function MediaPreview({ message }: { message: Message }) {
             setFailureMessage('Attachment could not be loaded.');
             setUrl(null);
             setMimeType(null);
+            setSizeBytes(null);
             setDownloadProgress({ percent: 0, bytesPerSecond: 0 });
             setAttempt((value) => value + 1);
           }}
@@ -2600,7 +2635,7 @@ function MediaPreview({ message }: { message: Message }) {
         {!failed && downloadProgress && (
           <div
             role="progressbar"
-            aria-label={`Download progress for ${message.media_file_name ?? 'attachment'}`}
+            aria-label={`Download progress for ${safeMediaDownloadName(message.media_file_name).name}`}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={downloadProgress.percent ?? undefined}
@@ -2614,28 +2649,71 @@ function MediaPreview({ message }: { message: Message }) {
         )}
       </div>
     );
+  const safeName = safeMediaDownloadName(message.media_file_name);
+  const metadata = (
+    <p className="mt-1 text-xs text-ink-faint">
+      {mimeType || 'Unknown file type'}
+      {sizeBytes !== null ? ` · ${formatMediaSize(sizeBytes)}` : ''}
+    </p>
+  );
   if (mimeType?.startsWith('image/'))
     return (
-      <a href={url} target="_blank" rel="noreferrer">
-        <img
-          src={url}
-          alt={message.media_file_name ?? 'WhatsApp media'}
-          className="mt-2 max-h-64 max-w-full object-contain"
-        />
-      </a>
+      <div>
+        <a href={url} target="_blank" rel="noreferrer">
+          <img
+            src={url}
+            alt={safeName.name}
+            className="mt-2 max-h-64 max-w-full object-contain"
+          />
+        </a>
+        {metadata}
+      </div>
     );
   if (mimeType?.startsWith('video/'))
-    return <video controls src={url} className="mt-2 max-h-64 max-w-full" />;
+    return (
+      <div>
+        <video controls src={url} className="mt-2 max-h-64 max-w-full" />
+        {metadata}
+      </div>
+    );
   if (mimeType?.startsWith('audio/'))
-    return <audio controls src={url} className="mt-2 max-w-full" />;
+    return (
+      <div>
+        <audio controls src={url} className="mt-2 max-w-full" />
+        {metadata}
+      </div>
+    );
+  if (mimeType === 'application/pdf')
+    return (
+      <div className="mt-2 space-y-1">
+        <iframe
+          src={url}
+          title={`Sandboxed PDF preview: ${safeName.name}`}
+          sandbox=""
+          className="h-72 w-full border border-ink"
+        />
+        <p className="text-xs text-ink-faint">
+          PDF preview is sandboxed. Download the file to use your PDF reader.
+        </p>
+        {metadata}
+        <a href={url} download={safeName.name} className="inline-block underline">
+          Download PDF
+        </a>
+      </div>
+    );
   return (
-    <a
-      href={url}
-      download={message.media_file_name ?? 'attachment'}
-      className="mt-2 inline-block underline"
-    >
-      Download attachment
-    </a>
+    <div className="mt-2 space-y-1">
+      <p className="text-sm">{safeName.name}</p>
+      {metadata}
+      {safeName.blockedExtension && (
+        <p role="status" className="text-xs text-warning">
+          Potentially active file type ({safeName.blockedExtension}) is renamed for safer download.
+        </p>
+      )}
+      <a href={url} download={safeName.name} className="inline-block underline">
+        Download attachment
+      </a>
+    </div>
   );
 }
 

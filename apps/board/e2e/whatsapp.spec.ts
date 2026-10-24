@@ -292,7 +292,25 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
             media_file_name: 'download.png',
             create_date: new Date(Date.now() - 100).toISOString(),
           },
-          ...Array.from({ length: 40 }, (_, index) => ({
+          {
+            id: 62,
+            direction: 'inbound',
+            content: 'PDF attachment',
+            status: 'received',
+            message_type: 'document',
+            media_file_name: 'statement.pdf',
+            create_date: new Date(Date.now() - 75).toISOString(),
+          },
+          {
+            id: 63,
+            direction: 'inbound',
+            content: 'Active extension attachment',
+            status: 'received',
+            message_type: 'document',
+            media_file_name: 'invoice.html',
+            create_date: new Date(Date.now() - 50).toISOString(),
+          },
+          ...Array.from({ length: 38 }, (_, index) => ({
             id: 49 - index,
             direction: 'inbound',
             is_unread: true,
@@ -344,6 +362,20 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
       ),
     });
   });
+  await page.route('**/whatsapp/media/62', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/pdf',
+      body: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF'),
+    })
+  );
+  await page.route('**/whatsapp/media/63', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'text/html',
+      body: Buffer.from('<!doctype html><script>alert(1)</script>'),
+    })
+  );
 
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('/board/whatsapp');
@@ -352,13 +384,27 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   await expect(
     page.getByRole('progressbar', { name: 'Download progress for download.png' })
   ).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Cancel download' })).toBeVisible();
-  await page.getByRole('button', { name: 'Cancel download' }).click();
+  const progressAttachment = page.locator('#whatsapp-message-61');
+  await expect(progressAttachment.getByRole('button', { name: 'Cancel download' })).toBeVisible();
+  await progressAttachment.getByRole('button', { name: 'Cancel download' }).click();
   downloadCancelled = true;
   releaseDownload();
   await expect(page.getByText('Download cancelled. Try again when ready.')).toBeVisible();
   await page.getByRole('button', { name: 'Try again' }).last().click();
   await expect(page.locator('img[alt="download.png"]')).toBeVisible();
+  const pdfPreview = page.getByTitle('Sandboxed PDF preview: statement.pdf');
+  await expect(pdfPreview).toBeVisible();
+  await expect(pdfPreview).toHaveAttribute('sandbox', '');
+  await expect(page.locator('article').getByText(/application\/pdf · \d+ B/u)).toBeVisible();
+  const dangerousAttachment = page.locator('#whatsapp-message-63');
+  await expect(dangerousAttachment.getByText('invoice.html.download').first()).toBeVisible();
+  await expect(
+    page.getByText('Potentially active file type (.html) is renamed for safer download.')
+  ).toBeVisible();
+  await expect(dangerousAttachment.getByRole('link', { name: 'Download attachment' })).toHaveAttribute(
+    'download',
+    'invoice.html.download'
+  );
   await expect(page.getByText('Group ID: 120363000')).toBeVisible();
   await expect(page.getByRole('separator', { name: 'New messages' })).toBeVisible();
   await expect(
