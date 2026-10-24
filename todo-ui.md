@@ -511,10 +511,11 @@ Urutan: header → hero manga → tiga panel editorial → band koneksi → film
 
 ### Animasi yang dirancang dan diverifikasi
 
-- [ ] Tetapkan token durasi dan easing untuk feedback cepat, transisi panel, dan dekorasi; hindari nilai acak yang tersebar.
-- [ ] Animasi tombol saat hover, focus, active, dan submit tanpa mengubah ukuran area klik atau menggeser layout.
-- [ ] Animasi underline navigasi dan indikator panel aktif dengan transisi singkat.
-- [ ] Animasi masuk/keluar Dialog, Sheet, Dropdown, Popover, dan Toast; pastikan overlay serta fokus tetap benar.
+- [x] Tetapkan token durasi dan easing untuk feedback cepat, transisi panel, dan dekorasi; hindari nilai acak yang tersebar. Bukti: `packages/ui/src/styles/tokens.css` dan aturan pemakaian di `packages/ui/TOKENS.md`.
+- [x] Gunakan feedback animasi hover/active tombol tanpa mengubah ukuran area klik atau menggeser layout; pertahankan focus-visible ring langsung terlihat. Bukti: shared Button CSS memakai motion token; tes spinner auth memastikan lebar tombol stabil.
+- [x] Animasi underline navigasi dan indikator panel aktif dengan transisi singkat. Bukti: homepage underline kini memakai motion tokens fast/ease.
+- [x] Animasi masuk/keluar Dialog, Sheet, Dropdown, Popover, dan Tooltip memakai durasi/easing shared; pertahankan tes keyboard/focus overlay.
+- [ ] Audit timing masuk/keluar Sonner Toast terhadap motion tokens; override hanya jika dismissal dan pengumuman aksesibel tetap benar.
 - [ ] Animasi reveal artwork/hero satu kali dan singkat; jangan membuat gerakan dekoratif terus-menerus.
 - [ ] Animasi kartu/panel saat hover dengan perubahan ringan pada tinta, border, atau marker; hormati perangkat tanpa hover.
 - [ ] Animasi Skeleton hanya selama request nyata; jangan memakai shimmer tanpa proses aktif.
@@ -523,19 +524,19 @@ Urutan: header → hero manga → tiga panel editorial → band koneksi → film
 - [x] Periksa label tombol saat submit tetap menyatakan proses yang berjalan, termasuk pada login dan registrasi. Bukti: `apps/board/e2e/auth.spec.ts` menguji label busy login; implementasi memakai label tersendiri untuk login dan registrasi.
 - [ ] Periksa success, warning, dan error feedback dengan transisi yang tidak bergantung pada warna atau gerakan saja.
 - [ ] Pastikan animasi dekoratif berhenti saat elemen keluar viewport dan tidak berjalan terus di halaman kerja.
-- [ ] Pastikan `prefers-reduced-motion` mematikan putaran, shimmer, parallax, dan perpindahan non-esensial; sediakan state statis yang tetap jelas.
-- [ ] Uji keyboard dan pointer untuk memastikan animasi tidak menunda input, menutup focus ring, atau menghalangi aksi.
-- [ ] Ambil screenshot state animasi pada frame deterministik; nonaktifkan/selesaikan animasi pada screenshot regression.
+- [x] Pastikan `prefers-reduced-motion` mematikan putaran, shimmer, parallax, dan perpindahan non-esensial; sediakan state statis yang tetap jelas. Bukti: UI package, global CSS Board, `MotionConfig`, dan tes Catalog.
+- [x] Uji keyboard dan pointer untuk memastikan animasi tidak menunda input, menutup focus ring, atau menghalangi aksi. Bukti: UI Catalog menguji hover/pressed/focus ring; Board E2E menguji keyboard/dismiss/focus return overlay.
+- [x] Ambil screenshot state animasi pada frame deterministik; nonaktifkan/selesaikan animasi pada screenshot regression. Bukti: `docs/design/ui-catalog/button-pressed-motion.png`, `command-palette-motion-mobile-375.png`, dan `reduced-motion-states.png`.
 
 ### FX dan loading
 
 - [ ] Gunakan texture statis untuk speckle, halftone, dan tinta.
-- [ ] Gunakan motion singkat hanya untuk feedback yang membantu.
-- [ ] Jadikan orbit dekoratif statis sebagai default.
+- [x] Gunakan motion singkat hanya untuk feedback yang membantu. Token shared: 120/160/220 ms; indikator pending memakai durasi khusus.
+- [x] Jadikan orbit dekoratif statis sebagai default. `SignalOrbit` hanya menggambar ring statis; specimen katalog menunjukkan efek motion terpisah.
 - [ ] Hentikan animasi saat elemen tidak terlihat.
-- [ ] Hindari parallax atau animasi berulang pada workbench.
+- [x] Hindari parallax atau animasi berulang pada workbench. Pemeriksaan source Board tidak menemukan efek berulang/parallax pada story workbench.
 - [ ] Hindari filter berat yang diterapkan ke setiap panel.
-- [ ] Hormati `prefers-reduced-motion` pada CSS dan JS.
+- [x] Hormati `prefers-reduced-motion` pada CSS dan JS. Bukti: token durasi berubah jadi nol, keyframe spinner/progress/orbit dihentikan, dan UI Catalog E2E menguji status tetap terlihat.
 - [ ] Pertahankan status bermakna tanpa animasi.
 - [ ] Gunakan skeleton hanya untuk request nyata dan bentuk konten yang dikenal.
 - [ ] Gunakan progress berlabel untuk operasi aktif.

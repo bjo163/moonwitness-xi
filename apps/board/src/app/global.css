@@ -53,7 +53,7 @@
   content: '';
   transform: scaleX(0);
   transform-origin: left;
-  transition: transform 120ms ease;
+  transition: transform var(--mw-motion-fast) var(--mw-motion-ease);
 }
 .home-nav a:hover::after,
 .home-nav a:focus-visible::after,
@@ -396,7 +396,7 @@
 }
 .home-card-art img {
   object-fit: cover;
-  transition: transform 220ms ease;
+  transition: transform var(--mw-motion-slow) var(--mw-motion-ease);
 }
 .home-editorial-card:hover .home-card-art img {
   transform: scale(1.04);

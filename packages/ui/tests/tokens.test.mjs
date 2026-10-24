@@ -246,6 +246,15 @@ test('type, spacing, shape, shadow and reduced-motion scales are present', () =>
     'shadow-ink',
     'motion-fast',
     'motion-normal',
+    'motion-slow',
+    'motion-delay',
+    'motion-draw',
+    'motion-effect',
+    'motion-pulse',
+    'motion-progress',
+    'motion-spin',
+    'motion-ease',
+    'motion-ease-emphasis',
   ]) {
     assert.ok(tokenValue(name).length > 0, `Expected --mw-${name}`);
   }
@@ -255,6 +264,17 @@ test('type, spacing, shape, shadow and reduced-motion scales are present', () =>
   assert.equal(tokenValue('signal-blue'), '#00b8f0');
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
   assert.match(css, /--mw-motion-normal:\s*0ms/);
+});
+
+test('shared controls and overlays use the semantic motion scale', async () => {
+  const componentCss = await readFile(
+    new URL('../src/styles/components.css', import.meta.url),
+    'utf8'
+  );
+  assert.match(componentCss, /transform var\(--mw-motion-fast\) var\(--mw-motion-ease\)/u);
+  assert.match(componentCss, /animation-duration: var\(--mw-motion-normal\) !important/u);
+  assert.match(componentCss, /mw-ui-tabs-trigger[\s\S]*?var\(--mw-motion-fast\)/u);
+  assert.match(componentCss, /animation: mw-ui-spin var\(--mw-motion-spin\) linear infinite/u);
 });
 
 test('shared tokens avoid app-specific global styling and external font loading', () => {

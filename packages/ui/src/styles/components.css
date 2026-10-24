@@ -23,9 +23,10 @@
     text-decoration: none;
     cursor: pointer;
     transition:
-      transform 120ms ease,
-      box-shadow 120ms ease,
-      background-color 120ms ease;
+      transform var(--mw-motion-fast) var(--mw-motion-ease),
+      box-shadow var(--mw-motion-fast) var(--mw-motion-ease),
+      background-color var(--mw-motion-fast) var(--mw-motion-ease),
+      color var(--mw-motion-fast) var(--mw-motion-ease);
   }
 
   .mw-ui-button[data-treatment='brush'] {
@@ -59,6 +60,7 @@
       0 38%
     );
     content: '';
+    transition: transform var(--mw-motion-fast) var(--mw-motion-ease);
   }
   .mw-ui-button[data-treatment='brush'][data-variant='secondary']::before {
     background: var(--mw-secondary);
@@ -230,6 +232,16 @@
   .mw-ui-button:hover:not(:disabled):not([aria-disabled='true']) {
     transform: translate(-1px, -1px);
     box-shadow: 3px 3px 0 var(--mw-ink);
+  }
+  .mw-ui-button:active:not(:disabled):not([aria-disabled='true']) {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0 var(--mw-ink);
+  }
+  .mw-ui-button[data-treatment='brush']:active:not(:disabled):not([aria-disabled='true']) {
+    box-shadow: none;
+  }
+  .mw-ui-button[data-treatment='brush']:active:not(:disabled):not([aria-disabled='true'])::before {
+    transform: scale(0.99);
   }
 
   .mw-ui-button:focus-visible,
@@ -438,7 +450,7 @@
     min-height: 1rem;
     border-radius: var(--mw-radius-sm, 0.125rem);
     background: var(--mw-muted);
-    animation: mw-ui-pulse 1.6s ease-in-out infinite;
+    animation: mw-ui-pulse var(--mw-motion-pulse) ease-in-out infinite;
   }
   .mw-ui-empty-state {
     display: grid;
@@ -703,6 +715,22 @@
     z-index: 50;
     background: var(--mw-backdrop);
   }
+  .mw-ui-dialog-overlay,
+  .mw-ui-sheet-overlay {
+    animation-duration: var(--mw-motion-fast) !important;
+    animation-timing-function: var(--mw-motion-ease) !important;
+  }
+  .mw-ui-dialog-content,
+  .mw-ui-sheet-content,
+  .mw-ui-popover-content,
+  .mw-ui-menu-content,
+  .mw-ui-select-content,
+  .mw-ui-tooltip-content {
+    animation-duration: var(--mw-motion-normal) !important;
+    animation-timing-function: var(--mw-motion-ease) !important;
+    transition-duration: var(--mw-motion-normal);
+    transition-timing-function: var(--mw-motion-ease);
+  }
   .mw-ui-dialog-content {
     position: fixed;
     top: 50%;
@@ -782,6 +810,9 @@
     color: var(--mw-muted-foreground);
     background: transparent;
     cursor: pointer;
+    transition:
+      color var(--mw-motion-fast) var(--mw-motion-ease),
+      border-color var(--mw-motion-fast) var(--mw-motion-ease);
   }
   .mw-ui-tabs-trigger[data-state='active'] {
     border-bottom-color: var(--mw-primary);
@@ -1045,7 +1076,7 @@
     width: 38%;
     height: 100%;
     background: var(--mw-pink);
-    animation: mw-ui-progress 1.4s ease-in-out infinite;
+    animation: mw-ui-progress var(--mw-motion-progress) ease-in-out infinite;
   }
   .mw-ui-loading-spinner {
     display: inline-block;
@@ -1055,7 +1086,7 @@
     border: 2px solid currentColor;
     border-right-color: transparent;
     border-radius: 50%;
-    animation: mw-ui-spin 0.8s linear infinite;
+    animation: mw-ui-spin var(--mw-motion-spin) linear infinite;
   }
   .mw-ui-sr-only {
     position: absolute;
@@ -1106,7 +1137,7 @@
   }
   .mw-ui-speed-lines-pulse {
     transform-origin: 22% 50%;
-    animation: mw-ui-speedlines 1.2s ease-in-out 2 alternate;
+    animation: mw-ui-speedlines var(--mw-motion-effect) ease-in-out 2 alternate;
   }
   .mw-ui-ink-underline {
     display: block;
@@ -1116,7 +1147,7 @@
   .mw-ui-ink-underline-path {
     stroke-dasharray: 1;
     stroke-dashoffset: 1;
-    animation: mw-ui-ink-draw 700ms ease-out 200ms forwards;
+    animation: mw-ui-ink-draw var(--mw-motion-draw) ease-out var(--mw-motion-delay) forwards;
   }
   .mw-ui-doodle {
     width: 1.5rem;
@@ -1144,7 +1175,7 @@
     font-weight: 700;
     box-shadow: 3px 3px 0 0 var(--mw-ink);
     transform-origin: 20% 100%;
-    animation: mw-ui-speech-pop 260ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    animation: mw-ui-speech-pop var(--mw-motion-slow) var(--mw-motion-ease-emphasis) both;
   }
   .mw-ui-speech-bubble::after {
     content: '';

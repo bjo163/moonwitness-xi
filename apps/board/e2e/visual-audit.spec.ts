@@ -151,6 +151,9 @@ test('mobile overlays keep accessible names, keyboard dismissal, focus return, a
   await page.keyboard.press('Enter');
   const modelNavigation = page.getByRole('dialog', { name: 'Model navigation' });
   await expect(modelNavigation).toBeVisible();
+  await expect
+    .poll(() => modelNavigation.evaluate((element) => getComputedStyle(element).animationDuration))
+    .toBe('0.16s');
   await expectNoA11yViolations(page, 'mobile/model-navigation-open');
   const dialogControls = modelNavigation.locator(
     'button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])'
@@ -176,6 +179,16 @@ test('mobile overlays keep accessible names, keyboard dismissal, focus return, a
   await expect(commandPalette.getByPlaceholder(/Search models or records/u)).toBeFocused();
   await expect(page.locator('[data-slot="dialog-overlay"]')).toHaveCSS('opacity', '1');
   await expect(commandPalette).toHaveCSS('opacity', '1');
+  await expect
+    .poll(() =>
+      page
+        .locator('[data-slot="dialog-overlay"]')
+        .evaluate((element) => getComputedStyle(element).animationDuration)
+    )
+    .toBe('0.12s');
+  await expect
+    .poll(() => commandPalette.evaluate((element) => getComputedStyle(element).animationDuration))
+    .toBe('0.16s');
   expect(await page.evaluate(() => window.scrollX)).toBe(0);
   const commandPaletteBounds = await commandPalette.boundingBox();
   expect(commandPaletteBounds).not.toBeNull();
@@ -184,6 +197,10 @@ test('mobile overlays keep accessible names, keyboard dismissal, focus return, a
   await expectNoA11yViolations(page, 'mobile/command-palette-open');
   await page.screenshot({
     path: path.join(auditDirectory, 'command-palette-mobile-375.png'),
+    fullPage: false,
+  });
+  await page.screenshot({
+    path: '../../docs/design/ui-catalog/command-palette-motion-mobile-375.png',
     fullPage: false,
   });
   await page.keyboard.press('Escape');

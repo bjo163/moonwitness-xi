@@ -435,6 +435,39 @@ test('reduced motion removes decorative animation and keeps loading status visib
   await motionGrid.screenshot({ path: testInfo.outputPath('reduced-motion-states.png') });
 });
 
+test('button hover and pressed motion keeps a stable hit area and visible focus ring', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('./#actions');
+  const button = page.getByRole('button', { name: 'Primary action' });
+  const idleBox = await button.boundingBox();
+  expect(idleBox).not.toBeNull();
+  expect(
+    await button.evaluate((element) => getComputedStyle(element).transitionDuration)
+  ).toContain('0.12s');
+
+  await button.hover();
+  const hoverTransform = await button.evaluate((element) => getComputedStyle(element).transform);
+  expect(hoverTransform).not.toBe('none');
+  const hoverBox = await button.boundingBox();
+  expect(hoverBox?.width).toBe(idleBox?.width);
+  expect(hoverBox?.height).toBe(idleBox?.height);
+
+  await page.mouse.down();
+  const pressedTransform = await button.evaluate((element) => getComputedStyle(element).transform);
+  expect(pressedTransform).not.toBe(hoverTransform);
+  const pressedBox = await button.boundingBox();
+  expect(pressedBox?.width).toBeCloseTo(idleBox!.width, 2);
+  expect(pressedBox?.height).toBeCloseTo(idleBox!.height, 2);
+  await button.screenshot({ path: '../../docs/design/ui-catalog/button-pressed-motion.png' });
+  await page.mouse.up();
+
+  await button.focus();
+  await expect(button).toBeFocused();
+  expect(await button.evaluate((element) => getComputedStyle(element).outlineWidth)).toBe('3px');
+});
+
 test('representative visual layout and token contract stays stable @visual', async ({ page }) => {
   test.setTimeout(15_000);
   await page.goto('./');

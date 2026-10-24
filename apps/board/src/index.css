@@ -152,9 +152,9 @@
     transform: rotate(var(--tilt, -1.5deg));
     box-shadow: 2px 2px 0 0 var(--ink);
     transition:
-      transform 160ms ease,
-      box-shadow 160ms ease,
-      background-color 160ms ease;
+      transform var(--mw-motion-normal) var(--mw-motion-ease),
+      box-shadow var(--mw-motion-normal) var(--mw-motion-ease),
+      background-color var(--mw-motion-normal) var(--mw-motion-ease);
   }
   .sticker:hover {
     transform: rotate(0deg) translate(-1px, -1px);
@@ -168,8 +168,8 @@
   .press {
     box-shadow: var(--shadow-ink);
     transition:
-      transform 120ms ease,
-      box-shadow 120ms ease;
+      transform var(--mw-motion-fast) var(--mw-motion-ease),
+      box-shadow var(--mw-motion-fast) var(--mw-motion-ease);
   }
   .press:hover:not(:disabled) {
     transform: translate(-1px, -1px);
