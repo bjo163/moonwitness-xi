@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
+import multipart from '@fastify/multipart';
 import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import type { Knex } from 'knex';
 import { PassThrough, Readable, Transform } from 'node:stream';
@@ -6,7 +7,7 @@ import { pipeline } from 'node:stream/promises';
 import type { AttachmentStorage } from '@moonwitness/orm-storage';
 import { WhatsappAccount, WhatsappConversation, WhatsappMessage } from '../whatsapp/models.js';
 import { attachPrivateLidAlias } from '../whatsapp/conversation-identity.js';
-import { isRecord, MAX_ATTACHMENT_BYTES, MAX_ATTACHMENT_REQUEST_BYTES } from '@moonwitness/types';
+import { isRecord, MAX_ATTACHMENT_BYTES } from '@moonwitness/types';
 
 import { mediaType, mimeMatchesSignature, safeMime, sniffMime } from '../whatsapp/media.js';
 import { gowaBinary, gowaOriginPath, gowaRequest, GowaError } from '../whatsapp/gowa-client.js';
@@ -36,9 +37,118 @@ function whatsappRateLimit(max: number) {
   };
 }
 
-class MediaTooLargeError extends Error {}
+class MediaTooLargeError extends Error {
+  readonly statusCode = 413;
+}
+class MediaStorageError extends Error {
+  readonly statusCode = 503;
+}
 class MediaIncompleteError extends Error {}
 class MediaEmptyError extends Error {}
+
+type OutgoingUpload = {
+  fields: Record<string, string>;
+  mediaKey: string | null;
+  mediaMime: string;
+  mediaFileName: string | null;
+  mediaDigest: string;
+};
+
+async function parseOutgoingUpload(
+  req: FastifyRequest,
+  storage: AttachmentStorage
+): Promise<OutgoingUpload> {
+  const fields: Record<string, string> = {};
+  if (req.isMultipart() === false && req.headers['content-type']?.includes('application/json')) {
+    const body = isRecord(req.body) ? req.body : null;
+    if (
+      !body ||
+      Object.keys(body).some((key) => !['content', 'reply_to_message_id'].includes(key)) ||
+      typeof body.content !== 'string' ||
+      body.content.length > 8000 ||
+      (body.reply_to_message_id !== undefined &&
+        (!Number.isSafeInteger(body.reply_to_message_id) || Number(body.reply_to_message_id) < 1))
+    )
+      throw Object.assign(new Error('Invalid message payload'), { statusCode: 400 });
+    if (body.content) fields.content = body.content;
+    if (body.reply_to_message_id !== undefined)
+      fields.reply_to_message_id = String(body.reply_to_message_id);
+    return {
+      fields,
+      mediaKey: null,
+      mediaMime: 'application/octet-stream',
+      mediaFileName: null,
+      mediaDigest: '',
+    };
+  }
+  let mediaKey: string | null = null;
+  let mediaMime = 'application/octet-stream';
+  let mediaFileName: string | null = null;
+  let mediaDigest = '';
+  let fileCount = 0;
+  try {
+    for await (const part of req.parts({ limits: { fileSize: MAX_ATTACHMENT_BYTES, files: 1 } })) {
+      if (part.type === 'field') {
+        if (
+          !['content', 'reply_to_message_id'].includes(part.fieldname) ||
+          typeof part.value !== 'string' ||
+          part.value.length > 8000
+        ) {
+          throw Object.assign(new Error('Invalid message payload'), { statusCode: 400 });
+        }
+        fields[part.fieldname] = part.value;
+        continue;
+      }
+      fileCount++;
+      if (part.fieldname !== 'media' || fileCount !== 1)
+        throw Object.assign(new Error('Invalid media upload'), { statusCode: 400 });
+      mediaKey = randomUUID();
+      mediaFileName = safeFileName(part.filename);
+      mediaMime = safeMime(part.mimetype);
+      const digest = createHash('sha256');
+      const prefix: Buffer[] = [];
+      let prefixLength = 0;
+      const inspector = new Transform({
+        transform(chunk: Buffer | Uint8Array, _encoding, callback) {
+          const bytes = Buffer.from(chunk);
+          digest.update(bytes);
+          if (prefixLength < 64 * 1024) {
+            const sample = bytes.subarray(0, 64 * 1024 - prefixLength);
+            prefix.push(sample);
+            prefixLength += sample.length;
+          }
+          callback(null, bytes);
+        },
+      });
+      const passThrough = new PassThrough();
+      if (!storage.putStream)
+        throw new MediaStorageError('Attachment storage does not support streamed uploads');
+      const transfer = pipeline(part.file, inspector, passThrough);
+      const [transferred, stored] = await Promise.allSettled([
+        transfer,
+        storage.putStream(mediaKey, passThrough, MAX_ATTACHMENT_BYTES),
+      ]);
+      if (stored.status === 'rejected')
+        throw new MediaStorageError('Attachment storage write failed', { cause: stored.reason });
+      if (transferred.status === 'rejected') throw transferred.reason;
+      if (part.file.truncated) throw new MediaTooLargeError('Media exceeds the 10 MiB limit');
+      if (prefixLength === 0)
+        throw Object.assign(new Error('Media file is empty'), { statusCode: 400 });
+      const detectedMime = sniffMime(Buffer.concat(prefix, prefixLength));
+      if (!mimeMatchesSignature(mediaMime, detectedMime))
+        throw Object.assign(new Error('Media content does not match its declared file type'), {
+          statusCode: 400,
+        });
+      if (mediaMime === 'application/octet-stream' && detectedMime) mediaMime = detectedMime;
+      mediaDigest = digest.digest('hex');
+    }
+    if (fileCount === 0) mediaKey = null;
+    return { fields, mediaKey, mediaMime, mediaFileName, mediaDigest };
+  } catch (error) {
+    if (mediaKey) await storage.delete(mediaKey).catch(() => undefined);
+    throw error;
+  }
+}
 
 const rawWebhookBodies = new WeakMap<FastifyRequest, Buffer>();
 const MAX_GOWA_WEBHOOK_BYTES = 256 * 1024;
@@ -524,6 +634,9 @@ async function recordWhatsAppAudit(
 }
 
 export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) => {
+  await app.register(multipart, {
+    limits: { fileSize: MAX_ATTACHMENT_BYTES, files: 1, fields: 5, fieldSize: 16 * 1024 },
+  });
   app.post<{ Params: { deviceId: string } }>(
     '/whatsapp/gowa/webhook/:deviceId',
     { bodyLimit: MAX_GOWA_WEBHOOK_BYTES, preParsing: captureGowaWebhookBody() },
@@ -2317,48 +2430,69 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
 
   app.post<{ Params: Params; Body: unknown }>(
     '/whatsapp/conversations/:id/messages',
-    { bodyLimit: MAX_ATTACHMENT_REQUEST_BYTES, ...whatsappRateLimit(20) },
+    { bodyLimit: MAX_ATTACHMENT_BYTES + 64 * 1024, ...whatsappRateLimit(20) },
     async (req, reply) => {
       const companyId = requireCompany(req, reply);
       if (!companyId) return;
       if (!requireWhatsAppAction(req, reply, 'whatsapp.message', 'create')) return;
-      const conversationId = id(req.params.id),
-        body = isRecord(req.body) ? req.body : null;
+      const conversationId = id(req.params.id);
+      let upload: OutgoingUpload;
+      try {
+        upload = await parseOutgoingUpload(req, options.attachmentStorage);
+      } catch (error) {
+        const status =
+          isRecord(error) && typeof error.statusCode === 'number' ? error.statusCode : 400;
+        return reply.code(status).send({
+          success: false,
+          error:
+            status >= 500
+              ? 'Media storage is unavailable. Try again.'
+              : error instanceof Error
+                ? error.message
+                : 'Invalid media upload',
+        });
+      }
+      const body = {
+        ...upload.fields,
+        content: upload.fields.content ?? '',
+        ...(upload.fields.reply_to_message_id
+          ? { reply_to_message_id: Number(upload.fields.reply_to_message_id) }
+          : {}),
+      };
       if (
         !conversationId ||
-        !body ||
-        Object.keys(body).some(
-          (k) =>
-            ![
-              'content',
-              'media_base64',
-              'media_mime_type',
-              'media_file_name',
-              'reply_to_message_id',
-            ].includes(k)
-        ) ||
         typeof body.content !== 'string' ||
         body.content.length > 8000 ||
         (body.reply_to_message_id !== undefined &&
-          (!Number.isSafeInteger(body.reply_to_message_id) || Number(body.reply_to_message_id) < 1))
-      )
+          (!Number.isSafeInteger(Number(body.reply_to_message_id)) ||
+            Number(body.reply_to_message_id) < 1))
+      ) {
+        if (upload.mediaKey)
+          await options.attachmentStorage.delete(upload.mediaKey).catch(() => undefined);
         return reply.code(400).send({ success: false, error: 'Invalid message payload' });
+      }
       const idempotencyKey = req.headers['idempotency-key'];
       if (
         typeof idempotencyKey !== 'string' ||
         idempotencyKey.length < 8 ||
         idempotencyKey.length > 128 ||
         !/^[A-Za-z0-9._:-]+$/u.test(idempotencyKey)
-      )
+      ) {
+        if (upload.mediaKey)
+          await options.attachmentStorage.delete(upload.mediaKey).catch(() => undefined);
         return reply
           .code(400)
           .send({ success: false, error: 'A valid Idempotency-Key is required' });
+      }
       const conversation = await WhatsappConversation.query().findOne({
         id: conversationId,
         company_id: companyId,
       });
-      if (!conversation)
+      if (!conversation) {
+        if (upload.mediaKey)
+          await options.attachmentStorage.delete(upload.mediaKey).catch(() => undefined);
         return reply.code(404).send({ success: false, error: 'Conversation not found' });
+      }
       let quotedMessage: { id: number; external_id: string } | undefined;
       if (body.reply_to_message_id !== undefined) {
         quotedMessage = await WhatsappMessage.query().findOne({
@@ -2366,42 +2500,28 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
           company_id: companyId,
           conversation_id: conversationId,
         });
-        if (!quotedMessage)
+        if (!quotedMessage) {
+          if (upload.mediaKey)
+            await options.attachmentStorage.delete(upload.mediaKey).catch(() => undefined);
           return reply.code(404).send({ success: false, error: 'Quoted message not found' });
-        if (!quotedMessage.external_id || quotedMessage.external_id.startsWith('pending:'))
+        }
+        if (!quotedMessage.external_id || quotedMessage.external_id.startsWith('pending:')) {
+          if (upload.mediaKey)
+            await options.attachmentStorage.delete(upload.mediaKey).catch(() => undefined);
           return reply.code(409).send({
             success: false,
             error: 'Quoted message is not available on WhatsApp yet',
           });
+        }
       }
       const account = await WhatsappAccount.query().findOne({ company_id: companyId });
-      if (!body.content.trim() && typeof body.media_base64 !== 'string')
+      if (!body.content.trim() && !upload.mediaKey) {
         return reply
           .code(400)
           .send({ success: false, error: 'Message must contain text or media' });
-      let mediaBytes: Buffer | null = null;
-      let mediaMime = safeMime(body.media_mime_type);
-      const fileName = safeFileName(body.media_file_name);
-      if (typeof body.media_base64 === 'string') {
-        const encoded = body.media_base64.replace(/^data:[^,]+,/u, '');
-        const bytes = Buffer.from(encoded, 'base64');
-        if (!bytes.length || bytes.toString('base64') !== encoded)
-          return reply
-            .code(400)
-            .send({ success: false, error: 'Media must be valid base64 up to 10 MiB' });
-        if (bytes.length > MAX_ATTACHMENT_BYTES) {
-          return reply.code(413).send({ success: false, error: 'Media exceeds the 10 MiB limit' });
-        }
-        const detectedMime = sniffMime(bytes);
-        if (!mimeMatchesSignature(mediaMime, detectedMime)) {
-          return reply.code(400).send({
-            success: false,
-            error: 'Media content does not match its declared file type',
-          });
-        }
-        if (mediaMime === 'application/octet-stream' && detectedMime) mediaMime = detectedMime;
-        mediaBytes = bytes;
       }
+      const mediaMime = upload.mediaMime;
+      const fileName = upload.mediaFileName;
       const requestHash = createHash('sha256')
         .update(
           JSON.stringify({
@@ -2413,27 +2533,28 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
             media_file_name: fileName,
           })
         )
-        .update(mediaBytes ?? Buffer.alloc(0))
+        .update(upload.mediaDigest)
         .digest('hex');
       const existing = await WhatsappMessage.query().findOne({
         company_id: companyId,
         idempotency_key: idempotencyKey,
       });
       if (existing) {
+        if (upload.mediaKey)
+          await options.attachmentStorage.delete(upload.mediaKey).catch(() => undefined);
         if (existing.request_hash !== requestHash)
           return reply
             .code(409)
             .send({ success: false, error: 'Idempotency key was used for another message' });
         return reply.code(202).send({ success: true, data: existing });
       }
-      if (!account || !account.gateway_device_id || account.status !== 'connected')
+      if (!account || !account.gateway_device_id || account.status !== 'connected') {
+        if (upload.mediaKey)
+          await options.attachmentStorage.delete(upload.mediaKey).catch(() => undefined);
         return reply.code(409).send({ success: false, error: 'WhatsApp account is not connected' });
-      let mediaKey: string | null = null;
+      }
+      const mediaKey = upload.mediaKey;
       try {
-        if (mediaBytes) {
-          mediaKey = randomUUID();
-          await options.attachmentStorage.put(mediaKey, mediaBytes);
-        }
         const message = await app.db.transaction(async (trx) => {
           const inserted = await WhatsappMessage.query(trx).insertAndFetch({
             company_id: companyId,
@@ -2496,9 +2617,9 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
             .code(409)
             .send({ success: false, error: 'Idempotency key was used for another message' });
         }
-        return reply.code(mediaBytes ? 503 : 500).send({
+        return reply.code(mediaKey ? 503 : 500).send({
           success: false,
-          error: mediaBytes
+          error: mediaKey
             ? 'Media storage or queue is unavailable. Try again.'
             : 'Message could not be queued. Try again.',
         });

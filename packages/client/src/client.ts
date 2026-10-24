@@ -52,8 +52,12 @@ interface InternalRequestOptions extends RequestOptions {
   isRetry?: boolean;
 }
 
-function isBinaryBody(value: unknown): value is Blob | string {
-  return typeof value === 'string' || (typeof Blob !== 'undefined' && value instanceof Blob);
+function isBinaryBody(value: unknown): value is Blob | FormData | string {
+  return (
+    typeof value === 'string' ||
+    (typeof Blob !== 'undefined' && value instanceof Blob) ||
+    (typeof FormData !== 'undefined' && value instanceof FormData)
+  );
 }
 
 interface ErrorBody {
@@ -419,7 +423,7 @@ export class MoonWitnessClient implements HttpClient {
     }
 
     const headers: Record<string, string> = { Accept: 'application/json', ...options.headers };
-    let requestBody: Blob | string | undefined;
+    let requestBody: Blob | FormData | string | undefined;
     if (options.body !== undefined) {
       if (isBinaryBody(options.body)) requestBody = options.body;
       else {

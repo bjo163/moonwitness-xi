@@ -569,10 +569,14 @@ test('connect shows QR, media is sent, and failures preserve the draft', async (
           status: 503,
           json: { success: false, error: 'Service unavailable' },
         });
-      const payload = route.request().postDataJSON();
+      const contentType = route.request().headers()['content-type'] ?? '';
+      const payload = route.request().postDataBuffer();
       expect(route.request().headers()['idempotency-key']).toBeTruthy();
-      expect(payload.media_file_name).toBe('sample.txt');
-      expect(Buffer.from(payload.media_base64, 'base64').toString()).toBe('test attachment');
+      expect(contentType).toContain('multipart/form-data; boundary=');
+      expect(payload?.toString('latin1')).toContain('name="content"');
+      expect(payload?.toString('latin1')).toContain('Test caption');
+      expect(payload?.toString('latin1')).toContain('filename="sample.txt"');
+      expect(payload?.includes(Buffer.from('test attachment'))).toBe(true);
       await new Promise((resolve) => setTimeout(resolve, 500));
       queued = true;
       return route.fulfill({

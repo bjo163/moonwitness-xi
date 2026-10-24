@@ -35,6 +35,34 @@ function pngFixture(size = 68): Buffer {
   return result;
 }
 
+function multipartPayload(
+  fields: Record<string, string>,
+  file?: { name: string; mime: string; bytes: Buffer }
+): { payload: Buffer; contentType: string } {
+  const boundary = `mw-test-${randomUUID()}`;
+  const chunks: Buffer[] = [];
+  for (const [name, value] of Object.entries(fields)) {
+    chunks.push(
+      Buffer.from(
+        `--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`
+      )
+    );
+  }
+  if (file) {
+    chunks.push(
+      Buffer.from(
+        `--${boundary}\r\nContent-Disposition: form-data; name="media"; filename="${file.name}"\r\nContent-Type: ${file.mime}\r\n\r\n`
+      )
+    );
+    chunks.push(file.bytes, Buffer.from('\r\n'));
+  }
+  chunks.push(Buffer.from(`--${boundary}--\r\n`));
+  return {
+    payload: Buffer.concat(chunks),
+    contentType: `multipart/form-data; boundary=${boundary}`,
+  };
+}
+
 describe('WhatsApp API GoWA bridge', () => {
   let db: Knex;
   let app: ReturnType<typeof Fastify>;
@@ -1746,17 +1774,20 @@ describe('WhatsApp API GoWA bridge', () => {
         status: 'received',
       })
       .returning(['id']);
+    const imageUpload = multipartPayload(
+      { content: 'Photo', reply_to_message_id: String(imageQuoteTarget.id) },
+      { name: 'test.png', mime: 'image/png', bytes: pngFixture() }
+    );
+    const imageIdempotencyKey = randomUUID();
     const sentImage = await app.inject({
       method: 'POST',
       url: `/whatsapp/conversations/${privateId}/messages`,
-      headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
-      payload: {
-        content: 'Photo',
-        media_base64: pngFixture().toString('base64'),
-        media_mime_type: 'image/png',
-        media_file_name: 'test.png',
-        reply_to_message_id: imageQuoteTarget.id,
+      headers: {
+        authorization: 'Bearer test',
+        'idempotency-key': imageIdempotencyKey,
+        'content-type': imageUpload.contentType,
       },
+      payload: imageUpload.payload,
     });
     expect(sentImage.statusCode).toBe(202);
     expect(sentImage.json().data).toMatchObject({
@@ -1765,6 +1796,28 @@ describe('WhatsApp API GoWA bridge', () => {
       status: 'queued',
     });
     const imageMessageId = sentImage.json().data.id as number;
+    const imageRetryUpload = multipartPayload(
+      { content: 'Photo', reply_to_message_id: String(imageQuoteTarget.id) },
+      { name: 'test.png', mime: 'image/png', bytes: pngFixture() }
+    );
+    const retriedImage = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${privateId}/messages`,
+      headers: {
+        authorization: 'Bearer test',
+        'idempotency-key': imageIdempotencyKey,
+        'content-type': imageRetryUpload.contentType,
+      },
+      payload: imageRetryUpload.payload,
+    });
+    expect(retriedImage.statusCode).toBe(202);
+    expect(retriedImage.json().data.id).toBe(imageMessageId);
+    expect(
+      await db('whatsapp_messages').where({
+        company_id: companyId,
+        idempotency_key: imageIdempotencyKey,
+      })
+    ).toHaveLength(1);
     const imageEvent = await db('outbox_events')
       .where({ aggregate_id: imageMessageId, event_type: 'whatsapp.message.send' })
       .first();
@@ -3438,16 +3491,19 @@ describe('WhatsApp API GoWA bridge', () => {
         expect(inbox.statusCode).toBe(200);
         const conversationId = inbox.json().data[0].id as number;
         const content = Buffer.from(`S3 WhatsApp acceptance ${randomUUID()}`);
+        const upload = multipartPayload(
+          { content: 'S3 acceptance' },
+          { name: 's3-acceptance.bin', mime: 'application/octet-stream', bytes: content }
+        );
         const sent = await app.inject({
           method: 'POST',
           url: `/whatsapp/conversations/${conversationId}/messages`,
-          headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
-          payload: {
-            content: 'S3 acceptance',
-            media_base64: content.toString('base64'),
-            media_mime_type: 'application/octet-stream',
-            media_file_name: 's3-acceptance.bin',
+          headers: {
+            authorization: 'Bearer test',
+            'idempotency-key': randomUUID(),
+            'content-type': upload.contentType,
           },
+          payload: upload.payload,
         });
         expect(sent.statusCode, sent.payload).toBe(202);
         const messageId = sent.json().data.id as number;
@@ -3484,18 +3540,21 @@ describe('WhatsApp API GoWA bridge', () => {
       })
       .returning(['id']);
     failAttachmentPut = true;
+    const upload = multipartPayload(
+      { content: 'Photo' },
+      { name: 'test.png', mime: 'image/png', bytes: pngFixture() }
+    );
     const response = await app.inject({
       method: 'POST',
       url: `/whatsapp/conversations/${conversation.id}/messages`,
-      headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
-      payload: {
-        content: 'Photo',
-        media_base64: pngFixture().toString('base64'),
-        media_mime_type: 'image/png',
-        media_file_name: 'test.png',
+      headers: {
+        authorization: 'Bearer test',
+        'idempotency-key': randomUUID(),
+        'content-type': upload.contentType,
       },
+      payload: upload.payload,
     });
-    expect(response.statusCode).toBe(503);
+    expect(response.statusCode, response.payload).toBe(503);
     expect(providerImageSendCount).toBe(0);
     const count = await db('whatsapp_messages').count({ count: '*' }).first();
     expect(Number(count?.count)).toBe(0);
@@ -3513,16 +3572,19 @@ describe('WhatsApp API GoWA bridge', () => {
         unread_count: 0,
       })
       .returning(['id']);
+    const upload = multipartPayload(
+      { content: 'Wrong type' },
+      { name: 'wrong.jpg', mime: 'image/jpeg', bytes: pngFixture() }
+    );
     const response = await app.inject({
       method: 'POST',
       url: `/whatsapp/conversations/${conversation.id}/messages`,
-      headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
-      payload: {
-        content: 'Wrong type',
-        media_base64: pngFixture().toString('base64'),
-        media_mime_type: 'image/jpeg',
-        media_file_name: 'wrong.jpg',
+      headers: {
+        authorization: 'Bearer test',
+        'idempotency-key': randomUUID(),
+        'content-type': upload.contentType,
       },
+      payload: upload.payload,
     });
     expect(response.statusCode).toBe(400);
     expect(response.json().error).toContain('does not match');
@@ -3531,7 +3593,7 @@ describe('WhatsApp API GoWA bridge', () => {
     expect(Number(messageCount?.count)).toBe(0);
   });
 
-  it('rejects empty files and malformed Base64 before creating a message', async () => {
+  it('rejects empty files and legacy Base64 payloads before creating a message', async () => {
     const accountId = await connectAndMarkReady();
     const [conversation] = await db('whatsapp_conversations')
       .insert({
@@ -3543,19 +3605,28 @@ describe('WhatsApp API GoWA bridge', () => {
         unread_count: 0,
       })
       .returning(['id']);
-    for (const invalidBase64 of ['', '!!!!', 'abc=def']) {
-      const response = await app.inject({
-        method: 'POST',
-        url: `/whatsapp/conversations/${conversation.id}/messages`,
-        headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
-        payload: {
-          content: 'Invalid file',
-          media_base64: invalidBase64,
-          media_mime_type: 'application/octet-stream',
-        },
-      });
-      expect(response.statusCode).toBe(400);
-    }
+    const emptyUpload = multipartPayload(
+      { content: 'Invalid file' },
+      { name: 'empty.bin', mime: 'application/octet-stream', bytes: Buffer.alloc(0) }
+    );
+    const emptyResponse = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversation.id}/messages`,
+      headers: {
+        authorization: 'Bearer test',
+        'idempotency-key': randomUUID(),
+        'content-type': emptyUpload.contentType,
+      },
+      payload: emptyUpload.payload,
+    });
+    expect(emptyResponse.statusCode).toBe(400);
+    const legacy = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversation.id}/messages`,
+      headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
+      payload: { content: 'Legacy', media_base64: 'aGVsbG8=' },
+    });
+    expect(legacy.statusCode).toBe(400);
     const messageCount = await db('whatsapp_messages').count({ count: '*' }).first();
     expect(Number(messageCount?.count)).toBe(0);
   });
@@ -3572,19 +3643,22 @@ describe('WhatsApp API GoWA bridge', () => {
         unread_count: 0,
       })
       .returning(['id']);
+    const upload = multipartPayload(
+      { content: 'Filename check' },
+      { name: '../../folder\r\nbad.png', mime: 'image/png', bytes: pngFixture() }
+    );
     const response = await app.inject({
       method: 'POST',
       url: `/whatsapp/conversations/${conversation.id}/messages`,
-      headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
-      payload: {
-        content: 'Filename check',
-        media_base64: pngFixture().toString('base64'),
-        media_mime_type: 'image/png',
-        media_file_name: '../../folder\r\nbad.png',
+      headers: {
+        authorization: 'Bearer test',
+        'idempotency-key': randomUUID(),
+        'content-type': upload.contentType,
       },
+      payload: upload.payload,
     });
     expect(response.statusCode).toBe(202);
-    expect(response.json().data.media_file_name).toBe('.._.._folder__bad.png');
+    expect(response.json().data.media_file_name).toBe('folder');
   });
 
   it('serves provider media with an inline-safe MIME derived from its bytes', async () => {
@@ -3679,7 +3753,7 @@ describe('WhatsApp API GoWA bridge', () => {
     expect(stored.size).toBe(0);
   });
 
-  it('enforces the shared 10 MiB raw-file limit after Base64 decoding', async () => {
+  it('enforces the shared 10 MiB raw-file limit during multipart upload', async () => {
     const accountId = await connectAndMarkReady();
     const [conversation] = await db('whatsapp_conversations')
       .insert({
@@ -3691,24 +3765,25 @@ describe('WhatsApp API GoWA bridge', () => {
         unread_count: 0,
       })
       .returning(['id']);
-    const tooLarge = Buffer.alloc(MAX_ATTACHMENT_BYTES + 1).toString('base64');
+    const upload = multipartPayload(
+      { content: 'Oversized file' },
+      { name: 'too-large.png', mime: 'image/png', bytes: pngFixture(MAX_ATTACHMENT_BYTES + 1) }
+    );
     const response = await app.inject({
       method: 'POST',
       url: `/whatsapp/conversations/${conversation.id}/messages`,
-      headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
-      payload: {
-        content: 'Oversized file',
-        media_base64: tooLarge,
-        media_mime_type: 'image/png',
-        media_file_name: 'too-large.png',
+      headers: {
+        authorization: 'Bearer test',
+        'idempotency-key': randomUUID(),
+        'content-type': upload.contentType,
       },
+      payload: upload.payload,
     });
-    expect(response.statusCode).toBe(413);
-    expect(response.json().error).toBe('Media exceeds the 10 MiB limit');
+    expect(response.statusCode, response.payload).toBe(413);
     expect(providerImageSendCount).toBe(0);
   });
 
-  it('accepts exactly 10 MiB through the 15 MiB Base64 transport limit', async () => {
+  it('accepts exactly 10 MiB through multipart streaming', async () => {
     const accountId = await connectAndMarkReady();
     const [conversation] = await db('whatsapp_conversations')
       .insert({
@@ -3720,17 +3795,19 @@ describe('WhatsApp API GoWA bridge', () => {
         unread_count: 0,
       })
       .returning(['id']);
-    const exactLimit = pngFixture(MAX_ATTACHMENT_BYTES).toString('base64');
+    const upload = multipartPayload(
+      { content: 'Maximum size file' },
+      { name: 'maximum.png', mime: 'image/png', bytes: pngFixture(MAX_ATTACHMENT_BYTES) }
+    );
     const response = await app.inject({
       method: 'POST',
       url: `/whatsapp/conversations/${conversation.id}/messages`,
-      headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
-      payload: {
-        content: 'Maximum size file',
-        media_base64: exactLimit,
-        media_mime_type: 'image/png',
-        media_file_name: 'maximum.png',
+      headers: {
+        authorization: 'Bearer test',
+        'idempotency-key': randomUUID(),
+        'content-type': upload.contentType,
       },
+      payload: upload.payload,
     });
     expect(response.statusCode).toBe(202);
     expect(providerImageSendCount).toBe(0);

@@ -1573,28 +1573,14 @@ function MessageComposer({
     sendLock.current = true;
     setSending(true);
     try {
-      const media_base64 = file
-        ? await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '');
-            reader.onerror = () => reject(new Error('Could not read file'));
-            reader.readAsDataURL(file);
-          })
-        : undefined;
+      const body = new FormData();
+      body.set('content', draft.trim());
+      if (replyTo) body.set('reply_to_message_id', String(replyTo.id));
+      if (file) body.set('media', file, file.name);
       await client.request(`/whatsapp/conversations/${conversationId}/messages`, {
         method: 'POST',
         headers: { 'Idempotency-Key': idempotencyKey.current },
-        body: {
-          content: draft.trim(),
-          ...(replyTo ? { reply_to_message_id: replyTo.id } : {}),
-          ...(file
-            ? {
-                media_base64,
-                media_mime_type: file.type || 'application/octet-stream',
-                media_file_name: file.name,
-              }
-            : {}),
-        },
+        body,
       });
       setDraft('');
       setFile(null);
