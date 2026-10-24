@@ -127,3 +127,32 @@ test('committed Pages assets match the public package manifest and shared UI tok
     '/moonwitness-xiv/assets/moonwitness/brand/readme-banner.svg'
   );
 });
+test('one fingerprint covers a CRLF and an LF checkout of the same assets', () => {
+  const assetManifest = {
+    schemaVersion: 1,
+    assets: [
+      { path: 'brand/banner.svg', kind: 'banner', format: 'svg' },
+      { path: 'brand/icon.png', kind: 'icon', format: 'png' },
+    ],
+  };
+  const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a]);
+  const banner = ['<svg>', '  <path/>', '</svg>', ''].join('\u000a');
+  const tokens = [':root { --mw-paper: #f3efe4; }', ''].join('\u000a');
+  const build = (eol) =>
+    createDocAssetArtifacts({
+      assetManifest,
+      assetManifestContents: Buffer.from(JSON.stringify(assetManifest)),
+      assetSources: new Map([
+        ['brand/banner.svg', Buffer.from(banner.replaceAll('\u000a', eol))],
+        ['brand/icon.png', png],
+      ]),
+      tokenContents: Buffer.from(tokens.replaceAll('\u000a', eol)),
+    });
+
+  const lf = build('\u000a');
+  const crlf = build('\u000d\u000a');
+  for (const [output, contents] of lf) {
+    assert.deepEqual(crlf.get(output), contents, `${output} is platform-independent`);
+  }
+  assert.deepEqual(lf.get('brand/icon.png'), png, 'binary assets keep their exact bytes');
+});
