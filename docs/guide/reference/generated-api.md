@@ -1,6 +1,6 @@
 # Generated API route reference
 
-Extracted from literal Fastify route declarations. Source fingerprint: `d4063a247cf89e0b62600ee8d672c669443a4143def7eefbfadf4c8309bdd7fe`. Generic handler request payloads are not inferred where the source does not declare a static schema.
+Extracted from literal Fastify route declarations. Source fingerprint: `cf8847e440572496901b168e9bd0e402dbd6b4f3cac80133cd2c1334ba1f07f6`. Generic handler request payloads are not inferred where the source does not declare a static schema.
 
 | Method | Path                                              |
 | ------ | ------------------------------------------------- |
@@ -58,16 +58,6 @@ Extracted from literal Fastify route declarations. Source fingerprint: `d4063a24
 | POST   | `/auth/refresh`                                   |
 | POST   | `/auth/register`                                  |
 | GET    | `/health`                                         |
-| GET    | `/internal/whatsapp/accounts`                     |
-| POST   | `/internal/whatsapp/connection-control`           |
-| POST   | `/internal/whatsapp/events/process`               |
-| POST   | `/internal/whatsapp/incoming`                     |
-| POST   | `/internal/whatsapp/job-result`                   |
-| POST   | `/internal/whatsapp/jobs/claim`                   |
-| POST   | `/internal/whatsapp/jobs/heartbeat`               |
-| GET    | `/internal/whatsapp/media/:id`                    |
-| POST   | `/internal/whatsapp/message-status`               |
-| POST   | `/internal/whatsapp/status`                       |
 | POST   | `/jsonrpc`                                        |
 | GET    | `/livez`                                          |
 | GET    | `/metrics`                                        |
@@ -80,11 +70,20 @@ Extracted from literal Fastify route declarations. Source fingerprint: `d4063a24
 | POST   | `/whatsapp/connect`                               |
 | GET    | `/whatsapp/conversations`                         |
 | POST   | `/whatsapp/conversations`                         |
+| POST   | `/whatsapp/conversations/:id/archive`             |
 | GET    | `/whatsapp/conversations/:id/messages`            |
 | POST   | `/whatsapp/conversations/:id/messages`            |
+| POST   | `/whatsapp/conversations/:id/pin`                 |
+| POST   | `/whatsapp/conversations/:id/read`                |
 | POST   | `/whatsapp/disconnect`                            |
+| POST   | `/whatsapp/gowa/webhook/:deviceId`                |
 | GET    | `/whatsapp/media/:id`                             |
+| POST   | `/whatsapp/messages/:id/edit`                     |
+| POST   | `/whatsapp/messages/:id/forward`                  |
+| POST   | `/whatsapp/messages/:id/reaction`                 |
 | POST   | `/whatsapp/messages/:id/retry`                    |
+| POST   | `/whatsapp/messages/:id/revoke`                   |
+| GET    | `/whatsapp/readyz`                                |
 | GET    | `/workflows/definitions`                          |
 | GET    | `/workflows/instances`                            |
 | POST   | `/workflows/instances`                            |

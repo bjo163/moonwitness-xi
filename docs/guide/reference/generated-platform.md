@@ -1,6 +1,6 @@
 # Generated platform reference
 
-Source fingerprint: `d4063a247cf89e0b62600ee8d672c669443a4143def7eefbfadf4c8309bdd7fe`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
+Source fingerprint: `cf8847e440572496901b168e9bd0e402dbd6b4f3cac80133cd2c1334ba1f07f6`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
 
 ## Workspace packages and apps
 
@@ -10,7 +10,6 @@ Source fingerprint: `d4063a247cf89e0b62600ee8d672c669443a4143def7eefbfadf4c8309b
 | `@moonwitness/board`            | App     | 1.0.0-rc.1 | `build`, `dev`, `lint`, `preview`, `start`, `start:built`, `typecheck`                                                                                                                              |
 | `@moonwitness/docs`             | App     | 1.0.0-rc.1 | `dev`, `portal:build`, `portal:build:built`, `preview`, `test`, `typecheck`                                                                                                                         |
 | `@moonwitness/ui-catalog`       | App     | 1.0.0-rc.1 | `build`, `build:built`, `dev`, `preview`, `test`                                                                                                                                                    |
-| `@moonwitness/whatsapp`         | App     | 1.0.0-rc.1 | `build`, `dev`, `start`, `start:built`, `test`, `typecheck`                                                                                                                                         |
 | `@moonwitness/assets`           | Package | 1.0.0-rc.1 | `artwork:prepare`, `brand:prepare`, `fonts:prepare`                                                                                                                                                 |
 | `@moonwitness/auth`             | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                                     |
 | `@moonwitness/client`           | Package | 1.0.0-rc.1 | `build`, `test`                                                                                                                                                                                     |
@@ -35,49 +34,59 @@ Source fingerprint: `d4063a247cf89e0b62600ee8d672c669443a4143def7eefbfadf4c8309b
 
 ## Environment variable names
 
-| Name                         | Value category | Present in `.env.example` | Sensitive value redacted |
-| ---------------------------- | -------------- | ------------------------- | ------------------------ |
-| `ACCESS_TOKEN_TTL_SECONDS`   | secret         | Yes                       | Yes                      |
-| `AI_MODE`                    | string         | Yes                       | No                       |
-| `API_HOST`                   | string         | Yes                       | No                       |
-| `API_PORT`                   | integer        | Yes                       | No                       |
-| `ATTACHMENT_STORAGE_DIR`     | string         | Yes                       | No                       |
-| `AUTH_LOGIN_RATE_MAX`        | integer        | Yes                       | No                       |
-| `BOARD_HOST`                 | string         | Yes                       | No                       |
-| `BOARD_PORT`                 | integer        | Yes                       | No                       |
-| `DATABASE_URL`               | url            | Yes                       | Yes                      |
-| `DB_ACQUIRE_TIMEOUT_MS`      | integer        | Yes                       | No                       |
-| `DB_POOL_MAX`                | integer        | Yes                       | No                       |
-| `DB_POOL_MIN`                | integer        | Yes                       | No                       |
-| `DB_STATEMENT_TIMEOUT_MS`    | integer        | Yes                       | No                       |
-| `HOST`                       | string         | No                        | No                       |
-| `JOB_HANDLERS_MODULE`        | string         | Yes                       | No                       |
-| `JOBS_SCHEDULER_HEALTH_PORT` | integer        | Yes                       | No                       |
-| `JOBS_WORKER_HEALTH_PORT`    | integer        | Yes                       | No                       |
-| `JWT_SECRET`                 | secret         | Yes                       | Yes                      |
-| `LOCAL_AI_ENDPOINT`          | string         | Yes                       | No                       |
-| `LOCAL_AI_TIMEOUT_MS`        | integer        | Yes                       | No                       |
-| `LOG_DIR`                    | string         | Yes                       | No                       |
-| `LOG_FILE_NAME`              | string         | Yes                       | No                       |
-| `LOG_LEVEL`                  | string         | Yes                       | No                       |
-| `LOG_PRETTY`                 | boolean        | Yes                       | No                       |
-| `LOG_TO_FILE`                | boolean        | Yes                       | No                       |
-| `METRICS_TOKEN`              | secret         | Yes                       | Yes                      |
-| `MOONWITNESS_CORPUS_ROOT`    | string         | No                        | No                       |
-| `NODE_ENV`                   | string         | Yes                       | No                       |
-| `OUTBOX_HANDLERS_MODULE`     | string         | Yes                       | No                       |
-| `OUTBOX_WORKER_HEALTH_PORT`  | integer        | Yes                       | No                       |
-| `PORT`                       | integer        | No                        | No                       |
-| `POSTGRES_TEST_URL`          | url            | Yes                       | No                       |
-| `PRINT_ROUTES`               | boolean        | Yes                       | No                       |
-| `REFRESH_TOKEN_TTL_SECONDS`  | secret         | Yes                       | Yes                      |
-| `RESTORE_DRILL_SCHEMA`       | string         | No                        | No                       |
-| `SUPERADMIN_PASSWORD`        | secret         | Yes                       | Yes                      |
-| `WHATSAPP_API_URL`           | string         | Yes                       | No                       |
-| `WHATSAPP_INTERNAL_TOKEN`    | secret         | Yes                       | Yes                      |
-| `WHATSAPP_PORT`              | integer        | Yes                       | No                       |
-| `WHATSAPP_SESSION_KEY`       | secret         | Yes                       | Yes                      |
-| `WORKER_HEALTH_HOST`         | string         | Yes                       | No                       |
+| Name                                | Value category | Present in `.env.example` | Sensitive value redacted |
+| ----------------------------------- | -------------- | ------------------------- | ------------------------ |
+| `ACCESS_TOKEN_TTL_SECONDS`          | secret         | Yes                       | Yes                      |
+| `AI_MODE`                           | string         | Yes                       | No                       |
+| `API_HOST`                          | string         | Yes                       | No                       |
+| `API_PORT`                          | integer        | Yes                       | No                       |
+| `ATTACHMENT_S3_ACCESS_KEY`          | secret         | Yes                       | Yes                      |
+| `ATTACHMENT_S3_BUCKET`              | string         | Yes                       | No                       |
+| `ATTACHMENT_S3_ENDPOINT`            | string         | Yes                       | No                       |
+| `ATTACHMENT_S3_FORCE_PATH_STYLE`    | boolean        | Yes                       | No                       |
+| `ATTACHMENT_S3_REGION`              | string         | Yes                       | No                       |
+| `ATTACHMENT_S3_SECRET_KEY`          | secret         | Yes                       | Yes                      |
+| `ATTACHMENT_STORAGE_DIR`            | string         | Yes                       | No                       |
+| `ATTACHMENT_STORAGE_DRIVER`         | string         | Yes                       | No                       |
+| `AUTH_LOGIN_RATE_MAX`               | integer        | Yes                       | No                       |
+| `BOARD_HOST`                        | string         | Yes                       | No                       |
+| `BOARD_PORT`                        | integer        | Yes                       | No                       |
+| `DATABASE_URL`                      | url            | Yes                       | Yes                      |
+| `DB_ACQUIRE_TIMEOUT_MS`             | integer        | Yes                       | No                       |
+| `DB_POOL_MAX`                       | integer        | Yes                       | No                       |
+| `DB_POOL_MIN`                       | integer        | Yes                       | No                       |
+| `DB_STATEMENT_TIMEOUT_MS`           | integer        | Yes                       | No                       |
+| `HOST`                              | string         | No                        | No                       |
+| `JOB_HANDLERS_MODULE`               | string         | Yes                       | No                       |
+| `JOBS_SCHEDULER_HEALTH_PORT`        | integer        | Yes                       | No                       |
+| `JOBS_WORKER_HEALTH_PORT`           | integer        | Yes                       | No                       |
+| `JWT_SECRET`                        | secret         | Yes                       | Yes                      |
+| `LOCAL_AI_ENDPOINT`                 | string         | Yes                       | No                       |
+| `LOCAL_AI_TIMEOUT_MS`               | integer        | Yes                       | No                       |
+| `LOG_DIR`                           | string         | Yes                       | No                       |
+| `LOG_FILE_NAME`                     | string         | Yes                       | No                       |
+| `LOG_LEVEL`                         | string         | Yes                       | No                       |
+| `LOG_PRETTY`                        | boolean        | Yes                       | No                       |
+| `LOG_TO_FILE`                       | boolean        | Yes                       | No                       |
+| `METRICS_TOKEN`                     | secret         | Yes                       | Yes                      |
+| `MOONWITNESS_CORPUS_ROOT`           | string         | No                        | No                       |
+| `NODE_ENV`                          | string         | Yes                       | No                       |
+| `OUTBOX_HANDLERS_MODULE`            | string         | Yes                       | No                       |
+| `OUTBOX_WORKER_HEALTH_PORT`         | integer        | Yes                       | No                       |
+| `PORT`                              | integer        | No                        | No                       |
+| `POSTGRES_TEST_URL`                 | url            | Yes                       | No                       |
+| `PRINT_ROUTES`                      | boolean        | Yes                       | No                       |
+| `REFRESH_TOKEN_TTL_SECONDS`         | secret         | Yes                       | Yes                      |
+| `RESTORE_DRILL_SCHEMA`              | string         | No                        | No                       |
+| `SUPERADMIN_PASSWORD`               | secret         | Yes                       | Yes                      |
+| `WHATSAPP_GATEWAY_EXPECTED_VERSION` | string         | Yes                       | No                       |
+| `WHATSAPP_GATEWAY_PASSWORD`         | secret         | Yes                       | Yes                      |
+| `WHATSAPP_GATEWAY_TIMEOUT_MS`       | integer        | Yes                       | No                       |
+| `WHATSAPP_GATEWAY_URL`              | string         | Yes                       | No                       |
+| `WHATSAPP_GATEWAY_USERNAME`         | string         | Yes                       | No                       |
+| `WHATSAPP_WEBHOOK_SECRET`           | secret         | Yes                       | Yes                      |
+| `WHATSAPP_WEBHOOK_URL`              | string         | Yes                       | No                       |
+| `WORKER_HEALTH_HOST`                | string         | Yes                       | No                       |
 
 The generator reads only `.env.example` and the names referenced by the typed config source. It never reads `.env` and does not emit values or defaults.
 
@@ -113,7 +122,6 @@ Value categories are inferred from variable names and example syntax; requiredne
 - `pnpm dev`
 - `pnpm dev:api`
 - `pnpm dev:board`
-- `pnpm dev:whatsapp`
 - `pnpm docs:build`
 - `pnpm docs:build:built`
 - `pnpm docs:change:classify`

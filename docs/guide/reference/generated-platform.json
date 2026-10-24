@@ -47,12 +47,6 @@
       "scripts": ["build", "build:built", "dev", "preview", "test"]
     },
     {
-      "name": "@moonwitness/whatsapp",
-      "version": "1.0.0-rc.1",
-      "directory": "apps/whatsapp",
-      "scripts": ["build", "dev", "start", "start:built", "test", "typecheck"]
-    },
-    {
       "name": "@moonwitness/assets",
       "version": "1.0.0-rc.1",
       "directory": "packages/assets",
@@ -218,14 +212,6 @@
       "preview": "vite preview",
       "test": "playwright test"
     },
-    "@moonwitness/whatsapp": {
-      "build": "tsc",
-      "dev": "tsx watch src/main.ts",
-      "start": "node dist/main.js",
-      "start:built": "node dist/main.js",
-      "test": "tsx --test tests/*.test.ts",
-      "typecheck": "tsc --noEmit"
-    },
     "@moonwitness/assets": {
       "artwork:prepare": "node scripts/prepare-artwork.mjs",
       "brand:prepare": "node scripts/prepare-brand-master.mjs",
@@ -337,10 +323,9 @@
       "ci:affected": "node scripts/select-affected.mjs",
       "dependency:candidate": "node scripts/dependency-candidate.mjs",
       "dependency:plan": "node scripts/dependency-update-plan.mjs",
-      "dev": "pnpm --filter @moonwitness/api --filter @moonwitness/board --filter @moonwitness/whatsapp --parallel dev",
+      "dev": "pnpm --filter @moonwitness/ui build && node scripts/run-local-services.mjs dev",
       "dev:api": "pnpm --filter @moonwitness/api dev",
       "dev:board": "pnpm --filter @moonwitness/board dev",
-      "dev:whatsapp": "pnpm --filter @moonwitness/whatsapp dev",
       "docs:build": "pnpm docs:check && node scripts/docs/build-guide.mjs && pnpm --filter @moonwitness/docs portal:build",
       "docs:build:built": "pnpm docs:check:built && node scripts/docs/build-guide.mjs && pnpm --filter @moonwitness/docs portal:build:built",
       "docs:change:classify": "node scripts/classify-docs-change.mjs",
@@ -378,8 +363,8 @@
       "roadmap:issues:audit": "node scripts/roadmap/audit-issues.mjs",
       "roadmap:issues:plan": "node scripts/roadmap/sync-issues.mjs",
       "roadmap:progress": "node scripts/roadmap/progress-dashboard.mjs",
-      "start": "pnpm --filter @moonwitness/api --filter @moonwitness/board --filter @moonwitness/whatsapp --parallel start",
-      "start:built": "pnpm --filter @moonwitness/api --filter @moonwitness/board --filter @moonwitness/whatsapp --parallel start:built",
+      "start": "node scripts/run-local-services.mjs start",
+      "start:built": "node scripts/run-local-services.mjs start:built",
       "test": "pnpm test:unit",
       "test:action-pins": "node --test scripts/check-action-pins.test.mjs",
       "test:action-tags": "node --test scripts/check-action-tag-pins.test.mjs",
@@ -435,10 +420,10 @@
       "test:ui-catalog": "pnpm --filter @moonwitness/ui-catalog build && pnpm --filter @moonwitness/ui-catalog test",
       "test:unit": "pnpm build && pnpm test:unit:built",
       "test:unit-runner-policy": "node --test scripts/unit-runner-policy.test.mjs",
-      "test:unit:built": "pnpm --filter @moonwitness/types test && pnpm --filter @moonwitness/whatsapp test && pnpm --filter @moonwitness/api exec vitest run --exclude tests/postgres.integration.test.ts --exclude tests/postgres.performance.integration.test.ts && pnpm --filter @moonwitness/auth test && pnpm --filter @moonwitness/client test && pnpm --filter @moonwitness/jobs test && pnpm --filter @moonwitness/logger test && pnpm --filter @moonwitness/orm test && pnpm test:board-csv && pnpm test:addon-conformance && pnpm --filter @moonwitness/orm-base test && pnpm --filter @moonwitness/orm-integration test && pnpm --filter @moonwitness/orm-knowledge test && pnpm --filter @moonwitness/orm-notification test && pnpm --filter @moonwitness/orm-organization test && pnpm --filter @moonwitness/orm-request test && pnpm --filter @moonwitness/orm-storage test && pnpm --filter @moonwitness/orm-workflow test && pnpm --filter @moonwitness/knowledge typecheck && pnpm --filter @moonwitness/knowledge test && pnpm --filter @moonwitness/corpus typecheck && pnpm --filter @moonwitness/corpus test && pnpm --filter @moonwitness/research typecheck && pnpm --filter @moonwitness/research test && pnpm test:knowledge-cli:built && pnpm test:assets && pnpm test:ui && pnpm test:platform-audit && pnpm test:board-budget && pnpm board:budget && pnpm test:release-workflow && pnpm test:release-latest-policy && pnpm test:release-image-publish && pnpm test:release-asset-reconcile && pnpm test:release-dry-run && pnpm test:release-verify-attestations && pnpm test:expected-ref && pnpm test:release-plan && pnpm test:release-orchestration && pnpm test:versioned-docs",
+      "test:unit:built": "pnpm --filter @moonwitness/types test && pnpm --filter @moonwitness/api exec vitest run --exclude tests/postgres.integration.test.ts --exclude tests/postgres.performance.integration.test.ts && pnpm --filter @moonwitness/auth test && pnpm --filter @moonwitness/client test && pnpm --filter @moonwitness/jobs test && pnpm --filter @moonwitness/logger test && pnpm --filter @moonwitness/orm test && pnpm test:board-csv && pnpm test:addon-conformance && pnpm --filter @moonwitness/orm-base test && pnpm --filter @moonwitness/orm-integration test && pnpm --filter @moonwitness/orm-knowledge test && pnpm --filter @moonwitness/orm-notification test && pnpm --filter @moonwitness/orm-organization test && pnpm --filter @moonwitness/orm-request test && pnpm --filter @moonwitness/orm-storage test && pnpm --filter @moonwitness/orm-workflow test && pnpm --filter @moonwitness/knowledge typecheck && pnpm --filter @moonwitness/knowledge test && pnpm --filter @moonwitness/corpus typecheck && pnpm --filter @moonwitness/corpus test && pnpm --filter @moonwitness/research typecheck && pnpm --filter @moonwitness/research test && pnpm test:knowledge-cli:built && pnpm test:assets && pnpm test:ui && pnpm test:platform-audit && pnpm test:board-budget && pnpm board:budget && pnpm test:release-workflow && pnpm test:release-latest-policy && pnpm test:release-image-publish && pnpm test:release-asset-reconcile && pnpm test:release-dry-run && pnpm test:release-verify-attestations && pnpm test:expected-ref && pnpm test:release-plan && pnpm test:release-orchestration && pnpm test:versioned-docs",
       "test:unit:ci": "node scripts/run-unit-tests.mjs",
       "test:versioned-docs": "node --test scripts/docs/versioned-site.test.mjs",
-      "test:whatsapp": "pnpm --filter @moonwitness/whatsapp test && pnpm --filter @moonwitness/api exec vitest run tests/whatsapp.routes.test.ts",
+      "test:whatsapp": "pnpm --filter @moonwitness/api exec vitest run tests/whatsapp.media.test.ts tests/whatsapp.routes.test.ts",
       "test:workflow-trust": "node --test scripts/check-workflow-checkout-trust.test.mjs",
       "test:workspace-version-policy": "node --test scripts/workspace-version-policy.test.mjs",
       "typecheck": "pnpm build && pnpm --filter @moonwitness/board typecheck",
@@ -473,7 +458,49 @@
       "valueType": "integer"
     },
     {
+      "name": "ATTACHMENT_S3_ACCESS_KEY",
+      "configuredInExample": true,
+      "secret": true,
+      "valueType": "secret"
+    },
+    {
+      "name": "ATTACHMENT_S3_BUCKET",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "string"
+    },
+    {
+      "name": "ATTACHMENT_S3_ENDPOINT",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "string"
+    },
+    {
+      "name": "ATTACHMENT_S3_FORCE_PATH_STYLE",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "boolean"
+    },
+    {
+      "name": "ATTACHMENT_S3_REGION",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "string"
+    },
+    {
+      "name": "ATTACHMENT_S3_SECRET_KEY",
+      "configuredInExample": true,
+      "secret": true,
+      "valueType": "secret"
+    },
+    {
       "name": "ATTACHMENT_STORAGE_DIR",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "string"
+    },
+    {
+      "name": "ATTACHMENT_STORAGE_DRIVER",
       "configuredInExample": true,
       "secret": false,
       "valueType": "string"
@@ -665,28 +692,46 @@
       "valueType": "secret"
     },
     {
-      "name": "WHATSAPP_API_URL",
+      "name": "WHATSAPP_GATEWAY_EXPECTED_VERSION",
       "configuredInExample": true,
       "secret": false,
       "valueType": "string"
     },
     {
-      "name": "WHATSAPP_INTERNAL_TOKEN",
+      "name": "WHATSAPP_GATEWAY_PASSWORD",
       "configuredInExample": true,
       "secret": true,
       "valueType": "secret"
     },
     {
-      "name": "WHATSAPP_PORT",
+      "name": "WHATSAPP_GATEWAY_TIMEOUT_MS",
       "configuredInExample": true,
       "secret": false,
       "valueType": "integer"
     },
     {
-      "name": "WHATSAPP_SESSION_KEY",
+      "name": "WHATSAPP_GATEWAY_URL",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "string"
+    },
+    {
+      "name": "WHATSAPP_GATEWAY_USERNAME",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "string"
+    },
+    {
+      "name": "WHATSAPP_WEBHOOK_SECRET",
       "configuredInExample": true,
       "secret": true,
       "valueType": "secret"
+    },
+    {
+      "name": "WHATSAPP_WEBHOOK_URL",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "string"
     },
     {
       "name": "WORKER_HEALTH_HOST",
@@ -6296,46 +6341,6 @@
       "path": "/health"
     },
     {
-      "method": "GET",
-      "path": "/internal/whatsapp/accounts"
-    },
-    {
-      "method": "POST",
-      "path": "/internal/whatsapp/connection-control"
-    },
-    {
-      "method": "POST",
-      "path": "/internal/whatsapp/events/process"
-    },
-    {
-      "method": "POST",
-      "path": "/internal/whatsapp/incoming"
-    },
-    {
-      "method": "POST",
-      "path": "/internal/whatsapp/job-result"
-    },
-    {
-      "method": "POST",
-      "path": "/internal/whatsapp/jobs/claim"
-    },
-    {
-      "method": "POST",
-      "path": "/internal/whatsapp/jobs/heartbeat"
-    },
-    {
-      "method": "GET",
-      "path": "/internal/whatsapp/media/:id"
-    },
-    {
-      "method": "POST",
-      "path": "/internal/whatsapp/message-status"
-    },
-    {
-      "method": "POST",
-      "path": "/internal/whatsapp/status"
-    },
-    {
       "method": "POST",
       "path": "/jsonrpc"
     },
@@ -6384,6 +6389,10 @@
       "path": "/whatsapp/conversations"
     },
     {
+      "method": "POST",
+      "path": "/whatsapp/conversations/:id/archive"
+    },
+    {
       "method": "GET",
       "path": "/whatsapp/conversations/:id/messages"
     },
@@ -6393,7 +6402,19 @@
     },
     {
       "method": "POST",
+      "path": "/whatsapp/conversations/:id/pin"
+    },
+    {
+      "method": "POST",
+      "path": "/whatsapp/conversations/:id/read"
+    },
+    {
+      "method": "POST",
       "path": "/whatsapp/disconnect"
+    },
+    {
+      "method": "POST",
+      "path": "/whatsapp/gowa/webhook/:deviceId"
     },
     {
       "method": "GET",
@@ -6401,7 +6422,27 @@
     },
     {
       "method": "POST",
+      "path": "/whatsapp/messages/:id/edit"
+    },
+    {
+      "method": "POST",
+      "path": "/whatsapp/messages/:id/forward"
+    },
+    {
+      "method": "POST",
+      "path": "/whatsapp/messages/:id/reaction"
+    },
+    {
+      "method": "POST",
       "path": "/whatsapp/messages/:id/retry"
+    },
+    {
+      "method": "POST",
+      "path": "/whatsapp/messages/:id/revoke"
+    },
+    {
+      "method": "GET",
+      "path": "/whatsapp/readyz"
     },
     {
       "method": "GET",
@@ -6424,5 +6465,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "d4063a247cf89e0b62600ee8d672c669443a4143def7eefbfadf4c8309bdd7fe"
+  "generatedFromSha256": "cf8847e440572496901b168e9bd0e402dbd6b4f3cac80133cd2c1334ba1f07f6"
 }

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "apps/*/package.json and packages/*/package.json",
-  "sourceSha256": "4f7b30b95f27acfa7fae7be16930912de26cd60be0744371efc2a366162c108c",
+  "sourceSha256": "a5ca1de95ef2c12eedac4a2679f765afccf17947fcd11c4e9564b48d68583f51",
   "packages": [
     {
       "name": "@moonwitness/api",
@@ -152,12 +152,6 @@
       "kind": "app",
       "version": "1.0.0-rc.1",
       "manifest": "apps/ui-catalog"
-    },
-    {
-      "name": "@moonwitness/whatsapp",
-      "kind": "app",
-      "version": "1.0.0-rc.1",
-      "manifest": "apps/whatsapp"
     }
   ],
   "dependencies": [
@@ -488,6 +482,12 @@
     {
       "from": "@moonwitness/orm-storage",
       "to": "@moonwitness/orm",
+      "kind": "runtime",
+      "manifest": "packages/orm-storage"
+    },
+    {
+      "from": "@moonwitness/orm-storage",
+      "to": "@moonwitness/types",
       "kind": "runtime",
       "manifest": "packages/orm-storage"
     },
