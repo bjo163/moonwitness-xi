@@ -56,6 +56,34 @@
     font: inherit;
   }
 
+  .mw-ui-interactive-surface:focus-within {
+    --mw-interactive-surface-border: var(--mw-interactive-accent, var(--mw-magenta));
+  }
+
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .mw-ui-interactive-surface {
+      transition: border-color var(--mw-motion-fast) var(--mw-motion-ease);
+    }
+    .mw-ui-interactive-marker,
+    .mw-ui-interactive-title {
+      transition:
+        transform var(--mw-motion-fast) var(--mw-motion-ease),
+        color var(--mw-motion-fast) var(--mw-motion-ease),
+        border-color var(--mw-motion-fast) var(--mw-motion-ease);
+    }
+    .mw-ui-interactive-surface:hover {
+      --mw-interactive-surface-border: var(--mw-interactive-accent, var(--mw-magenta));
+    }
+    .mw-ui-interactive-surface:hover .mw-ui-interactive-marker {
+      --mw-interactive-marker-transform: rotate(-7deg) scale(1.06);
+      --mw-interactive-marker-border: var(--mw-interactive-accent, var(--mw-magenta));
+      --mw-interactive-marker-color: var(--mw-interactive-accent, var(--mw-magenta));
+    }
+    .mw-ui-interactive-surface:hover .mw-ui-interactive-title {
+      --mw-interactive-title-color: var(--mw-interactive-accent, var(--mw-magenta));
+    }
+  }
+
   .mw-ui-button {
     display: inline-flex;
     min-width: 0;

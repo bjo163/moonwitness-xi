@@ -396,12 +396,19 @@
   gap: clamp(0.6rem, 1.1vw, 1rem);
 }
 .home-editorial-card {
+  --mw-interactive-accent: var(--mw-magenta);
   display: grid;
   min-width: 0;
   grid-template-rows: auto clamp(13rem, 15vw, 16rem) 1fr;
   overflow: hidden;
-  border: 2px solid var(--mw-paper);
+  border: 2px solid var(--mw-interactive-surface-border, var(--mw-paper));
   background: var(--mw-night-raised);
+}
+.crop-knowledge {
+  --mw-interactive-accent: var(--mw-cyan);
+}
+.crop-stories {
+  --mw-interactive-accent: var(--mw-yellow);
 }
 .home-editorial-card .mw-ui-section-ribbon {
   border-color: var(--mw-paper);
@@ -418,10 +425,6 @@
 }
 .home-card-art img {
   object-fit: cover;
-  transition: transform var(--mw-motion-slow) var(--mw-motion-ease);
-}
-.home-editorial-card:hover .home-card-art img {
-  transform: scale(1.04);
 }
 .crop-people .home-card-art img {
   object-position: 38% 60%;
@@ -441,9 +444,10 @@
   width: 2.5rem;
   height: 2.5rem;
   place-items: center;
-  border: 2px solid var(--mw-yellow);
+  border: 2px solid var(--mw-interactive-marker-border, var(--mw-yellow));
   border-radius: 50%;
-  color: var(--mw-yellow);
+  color: var(--mw-interactive-marker-color, var(--mw-yellow));
+  transform: var(--mw-interactive-marker-transform, none);
 }
 .home-card-mark svg {
   width: 1.2rem;
@@ -458,7 +462,16 @@
 .home-card-copy h2 {
   margin: 0;
   font: 400 clamp(1.45rem, 2.25vw, 2.4rem)/0.95 var(--mw-font-brush);
+  color: var(--mw-interactive-title-color, inherit);
   text-transform: uppercase;
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .home-card-art img {
+    transition: transform var(--mw-motion-slow) var(--mw-motion-ease);
+  }
+  .home-editorial-card:hover .home-card-art img {
+    transform: scale(1.035);
+  }
 }
 .home-card-copy p {
   margin: 0.8rem 0;

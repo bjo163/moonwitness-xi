@@ -158,7 +158,11 @@ export default function HomePage() {
       <section className="home-editorial" aria-label="Explore MoonWitness">
         <div className="home-editorial-grid">
           {editorialCards.map((card) => (
-            <article className={`home-editorial-card crop-${card.crop}`} id={card.id} key={card.id}>
+            <article
+              className={`home-editorial-card mw-ui-interactive-surface crop-${card.crop}`}
+              id={card.id}
+              key={card.id}
+            >
               <SectionRibbon
                 title={card.label}
                 number={card.number}
@@ -167,7 +171,7 @@ export default function HomePage() {
               />
               <div className="home-card-art" aria-hidden="true">
                 <Image src={card.artwork} alt="" fill sizes="(max-width: 800px) 100vw, 33vw" />
-                <span className="home-card-mark">
+                <span className="home-card-mark mw-ui-interactive-marker">
                   {card.number === '01' ? (
                     <GlobeIcon />
                   ) : card.number === '02' ? (
@@ -178,7 +182,7 @@ export default function HomePage() {
                 </span>
               </div>
               <div className="home-card-copy">
-                <h2>{card.title}</h2>
+                  <h2 className="mw-ui-interactive-title">{card.title}</h2>
                 <p>{card.body}</p>
                 <Link
                   href={card.id === 'stories' ? '/login' : '/register'}

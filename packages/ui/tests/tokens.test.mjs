@@ -277,6 +277,20 @@ test('shared controls and overlays use the semantic motion scale', async () => {
   assert.match(componentCss, /animation: mw-ui-spin var\(--mw-motion-spin\) linear infinite/u);
 });
 
+test('interactive surfaces expose opt-in feedback only for hover pointers without reduced motion', async () => {
+  const componentCss = await readFile(
+    new URL('../src/styles/components.css', import.meta.url),
+    'utf8'
+  );
+  assert.match(componentCss, /\.mw-ui-interactive-surface:focus-within\s*\{[^}]*--mw-interactive-surface-border/u);
+  assert.match(
+    componentCss,
+    /@media\s*\(hover:\s*hover\)\s*and\s*\(prefers-reduced-motion:\s*no-preference\)/u
+  );
+  assert.match(componentCss, /\.mw-ui-interactive-surface:hover\s*\{[^}]*--mw-interactive-surface-border/u);
+  assert.match(componentCss, /\.mw-ui-interactive-marker[\s\S]*?var\(--mw-motion-fast\)/u);
+});
+
 test('shared tokens avoid app-specific global styling and external font loading', () => {
   assert.doesNotMatch(css, /@import\s+url|https?:\/\//i);
   assert.doesNotMatch(css, /(^|\})\s*(html|body|\*)\s*\{/);

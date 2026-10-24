@@ -165,6 +165,64 @@ test('homepage hero reveal is one-shot without layout shift and respects reduced
   });
 });
 
+test('editorial card feedback stays subtle, keyboard-visible, and absent on touch or reduced motion', async ({
+  page,
+  browser,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('/');
+
+  const card = page.locator('.home-editorial-card.crop-people');
+  const image = card.locator('.home-card-art img');
+  const marker = card.locator('.home-card-mark');
+  await expect(image).toBeVisible();
+  await card.hover();
+  await expect
+    .poll(() => card.evaluate((element) => getComputedStyle(element).borderTopColor))
+    .toBe('rgb(255, 46, 136)');
+  await expect
+    .poll(() => image.evaluate((element) => getComputedStyle(element).transform))
+    .not.toBe('none');
+  await expect
+    .poll(() => marker.evaluate((element) => getComputedStyle(element).transform))
+    .not.toBe('none');
+  await page.evaluate(() => document.querySelector('nextjs-portal')?.remove());
+  await card.screenshot({
+    path: resolve(process.cwd(), '../../docs/design/ui-catalog/home-editorial-card-hover-desktop.png'),
+    animations: 'disabled',
+  });
+
+  const cardLink = card.getByRole('link');
+  await cardLink.focus();
+  await expect
+    .poll(() => card.evaluate((element) => getComputedStyle(element).borderTopColor))
+    .toBe('rgb(255, 46, 136)');
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.mouse.move(0, 0);
+  await card.hover();
+  expect(await image.evaluate((element) => getComputedStyle(element).transform)).toBe('none');
+  expect(await marker.evaluate((element) => getComputedStyle(element).transform)).toBe('none');
+
+  const touchContext = await browser.newContext({
+    hasTouch: true,
+    isMobile: true,
+    viewport: { width: 390, height: 844 },
+  });
+  const touchPage = await touchContext.newPage();
+  await touchPage.goto('/');
+  expect(await touchPage.evaluate(() => matchMedia('(hover: hover)').matches)).toBe(false);
+  const touchCard = touchPage.locator('.home-editorial-card.crop-people');
+  const touchImage = touchCard.locator('.home-card-art img');
+  await touchCard.hover();
+  expect(await touchImage.evaluate((element) => getComputedStyle(element).transform)).toBe('none');
+  expect(await touchImage.evaluate((element) => getComputedStyle(element).transitionDuration)).toBe(
+    '0s'
+  );
+  await touchContext.close();
+});
+
 test('legacy Board routes redirect to canonical paths and preserve query strings', async ({
   request,
 }) => {
