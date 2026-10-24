@@ -122,6 +122,14 @@ test('manifest describes all stable brand and icon exports with unique paths', (
     'smartphone',
     'sparkle',
     'sun',
+    'bolt',
+    'chevrons-left',
+    'chevrons-right',
+    'columns',
+    'grid',
+    'sort-ascending',
+    'sort-descending',
+    'tag',
   ];
   assert.equal(manifest.assets.filter(({ kind }) => kind === 'icon').length, iconNames.length);
   for (const name of iconNames) {

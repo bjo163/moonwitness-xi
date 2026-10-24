@@ -4,7 +4,7 @@
   "generatedFrom": "packages/assets/manifest.json and packages/ui/src/styles/tokens.css",
   "sources": {
     "assetManifest": "manifest.json",
-    "assetManifestSha256": "003d7020ddf2f1e311d57c779e2c0e6c0ea35c7ef4a3d7d2b3c239d956b35ba7",
+    "assetManifestSha256": "b35ab2aa7a9f36f636f3232dd92fc70d054453044eb5a258adb74d7cb63e94e9",
     "tokens": "packages/ui/src/styles/tokens.css",
     "tokensSha256": "960dbbc0bf8a2c0beaa14d5cdc8525f40499dde8e353fb32ee7f429e57590b47"
   },
@@ -284,6 +284,15 @@
       "sha256": "55b43cf1ee1876cbd9cbf199e6138df4883e63a6410e70739965c7c6dc136dca"
     },
     {
+      "source": "packages/assets/icons/bolt.svg",
+      "output": "docs/assets/moonwitness/icons/bolt.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "d39fb24edeaa25188e69141ae1a9b96d60a830c5d318911b906320f9a16c7c84"
+    },
+    {
       "source": "packages/assets/icons/book-open.svg",
       "output": "docs/assets/moonwitness/icons/book-open.svg",
       "kind": "icon",
@@ -320,6 +329,24 @@
       "sha256": "76cc300d74fc0970e8dd8c016dd2545492af2647b269f1c25ecca6dcc1a8ee05"
     },
     {
+      "source": "packages/assets/icons/chevrons-left.svg",
+      "output": "docs/assets/moonwitness/icons/chevrons-left.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "feefdd0de12a295fa43cf8a38ea0a051d66156423f344dc7cd2c7d4233b6e58f"
+    },
+    {
+      "source": "packages/assets/icons/chevrons-right.svg",
+      "output": "docs/assets/moonwitness/icons/chevrons-right.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "d0d0e458862133c1d3405f752b98c7d6bafbf6491709e3983ed3369828c860d6"
+    },
+    {
       "source": "packages/assets/icons/close.svg",
       "output": "docs/assets/moonwitness/icons/close.svg",
       "kind": "icon",
@@ -336,6 +363,15 @@
       "width": 24,
       "height": 24,
       "sha256": "ab665a68c3e695ce97afe6f09ce1cad23b39343fecb4167c431b19c8c3c5a21e"
+    },
+    {
+      "source": "packages/assets/icons/columns.svg",
+      "output": "docs/assets/moonwitness/icons/columns.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "4509084fa3b81235e2c261e25d41d9b337df4aeb5a62b25e2ef1a8216c20f83e"
     },
     {
       "source": "packages/assets/icons/company.svg",
@@ -444,6 +480,15 @@
       "width": 24,
       "height": 24,
       "sha256": "6759badec6c0596d96920d61f9fe9fa4a21cb36e0c289c557af5ca91e4439d16"
+    },
+    {
+      "source": "packages/assets/icons/grid.svg",
+      "output": "docs/assets/moonwitness/icons/grid.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "42bc2b41dba6922c4cfd9352199d2498621f29f79409feaa06e678c04b144be0"
     },
     {
       "source": "packages/assets/icons/hash.svg",
@@ -725,6 +770,24 @@
       "sha256": "951807c7a0e2997f965435bb759004235b06c4d77df4fff1be7adc84fdde5170"
     },
     {
+      "source": "packages/assets/icons/sort-ascending.svg",
+      "output": "docs/assets/moonwitness/icons/sort-ascending.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "68618ec272233feee675ec854f6c7eecbf6513b3cead1e39cf8681a70a4ad5be"
+    },
+    {
+      "source": "packages/assets/icons/sort-descending.svg",
+      "output": "docs/assets/moonwitness/icons/sort-descending.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "1fdb85ac97a3601cf717537933a8e86aef274331835d92444453e63173cc75ec"
+    },
+    {
       "source": "packages/assets/icons/sort.svg",
       "output": "docs/assets/moonwitness/icons/sort.svg",
       "kind": "icon",
@@ -759,6 +822,15 @@
       "width": 24,
       "height": 24,
       "sha256": "403f9930a9abb951648b1401d153b75120e3d0ab3a17fb6c69698658321947c3"
+    },
+    {
+      "source": "packages/assets/icons/tag.svg",
+      "output": "docs/assets/moonwitness/icons/tag.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "bef90b1d975be0f12551a7eeaffe585b01d325bda318e75ef85e58b018081ff3"
     },
     {
       "source": "packages/assets/icons/team.svg",
