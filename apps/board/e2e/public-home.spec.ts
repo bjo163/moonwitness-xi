@@ -256,7 +256,7 @@ test('auth pages stay out of search and external login return paths are discarde
   await expect(page).toHaveTitle(/Enter the Shadow/u);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/u);
   const register = new URL(
-    (await page.getByRole('link', { name: 'Register' }).getAttribute('href'))!,
+    (await page.getByRole('link', { name: 'Create an account' }).getAttribute('href'))!,
     page.url()
   );
   expect(register.searchParams.get('returnTo')).toBe('/board');
