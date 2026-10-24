@@ -150,7 +150,7 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
             message_type: 'image',
             create_date: new Date(Date.now() - 250).toISOString(),
           },
-          ...Array.from({ length: 48 }, (_, index) => ({
+          ...Array.from({ length: 46 }, (_, index) => ({
             id: 49 - index,
             direction: 'inbound',
             content: `Older item ${index}`,
