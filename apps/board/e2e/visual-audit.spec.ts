@@ -74,6 +74,67 @@ test('dashboard KPI cards show current values without fabricated trend percentag
   });
 });
 
+test('desktop Board shell uses the compact crown lockup and a magenta active navigation rail', async ({
+  page,
+}) => {
+  await mkdir(auditDirectory, { recursive: true });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/login');
+  await page.getByLabel('Email or Username').fill('superadmin');
+  await page.getByLabel('Password', { exact: true }).fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
+  await expect(page).toHaveURL(/\/board$/u);
+
+  const sidebar = page.locator('aside').filter({
+    has: page.getByRole('navigation', { name: 'Models' }),
+  });
+  const crown = sidebar.locator('img[src="/brand/moonwitness-symbol-dark.svg"]');
+  await expect(crown).toBeVisible();
+  await expect(crown).toHaveAttribute('aria-hidden', 'true');
+  expect((await crown.boundingBox())?.width).toBe(36);
+  expect((await crown.boundingBox())?.height).toBe(36);
+  await expect(sidebar.getByText('MoonWitness', { exact: true })).toBeVisible();
+
+  const activeLink = sidebar.getByRole('link', { name: 'Dashboard' });
+  await expect(activeLink).toHaveAttribute('aria-current', 'page');
+  await expect(activeLink).toHaveCSS('border-left-color', 'rgb(255, 46, 136)');
+  await expect(activeLink).toHaveCSS('background-color', 'rgb(255, 46, 136)');
+  await page
+    .locator('nextjs-portal')
+    .evaluateAll((elements) => elements.forEach((element) => element.remove()));
+  await page.screenshot({
+    path: path.join(root, 'docs/design/ui-catalog/board-sidebar-desktop-1440.png'),
+    fullPage: true,
+    animations: 'disabled',
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('button', { name: 'Open model navigation' }).click();
+  const mobileSidebar = page.getByRole('dialog', { name: 'Model navigation' });
+  const mobileCrown = mobileSidebar.locator('img[src="/brand/moonwitness-symbol-dark.svg"]');
+  await expect(mobileCrown).toBeVisible();
+  expect((await mobileCrown.boundingBox())?.width).toBe(36);
+  expect((await mobileCrown.boundingBox())?.height).toBe(36);
+  await expect(mobileSidebar.getByText('MoonWitness', { exact: true })).toBeVisible();
+  await expect(mobileSidebar.getByRole('link', { name: 'Dashboard' })).toHaveAttribute(
+    'aria-current',
+    'page'
+  );
+  await mobileSidebar.evaluate(async (element) => {
+    await Promise.all(
+      element.getAnimations().map((animation) => animation.finished.catch(() => undefined))
+    );
+  });
+  await page
+    .locator('nextjs-portal')
+    .evaluateAll((elements) => elements.forEach((element) => element.remove()));
+  await page.screenshot({
+    path: path.join(root, 'docs/design/ui-catalog/board-sidebar-mobile-390.png'),
+    fullPage: false,
+    animations: 'disabled',
+  });
+});
+
 test('ordinary-user dashboard has a verified visual baseline', async ({ page }) => {
   await mkdir(auditDirectory, { recursive: true });
   await page.setViewportSize({ width: 1440, height: 1000 });

@@ -408,9 +408,9 @@ Urutan: header → hero manga → tiga panel editorial → band koneksi → film
 
 ### Shell
 
-- [ ] Buat sidebar dark editorial, lebar desktop awal sekitar 208 px.
-- [ ] Pasang compact crown lockup.
-- [ ] Gunakan active magenta strip dan icon canonical.
+- [x] Gunakan sidebar dark editorial dengan lebar desktop 208 px dan navigasi aktif magenta bertepi lurus; fungsi route/permission tetap. Bukti screenshot: `docs/design/ui-catalog/board-sidebar-desktop-1440.png`; E2E memeriksa ukuran brand, warna rail, `aria-current`, serta screenshot.
+- [x] Pasang crown compact canonical bersama wordmark “MoonWitness” di desktop dan menu mobile; ejaan diperiksa pada screenshot desktop dan `docs/design/ui-catalog/board-sidebar-mobile-390.png`.
+- [ ] Migrasikan ikon sidebar dan navigasi ke icon canonical shared.
 - [ ] Pertahankan menu model dinamis serta permission.
 - [ ] Pertahankan company scope.
 - [ ] Gunakan sheet sidebar pada viewport di bawah 1024 px.

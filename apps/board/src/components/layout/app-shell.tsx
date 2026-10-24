@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { motion } from 'motion/react';
 import type { ModelInfo } from '@moonwitness/client';
 import { ToastHost } from '@moonwitness/ui/components/toast';
 import { SettingsIcon as MoonWitnessSettingsIcon } from '@moonwitness/ui/icons/settings';
@@ -67,13 +66,11 @@ function NavItem({
   to,
   label,
   icon: Icon,
-  tilt,
   onNavigate,
 }: {
   to: string;
   label: string;
   icon: typeof DashboardIcon;
-  tilt: number;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
@@ -84,19 +81,12 @@ function NavItem({
       onClick={onNavigate}
       title={label}
       className={cn(
-        'group relative flex min-w-0 items-center gap-3 px-3 py-2 font-display text-lg uppercase tracking-wide text-ink/70 transition-colors hover:text-ink',
-        active && 'text-on-pink hover:text-on-pink'
+        'group relative flex min-h-10 min-w-0 items-center gap-3 border-l-4 border-transparent px-2 py-2 font-display text-base uppercase tracking-wide text-ink/70 transition-[background-color,color,border-color] duration-[var(--mw-motion-fast)] ease-[var(--mw-motion-ease)] hover:bg-ink/10 hover:text-ink',
+        active && 'border-l-pink bg-pink text-on-pink hover:bg-pink hover:text-on-pink'
       )}
+      aria-current={active ? 'page' : undefined}
     >
       <>
-        {active && (
-          <motion.span
-            layoutId="nav-active"
-            className="absolute inset-0 -z-0 border-2 border-ink bg-pink shadow-[3px_3px_0_0_var(--ink)]"
-            style={{ rotate: tilt }}
-            transition={{ type: 'spring', stiffness: 500, damping: 34 }}
-          />
-        )}
         <Icon className="relative size-5" strokeWidth={2.4} />
         <span className="relative min-w-0 whitespace-normal leading-tight">{label}</span>
       </>
@@ -123,7 +113,6 @@ function ModelNavigation({
         to="/board"
         label="Dashboard"
         icon={DashboardIcon}
-        tilt={-1.5}
         onNavigate={onNavigate}
       />
       {canReadResearch && (
@@ -131,7 +120,6 @@ function ModelNavigation({
           to="/board/knowledge"
           label="Knowledge explorer"
           icon={Network}
-          tilt={-1.2}
           onNavigate={onNavigate}
         />
       )}
@@ -140,7 +128,6 @@ function ModelNavigation({
           to="/board/stories/workbench"
           label="Story workbench"
           icon={BookOpenCheck}
-          tilt={1.1}
           onNavigate={onNavigate}
         />
       )}
@@ -148,7 +135,6 @@ function ModelNavigation({
         to="/board/whatsapp"
         label="WhatsApp"
         icon={MessageCircle}
-        tilt={-0.8}
         onNavigate={onNavigate}
       />
       {isLoading &&
@@ -158,13 +144,12 @@ function ModelNavigation({
           <p className="px-3 pb-1 font-mono text-[11px] uppercase tracking-[0.2em] text-ink-faint">
             {group}
           </p>
-          {items.map((item, i) => (
+          {items.map((item) => (
             <NavItem
               key={item.model}
               to={`/board/m/${item.model}`}
               label={item.menu.label ?? modelLabel(item.model)}
               icon={modelIcon(item.model)}
-              tilt={i % 2 ? 1.2 : -1.5}
               onNavigate={onNavigate}
             />
           ))}
@@ -349,8 +334,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       <ToastHost theme={theme} />
       {/* Sidebar: scoped .dark tokens keep it ink-black with light ink in BOTH themes. */}
       <aside className="dark sticky top-0 hidden h-dvh flex-col border-r-4 border-ink bg-night text-ink lg:flex">
-        <div className="relative border-b-2 border-dashed border-ink/20 px-5 py-5">
-          <Logo surface="dark" />
+        <div className="relative flex items-center gap-3 border-b-2 border-dashed border-ink/20 px-4 py-4">
+          <Logo compact decorative surface="dark" className="size-9 shrink-0" />
+          <span className="font-display text-sm uppercase tracking-[0.16em] text-ink">
+            MoonWitness
+          </span>
         </div>
         <ModelNavigation
           groups={visibleGroups}
@@ -397,8 +385,11 @@ export function AppShell({ children }: { children: ReactNode }) {
               className="dark w-[min(18rem,85vw)] gap-0 border-r-4 border-ink bg-night p-0 text-ink"
               aria-label="Model navigation"
             >
-              <div className="border-b-2 border-dashed border-ink/20 px-5 py-5">
-                <Logo surface="dark" />
+              <div className="flex items-center gap-3 border-b-2 border-dashed border-ink/20 px-4 py-4">
+                <Logo compact decorative surface="dark" className="size-9 shrink-0" />
+                <span className="font-display text-sm uppercase tracking-[0.16em] text-ink">
+                  MoonWitness
+                </span>
               </div>
               <ModelNavigation
                 groups={visibleGroups}
