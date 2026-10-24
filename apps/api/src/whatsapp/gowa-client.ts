@@ -1,14 +1,5 @@
 type GowaEnvelope<T> = { code?: string; message?: string; results?: T; status?: number };
-
-function baseUrl(): string {
-  return (process.env.WHATSAPP_GATEWAY_URL || 'http://127.0.0.1:3001').replace(/\/$/u, '');
-}
-
-function authorization(): string {
-  const username = process.env.WHATSAPP_GATEWAY_USERNAME || 'moonwitness';
-  const password = process.env.WHATSAPP_GATEWAY_PASSWORD || 'moonwitness';
-  return `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
-}
+import { readWhatsAppGatewayConfig } from './config.js';
 
 export class GowaError extends Error {
   constructor(
@@ -20,6 +11,74 @@ export class GowaError extends Error {
   }
 }
 
+const MAX_CONCURRENT_GATEWAY_REQUESTS = 8;
+const CIRCUIT_FAILURE_THRESHOLD = 5;
+const CIRCUIT_COOLDOWN_MS = 10_000;
+
+interface GatewayProtectionState {
+  activeRequests: number;
+  consecutiveFailures: number;
+  openUntil: number | null;
+  probeInFlight: boolean;
+}
+
+const gatewayProtection = new Map<string, GatewayProtectionState>();
+
+function protectionState(url: string): GatewayProtectionState {
+  const key = new URL(url).origin;
+  let state = gatewayProtection.get(key);
+  if (!state) {
+    state = {
+      activeRequests: 0,
+      consecutiveFailures: 0,
+      openUntil: null,
+      probeInFlight: false,
+    };
+    gatewayProtection.set(key, state);
+  }
+  return state;
+}
+
+async function protectedFetch(url: string, init: RequestInit): Promise<Response> {
+  const state = protectionState(url);
+  const now = Date.now();
+  let halfOpenProbe = false;
+  if (state.openUntil !== null) {
+    if (now < state.openUntil || state.probeInFlight) {
+      throw new GowaError('WhatsApp gateway circuit is open', 503, 'CIRCUIT_OPEN');
+    }
+    state.probeInFlight = true;
+    halfOpenProbe = true;
+  }
+  if (state.activeRequests >= MAX_CONCURRENT_GATEWAY_REQUESTS) {
+    if (halfOpenProbe) state.probeInFlight = false;
+    throw new GowaError('WhatsApp gateway is at its concurrency limit', 503, 'GATEWAY_BUSY');
+  }
+  state.activeRequests++;
+  try {
+    const response = await fetch(url, init);
+    if (response.status >= 500) {
+      state.consecutiveFailures++;
+      if (halfOpenProbe || state.consecutiveFailures >= CIRCUIT_FAILURE_THRESHOLD) {
+        state.openUntil = Date.now() + CIRCUIT_COOLDOWN_MS;
+      }
+    } else {
+      state.consecutiveFailures = 0;
+      state.openUntil = null;
+    }
+    return response;
+  } catch (error) {
+    state.consecutiveFailures++;
+    if (halfOpenProbe || state.consecutiveFailures >= CIRCUIT_FAILURE_THRESHOLD) {
+      state.openUntil = Date.now() + CIRCUIT_COOLDOWN_MS;
+    }
+    throw error;
+  } finally {
+    state.activeRequests--;
+    if (halfOpenProbe) state.probeInFlight = false;
+  }
+}
+
 export async function gowaRequest<T>(
   path: string,
   options: {
@@ -27,16 +86,20 @@ export async function gowaRequest<T>(
     deviceId?: string;
     body?: string | FormData;
     contentType?: string;
+    timeoutMs?: number;
   } = {}
 ): Promise<T> {
-  const headers = new Headers({ authorization: authorization() });
+  const config = readWhatsAppGatewayConfig();
+  const headers = new Headers({
+    authorization: `Basic ${Buffer.from(`${config.username}:${config.password}`).toString('base64')}`,
+  });
   if (options.deviceId) headers.set('X-Device-Id', options.deviceId);
   if (options.contentType) headers.set('content-type', options.contentType);
-  const response = await fetch(`${baseUrl()}${path}`, {
+  const response = await protectedFetch(`${config.url}${path}`, {
     method: options.method ?? 'GET',
     headers,
     body: options.body,
-    signal: AbortSignal.timeout(20_000),
+    signal: AbortSignal.timeout(options.timeoutMs ?? config.timeoutMs),
   });
   const raw = await response.text();
   let envelope: GowaEnvelope<T> | null = null;
@@ -47,20 +110,23 @@ export async function gowaRequest<T>(
   }
   if (!response.ok || (envelope?.code && envelope.code !== 'SUCCESS')) {
     throw new GowaError(
-      envelope?.message || `WhatsApp gateway request failed (${response.status})`,
+      `WhatsApp gateway request failed (${response.status})`,
       response.status,
       envelope?.code
     );
   }
-  return (envelope?.results ?? envelope) as T;
+  return (envelope?.results ?? envelope ?? raw) as T;
 }
 
 export async function gowaBinary(path: string, deviceId?: string): Promise<Response> {
-  const headers = new Headers({ authorization: authorization() });
+  const config = readWhatsAppGatewayConfig();
+  const headers = new Headers({
+    authorization: `Basic ${Buffer.from(`${config.username}:${config.password}`).toString('base64')}`,
+  });
   if (deviceId) headers.set('X-Device-Id', deviceId);
-  const response = await fetch(`${baseUrl()}${path}`, {
+  const response = await protectedFetch(`${config.url}${path}`, {
     headers,
-    signal: AbortSignal.timeout(20_000),
+    signal: AbortSignal.timeout(config.timeoutMs),
   });
   if (!response.ok)
     throw new GowaError(`WhatsApp gateway request failed (${response.status})`, response.status);
@@ -68,7 +134,7 @@ export async function gowaBinary(path: string, deviceId?: string): Promise<Respo
 }
 
 export function gowaOriginPath(value: string): string {
-  const requested = new URL(value, baseUrl());
+  const requested = new URL(value, readWhatsAppGatewayConfig().url);
   if (
     !['http:', 'https:'].includes(requested.protocol) ||
     !requested.pathname.startsWith('/statics/')

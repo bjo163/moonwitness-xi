@@ -21,6 +21,7 @@ import {
   asJsonObject,
   isRecord as isObject,
   isJsonValue,
+  MAX_ATTACHMENT_BYTES,
   type JsonObject,
   type JsonValue,
 } from '@moonwitness/types';
@@ -606,7 +607,6 @@ interface GenericRoutesOptions {
   attachmentStorage: AttachmentStorage;
 }
 
-const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 const ATTACHMENT_MIME_TYPES = new Set([
   'application/octet-stream',
   'application/pdf',
@@ -765,7 +765,19 @@ export const genericRoutes: FastifyPluginAsync<GenericRoutesOptions> = async (fa
         });
         return reply.code(201).send({ success: true, data: record });
       } catch (error) {
-        if (persisted) await options.attachmentStorage.delete(key).catch(() => undefined);
+        if (persisted) {
+          await options.attachmentStorage.delete(key).catch((cleanupError) => {
+            req.log.error(
+              { err: cleanupError, storageKey: key },
+              'Failed to compensate attachment upload'
+            );
+          });
+        } else {
+          req.log.error({ err: error }, 'Attachment storage upload failed');
+          return reply
+            .code(503)
+            .send({ success: false, error: 'Attachment storage is temporarily unavailable' });
+        }
         throw error;
       }
     }
@@ -819,8 +831,11 @@ export const genericRoutes: FastifyPluginAsync<GenericRoutesOptions> = async (fa
         .header('X-Content-Type-Options', 'nosniff')
         .header('Cache-Control', 'private, no-store');
       return reply.send(content);
-    } catch {
-      return reply.code(404).send({ success: false, error: 'Attachment content not found' });
+    } catch (error) {
+      req.log.error({ err: error }, 'Attachment storage download failed');
+      return reply
+        .code(503)
+        .send({ success: false, error: 'Attachment storage is temporarily unavailable' });
     }
   });
 
@@ -1264,7 +1279,12 @@ export const genericRoutes: FastifyPluginAsync<GenericRoutesOptions> = async (fa
       if ('reference' in deletion && typeof deletion.reference === 'string')
         return relationConflict(reply, req.params.model, deletion.reference);
       if (typeof deletion.storageKey === 'string') {
-        await options.attachmentStorage.delete(deletion.storageKey);
+        await options.attachmentStorage.delete(deletion.storageKey).catch((error) => {
+          req.log.error(
+            { err: error, storageKey: deletion.storageKey },
+            'Attachment object cleanup failed'
+          );
+        });
       }
       return {
         success: true,

@@ -30,7 +30,9 @@
     "src/**/*.tsx",
     "next.config.ts",
     ".next-visual/types/**/*.ts",
-    ".next-visual/dev/types/**/*.ts"
+    ".next-visual/dev/types/**/*.ts",
+    ".next-e2e/types/**/*.ts",
+    ".next-e2e/dev/types/**/*.ts"
   ],
   "exclude": ["node_modules", "e2e"]
 }

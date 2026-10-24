@@ -41,6 +41,7 @@ function isPublic(url: string): boolean {
     url === '/health' ||
     url === '/livez' ||
     url === '/readyz' ||
+    url === '/whatsapp/readyz' ||
     url === '/metrics' ||
     url.startsWith('/docs') ||
     url === '/auth/register' ||

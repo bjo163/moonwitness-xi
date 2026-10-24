@@ -17,20 +17,21 @@ services:
       timeout: 5s
       retries: 10
 
-  # Standalone WhatsApp gateway UI/API. Host port 3001 avoids the API on 3000.
-  whatsapp:
-    image: aldinokemal2104/go-whatsapp-web-multidevice:latest
-    container_name: moonwitness_whatsapp
+  # Dev-only free-tier LLM gateway. Loopback-bound; dashboard password is preset below.
+  omniroute:
+    image: diegosouzapw/omniroute:latest
+    container_name: moonwitness_omniroute
     restart: unless-stopped
+    stop_grace_period: 40s
     environment:
-      APP_PORT: 3000
-      APP_HOST: 0.0.0.0
-      APP_BASIC_AUTH: moonwitness:moonwitness
+      DATA_DIR: /app/data
+      JWT_SECRET: dev-only-omniroute-jwt-secret-0123456789-change-me
+      INITIAL_PASSWORD: moonwitness-omniroute
     ports:
-      - '127.0.0.1:3001:3000'
+      - '127.0.0.1:20128:20128'
     volumes:
-      - gowa_storages:/app/storages
+      - omniroute_data:/app/data
 
 volumes:
   pgdata:
-  gowa_storages:
+  omniroute_data:

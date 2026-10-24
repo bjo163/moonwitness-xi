@@ -661,6 +661,63 @@ Pertahankan satu command manual/otomatis: **`pnpm board:ui:check`**.
 - [ ] Catat command pemeriksaan serta hasilnya pada ringkasan implementasi.
 - [ ] Biarkan item checklist terbuka jika bukti penyelesaian belum ada.
 
+## O. UX lampiran saat object storage S3-compatible diaktifkan
+
+Object storage harus transparan bagi pengguna selama alur tetap melewati API. Implementasi provider sudah diuji terhadap Garage melalui HTTPS; RustFS hanya bukti development historis. Tahap ini mencatat UX yang diperlukan karena storage jarak jauh memengaruhi error, ukuran/latensi transfer, dan pemulihan request. Jangan menambahkan pengaturan endpoint, bucket, atau kredensial storage ke Board.
+
+### Standar ukuran berkas
+
+- [x] Tetapkan batas produk tunggal: **maksimum 10 MiB (10 × 1.024 × 1.024 = 10.485.760 byte) untuk satu berkas pada semua alur unggah yang diterima aplikasi**, termasuk lampiran record, media outbound WhatsApp, dan media WhatsApp yang diambil ulang dari gateway.
+- [x] Tampilkan “Maksimum 10 MiB per file” pada UI unggah; validasi browser dan server memakai konstanta MiB yang sama.
+- [x] Untuk unggah WhatsApp berbasis Base64, berkas mentah tetap maksimum 10 MiB; batas request JSON di API/reverse proxy harus sekurangnya **15 MiB** agar encoding Base64 dan metadata memiliki ruang, sedangkan validasi hasil decode tetap 10 MiB.
+- [x] Perlakukan limit transport sebagai pagar payload, bukan sebagai limit ukuran berkas. Tolak payload yang dikodekan valid tetapi ukuran byte hasil decode melebihi 10 MiB.
+- [x] Terapkan batas 10 MiB saat mengambil media historis dari gateway; media berlebih tidak disimpan sebagian, UI memberi pesan spesifik, pesan percakapan tetap tersedia.
+- [x] Hapus/selaraskan limit 8 MiB composer/server dan 50 MiB media fetch menjadi standar 10 MiB.
+
+### Pesan kegagalan dan pemulihan
+
+- [x] Bedakan “file tidak ditemukan” dari storage sementara tidak tersedia; API memberi 404 dan 503 terpisah.
+- [x] Pada kegagalan upload sementara, pertahankan file terpilih dan konteks record untuk retry tanpa memilih ulang.
+- [x] Tampilkan status upload berjalan dan cegah submit ganda; pesan state memakai semantik status/alert.
+- [x] Pada kegagalan unduh sementara, sediakan retry dan pertahankan item lampiran.
+- [x] Pada preview media WhatsApp gagal, tampilkan retry di dekat media dan pertahankan pesan percakapan.
+- [x] Pesan error publik tidak memuat hostname internal, bucket, key, signature, atau credential.
+- [x] Cek inline error dan retry pada viewport mobile; screenshot 390×844 menunjukkan pesan dan tombol retry tidak menutupi composer atau attachment.
+
+### Ukuran dan transfer
+
+- [x] Terapkan standar 10 MiB di browser, API, dan provider; validasi server menjadi otoritas akhir. Reverse proxy deployment wajib dikonfigurasi ke body 15 MiB.
+- [x] Uji ukuran sama dengan dan di atas 10 MiB untuk upload generik serta WhatsApp; jalur gateway dibatasi streaming. Uji produksi gateway di deployment masih tertunda.
+- [x] API menerima request JSON hingga 15 MiB dan uji media Base64 10 MiB lulus; konfigurasi reverse proxy perlu diverifikasi saat deployment.
+- [x] Berikan pesan ukuran konsisten dan pesan khusus media gateway yang melebihi 10 MiB.
+- [x] Dokumentasikan konsekuensi Base64 dan rumus kapasitas memori; pengukuran beban produksi sebelum cutover masih harus dilakukan.
+- [x] Streaming/presigned transfer tidak dipakai; bila arsitektur transfer berubah kelak, progress, cancel, kedaluwarsa URL, dan state retry harus ditinjau ulang.
+- [x] Tidak ada URL presigned atau bucket di UI; unduhan tetap lewat route API yang menjaga autentikasi dan otorisasi.
+
+### Cakupan dan penerimaan UX
+
+- [x] Pertahankan alur attachment generik tab lampiran tanpa mengekspos provider pada pengguna.
+- [x] Pertahankan composer WhatsApp, preview media, serta pengiriman pesan lewat provider storage bersama.
+- [x] Implementasikan state storage gagal, pilihan file dipertahankan, retry download/preview, dan penolakan di atas 10 MiB; provider serta alur API/ORM live sudah diuji terhadap Garage. Bukti runtime lokal dan batas penerimaan production ada di `docs/operations/evidence/garage-live-acceptance-2026-10-24.md`.
+- [x] State loading/error/retry memakai status semantik dan kontrol aksi keyboard.
+- [x] Ambil screenshot state storage unavailable dan retry pada media WhatsApp setelah perubahan interaksi.
+- [x] Catat bukti visual: `docs/design/ui-catalog/rustfs-whatsapp-storage-error-mobile-390.png`; skenario browser juga memverifikasi tombol retry memicu request ulang.
+
+## P. Board WhatsApp
+
+> Checklist feature dan kesiapan GoWA tetap menjadi [`todo-wa.md`](./todo-wa.md). Item di sini hanya mencatat pekerjaan presentasi dan interaksi Board; tiap item menggunakan ID `WUI-*` sebagai rujukan silang dari backlog WhatsApp. Ikuti UI Bible, import kontrol dan ikon melalui public subpath `@moonwitness/ui`, dan jangan menambah primitive shared sebelum pola yang sama benar-benar diperlukan di beberapa surface.
+
+- [ ] **WUI-01 — Layout inbox responsif:** review daftar chat dan pane percakapan pada desktop, tablet, 390 px, dan 320 px; di mobile sediakan perpindahan daftar/detail yang jelas, composer tetap terjangkau, dan tidak ada overflow halaman. Tautan feature: `todo-wa.md` P1-27, P4-14.
+- [ ] **WUI-02 — Panel akun dan pairing:** Board kini memberi label logout, QR expired, reconnecting, dan gateway error; QR expired memiliki aksi Refresh QR. API mengirim capability management per role dan Board menyembunyikan kontrol sambung/putus dari role read-only. Review visual QR berubah/kedaluwarsa, bantuan scan, konfirmasi disconnect, loading, dan data stale sebelum menutup item. Tautan feature: P0-05–06, P0-21, P1-13–14, P4-16–18.
+- [ ] **WUI-03 — Navigasi inbox:** Board mencari nama/JID dan isi pesan cached lewat API (debounce 250 ms), memfilter Semua/Belum dibaca/Pribadi/Grup/Active/Archived, memuat 50 percakapan berikutnya, dan menyediakan aksi Mark latest as read. Header percakapan memberi aksi Pin/Unpin dan Archive/Unarchive sesuai capability. API mengisi preview dan menyinkronkan hingga 100 pesan terbaru saat timestamp percakapan berubah; unread cursor tersimpan per pengguna. Hitungan unread masih parsial karena GoWA tidak memberi total authoritative dan provider sync dibatasi 100 pesan. Board mempertahankan cache saat refresh gagal, menampilkan waktu sync terakhir, serta menyediakan Retry umum/per-pane. E2E Chromium pada PostgreSQL sementara memverifikasi filter, pencarian, pemulihan saat request gagal, serta percakapan cache. Lengkapi review aksesibilitas aksi baru. Tautan feature: P1-01, P1-04–08, P1-13–14, P1-22.
+- [ ] **WUI-04 — Riwayat percakapan:** bubble kini menampilkan state antre/kirim/gagal/tidak diketahui, alasan gagal yang aman, dan aksi retry hanya untuk gagal yang bisa dicoba ulang. Board sekarang memuat 50 pesan terbaru dan halaman terdahulu otomatis saat scroll ke atas (dengan tombol aksesibel). Pastikan state delivered/read, timestamp lokal, fallback jenis pesan, scroll, dan penanda pesan baru selesai direview. Tautan feature: P0-08–13, P1-11–12, P1-28–30, P1-37–38, P2-11, P2-18, P2-22.
+- [ ] **WUI-05 — Composer dan aksi pesan:** composer kini mengirim kunci idempotensi yang stabil untuk draft aktif dan merotasinya saat isi/lampiran berubah; composer serta new-chat form mengikuti capability dari API. Verifikasi Enter/Shift+Enter, pending state, pencegahan submit ganda lintas tab/perangkat, draft saat error, quote/aksi pesan, dan mention picker hanya ketika endpoint mendukung. Tautan feature: P0-09–11, P0-21, P1-31–37, P2-27.
+- [ ] **WUI-06 — Alur media:** preview kini mengikuti MIME terverifikasi dari respons API, dan jenis tak dikenal tampil sebagai unduhan attachment. Lengkapi progress, cancel, preview dokumen aman, remove, retry, ukuran/tipe file, serta pemulihan draft setelah refresh. Pertahankan pesan dan konteks percakapan saat storage gagal; tampilkan error tanpa detail internal. Periksa kembali alur lampiran yang sudah tercatat di bagian O. Tautan feature: P2-06–07, P2-08, P2-11, P4-22–23.
+- [ ] **WUI-07 — Aksesibilitas dan lokalisasi:** keyboard-only, urutan fokus, nama/role/status screen reader, menu/dialog, reduced motion, kontras, indikator status non-warna, serta label/error/waktu Indonesia dan Inggris. Gunakan ikon canonical dengan accessible name pada kontrol. Tautan feature: P1-26, P4-19–21.
+- [ ] **WUI-08 — Bukti visual dan regresi:** Tiga skenario E2E Chromium WhatsApp lulus dengan fixture PostgreSQL: inbox/filter/retry/kirim teks, QR expired/refresh/kirim media/draft gagal, serta pin/archive/restore. Lengkapi inbox kosong/stale, media download gagal, screenshot desktop/tablet/390/320 px di dua theme, axe, dan keyboard-only review. Tautan feature: P4-23–24.
+- [ ] **WUI-09 — Ikon WhatsApp:** selesaikan migrasi ikon WhatsApp yang sudah direncanakan di bagian E (“Migrasikan icon Knowledge, profile, settings, dan WhatsApp”); gunakan ikon canonical dari `@moonwitness/ui/icons/*`, dan tambahkan source/provenance ke assets hanya bila ikon dengan makna/siluet sesuai belum tersedia.
+- [ ] **WUI-10 — Batas package UI:** audit perubahan inbox untuk memastikan Board menangani route/data/permission, sedangkan `@moonwitness/ui` hanya menerima primitive presentasi dan interaksi reusable. Jika komponen baru benar-benar dipakai ulang atau diperlukan demi aksesibilitas, dokumentasikan kontrak, expose subpath publik, tambahkan specimen UI Catalog dan package checks; jika khusus WhatsApp, pertahankan di Board.
+
 ## Urutan kerja
 
 1. **A–C:** baseline, pemetaan fitur, UI Bible awal, dan keamanan generator.
@@ -668,6 +725,8 @@ Pertahankan satu command manual/otomatis: **`pnpm board:ui:check`**.
 3. **G–H:** komponen shared dan tiga proof UI Catalog.
 4. **I–K:** homepage, dashboard, workbench, dan halaman pendukung.
 5. **L–N:** motion/audio, gate dan visual acceptance, cleanup, serta Bible final.
+6. **O:** selaraskan pengalaman lampiran dengan limit, error, dan jalur pemulihan storage untuk provider S3-compatible; penerimaan UI/API sudah dilakukan terhadap Garage, sedangkan body limit reverse proxy production masih menjadi gate deployment.
+7. **P:** selesaikan UI WhatsApp bersama pekerjaan feature pada `todo-wa.md`; tutup item hanya dengan bukti interaksi dan visual yang direview.
 
 ## Definisi selesai
 

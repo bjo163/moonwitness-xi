@@ -1,15 +1,26 @@
 import { defineAddon, defineView, ref, seed } from '@moonwitness/orm';
 import { ModelAccess } from '@moonwitness/orm-base';
-import { WhatsappAccount, WhatsappConversation, WhatsappMessage } from './models.js';
+import {
+  WhatsappAccount,
+  WhatsappConversation,
+  WhatsappConversationRead,
+  WhatsappMessage,
+} from './models.js';
 
-const models = [WhatsappAccount, WhatsappConversation, WhatsappMessage] as const;
+const models = [
+  WhatsappAccount,
+  WhatsappConversation,
+  WhatsappMessage,
+  WhatsappConversationRead,
+] as const;
+const userFacingModels = [WhatsappAccount, WhatsappConversation, WhatsappMessage] as const;
 export const whatsappManifest = defineAddon({
   // Preserve the installed addon identity and seed IDs used by earlier builds.
   name: 'orm-whatsapp',
-  version: '1.2.0',
+  version: '1.3.0',
   depends: ['base'],
   models: [...models],
-  data: models.flatMap((model) => [
+  data: userFacingModels.flatMap((model) => [
     seed(ModelAccess, `orm-whatsapp.access_user_read_${model.modelName.replaceAll('.', '_')}`, {
       group: ref('base.group_user'),
       model_name: model.modelName,
@@ -72,7 +83,7 @@ export const whatsappManifest = defineAddon({
       search: { fields: ['content'] },
     }),
   ],
-  menus: models.map((model, index) => ({
+  menus: userFacingModels.map((model, index) => ({
     model: model.modelName,
     label: model.modelName.split('.')[1],
     group: 'Technical',

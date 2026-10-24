@@ -30,7 +30,14 @@ import { localRetrievalRoutes } from './routes/local-retrieval.routes.js';
 import { localAiSuggestionRoutes } from './routes/local-ai-suggestion.routes.js';
 import { ensureResearchReviewWorkflow } from './research-review-workflow.js';
 import { config, localAiConfig } from './config/env.js';
-import { LocalFileAttachmentStorage, type AttachmentStorage } from '@moonwitness/orm-storage';
+import { gowaRequest } from './whatsapp/gowa-client.js';
+import { whatsappLogErrorContext } from './whatsapp/log-redaction.js';
+import {
+  LocalFileAttachmentStorage,
+  S3AttachmentStorage,
+  closeS3AttachmentStorage,
+  type AttachmentStorage,
+} from '@moonwitness/orm-storage';
 import { createDatabase } from './database/knex.js';
 import { databaseErrorCode, databaseErrorContext } from './database/errors.js';
 import type { Knex } from 'knex';
@@ -50,6 +57,7 @@ import { createLogger, type LogLevel } from '@moonwitness/logger';
 import { installPrivacySafeNotFoundHandler } from './not-found.js';
 import { isRecord } from '@moonwitness/types';
 import observabilityPlugin from './plugins/observability.plugin.js';
+import { createAttachmentStorage } from './storage/attachment-storage.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -70,6 +78,8 @@ export interface BuildAppOptions {
   /** Overrides AUTH_LOGIN_RATE_MAX (used by tests). */
   loginRateMax?: number;
   metricsToken?: string;
+  /** Overrides the WhatsApp gateway probe for isolated tests. */
+  checkWhatsAppGateway?: () => Promise<boolean>;
   /** Overrides attachment storage for isolated tests or custom providers. */
   attachmentStorage?: AttachmentStorage;
   /** @deprecated Use attachmentStorage; retained for existing test/app callers. */
@@ -206,6 +216,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
 
   // Error handling
   app.setErrorHandler((error, request, reply) => {
+    const isWhatsAppRoute = request.routeOptions.url?.startsWith('/whatsapp/') === true;
     const code = databaseErrorCode(error);
     if (code) {
       // Driver errors can contain SQL bindings, including password hashes.
@@ -226,30 +237,61 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
           : 'Database request failed',
       });
     }
-    request.log.error(error);
+    if (isWhatsAppRoute) {
+      request.log.error({ error: whatsappLogErrorContext(error) }, 'WhatsApp request failed');
+    } else {
+      request.log.error(error);
+    }
 
     // Objection.js ValidationError
     if (errorProperty(error, 'name') === 'ValidationError') {
       const message = error instanceof Error ? error.message : 'Validation failed';
       return reply.status(400).send({
         success: false,
-        error: message,
+        error: isWhatsAppRoute ? 'Invalid WhatsApp request' : message,
         type: 'ValidationError',
-        data: errorProperty(error, 'data'),
+        ...(isWhatsAppRoute ? {} : { data: errorProperty(error, 'data') }),
       });
     }
 
     const statusCode = errorProperty(error, 'statusCode');
     return reply.status(typeof statusCode === 'number' ? statusCode : 500).send({
       success: false,
-      error: error instanceof Error ? error.message : 'Internal Server Error',
+      error: isWhatsAppRoute
+        ? 'WhatsApp request failed'
+        : error instanceof Error
+          ? error.message
+          : 'Internal Server Error',
     });
   });
 
   installPrivacySafeNotFoundHandler(app);
 
+  const attachmentStorage =
+    options.attachmentStorage ??
+    (options.attachmentStorageDirectory
+      ? new LocalFileAttachmentStorage(options.attachmentStorageDirectory)
+      : createAttachmentStorage());
+  if (attachmentStorage instanceof S3AttachmentStorage) {
+    app.addHook('onClose', async () => closeS3AttachmentStorage(attachmentStorage));
+  }
+
   // Install the handler before route plugins inherit their error handling scope.
-  await app.register(healthRoutes, { metricsToken: options.metricsToken ?? config.metricsToken });
+  await app.register(healthRoutes, {
+    metricsToken: options.metricsToken ?? config.metricsToken,
+    checkWhatsAppGateway:
+      options.checkWhatsAppGateway ??
+      (async () => {
+        await gowaRequest('/health', { timeoutMs: 5_000 });
+        return true;
+      }),
+    checkAttachmentStorage: async () => {
+      if (attachmentStorage instanceof S3AttachmentStorage) {
+        await attachmentStorage.checkReady();
+      }
+      return true;
+    },
+  });
   await app.register(authRoutes, {
     authService: createAuthService({
       refreshTtlSeconds: authConfig.refreshTtlSeconds,
@@ -259,18 +301,10 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     loginRateMax: options.loginRateMax ?? authConfig.loginRateMax,
   });
   await app.register(genericRoutes, {
-    attachmentStorage:
-      options.attachmentStorage ??
-      new LocalFileAttachmentStorage(
-        options.attachmentStorageDirectory ?? config.attachmentStorageDirectory
-      ),
+    attachmentStorage,
   });
   await app.register(whatsappRoutes, {
-    attachmentStorage:
-      options.attachmentStorage ??
-      new LocalFileAttachmentStorage(
-        options.attachmentStorageDirectory ?? config.attachmentStorageDirectory
-      ),
+    attachmentStorage,
   });
   await app.register(jobsRoutes);
   await app.register(notificationRoutes);

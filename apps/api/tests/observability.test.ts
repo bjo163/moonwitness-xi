@@ -5,6 +5,7 @@ import { buildApp } from '../src/app.js';
 
 describe('health and metrics endpoints', () => {
   let app: FastifyInstance;
+  let whatsappGatewayReady = true;
 
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
@@ -18,6 +19,7 @@ describe('health and metrics endpoints', () => {
       superadminPassword: 'observability-test-password',
       jwtSecret: 'test-secret-test-secret-test-secret-123',
       metricsToken: 'metrics-secret-token-at-least-32-chars',
+      checkWhatsAppGateway: async () => whatsappGatewayReady,
     });
     await app.ready();
   });
@@ -59,6 +61,22 @@ describe('health and metrics endpoints', () => {
       });
     } finally {
       app.testConnection = testConnection;
+    }
+  });
+
+  it('reports GoWA reachability independently from API readiness', async () => {
+    const reachable = await app.inject('/whatsapp/readyz');
+    expect(reachable.statusCode).toBe(200);
+    expect(reachable.json()).toMatchObject({ status: 'reachable', gateway: 'connected' });
+
+    whatsappGatewayReady = false;
+    try {
+      const unavailable = await app.inject('/whatsapp/readyz');
+      expect(unavailable.statusCode).toBe(503);
+      expect(unavailable.json()).toMatchObject({ status: 'unreachable', gateway: 'disconnected' });
+      expect((await app.inject('/readyz')).statusCode).toBe(200);
+    } finally {
+      whatsappGatewayReady = true;
     }
   });
 

@@ -11,7 +11,7 @@
 
 Buat bucket privat dan access key khusus aplikasi dengan akses minimum hanya ke bucket tersebut. Jangan membuat bucket publik dan jangan menyimpan secret di repository. Provider menggunakan AWS S3 API dan dapat diarahkan ke layanan S3-compatible mana pun.
 
-Policy service account perlu mengizinkan pemeriksaan/list bucket serta get, head, put, dan delete object di bucket ini. Jika menggunakan policy IAM S3, resource dibatasi seperti berikut (ganti nama bucket):
+Untuk penyedia S3 yang mendukung IAM policy, batasi akses aplikasi ke pemeriksaan/list bucket serta get, head, put, dan delete object pada bucket terkait. Contoh di bawah ini adalah policy IAM S3 generik; Garage tidak memakai policy IAM ini untuk key S3 aplikasinya, jadi ikuti provisioning Garage di bawah.
 
 ```json
 {
@@ -31,19 +31,19 @@ Policy service account perlu mengizinkan pemeriksaan/list bucket serta get, head
 }
 ```
 
-Jangan berikan hak membuat/menghapus bucket ke service account aplikasi; buat bucket lewat proses provisioning operator.
+Jangan berikan hak membuat/menghapus bucket ke service account aplikasi; buat bucket lewat proses provisioning operator. Pada Garage, `garage bucket allow --read --write` memberikan akses data ke key untuk bucket yang ditentukan tanpa memberikan hak owner.
 
 Backend saat ini adalah Garage pada host terpisah, diakses lewat S3 API `https://s3.moonwitness.biz.id`. Buat key aplikasi dan bucket privat dari CLI Garage pada salah satu node klaster:
 
 ```bash
 garage key create moonwitness-attachments
 garage bucket create moonwitness-attachments
-garage bucket allow --read --write --key moonwitness-attachments --bucket moonwitness-attachments
+garage bucket allow --read --write moonwitness-attachments --key moonwitness-attachments
 ```
 
 `garage bucket allow` tanpa `--owner` hanya memberi akses data, sehingga key aplikasi tidak dapat membuat bucket atau mengubah kebijakan. Jangan menaruh key administrator Garage (termasuk token admin API dan RPC secret) di environment API atau worker. Console web `https://s3-web.moonwitness.biz.id` dan admin API `https://s3-admin.moonwitness.biz.id` dipakai operator saat provisioning saja.
 
-Karena bucket berada di luar jaringan Compose, seluruh hop wajib HTTPS dengan sertifikat yang dipercaya runtime API; jangan mematikan verifikasi sertifikat sebagai jalan pintas.
+Garage S3 API sendiri tidak menyediakan TLS, sehingga endpoint publik `https://s3.moonwitness.biz.id` harus diakhiri oleh reverse proxy TLS di depan Garage. Pastikan proxy meneruskan request S3/SigV4 tanpa mengubah host, path, atau query string yang ditandatangani. API harus mempercayai rantai sertifikat endpoint; jangan mematikan verifikasi sertifikat sebagai jalan pintas. [Dokumentasi konfigurasi resmi Garage](https://garagehq.deuxfleurs.fr/documentation/reference-manual/configuration/) menjelaskan bahwa TLS untuk S3 API perlu disediakan oleh reverse proxy.
 
 ```dotenv
 ATTACHMENT_STORAGE_DRIVER=s3
@@ -55,7 +55,7 @@ ATTACHMENT_S3_SECRET_KEY=<secret key Garage dari secret manager>
 ATTACHMENT_S3_FORCE_PATH_STYLE=true
 ```
 
-`ATTACHMENT_S3_ENDPOINT` harus berupa URL HTTPS tanpa user/password di dalam URL. `ATTACHMENT_S3_REGION` harus sama dengan `region` pada `garage.toml` — pada deployment ini nilainya `garage`, bukan `us-east-1`; bila salah, Garage menolak request SigV4 dengan `AuthorizationHeaderMalformed` yang menyebut scope yang diharapkan, sehingga nilai benar dapat dibaca langsung dari error tersebut. Path-style addressing aktif secara default dan cocok dengan `path_style_fallback` Garage. Aplikasi memeriksa akses bucket pada readiness probe.
+`ATTACHMENT_S3_ENDPOINT` harus berupa URL HTTPS tanpa user/password di dalam URL. `ATTACHMENT_S3_REGION` harus sama dengan `[s3_api].s3_region` pada `garage.toml` — konfigurasi proyek menetapkan `garage`, bukan `us-east-1`, dan operator perlu mencocokkannya dengan cluster aktif. Bila salah, Garage menolak request SigV4 dengan `AuthorizationHeaderMalformed` yang menyebut region yang diharapkan. Path-style addressing aktif secara default dan didukung Garage. Aplikasi memeriksa akses bucket pada readiness probe.
 
 Overlay `docker-compose.production.yml` mengaktifkan driver `s3` secara default untuk API serta semua worker, memakai endpoint Garage, memasang volume lokal legacy read-only, dan menolak startup jika kredensial aplikasi belum diisi. Overlay `docker-compose.development.yml` default ke driver `local` agar stack naik dengan satu perintah; isi `ATTACHMENT_STORAGE_DRIVER=s3` plus key Garage di `.env` untuk menguji bucket asli.
 
@@ -135,6 +135,7 @@ pnpm attachments:reconcile -- --apply --older-than=2026-10-01T00:00:00.000Z --li
 
 - `/readyz` memeriksa koneksi PostgreSQL dan akses bucket S3.
 - Bucket harus privat. API mengotorisasi record sebelum mengambil konten dan mengirim unduhan dengan cache privat.
+- Driver local dan S3 mendukung `putStream`/`getStream`. Unduhan media GoWA dialirkan ke storage lalu ke respons Board tanpa membuat satu Buffer sebesar file. Driver local memakai file sementara dan rename atomik; S3 menggunakan multipart upload dengan satu part aktif. API tetap membatasi attachment 10 MiB dan menghitung SHA-256 saat ingest. Adapter storage lama yang hanya menyediakan `put`/`get` memakai jalur Buffer kompatibilitas.
 - Simpan access key sebagai secret deployment dan rotasi dengan prosedur terencana.
 - Pantau kegagalan/latensi storage, ukuran bucket, dan status rekonsiliasi. Error storage sementara mengembalikan 503; objek yang tidak ditemukan tetap 404.
 - Cadangkan bucket dan database. Pemulihan yang konsisten memerlukan snapshot metadata serta objek yang saling cocok.

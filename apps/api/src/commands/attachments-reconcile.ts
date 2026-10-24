@@ -5,11 +5,13 @@ import { installAddons } from '@moonwitness/orm';
 import { manifest as baseManifest } from '@moonwitness/orm-base';
 import {
   manifest as storageManifest,
-  LocalFileAttachmentStorage,
-  reconcileLocalAttachmentStorage,
+  reconcileAttachmentStorage,
+  closeS3AttachmentStorage,
+  S3AttachmentStorage,
   type AttachmentReference,
 } from '@moonwitness/orm-storage';
-import { config } from '../config/env.js';
+import { createAttachmentStorage } from '../storage/attachment-storage.js';
+import { whatsappManifest } from '../whatsapp/manifest.js';
 
 export interface AttachmentReconcileOptions {
   readonly apply: boolean;
@@ -17,10 +19,13 @@ export interface AttachmentReconcileOptions {
   readonly limit: number;
 }
 
+const ORPHAN_GRACE_PERIOD_MS = 24 * 60 * 60 * 1000;
+
 export async function reconcileAttachments(options: AttachmentReconcileOptions) {
   const db = createDatabase();
   try {
-    await installAddons(db, [baseManifest, storageManifest]);
+    await installAddons(db, [baseManifest, storageManifest, whatsappManifest]);
+    const storage = createAttachmentStorage();
     async function* references(): AsyncIterable<AttachmentReference> {
       const rows = await db('attachments').select('storage_key', 'size_bytes', 'checksum');
       for (const row of rows) {
@@ -31,12 +36,17 @@ export async function reconcileAttachments(options: AttachmentReconcileOptions) 
           ...(typeof row.checksum === 'string' ? { checksum: row.checksum } : {}),
         };
       }
+      const mediaRows = await db('whatsapp_messages').whereNotNull('media_key').select('media_key');
+      for (const row of mediaRows) {
+        if (typeof row.media_key !== 'string') continue;
+        yield { storageKey: row.media_key };
+      }
     }
-    return await reconcileLocalAttachmentStorage(
-      new LocalFileAttachmentStorage(config.attachmentStorageDirectory),
-      references(),
-      options
-    );
+    try {
+      return await reconcileAttachmentStorage(storage, references(), options);
+    } finally {
+      if (storage instanceof S3AttachmentStorage) await closeS3AttachmentStorage(storage);
+    }
   } finally {
     await db.destroy();
   }
@@ -48,7 +58,7 @@ function parseOptions(args: readonly string[]): AttachmentReconcileOptions {
   const limitArgument = args.find((argument) => argument.startsWith('--limit='));
   const cutoff = cutoffArgument?.slice('--older-than='.length);
   if (apply && !cutoff) throw new Error('--apply requires an explicit --older-than ISO timestamp');
-  const olderThan = cutoff ? new Date(cutoff) : new Date(0);
+  const olderThan = cutoff ? new Date(cutoff) : new Date(Date.now() - ORPHAN_GRACE_PERIOD_MS);
   if (!Number.isFinite(olderThan.getTime()))
     throw new Error('--older-than must be a valid ISO timestamp');
   const rawLimit = limitArgument?.slice('--limit='.length);

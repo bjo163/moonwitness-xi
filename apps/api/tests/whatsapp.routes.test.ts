@@ -1,38 +1,93 @@
 import Fastify from 'fastify';
+import rateLimit from '@fastify/rate-limit';
 import { installAddons } from '@moonwitness/orm';
 import { manifest as baseManifest } from '@moonwitness/orm-base';
 import { Model } from 'objection';
 import knex, { type Knex } from 'knex';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AttachmentStorage } from '@moonwitness/orm-storage';
+import {
+  closeS3AttachmentStorage,
+  S3AttachmentStorage,
+  type AttachmentStorage,
+} from '@moonwitness/orm-storage';
 import { whatsappRoutes } from '../src/routes/whatsapp.routes.js';
 import { whatsappManifest } from '../src/whatsapp/manifest.js';
 import { randomUUID } from 'node:crypto';
+import { Readable } from 'node:stream';
+import { MAX_ATTACHMENT_BYTES } from '@moonwitness/types';
+import { dispatchOneOutboxEvent, jobsManifest } from '@moonwitness/jobs';
+import {
+  dispatchQueuedWhatsAppMessage,
+  registerWhatsAppOutboxConsumer,
+} from '../src/whatsapp/outbox-consumer.js';
 
 const postgres = process.env.WHATSAPP_TEST_POSTGRES === 'true';
+
+function pngFixture(size = 68): Buffer {
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l5sAAAAASUVORK5CYII=',
+    'base64'
+  );
+  if (size <= png.length) return png.subarray(0, size);
+  const result = Buffer.alloc(size);
+  png.copy(result);
+  return result;
+}
 
 describe('WhatsApp API GoWA bridge', () => {
   let db: Knex;
   let app: ReturnType<typeof Fastify>;
   let companyId: number;
+  let foreignCompanyId: number;
   let schema: string;
   let deviceExists = false;
   let providerConnected = false;
+  let qrExpired = false;
+  let qrLoginCount = 0;
+  let deviceCreateCount = 0;
   let providerChats: Array<Record<string, unknown>> = [];
+  let providerChatRequests: URL[] = [];
+  let providerChatActions: Array<{ path: string; body: Record<string, unknown> }> = [];
   let providerMessages: Array<Record<string, unknown>> = [];
+  let providerMessageRequests: URL[] = [];
+  let providerReadRequests: URL[] = [];
+  let providerReadBodies: Array<Record<string, unknown>> = [];
+  let failReadReceipt = false;
+  let failPreviewFetch = false;
   let failTextSend = false;
+  let failTextBeforeAcceptance = false;
+  let textSendFailureStatus = 503;
+  let acceptThenTimeout = false;
+  let providerTextSendCount = 0;
   let failAttachmentPut = false;
   let providerImageSendCount = 0;
+  let providerDownloadBytes = Buffer.alloc(0);
+  let providerDownloadDeclaredLength: number | null = null;
+  let providerDownloadFileName = 'incoming.png';
+  let streamPutCount = 0;
+  let streamGetCount = 0;
+  let bufferGetCount = 0;
   const previousGateway = process.env.WHATSAPP_GATEWAY_URL;
   const stored = new Map<string, Buffer>();
-  const storage: AttachmentStorage = {
+  const memoryStorage: AttachmentStorage = {
     async put(key, content) {
-      if (failAttachmentPut) throw new Error('attachment storage unavailable');
       stored.set(key, Buffer.from(content));
       return { key, sizeBytes: content.byteLength, checksum: 'test' };
     },
     async get(key) {
+      bufferGetCount++;
       return stored.get(key) ?? null;
+    },
+    async putStream(key, content) {
+      streamPutCount++;
+      const chunks: Buffer[] = [];
+      for await (const chunk of content) chunks.push(Buffer.from(chunk));
+      return this.put(key, Buffer.concat(chunks));
+    },
+    async getStream(key) {
+      streamGetCount++;
+      const content = stored.get(key) ?? null;
+      return content ? Readable.from([content]) : null;
     },
     async delete(key) {
       stored.delete(key);
@@ -41,6 +96,26 @@ describe('WhatsApp API GoWA bridge', () => {
       for (const [key, content] of stored)
         yield { key, sizeBytes: content.length, checksum: 'test' };
     },
+  };
+  let activeStorage: AttachmentStorage = memoryStorage;
+  const storage: AttachmentStorage = {
+    async put(key, content) {
+      if (failAttachmentPut) throw new Error('attachment storage unavailable');
+      return activeStorage.put(key, content);
+    },
+    get: (key) => activeStorage.get(key),
+    putStream: async (key, content, maxBytes) => {
+      if (failAttachmentPut) throw new Error('attachment storage unavailable');
+      return activeStorage.putStream
+        ? activeStorage.putStream(key, content, maxBytes)
+        : activeStorage.put(key, Buffer.concat(await Array.fromAsync(content)));
+    },
+    getStream: (key) =>
+      activeStorage.getStream
+        ? activeStorage.getStream(key)
+        : activeStorage.get(key).then((content) => (content ? Readable.from([content]) : null)),
+    delete: (key) => activeStorage.delete(key),
+    list: () => activeStorage.list(),
   };
 
   beforeAll(async () => {
@@ -58,20 +133,45 @@ describe('WhatsApp API GoWA bridge', () => {
         });
     if (postgres) await db.raw(`CREATE SCHEMA "${schema}"`);
     Model.knex(db);
-    await installAddons(db, [baseManifest, whatsappManifest]);
+    await installAddons(db, [baseManifest, jobsManifest, whatsappManifest]);
     companyId = Number((await db('companies').first('id'))?.id);
+    const [foreignCompany] = await db('companies')
+      .insert({ name: `WhatsApp isolation ${randomUUID()}`, timezone: 'UTC' })
+      .returning(['id']);
+    foreignCompanyId = Number(foreignCompany.id);
   }, 120_000);
 
   beforeEach(async () => {
     process.env.WHATSAPP_GATEWAY_URL = 'http://gowa.test';
     deviceExists = false;
     providerConnected = false;
+    qrExpired = false;
+    qrLoginCount = 0;
+    deviceCreateCount = 0;
     providerChats = [];
+    providerChatRequests = [];
+    providerChatActions = [];
     providerMessages = [];
+    providerMessageRequests = [];
+    providerReadRequests = [];
+    providerReadBodies = [];
+    failReadReceipt = false;
+    failPreviewFetch = false;
     failTextSend = false;
+    failTextBeforeAcceptance = false;
+    textSendFailureStatus = 503;
+    acceptThenTimeout = false;
+    providerTextSendCount = 0;
     failAttachmentPut = false;
     providerImageSendCount = 0;
+    providerDownloadBytes = pngFixture();
+    providerDownloadDeclaredLength = null;
+    providerDownloadFileName = 'incoming.png';
+    streamPutCount = 0;
+    streamGetCount = 0;
+    bufferGetCount = 0;
     stored.clear();
+    activeStorage = memoryStorage;
     const mockFetch = vi.fn(async (input: URL | RequestInfo, init?: RequestInit) => {
       const url = new URL(input instanceof Request ? input.url : String(input));
       const method = init?.method ?? 'GET';
@@ -84,6 +184,7 @@ describe('WhatsApp API GoWA bridge', () => {
           }
         );
       if (url.pathname === '/devices' && method === 'POST') {
+        deviceCreateCount++;
         deviceExists = true;
         return json({ device_id: 'moonwitness-company-' + companyId });
       }
@@ -98,27 +199,83 @@ describe('WhatsApp API GoWA bridge', () => {
           is_logged_in: providerConnected,
           jid: providerConnected ? '6281234567890@s.whatsapp.net' : '',
         });
-      if (/^\/devices\/[^/]+\/login$/u.test(url.pathname))
+      if (/^\/devices\/[^/]+\/login$/u.test(url.pathname)) {
+        qrLoginCount++;
         return json({ qr_link: 'http://localhost:3000/statics/images/qrcode/test.png' });
+      }
+      if (url.pathname === '/statics/images/qrcode/test.png' && qrExpired)
+        return json({ message: 'QR expired' }, 404);
       if (url.pathname === '/statics/images/qrcode/test.png')
         return new Response(Buffer.from('qr-image'), { headers: { 'content-type': 'image/png' } });
-      if (url.pathname === '/chats') return json({ data: providerChats });
-      if (url.pathname.startsWith('/chat/') && url.pathname.endsWith('/messages'))
-        return json({ data: providerMessages });
-      if (url.pathname === '/send/message')
+      if (url.pathname === '/chats') {
+        providerChatRequests.push(url);
+        const archived = url.searchParams.get('archived');
+        return json({
+          data: providerChats.filter(
+            (chat) => archived === null || String(chat.archived === true) === archived
+          ),
+        });
+      }
+      if (/^\/chat\/.+\/(archive|pin)$/u.test(url.pathname) && method === 'POST') {
+        const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        const path = url.pathname.endsWith('/archive') ? 'archive' : 'pin';
+        providerChatActions.push({ path, body });
+        const jid = decodeURIComponent(url.pathname.slice('/chat/'.length).replace(/\/(archive|pin)$/u, ''));
+        if (path === 'archive') {
+          const chat = providerChats.find((item) => item.jid === jid);
+          if (chat) chat.archived = body.archived;
+        }
+        return json({ [path === 'archive' ? 'archived' : 'pinned']: body[path === 'archive' ? 'archived' : 'pinned'] });
+      }
+      if (url.pathname.startsWith('/chat/') && url.pathname.endsWith('/messages')) {
+        providerMessageRequests.push(url);
+        return failPreviewFetch
+          ? json({ message: 'temporary preview failure' }, 503)
+          : json({ data: providerMessages });
+      }
+      if (/^\/message\/[^/]+\/read$/u.test(url.pathname) && method === 'POST') {
+        providerReadRequests.push(url);
+        providerReadBodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+        return failReadReceipt ? json({ message: 'provider read failed' }, 503) : json({});
+      }
+      if (url.pathname === '/send/message') {
+        providerTextSendCount++;
+        if (failTextBeforeAcceptance) {
+          failTextBeforeAcceptance = false;
+          throw new Error('simulated network failure before provider acceptance');
+        }
+        if (acceptThenTimeout) {
+          acceptThenTimeout = false;
+          const body = JSON.parse(String(init?.body)) as { phone: string; message: string };
+          providerMessages.push({
+            id: 'accepted-before-response-timeout',
+            chat_jid: body.phone,
+            content: body.message,
+            timestamp: new Date().toISOString(),
+            is_from_me: true,
+            media_type: 'text',
+          });
+          throw new Error('simulated network timeout after GoWA accepted the send');
+        }
         return failTextSend
-          ? json({ message: 'provider send failed' }, 503)
+          ? json({ message: 'provider send failed' }, textSendFailureStatus)
           : json({ message_id: 'sent-text-id' });
+      }
       if (url.pathname === '/send/image') {
         providerImageSendCount++;
         return json({ message_id: 'sent-image-id' });
       }
-      if (url.pathname === '/devices/moonwitness-company-' + companyId + '/logout') return json({});
+      if (/^\/devices\/moonwitness-company-\d+\/logout$/u.test(url.pathname)) return json({});
       if (url.pathname === '/message/incoming-image/download')
-        return json({ file_path: '/statics/media/incoming.png', filename: 'incoming.png' });
+        return json({ file_path: '/statics/media/incoming.png', filename: providerDownloadFileName });
       if (url.pathname === '/statics/media/incoming.png')
-        return new Response(Buffer.from('incoming-image'), {
-          headers: { 'content-type': 'image/png' },
+        return new Response(providerDownloadBytes, {
+          headers: {
+            'content-type': 'image/png',
+            ...(providerDownloadDeclaredLength === null
+              ? {}
+              : { 'content-length': String(providerDownloadDeclaredLength) }),
+          },
         });
       return json({ message: `Unexpected GoWA request: ${method} ${url.pathname}` }, 500);
     });
@@ -130,23 +287,31 @@ describe('WhatsApp API GoWA bridge', () => {
     app.addHook('onRequest', async (request) => {
       if (request.headers.authorization === 'Bearer test')
         request.auth = {
-          userId: 1,
+          userId: Number(request.headers['x-test-user-id'] ?? 1),
           companyId:
             request.headers['x-test-company'] === 'none'
               ? undefined
               : request.headers['x-test-company'] === 'foreign'
-                ? companyId + 999
+                ? foreignCompanyId
                 : companyId,
-          role: 'superadmin',
+          role: request.headers['x-test-role'] === 'user' ? 'user' : 'superadmin',
           groupPermissions: [],
         };
     });
+    await app.register(rateLimit, { global: false });
     await app.register(whatsappRoutes, { attachmentStorage: storage });
   });
 
   afterEach(async () => {
     await app.close();
-    for (const table of ['whatsapp_messages', 'whatsapp_conversations', 'whatsapp_accounts'])
+    for (const table of [
+      'outbox_events',
+      'whatsapp_conversation_reads',
+      'whatsapp_messages',
+      'whatsapp_conversations',
+      'whatsapp_accounts',
+      'audit_logs',
+    ])
       await db(table).delete();
     stored.clear();
     vi.unstubAllGlobals();
@@ -164,7 +329,7 @@ describe('WhatsApp API GoWA bridge', () => {
       method: 'POST',
       url: '/whatsapp/connect',
       headers: { authorization: 'Bearer test' },
-      payload: {},
+      payload: { company_id: companyId + 1000, device_id: 'untrusted-device' },
     });
     expect(connected.statusCode).toBe(202);
     providerConnected = true;
@@ -172,6 +337,40 @@ describe('WhatsApp API GoWA bridge', () => {
       .where({ id: connected.json().data.id })
       .update({ status: 'connected' });
     return connected.json().data.id as number;
+  }
+
+  async function createFailingUpdateTrigger(
+    name: string,
+    table: string,
+    column: string,
+    message: string,
+    condition?: string
+  ) {
+    if (postgres) {
+      const functionName = `${name}_function`;
+      const action = condition
+        ? `IF ${condition} THEN RAISE EXCEPTION '${message}'; END IF;`
+        : `RAISE EXCEPTION '${message}';`;
+      await db.raw(
+        `CREATE FUNCTION ${functionName}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN ${action} RETURN NEW; END; $$`
+      );
+      await db.raw(
+        `CREATE TRIGGER ${name} BEFORE UPDATE OF ${column} ON ${table} FOR EACH ROW EXECUTE FUNCTION ${functionName}()`
+      );
+      return;
+    }
+    await db.raw(
+      `CREATE TRIGGER ${name} BEFORE UPDATE OF ${column} ON ${table}${condition ? ` WHEN ${condition}` : ''} BEGIN SELECT RAISE(ABORT, '${message}'); END;`
+    );
+  }
+
+  async function dropFailingUpdateTrigger(name: string, table: string) {
+    if (postgres) {
+      await db.raw(`DROP TRIGGER ${name} ON ${table}`);
+      await db.raw(`DROP FUNCTION ${name}_function()`);
+      return;
+    }
+    await db.raw(`DROP TRIGGER ${name}`);
   }
 
   it('requires an authenticated active company and creates a stable GoWA device with a proxied QR', async () => {
@@ -190,7 +389,7 @@ describe('WhatsApp API GoWA bridge', () => {
       method: 'POST',
       url: '/whatsapp/connect',
       headers: { authorization: 'Bearer test' },
-      payload: {},
+      payload: { company_id: companyId + 1000, device_id: 'untrusted-device' },
     });
     expect(connected.statusCode).toBe(202);
     expect(connected.json().data.status).toBe('qr');
@@ -213,6 +412,9 @@ describe('WhatsApp API GoWA bridge', () => {
       qr_code: 'data:image/png;base64,cXItaW1hZ2U=',
     });
     expect(account.json().data).not.toHaveProperty('gateway_device_id');
+    expect(
+      (await db('whatsapp_accounts').where({ company_id: companyId }).first()).gateway_device_id
+    ).toBe(`moonwitness-company-${companyId}`);
     const foreign = await app.inject({
       method: 'GET',
       url: '/whatsapp/account',
@@ -239,6 +441,831 @@ describe('WhatsApp API GoWA bridge', () => {
     ).toBe(1);
   });
 
+  it('distinguishes a logged-out WhatsApp account from an unreachable GoWA gateway', async () => {
+    const headers = { authorization: 'Bearer test' };
+    const connect = await app.inject({ method: 'POST', url: '/whatsapp/connect', headers });
+    expect(connect.statusCode).toBe(202);
+    await app.inject({ method: 'POST', url: '/whatsapp/disconnect', headers });
+    const accountAudits = await db('audit_logs').where({ model: 'whatsapp.account' }).orderBy('id');
+    expect(accountAudits.map((entry) => entry.operation)).toEqual(['connect', 'disconnect']);
+    expect(accountAudits.map((entry) => JSON.parse(entry.changes))).toEqual([
+      { area: 'whatsapp', company_id: companyId },
+      { area: 'whatsapp', company_id: companyId },
+    ]);
+
+    const loggedOut = await app.inject({ method: 'GET', url: '/whatsapp/account', headers });
+    expect(loggedOut.json().data.status).toBe('disconnected');
+
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('gateway offline'); }));
+    const gatewayDown = await app.inject({ method: 'GET', url: '/whatsapp/account', headers });
+    expect(gatewayDown.json().data).toMatchObject({
+      status: 'error',
+      last_error: 'WhatsApp gateway is temporarily unavailable',
+    });
+  });
+
+  it('keeps ordinary company members read-only unless the WhatsApp action grants are present', async () => {
+    const [account] = await db('whatsapp_accounts')
+      .insert({
+        company_id: companyId,
+        status: 'connected',
+        gateway_device_id: `moonwitness-company-${companyId}`,
+      })
+      .returning(['id']);
+    const [conversation] = await db('whatsapp_conversations')
+      .insert({
+        company_id: companyId,
+        account_id: account.id,
+        jid: '628111111111@s.whatsapp.net',
+        name: 'Read only',
+        is_group: false,
+        unread_count: 0,
+      })
+      .returning(['id']);
+    const headers = { authorization: 'Bearer test', 'x-test-role': 'user' };
+    const status = await app.inject({ method: 'GET', url: '/whatsapp/account', headers });
+    expect(status.statusCode).toBe(200);
+    expect(status.json().data.permissions).toEqual({
+      manage: false,
+      manageConversations: false,
+      createConversation: false,
+      send: false,
+    });
+    expect(
+      (await app.inject({ method: 'POST', url: '/whatsapp/connect', headers })).statusCode
+    ).toBe(403);
+    expect(
+      (
+        await app.inject({
+          method: 'POST',
+          url: '/whatsapp/disconnect',
+          headers,
+          payload: {},
+        })
+      ).statusCode
+    ).toBe(403);
+    expect(
+      (
+        await app.inject({
+          method: 'POST',
+          url: '/whatsapp/conversations',
+          headers,
+          payload: { phone: '6281234567890' },
+        })
+      ).statusCode
+    ).toBe(403);
+    expect(
+      (
+        await app.inject({
+          method: 'POST',
+          url: `/whatsapp/conversations/${conversation.id}/archive`,
+          headers,
+          payload: { archived: true },
+        })
+      ).statusCode
+    ).toBe(403);
+    expect(
+      (
+        await app.inject({
+          method: 'POST',
+          url: `/whatsapp/conversations/${conversation.id}/pin`,
+          headers,
+          payload: { pinned: true },
+        })
+      ).statusCode
+    ).toBe(403);
+    expect(
+      (
+        await app.inject({
+          method: 'POST',
+          url: `/whatsapp/conversations/${conversation.id}/messages`,
+          headers,
+          payload: { content: 'not allowed' },
+        })
+      ).statusCode
+    ).toBe(403);
+    expect(
+      (
+        await app.inject({
+          method: 'POST',
+          url: '/whatsapp/messages/999/retry',
+          headers,
+        })
+      ).statusCode
+    ).toBe(403);
+  });
+
+  it('reuses an active pairing QR and reports an expired QR so it can be refreshed', async () => {
+    const auth = { authorization: 'Bearer test' };
+    const first = await app.inject({ method: 'POST', url: '/whatsapp/connect', headers: auth });
+    expect(first.statusCode).toBe(202);
+    expect(qrLoginCount).toBe(1);
+    const repeated = await app.inject({ method: 'POST', url: '/whatsapp/connect', headers: auth });
+    expect(repeated.statusCode).toBe(202);
+    expect(repeated.json().data).toMatchObject({ id: first.json().data.id, status: 'qr' });
+    expect(qrLoginCount).toBe(1);
+    expect(deviceCreateCount).toBe(1);
+
+    qrExpired = true;
+    const expired = await app.inject({ method: 'GET', url: '/whatsapp/account', headers: auth });
+    expect(expired.json().data).toMatchObject({
+      status: 'qr_expired',
+      qr_code: null,
+      last_error: expect.stringContaining('expired'),
+    });
+
+    qrExpired = false;
+    const refreshed = await app.inject({ method: 'POST', url: '/whatsapp/connect', headers: auth });
+    expect(refreshed.statusCode).toBe(202);
+    expect(refreshed.json().data.status).toBe('qr');
+    expect(qrLoginCount).toBe(2);
+    expect(deviceCreateCount).toBe(1);
+  });
+
+  it('serializes simultaneous connect requests for one company', async () => {
+    const headers = { authorization: 'Bearer test' };
+    const responses = await Promise.all([
+      app.inject({ method: 'POST', url: '/whatsapp/connect', headers }),
+      app.inject({ method: 'POST', url: '/whatsapp/connect', headers }),
+    ]);
+    expect(responses.map((response) => response.statusCode).sort()).toEqual([202, 202]);
+    expect(deviceCreateCount).toBe(1);
+    expect(qrLoginCount).toBe(1);
+    expect(await db('whatsapp_accounts').where({ company_id: companyId })).toHaveLength(1);
+  });
+
+  it('limits outbound message bursts per company and user', async () => {
+    const accountId = await connectAndMarkReady();
+    const [conversation] = await db('whatsapp_conversations')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        jid: '628111111111@s.whatsapp.net',
+        name: 'Rate limit test',
+        is_group: false,
+        unread_count: 0,
+      })
+      .returning(['id']);
+    const responses = [];
+    for (let attempt = 0; attempt < 21; attempt++) {
+      responses.push(
+        await app.inject({
+          method: 'POST',
+          url: `/whatsapp/conversations/${conversation.id}/messages`,
+          headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
+          payload: { content: `Burst ${attempt}` },
+        })
+      );
+    }
+    expect(responses.slice(0, 20).every((response) => response.statusCode === 202)).toBe(true);
+    expect(responses[20]?.statusCode).toBe(429);
+  });
+
+  it('ignores or rejects client supplied company, device, and JID routing fields', async () => {
+    const accountId = await connectAndMarkReady();
+    const [conversation] = await db('whatsapp_conversations')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        jid: '628111111111@s.whatsapp.net',
+        name: 'Scoped conversation',
+        is_group: false,
+        unread_count: 0,
+      })
+      .returning(['id']);
+    const rejected = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversation.id}/messages`,
+      headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
+      payload: {
+        content: 'must use the server scoped JID',
+        company_id: companyId + 1000,
+        device_id: 'untrusted-device',
+        phone: '6289999999999@s.whatsapp.net',
+      },
+    });
+    expect(rejected.statusCode).toBe(400);
+  });
+
+  it('keeps account, conversations, messages, media, and disconnect scoped to the active company', async () => {
+    const accountId = await connectAndMarkReady();
+    const [conversation] = await db('whatsapp_conversations')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        jid: '628111111111@s.whatsapp.net',
+        name: 'Tenant private chat',
+        is_group: false,
+        unread_count: 0,
+      })
+      .returning(['id']);
+    const [message] = await db('whatsapp_messages')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        conversation_id: conversation.id,
+        external_id: 'tenant-private-media',
+        direction: 'inbound',
+        message_type: 'image',
+        status: 'received',
+        media_key: 'tenant-private-object',
+        media_mime_type: 'image/png',
+      })
+      .returning(['id']);
+    const headers = { authorization: 'Bearer test', 'x-test-company': 'foreign' };
+    expect(
+      (await app.inject({ method: 'GET', url: '/whatsapp/account', headers })).json().data
+    ).toMatchObject({
+      status: 'disconnected',
+      phone_number: null,
+    });
+    expect(
+      (await app.inject({ method: 'GET', url: '/whatsapp/conversations', headers })).json().data
+    ).toEqual([]);
+    expect(
+      (
+        await app.inject({
+          method: 'GET',
+          url: `/whatsapp/conversations/${conversation.id}/messages`,
+          headers,
+        })
+      ).statusCode
+    ).toBe(404);
+    const foreignConnect = await app.inject({ method: 'POST', url: '/whatsapp/connect', headers });
+    expect(foreignConnect.statusCode).toBeGreaterThanOrEqual(200);
+    expect(foreignConnect.statusCode).toBeLessThan(300);
+    expect((await db('whatsapp_accounts').where({ company_id: companyId }).first()).status).toBe(
+      'connected'
+    );
+    expect(
+      (
+        await app.inject({
+          method: 'POST',
+          url: `/whatsapp/conversations/${conversation.id}/messages`,
+          headers: { ...headers, 'idempotency-key': randomUUID() },
+          payload: { content: 'must stay private' },
+        })
+      ).statusCode
+    ).toBe(404);
+    expect(
+      (await app.inject({ method: 'GET', url: `/whatsapp/media/${message.id}`, headers }))
+        .statusCode
+    ).toBe(404);
+    expect(
+      (
+        await app.inject({
+          method: 'POST',
+          url: `/whatsapp/messages/${message.id}/retry`,
+          headers,
+        })
+      ).statusCode
+    ).toBe(404);
+    const foreignAccount = await db('whatsapp_accounts')
+      .where({ company_id: foreignCompanyId })
+      .first();
+    expect(foreignAccount).toBeTruthy();
+    const [foreignConversation] = await db('whatsapp_conversations')
+      .insert({
+        company_id: foreignCompanyId,
+        account_id: foreignAccount.id,
+        jid: '628333333333@s.whatsapp.net',
+        name: 'Foreign private chat',
+        is_group: false,
+        unread_count: 0,
+      })
+      .returning(['id']);
+    const [foreignMessage] = await db('whatsapp_messages')
+      .insert({
+        company_id: foreignCompanyId,
+        account_id: foreignAccount.id,
+        conversation_id: foreignConversation.id,
+        external_id: 'foreign-private-media',
+        direction: 'inbound',
+        message_type: 'image',
+        status: 'received',
+        media_key: 'foreign-private-object',
+        media_mime_type: 'image/png',
+      })
+      .returning(['id']);
+    stored.set('foreign-private-object', Buffer.from('foreign-image'));
+    const mainHeaders = { authorization: 'Bearer test' };
+    expect(
+      (
+        await app.inject({
+          method: 'GET',
+          url: `/whatsapp/conversations/${foreignConversation.id}/messages`,
+          headers: mainHeaders,
+        })
+      ).statusCode
+    ).toBe(404);
+    expect(
+      (
+        await app.inject({
+          method: 'GET',
+          url: `/whatsapp/media/${foreignMessage.id}`,
+          headers: mainHeaders,
+        })
+      ).statusCode
+    ).toBe(404);
+    expect(
+      (
+        await app.inject({
+          method: 'POST',
+          url: `/whatsapp/messages/${foreignMessage.id}/retry`,
+          headers: mainHeaders,
+        })
+      ).statusCode
+    ).toBe(404);
+    expect(
+      (
+        await app.inject({
+          method: 'POST',
+          url: `/whatsapp/conversations/${foreignConversation.id}/messages`,
+          headers: { ...mainHeaders, 'idempotency-key': randomUUID() },
+          payload: { content: 'cross tenant attempt' },
+        })
+      ).statusCode
+    ).toBe(404);
+    expect(
+      (
+        await app.inject({
+          method: 'GET',
+          url: '/whatsapp/conversations',
+          headers: { authorization: 'Bearer test', 'x-test-company': 'foreign' },
+        })
+      ).json().data.map((chat: { id: number }) => chat.id)
+    ).toContain(foreignConversation.id);
+    expect(
+      (
+        await app.inject({
+          method: 'GET',
+          url: `/whatsapp/media/${foreignMessage.id}`,
+          headers: { authorization: 'Bearer test', 'x-test-company': 'foreign' },
+        })
+      ).body
+    ).toBe('foreign-image');
+    expect(
+      (await app.inject({ method: 'POST', url: '/whatsapp/disconnect', headers, payload: {} }))
+        .statusCode
+    ).toBe(200);
+    expect((await db('whatsapp_accounts').where({ company_id: companyId }).first()).status).toBe(
+      'connected'
+    );
+    expect(
+      (await db('whatsapp_accounts').where({ company_id: foreignCompanyId }).first()).status
+    ).toBe('disconnected');
+  });
+
+  it('uses record IDs as stable tie-breakers for equal conversation and message timestamps', async () => {
+    const accountId = await connectAndMarkReady();
+    const sameTime = '2026-10-23T11:00:00.000Z';
+    const firstConversation = await db('whatsapp_conversations')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        jid: '628111111111@s.whatsapp.net',
+        name: 'First',
+        is_group: false,
+        unread_count: 0,
+        last_message_at: sameTime,
+      })
+      .returning(['id']);
+    const secondConversation = await db('whatsapp_conversations')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        jid: '628222222222@s.whatsapp.net',
+        name: 'Second',
+        is_group: false,
+        unread_count: 0,
+        last_message_at: sameTime,
+      })
+      .returning(['id']);
+    const inbox = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations',
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(inbox.json().data.slice(0, 2).map((item: { id: number }) => item.id)).toEqual([
+      secondConversation[0].id,
+      firstConversation[0].id,
+    ]);
+
+    const conversationId = Number(firstConversation[0].id);
+    const firstMessage = await db('whatsapp_messages')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        conversation_id: conversationId,
+        external_id: 'same-time-first',
+        direction: 'inbound',
+        message_type: 'text',
+        content: 'First message',
+        status: 'received',
+        create_date: sameTime,
+      })
+      .returning(['id']);
+    const secondMessage = await db('whatsapp_messages')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        conversation_id: conversationId,
+        external_id: 'same-time-second',
+        direction: 'inbound',
+        message_type: 'text',
+        content: 'Second message',
+        status: 'received',
+        create_date: sameTime,
+      })
+      .returning(['id']);
+    const messages = await app.inject({
+      method: 'GET',
+      url: `/whatsapp/conversations/${conversationId}/messages`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(messages.json().data.map((item: { id: number }) => item.id)).toEqual([
+      secondMessage[0].id,
+      firstMessage[0].id,
+    ]);
+  });
+
+  it('sends a GoWA read receipt for the newest cached inbound message', async () => {
+    const accountId = await connectAndMarkReady();
+    const [conversation] = await db('whatsapp_conversations')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        jid: '628111111111@s.whatsapp.net',
+        name: 'Private',
+        is_group: false,
+        unread_count: 2,
+      })
+      .returning(['id']);
+    const [inbound] = await db('whatsapp_messages')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        conversation_id: conversation.id,
+        external_id: 'provider-inbound-read-id',
+        direction: 'inbound',
+        message_type: 'text',
+        content: 'Read this',
+        status: 'received',
+        create_date: '2026-10-23T11:00:00.000Z',
+      })
+      .returning(['id']);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversation.id}/read`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json().data).toEqual({ marked: true, message_id: inbound.id });
+    expect(providerReadRequests[0]?.pathname).toBe('/message/provider-inbound-read-id/read');
+    expect(providerReadBodies[0]).toEqual({ phone: '628111111111@s.whatsapp.net' });
+    expect(
+      (await db('whatsapp_conversations').where({ id: conversation.id }).first()).unread_count
+    ).toBe(2);
+    expect(
+      await db('audit_logs').where({ model: 'whatsapp.message', record_id: inbound.id, operation: 'mark_read' }).first()
+    ).toBeTruthy();
+
+    await db('whatsapp_conversation_reads')
+      .insert({
+        company_id: companyId,
+        conversation_id: conversation.id,
+        user_id: 1,
+        last_read_message_id: inbound.id + 100,
+        last_read_at: '2026-10-23T12:00:00.000Z',
+      })
+      .onConflict(['company_id', 'conversation_id', 'user_id'])
+      .merge();
+    const repeatedRead = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversation.id}/read`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(repeatedRead.statusCode).toBe(200);
+    expect(
+      await db('whatsapp_conversation_reads')
+        .where({ company_id: companyId, conversation_id: conversation.id, user_id: 1 })
+        .first()
+    ).toMatchObject({
+      last_read_message_id: inbound.id + 100,
+      last_read_at: '2026-10-23T12:00:00.000Z',
+    });
+
+    await db('whatsapp_conversations').where({ id: conversation.id }).update({ unread_count: 1 });
+    failReadReceipt = true;
+    const failed = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversation.id}/read`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(failed.statusCode).toBe(502);
+    expect(
+      (await db('whatsapp_conversations').where({ id: conversation.id }).first()).unread_count
+    ).toBe(1);
+
+    const foreign = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversation.id}/read`,
+      headers: { authorization: 'Bearer test', 'x-test-company': 'foreign' },
+    });
+    expect(foreign.statusCode).toBe(404);
+    expect(providerReadRequests).toHaveLength(3);
+  });
+
+  it('calculates unread counts and cursors per user, and filters unread conversations', async () => {
+    const accountId = await connectAndMarkReady();
+    const [conversation] = await db('whatsapp_conversations')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        jid: '628111111111@s.whatsapp.net',
+        name: 'Unread private',
+        is_group: false,
+      })
+      .returning(['id']);
+    const [otherConversation] = await db('whatsapp_conversations')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        jid: '628222222222@s.whatsapp.net',
+        name: 'Other unread',
+        is_group: false,
+      })
+      .returning(['id']);
+    const inboundRows = await db('whatsapp_messages')
+      .insert([
+        {
+          company_id: companyId,
+          account_id: accountId,
+          conversation_id: conversation.id,
+          external_id: 'unread-first',
+          direction: 'inbound',
+          message_type: 'text',
+          content: 'First',
+          status: 'received',
+          create_date: '2026-10-23T10:00:00.000Z',
+        },
+        {
+          company_id: companyId,
+          account_id: accountId,
+          conversation_id: conversation.id,
+          external_id: 'unread-latest',
+          direction: 'inbound',
+          message_type: 'text',
+          content: 'Latest',
+          status: 'received',
+          create_date: '2026-10-23T11:00:00.000Z',
+        },
+        {
+          company_id: companyId,
+          account_id: accountId,
+          conversation_id: otherConversation.id,
+          external_id: 'other-unread',
+          direction: 'inbound',
+          message_type: 'text',
+          content: 'Other',
+          status: 'received',
+          create_date: '2026-10-23T12:00:00.000Z',
+        },
+      ])
+      .returning(['id']);
+
+    const beforeRead = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations',
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(beforeRead.statusCode).toBe(200);
+    expect(
+      beforeRead
+        .json()
+        .data.map((item: { id: number; unread_count: number }) => [item.id, item.unread_count])
+    ).toEqual(
+      expect.arrayContaining([
+        [conversation.id, 2],
+        [otherConversation.id, 1],
+      ])
+    );
+
+    const markRead = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversation.id}/read`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(markRead.statusCode).toBe(200);
+    expect(markRead.json().data.message_id).toBe(inboundRows[1].id);
+
+    const unreadForCurrentUser = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations?unread=true',
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(unreadForCurrentUser.json().data).toHaveLength(1);
+    expect(unreadForCurrentUser.json().data[0]).toMatchObject({
+      id: otherConversation.id,
+      unread_count: 1,
+    });
+
+    const unreadForAnotherUser = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations?unread=true',
+      headers: { authorization: 'Bearer test', 'x-test-user-id': '2' },
+    });
+    expect(unreadForAnotherUser.json().data).toHaveLength(2);
+    expect(
+      unreadForAnotherUser.json().data.find((item: { id: number }) => item.id === conversation.id)
+        .unread_count
+    ).toBe(2);
+
+    const invalidUnread = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations?unread=maybe',
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(invalidUnread.statusCode).toBe(400);
+  });
+
+  it('syncs recent inbound messages from updated chats before calculating unread counts', async () => {
+    await connectAndMarkReady();
+    const jid = '628333333333@s.whatsapp.net';
+    providerChats = [
+      {
+        jid,
+        name: 'New inbound chat',
+        last_message_time: '2026-10-24T14:00:00.000Z',
+      },
+    ];
+    providerMessages = [
+      {
+        id: 'provider-unread-message',
+        is_from_me: false,
+        media_type: 'text',
+        content: 'New message from provider',
+        timestamp: '2026-10-24T14:00:00.000Z',
+      },
+      {
+        id: 'provider-unread-message',
+        is_from_me: false,
+        media_type: 'text',
+        content: 'New message from provider',
+        timestamp: '2026-10-24T14:00:00.000Z',
+      },
+    ];
+
+    const inbox = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations?unread=true',
+      headers: { authorization: 'Bearer test' },
+    });
+
+    expect(inbox.statusCode).toBe(200);
+    expect(inbox.json().data).toHaveLength(1);
+    expect(inbox.json().data[0]).toMatchObject({ name: 'New inbound chat', unread_count: 1 });
+    expect(providerMessageRequests[0]?.searchParams.get('limit')).toBe('100');
+    await expect(
+      db('whatsapp_messages').where({ company_id: companyId, external_id: 'provider-unread-message' }).first()
+    ).resolves.toMatchObject({ direction: 'inbound', content: 'New message from provider' });
+  });
+
+  it('retries unread synchronization after a provider preview failure', async () => {
+    await connectAndMarkReady();
+    const jid = '628444444444@s.whatsapp.net';
+    const timestamp = '2026-10-24T15:00:00.000Z';
+    providerChats = [{ jid, name: 'Retry preview', last_message_time: timestamp }];
+    providerMessages = [
+      {
+        id: 'retry-preview-message',
+        is_from_me: false,
+        media_type: 'text',
+        content: 'Retry should sync me',
+        timestamp,
+      },
+    ];
+    failPreviewFetch = true;
+
+    const failed = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations',
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(failed.statusCode).toBe(200);
+    expect(providerMessageRequests).toHaveLength(1);
+    const [failedConversation] = await db('whatsapp_conversations').where({ company_id: companyId, jid });
+    expect(failedConversation.last_message_sync_at).toBeNull();
+
+    failPreviewFetch = false;
+    const retried = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations',
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(retried.statusCode).toBe(200);
+    expect(providerMessageRequests).toHaveLength(2);
+    expect(retried.json().data[0]).toMatchObject({ unread_count: 1, last_message: 'Retry should sync me' });
+    expect(
+      await db('whatsapp_conversations').where({ company_id: companyId, jid }).first()
+    ).toMatchObject({ last_message_sync_at: timestamp });
+  });
+
+  it('archives and unarchives company-scoped conversations, and pins them in provider order', async () => {
+    await connectAndMarkReady();
+    const jid = '628111111111@s.whatsapp.net';
+    providerChats = [
+      { jid, name: 'Operations chat', last_message_time: '2026-10-24T10:00:00Z' },
+      {
+        jid: '628222222222@s.whatsapp.net',
+        name: 'Other chat',
+        last_message_time: '2026-10-24T10:00:00Z',
+      },
+    ];
+    const activeInbox = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations',
+      headers: { authorization: 'Bearer test' },
+    });
+    const conversationId = activeInbox.json().data.find((chat: { jid: string }) => chat.jid === jid)
+      .id as number;
+
+    const foreignArchive = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversationId}/archive`,
+      headers: { authorization: 'Bearer test', 'x-test-company': 'foreign' },
+      payload: { archived: true },
+    });
+    expect(foreignArchive.statusCode).toBe(404);
+    const invalidArchive = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversationId}/archive`,
+      headers: { authorization: 'Bearer test' },
+      payload: { archived: 'true' },
+    });
+    expect(invalidArchive.statusCode).toBe(400);
+
+    const pinned = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversationId}/pin`,
+      headers: { authorization: 'Bearer test' },
+      payload: { pinned: true },
+    });
+    expect(pinned.statusCode).toBe(200);
+    expect(pinned.json().data.is_pinned).toBe(true);
+    expect(providerChatActions.at(-1)).toEqual({ path: 'pin', body: { pinned: true } });
+    const afterPin = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations?archived=false',
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(afterPin.json().data[0].jid).toBe(jid);
+
+    const archived = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversationId}/archive`,
+      headers: { authorization: 'Bearer test' },
+      payload: { archived: true },
+    });
+    expect(archived.statusCode).toBe(200);
+    expect(archived.json().data.is_archived).toBe(true);
+    expect(providerChatActions.at(-1)).toEqual({ path: 'archive', body: { archived: true } });
+    const activeAfterArchive = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations?archived=false',
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(activeAfterArchive.json().data.map((chat: { jid: string }) => chat.jid)).toEqual([
+      '628222222222@s.whatsapp.net',
+    ]);
+    const archivedInbox = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations?archived=true',
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(archivedInbox.json().data[0]).toMatchObject({ id: conversationId, is_archived: true });
+    expect(providerChatRequests.at(-1)?.searchParams.get('archived')).toBe('true');
+
+    const unarchived = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversationId}/archive`,
+      headers: { authorization: 'Bearer test' },
+      payload: { archived: false },
+    });
+    expect(unarchived.json().data).toMatchObject({ is_archived: false, is_pinned: true });
+    const restoredActive = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations?archived=false',
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(restoredActive.json().data[0].jid).toBe(jid);
+    const audits = await db('audit_logs')
+      .where({ model: 'whatsapp.conversation', record_id: conversationId })
+      .orderBy('id');
+    expect(audits.map((entry) => entry.operation)).toEqual(['pin', 'archive', 'unarchive']);
+  });
+
   it('syncs private and group inboxes and maps GoWA messages without exposing provider session data', async () => {
     await connectAndMarkReady();
     providerChats = [
@@ -261,6 +1288,25 @@ describe('WhatsApp API GoWA bridge', () => {
       ['123456@g.us', true],
       ['628111111111@s.whatsapp.net', false],
     ]);
+    const chatPageOne = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations?limit=1&offset=0',
+      headers: { authorization: 'Bearer test' },
+    });
+    const chatPageTwo = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations?limit=1&offset=1',
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(chatPageOne.json().data.map((chat: { jid: string }) => chat.jid)).toEqual([
+      '123456@g.us',
+    ]);
+    expect(chatPageTwo.json().data.map((chat: { jid: string }) => chat.jid)).toEqual([
+      '628111111111@s.whatsapp.net',
+    ]);
+    expect(providerChatRequests[1]?.searchParams.get('limit')).toBe('100');
+    expect(providerChatRequests[2]?.searchParams.get('limit')).toBe('1');
+    expect(providerChatRequests[2]?.searchParams.get('offset')).toBe('1');
 
     providerMessages = [
       {
@@ -295,6 +1341,98 @@ describe('WhatsApp API GoWA bridge', () => {
       'Noted',
       'See this',
     ]);
+    providerMessages.push(
+      {
+        id: 'late-arriving-old-message',
+        chat_jid: '123456@g.us',
+        content: 'Old message',
+        timestamp: '2020-01-01T00:00:00Z',
+        is_from_me: false,
+      },
+      {
+        id: 'invalid-timestamp-message',
+        chat_jid: '123456@g.us',
+        content: 'Bad timestamp',
+        timestamp: 'not-a-date',
+        is_from_me: false,
+      }
+    );
+    const refreshedMessages = await app.inject({
+      method: 'GET',
+      url: `/whatsapp/conversations/${conversationId}/messages`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(
+      refreshedMessages.json().data.map((item: { content: string }) => item.content)
+    ).toContain('Old message');
+    expect(
+      refreshedMessages.json().data.map((item: { content: string }) => item.content)
+    ).not.toContain('Bad timestamp');
+    const refreshedConversation = await db('whatsapp_conversations')
+      .where({ id: conversationId, company_id: companyId })
+      .first();
+    expect(refreshedConversation.last_message).toBe('Noted');
+    expect(refreshedConversation.last_message_at).toBe('2026-10-23T11:06:00.000Z');
+    const contentSearch = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations?search=noted&limit=50&offset=0',
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(contentSearch.statusCode).toBe(200);
+    expect(contentSearch.json().data.map((chat: { jid: string }) => chat.jid)).toEqual([
+      '123456@g.us',
+    ]);
+    expect(providerChatRequests[4]?.searchParams.get('search')).toBe('noted');
+    const phoneSearch = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations?search=628111111111&limit=50&offset=0',
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(phoneSearch.json().data.map((chat: { jid: string }) => chat.jid)).toEqual([
+      '628111111111@s.whatsapp.net',
+    ]);
+    const foreignSearch = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations?search=noted',
+      headers: { authorization: 'Bearer test', 'x-test-company': 'foreign' },
+    });
+    expect(foreignSearch.json().data).toEqual([]);
+    providerChats[1]!.last_message_time = 'not-a-date';
+    await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations',
+      headers: { authorization: 'Bearer test' },
+    });
+    const invalidChatTimestamp = await db('whatsapp_conversations')
+      .where({ id: conversationId, company_id: companyId })
+      .first();
+    expect(invalidChatTimestamp.last_message_at).toBe('2026-10-23T11:06:00.000Z');
+    const firstHistoryRequest = providerMessageRequests.find(
+      (url) => url.searchParams.get('limit') === '100' && url.searchParams.get('offset') === '0'
+    );
+    expect(firstHistoryRequest).toBeTruthy();
+    const olderPage = await app.inject({
+      method: 'GET',
+      url: `/whatsapp/conversations/${conversationId}/messages?limit=1&offset=1`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(olderPage.json().data).toHaveLength(1);
+    expect(olderPage.json().data[0].content).toBe('See this');
+    const olderHistoryRequest = providerMessageRequests.find(
+      (url) => url.searchParams.get('limit') === '1' && url.searchParams.get('offset') === '1'
+    );
+    expect(olderHistoryRequest).toBeTruthy();
+    await app.inject({
+      method: 'GET',
+      url: `/whatsapp/conversations/${conversationId}/messages?limit=50&offset=0`,
+      headers: { authorization: 'Bearer test' },
+    });
+    const incrementalHistoryRequest = providerMessageRequests.find(
+      (url) => url.searchParams.has('start_time')
+    );
+    expect(incrementalHistoryRequest?.searchParams.get('start_time')).toBe(
+      '2026-10-23T10:56:00.000Z'
+    );
     expect(messages.json().data[1]).toMatchObject({
       direction: 'inbound',
       message_type: 'image',
@@ -309,7 +1447,17 @@ describe('WhatsApp API GoWA bridge', () => {
     });
     expect(image.statusCode).toBe(200);
     expect(image.headers['content-type']).toContain('image/png');
-    expect(image.body).toBe('incoming-image');
+    expect(image.headers['content-disposition']).toMatch(/^inline;/u);
+    expect(image.headers['content-security-policy']).toContain("default-src 'none'; sandbox");
+    expect(image.headers['x-content-type-options']).toBe('nosniff');
+    expect(image.body).toBe(pngFixture().toString());
+    const mediaAudit = await db('audit_logs').where({
+      model: 'whatsapp.message',
+      record_id: imageId,
+      operation: 'media_access',
+    }).first();
+    expect(JSON.parse(mediaAudit.changes)).toEqual({ area: 'whatsapp', company_id: companyId });
+    expect(mediaAudit.changes).not.toContain('628');
 
     expect(
       (
@@ -329,6 +1477,45 @@ describe('WhatsApp API GoWA bridge', () => {
         })
       ).json().data
     ).toEqual([]);
+  });
+
+  it('fills an unopened conversation preview from GoWA once and reuses the cache', async () => {
+    await connectAndMarkReady();
+    const jid = '628111111111@s.whatsapp.net';
+    const timestamp = '2026-10-24T10:00:00.000Z';
+    providerChats = [{ jid, name: 'Never opened', last_message_time: timestamp }];
+    providerMessages = [
+      {
+        id: 'unopened-latest-message',
+        chat_jid: jid,
+        content: 'Preview from latest message',
+        timestamp,
+        is_from_me: false,
+        media_type: 'text',
+      },
+    ];
+
+    const first = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations',
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(first.json().data[0]).toMatchObject({
+      jid,
+      last_message: 'Preview from latest message',
+      last_message_at: timestamp,
+    });
+    expect(providerMessageRequests.filter((url) => url.searchParams.get('limit') === '100'))
+      .toHaveLength(1);
+
+    const second = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations',
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(second.json().data[0].last_message).toBe('Preview from latest message');
+    expect(providerMessageRequests.filter((url) => url.searchParams.get('limit') === '100'))
+      .toHaveLength(1);
   });
 
   it('sends text to a group and media to a private chat through GoWA, and reports upstream failures', async () => {
@@ -354,59 +1541,608 @@ describe('WhatsApp API GoWA bridge', () => {
     const sentText = await app.inject({
       method: 'POST',
       url: `/whatsapp/conversations/${groupId}/messages`,
-      headers: { authorization: 'Bearer test' },
+      headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
       payload: { content: 'Group message' },
     });
-    expect(sentText.statusCode).toBe(201);
+    expect(sentText.statusCode).toBe(202);
     expect(sentText.json().data).toMatchObject({
-      external_id: 'sent-text-id',
+      external_id: expect.stringContaining('pending:'),
       direction: 'outbound',
       content: 'Group message',
-      status: 'sent',
+      status: 'queued',
     });
+    expect(failTextSend).toBe(false);
+    const textMessageId = sentText.json().data.id as number;
+    const textEvent = await db('outbox_events')
+      .where({ aggregate_id: textMessageId, event_type: 'whatsapp.message.send' })
+      .first();
+    const unregister = registerWhatsAppOutboxConsumer(storage);
+    await dispatchOneOutboxEvent('whatsapp-route-test-worker');
+    unregister();
+    expect((await db('whatsapp_messages').where({ id: textMessageId }).first()).status).toBe(
+      'sent'
+    );
+    expect((await db('outbox_events').where({ id: textEvent.id }).first()).status).toBe(
+      'published'
+    );
 
     const sentImage = await app.inject({
       method: 'POST',
       url: `/whatsapp/conversations/${privateId}/messages`,
-      headers: { authorization: 'Bearer test' },
+      headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
       payload: {
         content: 'Photo',
-        media_base64: Buffer.from('outgoing-image').toString('base64'),
+        media_base64: pngFixture().toString('base64'),
         media_mime_type: 'image/png',
         media_file_name: 'test.png',
       },
     });
-    expect(sentImage.statusCode).toBe(201);
+    expect(sentImage.statusCode).toBe(202);
     expect(sentImage.json().data).toMatchObject({
-      external_id: 'sent-image-id',
       message_type: 'image',
       media_file_name: 'test.png',
-      status: 'sent',
+      status: 'queued',
     });
+    const imageMessageId = sentImage.json().data.id as number;
+    const imageEvent = await db('outbox_events')
+      .where({ aggregate_id: imageMessageId, event_type: 'whatsapp.message.send' })
+      .first();
+    await dispatchQueuedWhatsAppMessage(imageMessageId, companyId, imageEvent.id, storage);
+    expect((await db('whatsapp_messages').where({ id: imageMessageId }).first()).status).toBe(
+      'sent'
+    );
     const media = await app.inject({
       method: 'GET',
       url: `/whatsapp/media/${sentImage.json().data.id}`,
       headers: { authorization: 'Bearer test' },
     });
-    expect(media.body).toBe('outgoing-image');
+    expect(media.body).toBe(pngFixture().toString());
 
     failTextSend = true;
     const failed = await app.inject({
       method: 'POST',
       url: `/whatsapp/conversations/${groupId}/messages`,
-      headers: { authorization: 'Bearer test' },
+      headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
       payload: { content: 'Please fail' },
     });
-    expect(failed.statusCode).toBe(502);
-    expect(failed.json().success).toBe(false);
+    expect(failed.statusCode).toBe(202);
+    const failedMessageId = failed.json().data.id as number;
+    const failedEvent = await db('outbox_events')
+      .where({ aggregate_id: failedMessageId, event_type: 'whatsapp.message.send' })
+      .first();
+    await dispatchQueuedWhatsAppMessage(failedMessageId, companyId, failedEvent.id, storage);
+    expect((await db('whatsapp_messages').where({ id: failedMessageId }).first()).status).toBe(
+      'unknown'
+    );
     const foreign = await app.inject({
       method: 'POST',
       url: `/whatsapp/conversations/${groupId}/messages`,
-      headers: { authorization: 'Bearer test', 'x-test-company': 'foreign' },
+      headers: {
+        authorization: 'Bearer test',
+        'x-test-company': 'foreign',
+        'idempotency-key': randomUUID(),
+      },
       payload: { content: 'Tenant isolation' },
     });
     expect(foreign.statusCode).toBe(404);
   });
+
+  it('keeps pre-acceptance network failures ambiguous and treats GoWA 4xx as permanent', async () => {
+    await connectAndMarkReady();
+    providerChats = [{ jid: '628111111111@s.whatsapp.net', name: 'Failure classes' }];
+    const inbox = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations',
+      headers: { authorization: 'Bearer test' },
+    });
+    const conversationId = inbox.json().data[0].id as number;
+    const queueMessage = async (content: string) => {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/whatsapp/conversations/${conversationId}/messages`,
+        headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
+        payload: { content },
+      });
+      const messageId = response.json().data.id as number;
+      const event = await db('outbox_events')
+        .where({ aggregate_id: messageId, event_type: 'whatsapp.message.send' })
+        .first();
+      return { messageId, event };
+    };
+
+    const network = await queueMessage('Network failed before acceptance');
+    failTextBeforeAcceptance = true;
+    await dispatchQueuedWhatsAppMessage(network.messageId, companyId, network.event.id, storage);
+    const uncertain = await db('whatsapp_messages').where({ id: network.messageId }).first();
+    expect(uncertain.status).toBe('unknown');
+    expect(Boolean(uncertain.retryable)).toBe(false);
+
+    const rejection = await queueMessage('Provider rejected request');
+    failTextSend = true;
+    textSendFailureStatus = 400;
+    await dispatchQueuedWhatsAppMessage(
+      rejection.messageId,
+      companyId,
+      rejection.event.id,
+      storage
+    );
+    const failed = await db('whatsapp_messages').where({ id: rejection.messageId }).first();
+    expect(failed.status).toBe('failed');
+    expect(Boolean(failed.retryable)).toBe(false);
+    expect(failed.last_error).toContain('400');
+  });
+
+  it('stores one durable send per idempotency key and rejects changed content', async () => {
+    await connectAndMarkReady();
+    providerChats = [{ jid: '628111111111@s.whatsapp.net', name: 'Private' }];
+    const inbox = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations',
+      headers: { authorization: 'Bearer test' },
+    });
+    const conversationId = inbox.json().data[0].id as number;
+    const key = randomUUID();
+    const headers = { authorization: 'Bearer test', 'idempotency-key': key };
+    const payload = { content: 'Exactly once from Board' };
+    const first = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversationId}/messages`,
+      headers,
+      payload,
+    });
+    await db('whatsapp_accounts')
+      .where({ company_id: companyId })
+      .update({ status: 'disconnected' });
+    const duplicate = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversationId}/messages`,
+      headers,
+      payload,
+    });
+    expect(first.statusCode).toBe(202);
+    expect(duplicate.statusCode).toBe(202);
+    expect(duplicate.json().data.id).toBe(first.json().data.id);
+    const queued = await db('outbox_events')
+      .where({ event_type: 'whatsapp.message.send' })
+      .count('* as count')
+      .first();
+    expect(Number(queued?.count)).toBe(1);
+    const changed = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversationId}/messages`,
+      headers,
+      payload: { content: 'Different message' },
+    });
+    expect(changed.statusCode).toBe(409);
+    const messageId = first.json().data.id as number;
+    await db('whatsapp_messages')
+      .where({ id: messageId })
+      .update({ status: 'failed', retryable: true });
+    const retry = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/messages/${messageId}/retry`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(retry.statusCode).toBe(202);
+    expect(retry.json().data.status).toBe('queued');
+    const messageAudits = await db('audit_logs').where({ model: 'whatsapp.message' }).orderBy('id');
+    expect(messageAudits.map((entry) => entry.operation)).toEqual(['send_queued', 'retry_queued']);
+    expect(messageAudits.every((entry) => !entry.changes.includes('Exactly once'))).toBe(true);
+    const retryEvents = await db('outbox_events')
+      .where({ event_type: 'whatsapp.message.send' })
+      .count('* as count')
+      .first();
+    expect(Number(retryEvents?.count)).toBe(2);
+    await db('whatsapp_messages').where({ id: messageId }).update({ status: 'unknown' });
+    const ambiguousRetry = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/messages/${messageId}/retry`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(ambiguousRetry.statusCode).toBe(409);
+  });
+
+  it('expires queued messages after 24 hours without sending them to GoWA', async () => {
+    await connectAndMarkReady();
+    providerChats = [{ jid: '628111111111@s.whatsapp.net', name: 'Private' }];
+    const inbox = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations',
+      headers: { authorization: 'Bearer test' },
+    });
+    const conversationId = inbox.json().data[0].id as number;
+    const response = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversationId}/messages`,
+      headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
+      payload: { content: 'expire this queued message' },
+    });
+    const messageId = response.json().data.id as number;
+    const event = await db('outbox_events')
+      .where({ aggregate_id: messageId, event_type: 'whatsapp.message.send' })
+      .first();
+    await db('whatsapp_messages')
+      .where({ id: messageId })
+      .update({ create_date: new Date(Date.now() - 25 * 60 * 60 * 1_000).toISOString() });
+
+    await dispatchQueuedWhatsAppMessage(messageId, companyId, event.id, storage);
+    expect(providerTextSendCount).toBe(0);
+    const expiredMessage = await db('whatsapp_messages').where({ id: messageId }).first();
+    expect(expiredMessage).toMatchObject({
+      status: 'failed',
+      last_error: 'WhatsApp delivery expired after 24 hours in the queue.',
+    });
+    expect(Boolean(expiredMessage.retryable)).toBe(false);
+  });
+
+  it('repairs the conversation preview after GoWA confirms without sending the message twice', async () => {
+    await connectAndMarkReady();
+    providerChats = [{ jid: '628111111111@s.whatsapp.net', name: 'Preview recovery' }];
+    const inbox = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations',
+      headers: { authorization: 'Bearer test' },
+    });
+    const conversation = inbox.json().data[0] as { id: number; last_message: string | null };
+    const response = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversation.id}/messages`,
+      headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
+      payload: { content: 'Accepted once' },
+    });
+    const messageId = response.json().data.id as number;
+    const event = await db('outbox_events')
+      .where({ aggregate_id: messageId, event_type: 'whatsapp.message.send' })
+      .first();
+    const sendsBefore = providerTextSendCount;
+    await createFailingUpdateTrigger(
+      'fail_whatsapp_preview',
+      'whatsapp_conversations',
+      'last_message',
+      'simulated preview cache failure'
+    );
+
+    await expect(
+      dispatchQueuedWhatsAppMessage(messageId, companyId, event.id, storage)
+    ).rejects.toThrow('simulated preview cache failure');
+    expect((await db('whatsapp_messages').where({ id: messageId }).first()).status).toBe('sent');
+    expect(providerTextSendCount).toBe(sendsBefore + 1);
+
+    await dropFailingUpdateTrigger('fail_whatsapp_preview', 'whatsapp_conversations');
+    await dispatchQueuedWhatsAppMessage(messageId, companyId, event.id, storage);
+    const repaired = await db('whatsapp_conversations').where({ id: conversation.id }).first();
+    expect(repaired.last_message).toBe('Accepted once');
+    expect(providerTextSendCount).toBe(sendsBefore + 1);
+
+    const olderDeliveryAt = new Date(Date.now() - 60_000).toISOString();
+    const newerDeliveryAt = new Date().toISOString();
+    await db('whatsapp_messages')
+      .where({ id: messageId })
+      .update({ write_date: olderDeliveryAt });
+    await db('whatsapp_conversations')
+      .where({ id: conversation.id })
+      .update({
+        last_message: 'A newer provider message',
+        last_message_at: newerDeliveryAt,
+      });
+    await dispatchQueuedWhatsAppMessage(messageId, companyId, event.id, storage);
+    const afterOldEventReplay = await db('whatsapp_conversations')
+      .where({ id: conversation.id })
+      .first();
+    expect(afterOldEventReplay.last_message).toBe('A newer provider message');
+    expect(providerTextSendCount).toBe(sendsBefore + 1);
+  });
+
+  it('persists the GoWA acknowledgement in the outbox before updating the message row', async () => {
+    await connectAndMarkReady();
+    providerChats = [{ jid: '628111111111@s.whatsapp.net', name: 'Ack recovery' }];
+    const inbox = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations',
+      headers: { authorization: 'Bearer test' },
+    });
+    const conversationId = inbox.json().data[0].id as number;
+    const response = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversationId}/messages`,
+      headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
+      payload: { content: 'Persist provider acknowledgement' },
+    });
+    const messageId = response.json().data.id as number;
+    const event = await db('outbox_events')
+      .where({ aggregate_id: messageId, event_type: 'whatsapp.message.send' })
+      .first();
+    const sendsBefore = providerTextSendCount;
+    await createFailingUpdateTrigger(
+      'fail_whatsapp_message_ack',
+      'whatsapp_messages',
+      'status',
+      'simulated message row failure',
+      "NEW.status = 'sent'"
+    );
+
+    await expect(
+      dispatchQueuedWhatsAppMessage(messageId, companyId, event.id, storage)
+    ).rejects.toThrow('simulated message row failure');
+    const eventAfterAck = await db('outbox_events').where({ id: event.id }).first();
+    const persistedPayload = JSON.parse(eventAfterAck.payload) as {
+      provider_ack?: { external_id: string };
+    };
+    expect(persistedPayload.provider_ack?.external_id).toBeTruthy();
+    expect((await db('whatsapp_messages').where({ id: messageId }).first()).status).toBe('sending');
+
+    await dropFailingUpdateTrigger('fail_whatsapp_message_ack', 'whatsapp_messages');
+    await dispatchQueuedWhatsAppMessage(
+      messageId,
+      companyId,
+      event.id,
+      storage,
+      persistedPayload.provider_ack
+    );
+    expect((await db('whatsapp_messages').where({ id: messageId }).first()).status).toBe('sent');
+    expect((await db('whatsapp_conversations').where({ id: conversationId }).first()).last_message)
+      .toBe('Persist provider acknowledgement');
+    expect(providerTextSendCount).toBe(sendsBefore + 1);
+  });
+
+  it('reconciles one unambiguous timed-out outbound message from GoWA history', async () => {
+    await connectAndMarkReady();
+    providerChats = [{ jid: '628111111111@s.whatsapp.net', name: 'Reconcile outbound' }];
+    const inbox = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations',
+      headers: { authorization: 'Bearer test' },
+    });
+    const conversationId = inbox.json().data[0].id as number;
+    const response = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversationId}/messages`,
+      headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
+      payload: { content: 'Delivery response was lost' },
+    });
+    const messageId = response.json().data.id as number;
+    const sentAt = new Date(Date.now() - 5_000).toISOString();
+    await db('whatsapp_messages')
+      .where({ id: messageId, company_id: companyId })
+      .update({ status: 'unknown', create_date: sentAt });
+    providerMessages = [
+      {
+        id: 'gowa-reconciled-message',
+        chat_jid: '628111111111@s.whatsapp.net',
+        content: 'Delivery response was lost',
+        timestamp: new Date(Date.parse(sentAt) + 2_000).toISOString(),
+        is_from_me: true,
+        media_type: 'text',
+      },
+    ];
+    const accountId = Number(
+      (await db('whatsapp_accounts').where({ company_id: companyId }).first()).id
+    );
+    await db('whatsapp_messages').insert({
+      company_id: companyId,
+      account_id: accountId,
+      conversation_id: conversationId,
+      external_id: 'gowa-reconciled-message',
+      direction: 'outbound',
+      message_type: 'text',
+      content: 'Delivery response was lost',
+      status: 'sent',
+      attempt_count: 1,
+      retryable: false,
+      create_date: new Date(Date.parse(sentAt) + 2_000).toISOString(),
+    });
+
+    const refreshed = await app.inject({
+      method: 'GET',
+      url: `/whatsapp/conversations/${conversationId}/messages`,
+      headers: { authorization: 'Bearer test' },
+    });
+    const reconciled = await db('whatsapp_messages').where({ id: messageId }).first();
+    expect(reconciled).toMatchObject({
+      external_id: 'gowa-reconciled-message',
+      status: 'sent',
+    });
+    expect(Boolean(reconciled.retryable)).toBe(false);
+    expect(refreshed.json().data.filter((item: { content: string }) =>
+      item.content === 'Delivery response was lost'
+    )).toHaveLength(1);
+    const reconciledCount = await db('whatsapp_messages')
+      .where({ company_id: companyId, external_id: 'gowa-reconciled-message' })
+      .count('* as count')
+      .first();
+    expect(Number(reconciledCount.count)).toBe(1);
+  });
+
+  it('recovers when GoWA accepts a send but the HTTP response is lost', async () => {
+    await connectAndMarkReady();
+    providerChats = [{ jid: '628111111111@s.whatsapp.net', name: 'Lost response' }];
+    const inbox = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations',
+      headers: { authorization: 'Bearer test' },
+    });
+    const conversationId = inbox.json().data[0].id as number;
+    const response = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversationId}/messages`,
+      headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
+      payload: { content: 'Accepted despite response loss' },
+    });
+    const messageId = response.json().data.id as number;
+    const event = await db('outbox_events')
+      .where({ aggregate_id: messageId, event_type: 'whatsapp.message.send' })
+      .first();
+    acceptThenTimeout = true;
+
+    await dispatchQueuedWhatsAppMessage(messageId, companyId, event.id, storage);
+    expect((await db('whatsapp_messages').where({ id: messageId }).first()).status).toBe('unknown');
+    expect(providerTextSendCount).toBe(1);
+
+    const refreshed = await app.inject({
+      method: 'GET',
+      url: `/whatsapp/conversations/${conversationId}/messages`,
+      headers: { authorization: 'Bearer test' },
+    });
+    const reconciled = await db('whatsapp_messages').where({ id: messageId }).first();
+    expect(reconciled).toMatchObject({
+      external_id: 'accepted-before-response-timeout',
+      status: 'sent',
+    });
+    expect(Boolean(reconciled.retryable)).toBe(false);
+    expect(refreshed.json().data.filter((item: { content: string }) =>
+      item.content === 'Accepted despite response loss'
+    )).toHaveLength(1);
+    expect(providerTextSendCount).toBe(1);
+  });
+
+  it('does not reconcile timed-out sends when more than one outbound message matches', async () => {
+    await connectAndMarkReady();
+    providerChats = [{ jid: '628111111111@s.whatsapp.net', name: 'Ambiguous reconcile' }];
+    const inbox = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations',
+      headers: { authorization: 'Bearer test' },
+    });
+    const conversationId = inbox.json().data[0].id as number;
+    const first = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversationId}/messages`,
+      headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
+      payload: { content: 'Same outbound body' },
+    });
+    const second = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversationId}/messages`,
+      headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
+      payload: { content: 'Same outbound body' },
+    });
+    const at = new Date(Date.now() - 5_000).toISOString();
+    await db('whatsapp_messages')
+      .whereIn('id', [first.json().data.id, second.json().data.id])
+      .update({ status: 'unknown', create_date: at });
+    providerMessages = [
+      {
+        id: 'gowa-ambiguous-message',
+        chat_jid: '628111111111@s.whatsapp.net',
+        content: 'Same outbound body',
+        timestamp: at,
+        is_from_me: true,
+        media_type: 'text',
+      },
+    ];
+
+    await app.inject({
+      method: 'GET',
+      url: `/whatsapp/conversations/${conversationId}/messages`,
+      headers: { authorization: 'Bearer test' },
+    });
+    const pending = await db('whatsapp_messages')
+      .where({ company_id: companyId, direction: 'outbound', content: 'Same outbound body' })
+      .orderBy('id');
+    expect(pending).toHaveLength(3);
+    expect(pending.slice(0, 2).every((message) => message.status === 'unknown')).toBe(true);
+    expect(pending.slice(0, 2).every((message) => message.external_id.startsWith('pending:'))).toBe(
+      true
+    );
+  });
+
+  it('stops automatic and manual retries after five delivery attempts', async () => {
+    await connectAndMarkReady();
+    providerChats = [{ jid: '628111111111@s.whatsapp.net', name: 'Private' }];
+    const inbox = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations',
+      headers: { authorization: 'Bearer test' },
+    });
+    const conversationId = inbox.json().data[0].id as number;
+    const response = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversationId}/messages`,
+      headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
+      payload: { content: 'limited retry message' },
+    });
+    const messageId = response.json().data.id as number;
+    const event = await db('outbox_events')
+      .where({ aggregate_id: messageId, event_type: 'whatsapp.message.send' })
+      .first();
+    await db('whatsapp_accounts').where({ company_id: companyId }).update({ status: 'disconnected' });
+    await db('whatsapp_messages').where({ id: messageId }).update({ attempt_count: 4 });
+
+    await dispatchQueuedWhatsAppMessage(messageId, companyId, event.id, storage);
+    const exhausted = await db('whatsapp_messages').where({ id: messageId }).first();
+    expect(exhausted.status).toBe('failed');
+    expect(Boolean(exhausted.retryable)).toBe(false);
+    const retry = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/messages/${messageId}/retry`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(retry.statusCode).toBe(409);
+  });
+
+  it.skipIf(process.env.ATTACHMENT_S3_ACCEPTANCE !== '1')(
+    'stores outbound WhatsApp media in live S3 storage and serves it back through the API',
+    async () => {
+      const s3Storage = new S3AttachmentStorage({
+        endpoint: process.env.ATTACHMENT_S3_ENDPOINT ?? 'http://127.0.0.1:9000',
+        region: process.env.ATTACHMENT_S3_REGION ?? 'us-east-1',
+        bucket: process.env.ATTACHMENT_S3_BUCKET ?? 'moonwitness-attachments',
+        accessKeyId: process.env.ATTACHMENT_S3_ACCESS_KEY ?? '',
+        secretAccessKey: process.env.ATTACHMENT_S3_SECRET_KEY ?? '',
+        forcePathStyle: process.env.ATTACHMENT_S3_FORCE_PATH_STYLE !== 'false',
+      });
+      activeStorage = s3Storage;
+      let mediaKey: string | undefined;
+      try {
+        await s3Storage.checkReady();
+        await connectAndMarkReady();
+        providerChats = [
+          {
+            jid: '628111111111@s.whatsapp.net',
+            name: 'S3 acceptance',
+            last_message_time: '2026-10-24T00:00:00Z',
+          },
+        ];
+        const inbox = await app.inject({
+          method: 'GET',
+          url: '/whatsapp/conversations',
+          headers: { authorization: 'Bearer test' },
+        });
+        expect(inbox.statusCode).toBe(200);
+        const conversationId = inbox.json().data[0].id as number;
+        const content = Buffer.from(`S3 WhatsApp acceptance ${randomUUID()}`);
+        const sent = await app.inject({
+          method: 'POST',
+          url: `/whatsapp/conversations/${conversationId}/messages`,
+          headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
+          payload: {
+            content: 'S3 acceptance',
+            media_base64: content.toString('base64'),
+            media_mime_type: 'application/octet-stream',
+            media_file_name: 's3-acceptance.bin',
+          },
+        });
+        expect(sent.statusCode, sent.payload).toBe(202);
+        const messageId = sent.json().data.id as number;
+        mediaKey = (await db('whatsapp_messages').where({ id: messageId }).first('media_key'))
+          ?.media_key as string | undefined;
+        expect(mediaKey).toBeDefined();
+
+        const media = await app.inject({
+          method: 'GET',
+          url: `/whatsapp/media/${messageId}`,
+          headers: { authorization: 'Bearer test' },
+        });
+        expect(media.statusCode).toBe(200);
+        expect(media.body).toBe(content.toString());
+      } finally {
+        if (mediaKey) await s3Storage.delete(mediaKey).catch(() => undefined);
+        activeStorage = memoryStorage;
+        await closeS3AttachmentStorage(s3Storage);
+      }
+    },
+    30_000
+  );
 
   it('does not send media to WhatsApp when the attachment cannot be stored first', async () => {
     const accountId = await connectAndMarkReady();
@@ -424,17 +2160,254 @@ describe('WhatsApp API GoWA bridge', () => {
     const response = await app.inject({
       method: 'POST',
       url: `/whatsapp/conversations/${conversation.id}/messages`,
-      headers: { authorization: 'Bearer test' },
+      headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
       payload: {
         content: 'Photo',
-        media_base64: Buffer.from('outgoing-image').toString('base64'),
+        media_base64: pngFixture().toString('base64'),
         media_mime_type: 'image/png',
         media_file_name: 'test.png',
       },
     });
-    expect(response.statusCode).toBe(502);
+    expect(response.statusCode).toBe(503);
     expect(providerImageSendCount).toBe(0);
     const count = await db('whatsapp_messages').count({ count: '*' }).first();
     expect(Number(count?.count)).toBe(0);
+  });
+
+  it('rejects uploaded content when its bytes do not match the declared MIME type', async () => {
+    const accountId = await connectAndMarkReady();
+    const [conversation] = await db('whatsapp_conversations')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        jid: '628111111111@s.whatsapp.net',
+        name: 'Private',
+        is_group: false,
+        unread_count: 0,
+      })
+      .returning(['id']);
+    const response = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversation.id}/messages`,
+      headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
+      payload: {
+        content: 'Wrong type',
+        media_base64: pngFixture().toString('base64'),
+        media_mime_type: 'image/jpeg',
+        media_file_name: 'wrong.jpg',
+      },
+    });
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error).toContain('does not match');
+    expect(providerImageSendCount).toBe(0);
+    const messageCount = await db('whatsapp_messages').count({ count: '*' }).first();
+    expect(Number(messageCount?.count)).toBe(0);
+  });
+
+  it('rejects empty files and malformed Base64 before creating a message', async () => {
+    const accountId = await connectAndMarkReady();
+    const [conversation] = await db('whatsapp_conversations')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        jid: '628111111111@s.whatsapp.net',
+        name: 'Private',
+        is_group: false,
+        unread_count: 0,
+      })
+      .returning(['id']);
+    for (const invalidBase64 of ['', '!!!!', 'abc=def']) {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/whatsapp/conversations/${conversation.id}/messages`,
+        headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
+        payload: {
+          content: 'Invalid file',
+          media_base64: invalidBase64,
+          media_mime_type: 'application/octet-stream',
+        },
+      });
+      expect(response.statusCode).toBe(400);
+    }
+    const messageCount = await db('whatsapp_messages').count({ count: '*' }).first();
+    expect(Number(messageCount?.count)).toBe(0);
+  });
+
+  it('sanitizes traversal and control characters from uploaded filenames', async () => {
+    const accountId = await connectAndMarkReady();
+    const [conversation] = await db('whatsapp_conversations')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        jid: '628111111111@s.whatsapp.net',
+        name: 'Private',
+        is_group: false,
+        unread_count: 0,
+      })
+      .returning(['id']);
+    const response = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversation.id}/messages`,
+      headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
+      payload: {
+        content: 'Filename check',
+        media_base64: pngFixture().toString('base64'),
+        media_mime_type: 'image/png',
+        media_file_name: '../../folder\r\nbad.png',
+      },
+    });
+    expect(response.statusCode).toBe(202);
+    expect(response.json().data.media_file_name).toBe('.._.._folder__bad.png');
+  });
+
+  it('serves provider media with an inline-safe MIME derived from its bytes', async () => {
+    await connectAndMarkReady();
+    providerChats = [{ jid: '628111111111@s.whatsapp.net', name: 'Private' }];
+    const inbox = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations',
+      headers: { authorization: 'Bearer test' },
+    });
+    const conversationId = inbox.json().data[0].id as number;
+    providerMessages = [
+      {
+        id: 'incoming-image',
+        chat_jid: '628111111111@s.whatsapp.net',
+        content: '',
+        timestamp: '2026-10-23T11:00:00Z',
+        is_from_me: false,
+        media_type: 'image',
+        mime_type: 'image/png',
+      },
+    ];
+    const messages = await app.inject({
+      method: 'GET',
+      url: `/whatsapp/conversations/${conversationId}/messages`,
+      headers: { authorization: 'Bearer test' },
+    });
+    const messageId = messages.json().data[0].id as number;
+    providerDownloadBytes = Buffer.from('<script>alert(1)</script>');
+    providerDownloadFileName = '../../evil\r\nX.html';
+    const response = await app.inject({
+      method: 'GET',
+      url: `/whatsapp/media/${messageId}`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['content-type']).toContain('application/octet-stream');
+    expect(response.headers['content-disposition']).toMatch(/^attachment;/u);
+    expect(response.headers['content-disposition']).toContain('filename=".._.._evil__X.html"');
+    expect(response.headers['content-security-policy']).toContain("default-src 'none'; sandbox");
+    expect(response.headers['x-content-type-options']).toBe('nosniff');
+    expect((await db('whatsapp_messages').where({ id: messageId }).first()).media_mime_type).toBe(
+      'application/octet-stream'
+    );
+    expect(streamPutCount).toBe(1);
+    expect(streamGetCount).toBe(1);
+    expect(bufferGetCount).toBe(0);
+    const cachedResponse = await app.inject({
+      method: 'GET',
+      url: `/whatsapp/media/${messageId}`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(cachedResponse.body).toBe(providerDownloadBytes.toString());
+    expect(streamGetCount).toBe(2);
+    expect(bufferGetCount).toBe(0);
+  });
+
+  it('does not cache provider downloads shorter than their declared content length', async () => {
+    await connectAndMarkReady();
+    providerChats = [{ jid: '628111111111@s.whatsapp.net', name: 'Private' }];
+    const inbox = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations',
+      headers: { authorization: 'Bearer test' },
+    });
+    const conversationId = inbox.json().data[0].id as number;
+    providerMessages = [
+      {
+        id: 'incoming-image',
+        chat_jid: '628111111111@s.whatsapp.net',
+        content: '',
+        timestamp: '2026-10-23T11:00:00Z',
+        is_from_me: false,
+        media_type: 'image',
+      },
+    ];
+    const messages = await app.inject({
+      method: 'GET',
+      url: `/whatsapp/conversations/${conversationId}/messages`,
+      headers: { authorization: 'Bearer test' },
+    });
+    const messageId = messages.json().data[0].id as number;
+    providerDownloadDeclaredLength = pngFixture().length + 8;
+    const response = await app.inject({
+      method: 'GET',
+      url: `/whatsapp/media/${messageId}`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(response.statusCode).toBe(502);
+    expect(response.json().error).toContain('incomplete media');
+    expect((await db('whatsapp_messages').where({ id: messageId }).first()).media_key).toBeNull();
+    expect(stored.size).toBe(0);
+  });
+
+  it('enforces the shared 10 MiB raw-file limit after Base64 decoding', async () => {
+    const accountId = await connectAndMarkReady();
+    const [conversation] = await db('whatsapp_conversations')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        jid: '628111111111@s.whatsapp.net',
+        name: 'Private',
+        is_group: false,
+        unread_count: 0,
+      })
+      .returning(['id']);
+    const tooLarge = Buffer.alloc(MAX_ATTACHMENT_BYTES + 1).toString('base64');
+    const response = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversation.id}/messages`,
+      headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
+      payload: {
+        content: 'Oversized file',
+        media_base64: tooLarge,
+        media_mime_type: 'image/png',
+        media_file_name: 'too-large.png',
+      },
+    });
+    expect(response.statusCode).toBe(413);
+    expect(response.json().error).toBe('Media exceeds the 10 MiB limit');
+    expect(providerImageSendCount).toBe(0);
+  });
+
+  it('accepts exactly 10 MiB through the 15 MiB Base64 transport limit', async () => {
+    const accountId = await connectAndMarkReady();
+    const [conversation] = await db('whatsapp_conversations')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        jid: '628111111111@s.whatsapp.net',
+        name: 'Private',
+        is_group: false,
+        unread_count: 0,
+      })
+      .returning(['id']);
+    const exactLimit = pngFixture(MAX_ATTACHMENT_BYTES).toString('base64');
+    const response = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversation.id}/messages`,
+      headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
+      payload: {
+        content: 'Maximum size file',
+        media_base64: exactLimit,
+        media_mime_type: 'image/png',
+        media_file_name: 'maximum.png',
+      },
+    });
+    expect(response.statusCode).toBe(202);
+    expect(providerImageSendCount).toBe(0);
+    const storedContent = [...stored.values()][0];
+    expect(storedContent?.byteLength).toBe(MAX_ATTACHMENT_BYTES);
   });
 });

@@ -8,7 +8,7 @@ export const WhatsappAccount = defineModel('whatsapp.account', {
   fields: {
     company: fields.belongsTo(Company, { required: true }),
     status: fields.enum(
-      ['disconnected', 'connecting', 'qr', 'connected', 'reconnecting', 'error'],
+      ['disconnected', 'connecting', 'qr', 'qr_expired', 'connected', 'reconnecting', 'error'],
       { required: true, default: 'disconnected' }
     ),
     phone_number: fields.string(),
@@ -20,7 +20,7 @@ export const WhatsappAccount = defineModel('whatsapp.account', {
 
 export const WhatsappConversation = defineModel('whatsapp.conversation', {
   table: 'whatsapp_conversations',
-  order: 'last_message_at desc, id desc',
+  order: 'is_pinned desc, last_message_at desc, id desc',
   unique: [['company', 'jid']],
   fields: {
     company: fields.belongsTo(Company, { required: true }),
@@ -28,34 +28,61 @@ export const WhatsappConversation = defineModel('whatsapp.conversation', {
     jid: fields.string({ required: true }),
     name: fields.string({ required: true }),
     is_group: fields.boolean({ required: true, default: false }),
-    unread_count: fields.integer({ required: true, default: 0 }),
+    is_archived: fields.boolean({ required: true, default: false }),
+    is_pinned: fields.boolean({ required: true, default: false }),
+    unread_count: fields.integer({ required: true, default: 0, hidden: true }),
     last_message: fields.text(),
     last_message_at: fields.string(),
+    last_message_sync_at: fields.string({ hidden: true }),
   },
 });
 
 export const WhatsappMessage = defineModel('whatsapp.message', {
   table: 'whatsapp_messages',
   order: 'create_date desc, id desc',
-  unique: [['company', 'external_id']],
+  unique: [
+    ['company', 'external_id'],
+    ['company', 'idempotency_key'],
+  ],
   fields: {
     company: fields.belongsTo(Company, { required: true }),
     account: fields.belongsTo(WhatsappAccount, { required: true }),
     conversation: fields.belongsTo(WhatsappConversation, { required: true }),
     external_id: fields.string({ required: true }),
+    idempotency_key: fields.string({ hidden: true, sensitive: true }),
+    request_hash: fields.string({ hidden: true, sensitive: true }),
     direction: fields.enum(['inbound', 'outbound'], { required: true }),
     message_type: fields.enum(['text', 'image', 'video', 'audio', 'document', 'sticker'], {
       required: true,
       default: 'text',
     }),
     content: fields.text(),
-    status: fields.enum(['received', 'queued', 'sent', 'delivered', 'read', 'failed'], {
-      required: true,
-      default: 'received',
-    }),
+    status: fields.enum(
+      ['received', 'queued', 'sending', 'sent', 'delivered', 'read', 'failed', 'unknown'],
+      {
+        required: true,
+        default: 'received',
+      }
+    ),
+    attempt_count: fields.integer({ required: true, default: 0 }),
+    retryable: fields.boolean({ required: true, default: false }),
+    last_error: fields.string(),
     media_key: fields.string({ hidden: true, sensitive: true }),
     media_mime_type: fields.string(),
     media_file_name: fields.string(),
     sender_jid: fields.string(),
+  },
+});
+
+export const WhatsappConversationRead = defineModel('whatsapp.conversation.read', {
+  table: 'whatsapp_conversation_reads',
+  order: 'id asc',
+  unique: [['company', 'conversation', 'user_id']],
+  fields: {
+    company: fields.belongsTo(Company, { required: true }),
+    conversation: fields.belongsTo(WhatsappConversation, { required: true }),
+    user_id: fields.integer({ required: true }),
+    last_read_message_id: fields.integer({ required: true }),
+    last_read_at: fields.string({ required: true }),
   },
 });
