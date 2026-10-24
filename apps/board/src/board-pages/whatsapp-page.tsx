@@ -231,6 +231,7 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
   const [newPhone, setNewPhone] = useState('');
   const [conversationSearch, setConversationSearch] = useState('');
   const conversationSearchRef = useRef<HTMLInputElement>(null);
+  const [mobileConversationOpen, setMobileConversationOpen] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
   const [pendingLabelDeleteId, setPendingLabelDeleteId] = useState<number | null>(null);
   const [assignmentPanelOpen, setAssignmentPanelOpen] = useState(false);
@@ -314,8 +315,10 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
       ) {
         return;
       }
+      const searchInput = conversationSearchRef.current;
+      if (!searchInput) return;
       event.preventDefault();
-      conversationSearchRef.current?.focus();
+      searchInput.focus();
     };
     window.addEventListener('keydown', focusConversationSearch);
     return () => window.removeEventListener('keydown', focusConversationSearch);
@@ -1283,7 +1286,11 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
           <h2 className="font-display text-xl uppercase">Scan with WhatsApp</h2>
           <p className="mt-1 text-sm">Open Linked devices on your phone and scan this code.</p>
           {qrImage ? (
-            <img src={qrImage} alt="WhatsApp connection QR code" className="mt-4 size-64" />
+            <img
+              src={qrImage}
+              alt="WhatsApp connection QR code"
+              className="mt-4 h-auto w-64 max-w-full"
+            />
           ) : (
             <Skeleton className="mt-4 size-64" />
           )}
@@ -1293,7 +1300,7 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
         <section className="grid min-h-[60vh] flex-1 overflow-hidden border-2 border-ink bg-paper shadow-[4px_4px_0_0_var(--ink)] md:grid-cols-[minmax(240px,0.38fr)_1fr]">
           <aside
             aria-label="Conversation inbox"
-            className="border-b-2 border-ink md:border-b-0 md:border-r-2"
+            className={`${mobileConversationOpen ? 'hidden' : 'block'} border-b-2 border-ink md:block md:border-b-0 md:border-r-2`}
             onKeyDown={(event) => {
               if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
               const target = event.target;
@@ -1559,7 +1566,10 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                   key={conversation.id}
                   type="button"
                   data-wa-conversation
-                  onClick={() => setSelected(conversation.id)}
+                  onClick={() => {
+                    setSelected(conversation.id);
+                    setMobileConversationOpen(true);
+                  }}
                   variant="ghost"
                   className={`h-auto w-full justify-start border-b border-ink/20 p-4 text-left hover:bg-pink/20 ${activeConversation?.id === conversation.id ? 'bg-pink/30' : ''}`}
                 >
@@ -1623,18 +1633,33 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
               </Button>
             )}
           </aside>
-          <div className="flex h-[70vh] min-h-[55vh] max-h-[calc(100dvh-8rem)] flex-col">
+          <div
+            className={`${mobileConversationOpen ? 'flex' : 'hidden md:flex'} min-w-0 h-[70vh] min-h-[55vh] max-h-[calc(100dvh-8rem)] flex-col`}
+          >
             <div className="border-b-2 border-ink p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <h2 className="font-display text-lg uppercase">
-                    {activeConversation?.name ?? 'Select a conversation'}
-                  </h2>
+                <div className="flex min-w-0 items-center gap-2">
                   {activeConversation && (
-                    <p className="break-all text-xs text-ink-faint">
-                      {formatConversationAddress(activeConversation)}
-                    </p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0 md:hidden"
+                      onClick={() => setMobileConversationOpen(false)}
+                    >
+                      Back to conversations
+                    </Button>
                   )}
+                  <div className="min-w-0">
+                    <h2 className="font-display text-lg uppercase">
+                      {activeConversation?.name ?? 'Select a conversation'}
+                    </h2>
+                    {activeConversation && (
+                      <p className="break-all text-xs text-ink-faint">
+                        {formatConversationAddress(activeConversation)}
+                      </p>
+                    )}
+                  </div>
                 </div>
                 {activeConversation && (
                   <div className="flex flex-wrap gap-2">

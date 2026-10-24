@@ -531,6 +531,24 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
     'true'
   );
   await expect(page.getByRole('heading', { name: 'Contact 0' })).toBeVisible();
+  const conversationList = page.getByRole('complementary', { name: 'Conversation inbox' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(conversationList).toBeVisible();
+  await page.getByRole('button', { name: /Contact 0/u }).click();
+  await expect(conversationList).toBeHidden();
+  const mobileComposer = page.getByRole('textbox', { name: 'Write a message' });
+  await expect(mobileComposer).toBeVisible();
+  expect(
+    await mobileComposer.evaluate(
+      (element) => element.getBoundingClientRect().bottom <= window.innerHeight
+    )
+  ).toBe(true);
+  await page.getByRole('button', { name: 'Back to conversations' }).click();
+  await expect(conversationList).toBeVisible();
+  await page.setViewportSize({ width: 320, height: 720 });
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
+  ).toBe(true);
   await page.screenshot({ path: '../../test-results/whatsapp-board.png', fullPage: true });
 });
 
@@ -933,8 +951,15 @@ test('connect shows QR, media is sent, and failures preserve the draft', async (
     });
   });
   await page.goto('/board/whatsapp');
+  await page.setViewportSize({ width: 320, height: 720 });
   await page.getByRole('button', { name: 'Connect WhatsApp' }).click();
-  await expect(page.getByAltText('WhatsApp connection QR code')).toBeVisible();
+  const qrCode = page.getByAltText('WhatsApp connection QR code');
+  await expect(qrCode).toBeVisible();
+  expect((await qrCode.boundingBox())?.width).toBeLessThanOrEqual(256);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
+  ).toBe(true);
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByRole('button', { name: 'Cancel connection' }).click();
   await expect(page.getByRole('button', { name: 'Connect WhatsApp' })).toBeVisible();
   status = 'qr_expired';

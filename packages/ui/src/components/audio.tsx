@@ -10,6 +10,8 @@ import {
   type ReactNode,
 } from 'react';
 import { Button } from './button.js';
+import { VolumeIcon } from '../icons/volume.js';
+import { VolumeOffIcon } from '../icons/volume-off.js';
 import {
   persistSoundPreference,
   playCatalogSound,
@@ -79,11 +81,22 @@ export function SoundToggle() {
       type="button"
       variant="outline"
       size="sm"
+      className="h-10 w-10 shrink-0 px-0 sm:h-9 sm:w-auto sm:px-3"
       aria-pressed={enabled}
       aria-label={enabled ? 'Mute interface sounds' : 'Enable interface sounds'}
       onClick={() => setEnabled(!enabled)}
     >
-      {enabled ? 'Sound on' : 'Sound off'}
+      {enabled ? (
+        <>
+          <VolumeIcon className="size-4 sm:hidden" />
+          <span className="hidden sm:inline">Sound on</span>
+        </>
+      ) : (
+        <>
+          <VolumeOffIcon className="size-4 sm:hidden" />
+          <span className="hidden sm:inline">Sound off</span>
+        </>
+      )}
     </Button>
   );
 }
