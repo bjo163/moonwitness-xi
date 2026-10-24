@@ -1,10 +1,4 @@
-FROM golang:1.27.3-bookworm AS go-toolchain
-
 FROM node:22-bookworm-slim AS build
-
-COPY --from=go-toolchain /usr/local/go /usr/local/go
-ENV PATH="/usr/local/go/bin:${PATH}" \
-    GOTOOLCHAIN=auto
 
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends python3 make g++ \
@@ -14,7 +8,6 @@ RUN apt-get update \
 WORKDIR /workspace
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json ./apps/api/package.json
-COPY apps/whatsapp/package.json ./apps/whatsapp/package.json
 COPY apps/docs/package.json ./apps/docs/package.json
 COPY apps/board/package.json ./apps/board/package.json
 COPY apps/ui-catalog/package.json ./apps/ui-catalog/package.json
@@ -47,11 +40,6 @@ RUN pnpm build
 FROM build AS api-deploy
 RUN pnpm --filter @moonwitness/api deploy --prod --legacy /deploy/api \
     && node scripts/prepare-api-runtime-assets.mjs /deploy/api
-
-FROM build AS whatsapp-deploy
-RUN mkdir -p /deploy/whatsapp \
-    && cd apps/whatsapp \
-    && CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o /deploy/whatsapp/whatsapp ./cmd/whatsapp
 
 FROM node:22-bookworm-slim AS runtime
 ENV NODE_ENV=production \
@@ -92,14 +80,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:8080/').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
 CMD ["node", "apps/board/server.js"]
 
-FROM node:22-bookworm-slim AS whatsapp-runtime
-ENV NODE_ENV=production
-WORKDIR /app
-COPY --from=whatsapp-deploy --chown=node:node /deploy/whatsapp/whatsapp ./whatsapp
-USER node
-EXPOSE 3100
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:3100/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
-CMD ["./whatsapp"]
 
 FROM runtime AS api

@@ -12,9 +12,9 @@ export const WhatsappAccount = defineModel('whatsapp.account', {
       { required: true, default: 'disconnected' }
     ),
     phone_number: fields.string(),
+    gateway_device_id: fields.string({ hidden: true }),
     qr_code: fields.text({ hidden: true, sensitive: true }),
     last_error: fields.string(),
-    auth_state: fields.text({ hidden: true, sensitive: true }),
   },
 });
 
@@ -57,39 +57,5 @@ export const WhatsappMessage = defineModel('whatsapp.message', {
     media_mime_type: fields.string(),
     media_file_name: fields.string(),
     sender_jid: fields.string(),
-  },
-});
-
-export const WhatsappJob = defineModel('whatsapp.job', {
-  table: 'whatsapp_jobs',
-  order: 'create_date asc, id asc',
-  fields: {
-    company: fields.belongsTo(Company, { required: true }),
-    account: fields.belongsTo(WhatsappAccount, { required: true }),
-    message: fields.belongsTo(WhatsappMessage, { required: true }),
-    recipient_jid: fields.string({ required: true }),
-    payload: fields.text({ required: true, default: '{}', hidden: true, sensitive: true }),
-    status: fields.enum(['pending', 'processing', 'done', 'retry', 'dead'], {
-      required: true,
-      default: 'pending',
-    }),
-    attempts: fields.integer({ required: true, default: 0 }),
-    available_at: fields.string({ required: true }),
-    last_error: fields.string(),
-  },
-});
-
-export const WhatsappEvent = defineModel('whatsapp.event', {
-  table: 'whatsapp_events',
-  unique: [['account', 'external_id']],
-  fields: {
-    company: fields.belongsTo(Company, { required: true }),
-    account: fields.belongsTo(WhatsappAccount, { required: true }),
-    external_id: fields.string({ required: true }),
-    payload: fields.text({ required: true, hidden: true, sensitive: true }),
-    status: fields.enum(['pending', 'done', 'dead'], { required: true, default: 'pending' }),
-    available_at: fields.string({ required: true, default: '' }),
-    attempts: fields.integer({ required: true, default: 0 }),
-    last_error: fields.string(),
   },
 });

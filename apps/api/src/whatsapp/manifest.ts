@@ -1,25 +1,13 @@
 import { defineAddon, defineView, ref, seed } from '@moonwitness/orm';
 import { ModelAccess } from '@moonwitness/orm-base';
-import {
-  WhatsappAccount,
-  WhatsappConversation,
-  WhatsappEvent,
-  WhatsappJob,
-  WhatsappMessage,
-} from './models.js';
+import { WhatsappAccount, WhatsappConversation, WhatsappMessage } from './models.js';
 
-const models = [
-  WhatsappAccount,
-  WhatsappConversation,
-  WhatsappMessage,
-  WhatsappJob,
-  WhatsappEvent,
-] as const;
+const models = [WhatsappAccount, WhatsappConversation, WhatsappMessage] as const;
 export const whatsappManifest = defineAddon({
   // Preserve the installed addon identity and seed IDs used by earlier builds.
   name: 'orm-whatsapp',
-  version: '1.1.0',
-  depends: ['base', 'jobs'],
+  version: '1.2.0',
+  depends: ['base'],
   models: [...models],
   data: models.flatMap((model) => [
     seed(ModelAccess, `orm-whatsapp.access_user_read_${model.modelName.replaceAll('.', '_')}`, {
@@ -82,47 +70,6 @@ export const whatsappManifest = defineAddon({
         ],
       },
       search: { fields: ['content'] },
-    }),
-    defineView(WhatsappJob, {
-      title: 'WhatsApp Queue',
-      list: { columns: ['message', 'recipient_jid', 'status', 'attempts', 'available_at'] },
-      form: {
-        sections: [
-          {
-            title: 'Queue item',
-            fields: [
-              'message',
-              'recipient_jid',
-              'status',
-              'attempts',
-              'available_at',
-              'last_error',
-            ],
-          },
-        ],
-      },
-      search: { fields: ['recipient_jid'] },
-    }),
-    defineView(WhatsappEvent, {
-      title: 'WhatsApp Events',
-      list: { columns: ['account', 'external_id', 'status', 'attempts', 'available_at'] },
-      form: {
-        sections: [
-          {
-            title: 'Inbound event',
-            fields: [
-              'company',
-              'account',
-              'external_id',
-              'status',
-              'attempts',
-              'available_at',
-              'last_error',
-            ],
-          },
-        ],
-      },
-      search: { fields: ['external_id'] },
     }),
   ],
   menus: models.map((model, index) => ({

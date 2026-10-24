@@ -83,6 +83,7 @@ export function WhatsappPage() {
     let cancelled = false;
     const code = accountQuery.data?.qr_code;
     if (!code) return;
+    if (code.startsWith('data:image/')) return;
     void import('qrcode')
       .then(({ default: QRCode }) => QRCode.toDataURL(code, { width: 256, margin: 1 }))
       .then((image) => {
@@ -138,7 +139,11 @@ export function WhatsappPage() {
   const connected = status === 'connected';
   const statusIcon = connected ? <Wifi className="size-4" /> : <WifiOff className="size-4" />;
   const messageList = messagesQuery.data ?? [];
-  const qrImage = qr?.code === account?.qr_code ? qr?.image : null;
+  const qrImage = account?.qr_code?.startsWith('data:image/')
+    ? account.qr_code
+    : qr && qr.code === account?.qr_code
+      ? qr.image
+      : null;
 
   return (
     <main className="mx-auto flex min-h-full w-full max-w-7xl flex-col gap-5 p-4 md:p-8">
@@ -268,9 +273,6 @@ export function WhatsappPage() {
                   <p className="mt-2 text-right font-mono text-[10px] text-ink-faint">
                     {message.status}
                   </p>
-                  {message.direction === 'outbound' && message.status === 'failed' && (
-                    <RetryMessage messageId={message.id} />
-                  )}
                 </article>
               ))}
             </div>
@@ -290,27 +292,6 @@ export function WhatsappPage() {
         </section>
       )}
     </main>
-  );
-}
-
-function RetryMessage({ messageId }: { messageId: number }) {
-  const queryClient = useQueryClient();
-  const [retrying, setRetrying] = useState(false);
-  const retry = async () => {
-    setRetrying(true);
-    try {
-      await client.request(`/whatsapp/messages/${messageId}/retry`, { method: 'POST', body: {} });
-      await queryClient.invalidateQueries({ queryKey: scopedQueryKey(['whatsapp']) });
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not retry message');
-    } finally {
-      setRetrying(false);
-    }
-  };
-  return (
-    <Button type="button" variant="outline" disabled={retrying} onClick={retry}>
-      Retry message
-    </Button>
   );
 }
 

@@ -1,39 +1,4 @@
 services:
-  whatsapp:
-    profiles: ['whatsapp']
-    build:
-      context: .
-      target: whatsapp-runtime
-    image: moonwitness-whatsapp:development
-    restart: unless-stopped
-    init: true
-    environment:
-      NODE_ENV: development
-      WHATSAPP_API_URL: http://host.docker.internal:${API_PORT:-3000}
-      WHATSAPP_PORT: 3100
-      WHATSAPP_INTERNAL_TOKEN: ${WHATSAPP_INTERNAL_TOKEN:-moonwitness-local-whatsapp-internal-token-v1-unsafe}
-      WHATSAPP_SESSION_KEY: ${WHATSAPP_SESSION_KEY:-moonwitness-local-whatsapp-session-key-v1-unsafe}
-      WHATSAPP_DATABASE_URL: ${WHATSAPP_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/moonwitness_db}
-      WHATSAPP_DATABASE_SCHEMA: ${WHATSAPP_DATABASE_SCHEMA:-whatsapp_session}
-    extra_hosts:
-      - host.docker.internal:host-gateway
-    ports:
-      - '127.0.0.1:3100:3100'
-    healthcheck:
-      test:
-        [
-          CMD,
-          node,
-          -e,
-          "fetch('http://127.0.0.1:3100/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
-        ]
-      interval: 30s
-      timeout: 5s
-      start_period: 15s
-      retries: 3
-    depends_on:
-      postgres:
-        condition: service_healthy
   postgres:
     image: postgres:16-alpine
     container_name: moonwitness_postgres
@@ -52,5 +17,20 @@ services:
       timeout: 5s
       retries: 10
 
+  # Standalone WhatsApp gateway UI/API. Host port 3001 avoids the API on 3000.
+  whatsapp:
+    image: aldinokemal2104/go-whatsapp-web-multidevice:latest
+    container_name: moonwitness_whatsapp
+    restart: unless-stopped
+    environment:
+      APP_PORT: 3000
+      APP_HOST: 0.0.0.0
+      APP_BASIC_AUTH: moonwitness:moonwitness
+    ports:
+      - '127.0.0.1:3001:3000'
+    volumes:
+      - gowa_storages:/app/storages
+
 volumes:
   pgdata:
+  gowa_storages:

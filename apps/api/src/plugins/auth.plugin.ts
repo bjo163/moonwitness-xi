@@ -46,8 +46,7 @@ function isPublic(url: string): boolean {
     url === '/auth/register' ||
     url === '/auth/login' ||
     url === '/auth/refresh' ||
-    url === '/auth/logout' ||
-    url.startsWith('/internal/whatsapp/')
+    url === '/auth/logout'
   );
 }
 
