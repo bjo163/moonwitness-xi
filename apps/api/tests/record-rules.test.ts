@@ -115,7 +115,7 @@ describe('Row-Level Security & Multi-Tenancy Record Rules', () => {
       .insert({
         company_id: company.id,
         status: 'connected',
-        auth_state: 'private-session-fixture',
+        qr_code: 'private-session-fixture',
       })
       .returning('id');
     const [foreignAccount] = await app
@@ -123,7 +123,7 @@ describe('Row-Level Security & Multi-Tenancy Record Rules', () => {
       .insert({
         company_id: foreign.id,
         status: 'connected',
-        auth_state: 'foreign-session-fixture',
+        qr_code: 'foreign-session-fixture',
       })
       .returning('id');
     const list = await app.inject({ method: 'GET', url: '/api/whatsapp.account', headers });
