@@ -829,7 +829,7 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                     </div>
                   )}
                   <article
-                    className={`max-w-[85%] border-2 border-ink p-3 ${message.direction === 'outbound' ? 'ml-auto bg-pink/30' : 'mr-auto bg-white'}`}
+                    className={`group relative max-w-[85%] border-2 border-ink p-3 ${message.direction === 'outbound' ? 'ml-auto bg-pink/30' : 'mr-auto bg-white'}`}
                   >
                   {activeConversation?.is_group &&
                     message.direction === 'inbound' &&
@@ -842,6 +842,24 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                   {message.message_type !== 'text' && <MediaPreview message={message} />}
                   {message.media_file_name && (
                     <p className="mt-1 text-xs">{message.media_file_name}</p>
+                  )}
+                  {message.content && (
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="absolute right-2 top-2 z-10 h-auto p-1 text-xs underline md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+                      aria-label="Copy message"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(message.content ?? '');
+                          toast.success('Message copied');
+                        } catch {
+                          toast.error('Could not copy message text');
+                        }
+                      }}
+                    >
+                      Copy
+                    </Button>
                   )}
                   <p className="mt-2 flex flex-wrap justify-end gap-x-2 text-right font-mono text-[10px] text-ink-faint">
                     <time dateTime={message.create_date}>

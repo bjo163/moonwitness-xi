@@ -95,7 +95,7 @@ Legenda: **P0** penghambat keselamatan/keandalan; **P1** inbox v1; **P2** media 
 - [ ] **P1-34** Forward pesan jika API GoWA mendukung.
 - [ ] **P1-35** Edit/hapus/unsend pesan milik sendiri sesuai batas waktu WhatsApp, jika didukung.
 - [ ] **P1-36** Reaksi emoji pada pesan jika didukung GoWA.
-- [ ] **P1-37** Salin teks dan menu aksi pesan yang aksesibel. (UI: `WUI-04`, `WUI-07`)
+- [ ] **P1-37** Bagian salin teks selesai: tiap pesan dengan teks menyediakan tombol `Copy message` bernama aksesibel, tombol bisa difokuskan keyboard, menyalin isi saja (tanpa status/waktu), dan memberi toast berhasil/gagal; E2E Chromium membandingkan clipboard dengan teks pesan. Menu aksi pesan (quote/forward/reaksi bila didukung) masih belum dibuat.
 - [ ] **P1-38** Pesan sistem, deleted, view-once, dan jenis pesan baru ditangani aman.
 - [x] **P1-39** Deduplikasi outbound saat provider mengirim pesan kembali ke sinkronisasi. Reconciliation memperbarui row outbound lokal yang idempotency key-nya masih pending dengan external ID GoWA sebelum upsert riwayat; `company_id + external_id` menjaga upsert berikutnya tetap idempotent. Route tests membuktikan satu pesan lokal tetap menjadi satu row.
 - [x] **P1-40** Deduplikasi external ID dengan cakupan device/account yang benar. Satu akun per company dijamin oleh unique company pada akun; pesan memakai unique `(company_id, external_id)` agar ID GoWA tidak bentrok lintas tenant dan konsisten dengan invariant satu device per company. Route tests memeriksa isolasi dua company.

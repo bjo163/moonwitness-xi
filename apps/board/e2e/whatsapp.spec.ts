@@ -228,6 +228,7 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
     })
   );
 
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('/board/whatsapp');
   await expect(page.getByText('+6281234567890')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Project group' })).toBeVisible();
@@ -283,6 +284,9 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   await expect(page.locator('article time').first()).not.toHaveText('—');
   await page.getByRole('button', { name: 'Load older messages' }).click();
   await expect(page.locator('article').getByText('Older history')).toBeVisible();
+  const inboundMessage = page.locator('article').filter({ hasText: 'Can you help?' });
+  await inboundMessage.getByRole('button', { name: 'Copy message' }).click();
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('Can you help?');
   const messageScroller = page.locator('div.overflow-y-auto').last();
   await expect.poll(() => messageScroller.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
   await page.locator('article').last().scrollIntoViewIfNeeded();
