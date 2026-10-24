@@ -1,4 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
+import { resolve } from 'node:path';
 import { expect, test } from '@playwright/test';
 
 test('public homepage renders its message, canonical metadata, and workspace action', async ({
@@ -78,6 +79,90 @@ test('homepage keeps its message and actions visible if hero artwork fails', asy
   await expect(page.getByRole('link', { name: /Explore MoonWitness/u })).toBeVisible();
   const accessibility = await new AxeBuilder({ page }).analyze();
   expect(accessibility.violations).toEqual([]);
+});
+
+test('homepage hero reveal is one-shot without layout shift and respects reduced motion', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('/');
+
+  const heroCopy = page.locator('.home-hero-copy');
+  const heroNote = page.locator('.home-hero-note');
+  const heroHeight = await page.locator('.home-hero').evaluate((element) => element.clientHeight);
+  await expect(page.getByRole('heading', { level: 1, name: 'MoonWitness' })).toBeAttached();
+  await expect(heroCopy).toBeVisible();
+  await expect(heroNote).toBeVisible();
+  await expect
+    .poll(() => heroCopy.evaluate((element) => getComputedStyle(element).animationName))
+    .toBe('mw-home-hero-reveal');
+  expect(await heroCopy.evaluate((element) => getComputedStyle(element).animationDuration)).toBe(
+    '0.22s'
+  );
+  expect(await heroCopy.evaluate((element) => getComputedStyle(element).animationIterationCount)).toBe(
+    '1'
+  );
+  await expect
+    .poll(() =>
+      heroCopy.evaluate((element) =>
+        element.getAnimations().every((animation) => animation.playState === 'finished')
+      )
+    )
+    .toBe(true);
+  await expect
+    .poll(() =>
+      heroNote.evaluate((element) =>
+        element.getAnimations().every((animation) => animation.playState === 'finished')
+      )
+    )
+    .toBe(true);
+  expect(await heroCopy.evaluate((element) => getComputedStyle(element).opacity)).toBe('1');
+  expect(await heroNote.evaluate((element) => getComputedStyle(element).opacity)).toBe('1');
+  expect(await page.locator('.home-hero').evaluate((element) => element.clientHeight)).toBe(
+    heroHeight
+  );
+  await page.locator('.home-hero').screenshot({
+    path: resolve(process.cwd(), '../../docs/design/ui-catalog/homepage-reveal-desktop-1672.png'),
+    animations: 'disabled',
+  });
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.reload();
+  await expect(page.getByRole('heading', { level: 1, name: 'MoonWitness' })).toBeVisible();
+  expect(await heroCopy.evaluate((element) => getComputedStyle(element).animationName)).toBe('none');
+  expect(await heroCopy.evaluate((element) => getComputedStyle(element).opacity)).toBe('1');
+  expect(await heroNote.evaluate((element) => getComputedStyle(element).opacity)).toBe('1');
+
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  await expect(page.getByRole('heading', { level: 1, name: 'MoonWitness' })).toBeVisible();
+  await expect
+    .poll(() => heroCopy.evaluate((element) => getComputedStyle(element).animationName))
+    .toBe('mw-home-hero-reveal');
+  await expect
+    .poll(() =>
+      heroCopy.evaluate((element) =>
+        element.getAnimations().every((animation) => animation.playState === 'finished')
+      )
+    )
+    .toBe(true);
+  await expect
+    .poll(() =>
+      heroNote.evaluate((element) =>
+        element.getAnimations().every((animation) => animation.playState === 'finished')
+      )
+    )
+    .toBe(true);
+  expect(await heroNote.evaluate((element) => getComputedStyle(element).opacity)).toBe('1');
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
+  ).toBe(true);
+  await page.locator('.home-hero').screenshot({
+    path: resolve(process.cwd(), '../../docs/design/ui-catalog/homepage-reveal-mobile-390.png'),
+    animations: 'disabled',
+  });
 });
 
 test('legacy Board routes redirect to canonical paths and preserve query strings', async ({

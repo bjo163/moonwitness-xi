@@ -231,6 +231,7 @@
 .home-hero-copy {
   width: min(58rem, 68%);
   padding: clamp(1.25rem, 3.5vw, 3.5rem) clamp(1rem, 4vw, 4rem);
+  animation: mw-home-hero-reveal var(--mw-motion-slow) var(--mw-motion-ease) both;
 }
 .home-kicker {
   display: inline-block;
@@ -294,6 +295,7 @@
   bottom: 3.25rem;
   width: 13rem;
   transform: rotate(4deg);
+  animation: mw-home-note-reveal var(--mw-motion-slow) var(--mw-motion-ease-emphasis) 70ms both;
 }
 .home-hero-caption {
   position: absolute;
@@ -302,6 +304,26 @@
   color: var(--mw-paper);
   font: 0.65rem var(--mw-font-mono);
   text-transform: uppercase;
+}
+@keyframes mw-home-hero-reveal {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0.65rem, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+@keyframes mw-home-note-reveal {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0.45rem, 0) rotate(4deg);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(4deg);
+  }
 }
 .home-band {
   position: relative;
@@ -836,6 +858,11 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .home-hero-copy,
+  .home-hero-note {
+    animation: none;
+    opacity: 1;
+  }
   .home-page *,
   .home-page *::before,
   .home-page *::after {
