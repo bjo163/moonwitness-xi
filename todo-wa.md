@@ -31,7 +31,7 @@ Legenda: **P0** penghambat keselamatan/keandalan; **P1** inbox v1; **P2** media 
 
 ## P0 — pairing, status koneksi, dan pengiriman aman
 
-- [ ] **P0-01** Pairkan perangkat lewat QR Board dengan GoWA aktual dan catat versi/endpoint. (UI: `WUI-02`, `WUI-08`)
+- [ ] **P0-01** Pairkan perangkat lewat QR Board dengan GoWA aktual dan catat versi/endpoint. Pemeriksaan read-only 24 Oktober 2026: `wa.moonwitness.biz.id/health` = 200, `/app/info` = v9.6.0, `/devices` = SUCCESS dengan `results: null` (belum ada device slot), jadi QR dan pairing nyata belum dapat dibuktikan. (UI: `WUI-02`, `WUI-08`)
 - [ ] **P0-02** Buktikan sesi GoWA bertahan setelah restart container tanpa scan QR ulang.
 - [ ] **P0-03** Buktikan sesi dan mapping perusahaan tetap benar setelah restart API, Board, dan PostgreSQL secara terpisah.
 - [ ] **P0-04** Uji putus jaringan, pemulihan koneksi, status reconnecting, lalu kembali connected tanpa akun ganda.
@@ -104,9 +104,9 @@ Legenda: **P0** penghambat keselamatan/keandalan; **P1** inbox v1; **P2** media 
 ## P2 — media, kontak, dan grup
 
 - [ ] **P2-01** Uji nyata kirim/terima gambar, dokumen, audio, video melalui GoWA.
-- [ ] **P2-02** Verifikasi format dan batas tiap tipe media terhadap GoWA aktual.
+- [ ] **P2-02** Verifikasi format dan batas tiap tipe media terhadap GoWA aktual. Metadata live GoWA v9.6 `/app/info` menyatakan `max_image_size=20,000,000`, `max_video_size=100,000,000`, dan `max_file_size=50,000,000` byte; tidak ada batas audio terpisah di response. Ini hanya batas yang dikonfigurasi provider, bukan bukti pengiriman nyata. `/devices` masih `results: null`, sehingga kirim/terima live untuk gambar, dokumen, audio, dan video belum diuji (P2-01).
 - [x] **P2-03** Pengiriman lampiran Board → API kini memakai multipart; API memvalidasi dan hash file sambil mengalirkannya langsung ke attachment storage, tanpa Base64 atau buffer file penuh pada jalur upload. Tes multipart tepat di batas 10 MiB, penolakan lebih besar, file kosong, MIME palsu, storage gagal, idempotent retry, dan payload Base64 lama lulus pada SQLite/PostgreSQL (44 lulus, 1 acceptance S3 dilewati). E2E Chromium PostgreSQL memverifikasi QR, multipart boundary, caption, filename, byte file, dan draft saat API gagal (1/1 lulus).
-- [ ] **P2-04** Tentukan batas ukuran tiap tipe; saat ini semua berkas dibatasi 10 MiB.
+- [ ] **P2-04** Tetapkan batas produk tiap tipe media. API/Board sekarang membatasi semua jenis ke 10 MiB; provider v9.6 melaporkan maksimum gambar 20 MB, video 100 MB, dokumen 50 MB, tetapi menaikkan batas aplikasi memerlukan verifikasi upload proxy production dan kapasitas storage, serta batas audio belum tersedia di metadata provider.
 - [ ] **P2-05** Upload langsung ke storage memakai URL singkat bertanda tangan dan izin perusahaan.
 - [ ] **P2-06** Progress upload/download, cancel, retry, dan indikator kecepatan. (UI: `WUI-06`)
 - [ ] **P2-07** Preview PDF/dokumen aman, ukuran file, dan penanganan ekstensi berbahaya. (UI: `WUI-06`)
