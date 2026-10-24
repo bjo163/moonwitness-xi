@@ -455,3 +455,47 @@ test('pins, archives, and restores a conversation from the inbox', async ({ page
   await page.getByRole('button', { name: 'Active' }).click();
   await expect(page.getByRole('button', { name: /Archive and pin test/u })).toBeVisible();
 });
+
+test('pauses WhatsApp account polling while the Board tab is hidden', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByLabel('Email or Username').fill('superadmin');
+  await page.getByLabel('Password', { exact: true }).fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
+  await expect(page).toHaveURL(/\/board$/u);
+
+  let accountPolls = 0;
+  await page.route('**/whatsapp/account', async (route) => {
+    accountPolls += 1;
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          status: 'connected',
+          phone_number: '6281234567890',
+          permissions: { manage: true, createConversation: true, send: true },
+        },
+      },
+    });
+  });
+  await page.goto('/board/whatsapp');
+  await expect.poll(() => accountPolls).toBe(1);
+
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'hidden',
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await page.waitForTimeout(4000);
+  expect(accountPolls).toBe(1);
+
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'visible',
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect.poll(() => accountPolls, { timeout: 5000 }).toBeGreaterThan(1);
+});
