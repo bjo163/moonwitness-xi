@@ -56,6 +56,13 @@ jobs:
       POSTGRES_TEST_URL: postgresql://postgres:postgres@127.0.0.1:5432/moonwitness_test
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/moonwitness_test
       REQUIRE_POSTGRES_TESTS: 'true'
+      # Production Compose interpolates these for every invocation; the release
+      # smoke stack never calls the gateway or uploads an attachment.
+      WHATSAPP_GATEWAY_URL: http://127.0.0.1:3001
+      WHATSAPP_GATEWAY_USERNAME: ci-only-whatsapp-username
+      WHATSAPP_GATEWAY_PASSWORD: ci-only-whatsapp-password
+      ATTACHMENT_S3_ACCESS_KEY: GKci-only-access-key-id
+      ATTACHMENT_S3_SECRET_KEY: ci-only-attachment-secret-that-is-at-least-32-characters-long
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

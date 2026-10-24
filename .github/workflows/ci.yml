@@ -363,6 +363,11 @@ jobs:
           JWT_SECRET: ci-only-secret-that-is-at-least-32-characters-long
           WHATSAPP_INTERNAL_TOKEN: ci-only-whatsapp-token-that-is-at-least-32-characters-long
           WHATSAPP_DATABASE_ENCRYPTED_AT_REST: 'true'
+          WHATSAPP_GATEWAY_URL: http://127.0.0.1:3001
+          WHATSAPP_GATEWAY_USERNAME: ci-only-whatsapp-username
+          WHATSAPP_GATEWAY_PASSWORD: ci-only-whatsapp-password
+          ATTACHMENT_S3_ACCESS_KEY: GKci-only-access-key-id
+          ATTACHMENT_S3_SECRET_KEY: ci-only-attachment-secret-that-is-at-least-32-characters-long
         run: docker compose -f docker-compose.yml -f docker-compose.production.yml config --quiet
       - name: Smoke test API and Board containers against isolated PostgreSQL
         run: bash scripts/smoke-containers.sh

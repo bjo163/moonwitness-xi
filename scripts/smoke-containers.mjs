@@ -205,6 +205,11 @@ export async function runContainerSmoke({
     JWT_SECRET: 'ci-only-secret-that-is-at-least-32-characters-long',
     // Compose interpolates these for every invocation; the smoke stack never starts WhatsApp.
     WHATSAPP_INTERNAL_TOKEN: 'ci-only-whatsapp-token-that-is-at-least-32-characters-long',
+    WHATSAPP_GATEWAY_URL: 'http://127.0.0.1:3001',
+    WHATSAPP_GATEWAY_USERNAME: 'ci-only-whatsapp-username',
+    WHATSAPP_GATEWAY_PASSWORD: 'ci-only-whatsapp-password',
+    ATTACHMENT_S3_ACCESS_KEY: 'GKci-only-access-key-id',
+    ATTACHMENT_S3_SECRET_KEY: 'ci-only-attachment-secret-that-is-at-least-32-characters-long',
     SUPERADMIN_PASSWORD: 'ci-smoke-superadmin-password',
     API_PORT: String(apiPort),
     BOARD_PORT: String(boardPort),
