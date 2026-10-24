@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ApiError } from '@moonwitness/client';
 import {
   AttachmentIcon,
   SendIcon,
@@ -916,11 +917,7 @@ function MediaPreview({ message }: { message: Message }) {
       })
       .catch((error: unknown) => {
         if (active) {
-          setFailureMessage(
-            error instanceof Error && error.message.includes('10 MiB')
-              ? 'This media exceeds the 10 MiB limit and cannot be cached.'
-              : 'Attachment could not be loaded. Check storage and try again.'
-          );
+          setFailureMessage(mediaLoadFailureMessage(error));
           setFailed(true);
         }
       });
@@ -973,4 +970,19 @@ function MediaPreview({ message }: { message: Message }) {
       Download attachment
     </a>
   );
+}
+
+function mediaLoadFailureMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : '';
+  if (message.includes('10 MiB'))
+    return 'This media exceeds the 10 MiB limit and cannot be cached.';
+  if (error instanceof ApiError && error.status === 404)
+    return 'This attachment is no longer available.';
+  if (message === 'Media storage is temporarily unavailable')
+    return 'Attachment storage is temporarily unavailable. Try again.';
+  if (error instanceof ApiError && (error.status === 502 || message.includes('WhatsApp gateway')))
+    return 'WhatsApp could not retrieve this attachment. Try again.';
+  if (error instanceof ApiError && error.status === 503)
+    return 'WhatsApp services are temporarily busy. Try again.';
+  return 'Attachment could not be loaded. Try again.';
 }

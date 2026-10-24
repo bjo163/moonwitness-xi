@@ -75,7 +75,9 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
         success: true,
         data: search
           ? conversations.filter((chat) =>
-              `${chat.name} ${chat.jid} ${chat.last_message ?? ''}`.toLocaleLowerCase().includes(search)
+              `${chat.name} ${chat.jid} ${chat.last_message ?? ''}`
+                .toLocaleLowerCase()
+                .includes(search)
             )
           : conversations,
       },
@@ -132,6 +134,22 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
             message_type: 'text',
             create_date: new Date().toISOString(),
           },
+          {
+            id: 53,
+            direction: 'inbound',
+            content: 'Storage failure attachment',
+            status: 'received',
+            message_type: 'image',
+            create_date: new Date(Date.now() - 500).toISOString(),
+          },
+          {
+            id: 54,
+            direction: 'inbound',
+            content: 'Gateway failure attachment',
+            status: 'received',
+            message_type: 'image',
+            create_date: new Date(Date.now() - 250).toISOString(),
+          },
           ...Array.from({ length: 48 }, (_, index) => ({
             id: 49 - index,
             direction: 'inbound',
@@ -147,10 +165,28 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   await page.route('**/whatsapp/conversations/42/read', (route) =>
     route.fulfill({ json: { success: true, data: { marked: true, message_id: 50 } } })
   );
+  await page.route('**/whatsapp/media/53', (route) =>
+    route.fulfill({
+      status: 503,
+      json: { success: false, error: 'Media storage is temporarily unavailable' },
+    })
+  );
+  await page.route('**/whatsapp/media/54', (route) =>
+    route.fulfill({
+      status: 502,
+      json: { success: false, error: 'WhatsApp gateway returned incomplete media' },
+    })
+  );
 
   await page.goto('/board/whatsapp');
   await expect(page.getByText('+6281234567890')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Project group' })).toBeVisible();
+  await expect(
+    page.locator('article').getByText('Attachment storage is temporarily unavailable. Try again.')
+  ).toBeVisible();
+  await expect(
+    page.locator('article').getByText('WhatsApp could not retrieve this attachment. Try again.')
+  ).toBeVisible();
   await page.getByRole('button', { name: 'Unread' }).click();
   await expect(page.getByRole('button', { name: /Project group/u })).toBeVisible();
   await expect(page.getByRole('button', { name: /Rani Putri/u })).toHaveCount(0);
