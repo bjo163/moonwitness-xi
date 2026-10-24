@@ -24,7 +24,7 @@ test('static catalog loads under the repository Pages subpath with its shared UI
     'https://github.com/bjo163/moonwitness-xi/tree/dev/packages/ui'
   );
   expect(failedRequests).toEqual([]);
-  expect(new URL(page.url()).pathname).toBe('/moonwitness-xi/components/');
+  expect(new URL(page.url()).pathname).toBe('/moonwitness-xiv/components/');
   await page.screenshot({ path: testInfo.outputPath('desktop.png'), fullPage: false });
 });
 
@@ -395,7 +395,7 @@ test('filter input controls sample table and navigation keeps a deep link at the
   await expect(sampleTable.getByText('Base')).toHaveCount(0);
 
   await page.getByRole('link', { name: 'Charts' }).click();
-  await expect(page).toHaveURL(/\/moonwitness-xi\/components\/#charts$/u);
+  await expect(page).toHaveURL(/\/moonwitness-xiv\/components\/#charts$/u);
   await expect(page.getByRole('heading', { name: 'Charts', exact: true })).toBeVisible();
 });
 
