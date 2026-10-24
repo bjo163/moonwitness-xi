@@ -92,6 +92,7 @@ test('a checkout reads only tracked documents so local and hosted gates share a 
       /scratch-included\/draft\.md:3: missing target/u
     );
   } finally {
-    await rm(root, { recursive: true, force: true });
+    // Windows keeps the directory locked briefly after the `git` child exits.
+    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   }
 });

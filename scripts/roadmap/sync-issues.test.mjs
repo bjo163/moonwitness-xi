@@ -100,10 +100,13 @@ test('issue plan summary is useful for operators without rendering issue bodies'
 });
 
 test('issue sync workflow bounds changed-task and backlog writes to an exact dev source', async () => {
-  const workflow = await readFile(
-    new URL('../../.github/workflows/roadmap-issue-plan.yml', import.meta.url),
-    'utf8'
-  );
+  // The job slices below anchor on LF; a Windows checkout carries CRLF.
+  const workflow = (
+    await readFile(
+      new URL('../../.github/workflows/roadmap-issue-plan.yml', import.meta.url),
+      'utf8'
+    )
+  ).replaceAll('\r\n', '\n');
   const jobs = workflow.slice(workflow.indexOf('\njobs:\n') + '\njobs:\n'.length);
   const applyBoundary = jobs.indexOf('\n  apply:\n');
   const planJob = jobs.slice(0, applyBoundary);

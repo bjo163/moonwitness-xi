@@ -10,7 +10,8 @@ import {
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const workflowPath = path.join(root, '.github/workflows/roadmap-issue-plan.yml');
-const source = await readFile(workflowPath, 'utf8');
+// The anchors below are LF-only and a Windows checkout carries CRLF.
+const source = (await readFile(workflowPath, 'utf8')).replaceAll('\r\n', '\n');
 
 function section(start, end) {
   const from = source.indexOf(start);

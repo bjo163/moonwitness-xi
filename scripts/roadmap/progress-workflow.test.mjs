@@ -9,10 +9,10 @@ import { fileURLToPath, URL } from 'node:url';
 
 const repositoryRoot = fileURLToPath(new URL('../../', import.meta.url));
 
-const workflow = await readFile(
-  new URL('../../.github/workflows/roadmap-progress.yml', import.meta.url),
-  'utf8'
-);
+// The assertion anchors below are LF-only and a Windows checkout carries CRLF.
+const workflow = (
+  await readFile(new URL('../../.github/workflows/roadmap-progress.yml', import.meta.url), 'utf8')
+).replaceAll('\r\n', '\n');
 
 test('progress report workflow reads dev and publishes only short-lived Markdown and JSON artifacts', () => {
   assert.match(workflow, /branches: \[dev\]/u);
