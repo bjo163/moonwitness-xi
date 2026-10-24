@@ -38,6 +38,101 @@ function makeClient(
 }
 
 describe('MoonWitnessClient', () => {
+  it('reports authenticated multipart upload progress without overriding its boundary', async () => {
+    const requests: Array<{ headers: Record<string, string>; body: FormData }> = [];
+    class FakeXMLHttpRequest extends EventTarget {
+      upload = new EventTarget();
+      status = 201;
+      statusText = 'Created';
+      responseText = '{"success":true}';
+      headers: Record<string, string> = {};
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      onabort: (() => void) | null = null;
+      open(_method: string, _url: string) {}
+      setRequestHeader(name: string, value: string) {
+        this.headers[name] = value;
+      }
+      send(body: FormData) {
+        requests.push({ headers: this.headers, body });
+        const progress = new Event('progress');
+        Object.defineProperties(progress, {
+          loaded: { value: 5 },
+          total: { value: 10 },
+          lengthComputable: { value: true },
+        });
+        this.upload.dispatchEvent(progress);
+        this.onload?.();
+        this.dispatchEvent(new Event('loadend'));
+      }
+      abort() {
+        this.onabort?.();
+        this.dispatchEvent(new Event('loadend'));
+      }
+    }
+    vi.stubGlobal('XMLHttpRequest', FakeXMLHttpRequest);
+    try {
+      const { client } = makeClient((url) =>
+        url.pathname === '/auth/login' ? json(tokens('upload-token')) : json({})
+      );
+      await client.login({ login: 'alice', password: 'pw' });
+      const progress: Array<{ loadedBytes: number; totalBytes: number | null; percent: number | null }> = [];
+      const body = new FormData();
+      body.set('media', new Blob(['file']), 'file.txt');
+      const result = await client.requestWithUploadProgress('/whatsapp/upload', {
+        method: 'POST',
+        body,
+        onUploadProgress: (event) => progress.push(event),
+      });
+      expect(result).toEqual({ success: true });
+      expect(requests[0]?.headers.Authorization).toBe('Bearer upload-token');
+      expect(requests[0]?.headers['Content-Type']).toBeUndefined();
+      expect(requests[0]?.body).toBe(body);
+      expect(progress).toEqual([{ loadedBytes: 5, totalBytes: 10, percent: 50 }]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('cancels an in-flight multipart upload with AbortError', async () => {
+    let request: InstanceType<typeof XMLHttpRequest> | undefined;
+    class FakeXMLHttpRequest extends EventTarget {
+      upload = new EventTarget();
+      status = 200;
+      statusText = 'OK';
+      responseText = '{}';
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      onabort: (() => void) | null = null;
+      open(_method: string, _url: string) {}
+      setRequestHeader(_name: string, _value: string) {}
+      send(_body: FormData) { request = this as unknown as XMLHttpRequest; }
+      abort() {
+        this.onabort?.();
+        this.dispatchEvent(new Event('loadend'));
+      }
+    }
+    vi.stubGlobal('XMLHttpRequest', FakeXMLHttpRequest);
+    try {
+      const { client } = makeClient((url) =>
+        url.pathname === '/auth/login' ? json(tokens('upload-token')) : json({})
+      );
+      await client.login({ login: 'alice', password: 'pw' });
+      const controller = new AbortController();
+      const pending = client.requestWithUploadProgress('/whatsapp/upload', {
+        method: 'POST',
+        body: new FormData(),
+        signal: controller.signal,
+        onUploadProgress: () => {},
+      });
+      await vi.waitFor(() => expect(request).toBeDefined());
+      controller.abort();
+      await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('removes all trailing slashes from the configured API URL', () => {
     const { client } = makeClient(() => json({}), 'http://api.test////');
     expect(client.baseUrl).toBe('http://api.test');

@@ -64,6 +64,10 @@ type ConversationAgent = {
 type ConversationTeam = { id: number; name: string };
 type QueueFilter = 'all' | 'mine' | 'unassigned';
 type WorkStateFilter = 'all' | 'open' | 'closed';
+type UploadProgressState = {
+  percent: number | null;
+  bytesPerSecond: number;
+};
 type ConversationPage = {
   items: Conversation[];
   nextOffset: number;
@@ -79,6 +83,12 @@ function formatConversationAddress(conversation: Conversation): string {
   if (domain === 's.whatsapp.net' && /^\d+$/.test(identifier)) return `+${identifier}`;
   if (domain === 'lid') return `WhatsApp ID: ${identifier}`;
   return conversation.jid;
+}
+
+function formatTransferRate(bytesPerSecond: number): string {
+  if (bytesPerSecond < 1024) return `${Math.round(bytesPerSecond)} B/s`;
+  if (bytesPerSecond < 1024 * 1024) return `${(bytesPerSecond / 1024).toFixed(1)} KB/s`;
+  return `${(bytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s`;
 }
 type Message = {
   id: number;
@@ -2271,9 +2281,12 @@ function MessageComposer({
   const [draft, setDraft] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgressState | null>(null);
   const sendLock = useRef(false);
   const idempotencyKey = useRef(crypto.randomUUID());
   const fileInput = useRef<HTMLInputElement>(null);
+  const uploadAbortController = useRef<AbortController | null>(null);
+  const previousUploadProgress = useRef({ loadedBytes: 0, sampledAt: 0 });
   useEffect(() => {
     idempotencyKey.current = crypto.randomUUID();
   }, [replyTo?.id]);
@@ -2286,6 +2299,10 @@ function MessageComposer({
     }
     sendLock.current = true;
     setSending(true);
+    setUploadProgress(file ? { percent: 0, bytesPerSecond: 0 } : null);
+    const abortController = file ? new AbortController() : null;
+    uploadAbortController.current = abortController;
+    previousUploadProgress.current = { loadedBytes: 0, sampledAt: performance.now() };
     try {
       const body: FormData | Record<string, unknown> = file
         ? new FormData()
@@ -2298,11 +2315,32 @@ function MessageComposer({
         if (replyTo) body.set('reply_to_message_id', String(replyTo.id));
         body.set('media', file!, file!.name);
       }
-      await client.request(`/whatsapp/conversations/${conversationId}/messages`, {
+      const requestOptions = {
         method: 'POST',
         headers: { 'Idempotency-Key': idempotencyKey.current },
         body,
-      });
+      } as const;
+      if (body instanceof FormData && abortController) {
+        await client.requestWithUploadProgress(`/whatsapp/conversations/${conversationId}/messages`, {
+          ...requestOptions,
+          body,
+          signal: abortController.signal,
+          onUploadProgress: (progress) => {
+            const sampledAt = performance.now();
+            const previous = previousUploadProgress.current;
+            const durationMs = Math.max(1, sampledAt - previous.sampledAt);
+            const bytesPerSecond =
+              Math.max(0, progress.loadedBytes - previous.loadedBytes) * (1000 / durationMs);
+            previousUploadProgress.current = {
+              loadedBytes: progress.loadedBytes,
+              sampledAt,
+            };
+            setUploadProgress({ percent: progress.percent, bytesPerSecond });
+          },
+        });
+      } else {
+        await client.request(`/whatsapp/conversations/${conversationId}/messages`, requestOptions);
+      }
       setDraft('');
       setFile(null);
       onCancelReply();
@@ -2310,10 +2348,16 @@ function MessageComposer({
       if (fileInput.current) fileInput.current.value = '';
       await queryClient.invalidateQueries({ queryKey: scopedQueryKey(['whatsapp']) });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Message could not be queued');
+      if (error instanceof Error && error.name === 'AbortError') {
+        toast.error('Upload stopped. Your draft is saved; retry uses the same message key.');
+      } else {
+        toast.error(error instanceof Error ? error.message : 'Message could not be queued');
+      }
     } finally {
+      uploadAbortController.current = null;
       sendLock.current = false;
       setSending(false);
+      setUploadProgress(null);
     }
   };
   const handleComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -2421,6 +2465,38 @@ function MessageComposer({
             Remove
           </Button>
         </p>
+      )}
+      {file && sending && uploadProgress && (
+        <div className="space-y-2" aria-live="polite">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+            <p role="status">
+              {uploadProgress.percent === null
+                ? `Uploading ${file.name} · ${formatTransferRate(uploadProgress.bytesPerSecond)}`
+                : `Uploading ${file.name} · ${uploadProgress.percent}% · ${formatTransferRate(uploadProgress.bytesPerSecond)}`}
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => uploadAbortController.current?.abort()}
+            >
+              Cancel upload
+            </Button>
+          </div>
+          <div
+            role="progressbar"
+            aria-label={`Upload progress for ${file.name}`}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={uploadProgress.percent ?? undefined}
+            className="h-2 overflow-hidden border border-ink bg-paper-raised"
+          >
+            <div
+              className="h-full bg-pink transition-[width] duration-150"
+              style={{ width: `${uploadProgress.percent ?? 0}%` }}
+            />
+          </div>
+        </div>
       )}
     </form>
   );

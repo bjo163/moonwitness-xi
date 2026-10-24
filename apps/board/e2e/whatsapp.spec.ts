@@ -909,7 +909,9 @@ test('connect shows QR, media is sent, and failures preserve the draft', async (
     return route.fulfill({ json: { success: true, data: createdChat ? [contact] : [] } });
   });
   let fail = false,
-    queued = false;
+    queued = false,
+    uploadAttempts = 0;
+  const uploadKeys: string[] = [];
   await page.route('**/whatsapp/conversations/12/messages*', async (route) => {
     if (route.request().method() === 'POST') {
       if (fail)
@@ -917,6 +919,7 @@ test('connect shows QR, media is sent, and failures preserve the draft', async (
           status: 503,
           json: { success: false, error: 'Service unavailable' },
         });
+      uploadAttempts += 1;
       const contentType = route.request().headers()['content-type'] ?? '';
       const payload = route.request().postDataBuffer();
       expect(route.request().headers()['idempotency-key']).toBeTruthy();
@@ -925,7 +928,9 @@ test('connect shows QR, media is sent, and failures preserve the draft', async (
       expect(payload?.toString('latin1')).toContain('Test caption');
       expect(payload?.toString('latin1')).toContain('filename="sample.txt"');
       expect(payload?.includes(Buffer.from('test attachment'))).toBe(true);
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      uploadKeys.push(route.request().headers()['idempotency-key'] ?? '');
+      if (uploadAttempts === 1) await new Promise((resolve) => setTimeout(resolve, 1_500));
+      else await new Promise((resolve) => setTimeout(resolve, 500));
       queued = true;
       return route.fulfill({
         status: 202,
@@ -978,8 +983,17 @@ test('connect shows QR, media is sent, and failures preserve the draft', async (
   });
   await expect(page.getByText('Attached: sample.txt')).toBeVisible();
   await page.getByRole('button', { name: 'Send message' }).click();
+  await expect(page.getByRole('progressbar', { name: 'Upload progress for sample.txt' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Cancel upload' })).toBeVisible();
+  await page.getByRole('button', { name: 'Cancel upload' }).click();
+  await expect(page.getByPlaceholder('Write a message…')).toHaveValue('Test caption');
+  await expect(page.getByText(/Upload stopped/u)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Send message' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Send message' }).click();
   await expect(page.getByRole('button', { name: 'Sending message' })).toBeDisabled();
   await expect(page.getByPlaceholder('Write a message…')).toHaveValue('');
+  expect(uploadKeys).toHaveLength(2);
+  expect(uploadKeys[1]).toBe(uploadKeys[0]);
   await expect(page.locator('article').getByText('sent')).toBeVisible();
   fail = true;
   await page.getByPlaceholder('Write a message…').fill('Keep this draft');
