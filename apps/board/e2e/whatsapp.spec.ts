@@ -15,7 +15,7 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
         data: {
           status: 'connected',
           phone_number: '6281234567890',
-          permissions: { manage: true, createConversation: true, send: true },
+          permissions: { manage: true, createConversation: true, send: true, manageMessages: true },
         },
       },
     })
@@ -23,6 +23,8 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   let failSearchConversationLoad = false;
   let includeNewInboundMessage = false;
   let ownReaction: { emoji: string; is_from_me: boolean } | null = null;
+  let editedMessageContent = 'A sent reply';
+  let messageDeleted = false;
   const forwardDestinationQueries: Array<{ archived: string | null; offset: string | null }> = [];
   await page.route('**/whatsapp/conversations*', (route) => {
     const url = new URL(route.request().url());
@@ -116,6 +118,14 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
     ownReaction = { emoji: body.emoji, is_from_me: true };
     await route.fulfill({ status: 200, json: { success: true, data: { reactions: [{ emoji: body.emoji, is_from_me: true }] } } });
   });
+  await page.route('**/whatsapp/messages/*/edit', async (route) => {
+    editedMessageContent = (route.request().postDataJSON() as { content: string }).content;
+    await route.fulfill({ json: { success: true, data: { content: editedMessageContent, is_edited: true } } });
+  });
+  await page.route('**/whatsapp/messages/*/revoke', async (route) => {
+    messageDeleted = true;
+    await route.fulfill({ json: { success: true, data: { is_deleted: true } } });
+  });
   const forwardedMessages: Array<{ sourceId: string; body: Record<string, unknown>; key: string }> = [];
   await page.route('**/whatsapp/messages/*/forward', async (route) => {
     const sourceId = new URL(route.request().url()).pathname.split('/').at(-2) ?? '';
@@ -179,8 +189,10 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
           {
             id: 52,
             direction: 'outbound',
-            content: 'A sent reply',
+            content: messageDeleted ? 'This message was deleted' : editedMessageContent,
             status: 'sent',
+            is_edited: editedMessageContent !== 'A sent reply',
+            is_deleted: messageDeleted,
             message_type: 'text',
             reply_to: { id: 50, content: 'Can you help?', message_type: 'text' },
             create_date: new Date().toISOString(),
@@ -389,6 +401,16 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
     body: { conversation_id: 99 },
   });
   expect(forwardedMessages[0]?.key).toBeTruthy();
+  const ownReply = page.locator('#whatsapp-message-52');
+  await ownReply.getByRole('button', { name: 'Edit message' }).click();
+  await page.getByLabel('Edited message text').fill('Edited reply text');
+  await page.getByRole('button', { name: 'Save edit' }).click();
+  await expect(ownReply.getByText('Edited')).toBeVisible();
+  await expect(ownReply.getByText('Edited reply text')).toBeVisible();
+  await ownReply.getByRole('button', { name: 'Delete message for everyone' }).click();
+  await page.getByRole('alertdialog', { name: 'Delete for everyone?' }).getByRole('button', { name: 'Delete message' }).click();
+  await expect(ownReply.getByText('This message was deleted')).toBeVisible();
+  await expect(ownReply.getByRole('button', { name: 'Edit message' })).toHaveCount(0);
   await page.locator('#whatsapp-message-50').getByRole('button', { name: 'Forward message' }).click();
   const secondForwardDialog = page.getByRole('dialog', { name: 'Forward message' });
   await expect(secondForwardDialog.getByRole('button', { name: 'Load more destinations' })).toBeVisible();
@@ -445,7 +467,7 @@ test('connect shows QR, media is sent, and failures preserve the draft', async (
         data: {
           status,
           qr_code: status === 'qr' ? 'mock-qr-for-test' : null,
-          permissions: { manage: true, createConversation: true, send: true },
+          permissions: { manage: true, createConversation: true, send: true, manageMessages: true },
         },
       },
     })
@@ -576,6 +598,7 @@ test('pins, archives, and restores a conversation from the inbox', async ({ page
             manageConversations: true,
             createConversation: true,
             send: true,
+            manageMessages: true,
           },
         },
       },
@@ -641,7 +664,7 @@ test('pauses WhatsApp account polling while the Board tab is hidden', async ({ p
         data: {
           status: 'connected',
           phone_number: '6281234567890',
-          permissions: { manage: true, createConversation: true, send: true },
+          permissions: { manage: true, createConversation: true, send: true, manageMessages: true },
         },
       },
     });

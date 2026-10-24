@@ -66,6 +66,7 @@ describe('WhatsApp API GoWA bridge', () => {
   let providerImageReplyIds: string[] = [];
   let providerForwardRequests: Array<{ sourceId: string; body: Record<string, unknown> }> = [];
   let providerReactionRequests: Array<{ messageId: string; body: Record<string, unknown> }> = [];
+  let providerMessageMutationRequests: Array<{ operation: string; messageId: string; body: Record<string, unknown> }> = [];
   let providerDownloadBytes = Buffer.alloc(0);
   let providerDownloadDeclaredLength: number | null = null;
   let providerDownloadFileName = 'incoming.png';
@@ -178,6 +179,7 @@ describe('WhatsApp API GoWA bridge', () => {
     providerImageReplyIds = [];
     providerForwardRequests = [];
     providerReactionRequests = [];
+    providerMessageMutationRequests = [];
     providerDownloadBytes = pngFixture();
     providerDownloadDeclaredLength = null;
     providerDownloadFileName = 'incoming.png';
@@ -301,6 +303,15 @@ describe('WhatsApp API GoWA bridge', () => {
           body: JSON.parse(String(init?.body)) as Record<string, unknown>,
         });
         return json({ message_id: `reaction-${providerReactionRequests.length}` });
+      }
+      if (/^\/message\/[^/]+\/(update|revoke)$/u.test(url.pathname) && method === 'POST') {
+        const operation = url.pathname.endsWith('/update') ? 'update' : 'revoke';
+        providerMessageMutationRequests.push({
+          operation,
+          messageId: decodeURIComponent(url.pathname.slice('/message/'.length).replace(/\/(update|revoke)$/u, '')),
+          body: JSON.parse(String(init?.body)) as Record<string, unknown>,
+        });
+        return json({ message_id: `mutated-${providerMessageMutationRequests.length}` });
       }
       if (/^\/devices\/moonwitness-company-\d+\/logout$/u.test(url.pathname)) return json({});
       if (url.pathname === '/message/incoming-image/download')
@@ -563,6 +574,7 @@ describe('WhatsApp API GoWA bridge', () => {
       manageConversations: false,
       createConversation: false,
       send: false,
+      manageMessages: false,
     });
     expect(
       (await app.inject({ method: 'POST', url: '/whatsapp/connect', headers })).statusCode
@@ -1879,6 +1891,7 @@ describe('WhatsApp API GoWA bridge', () => {
     });
     expect(history.statusCode).toBe(200);
     const source = history.json().data[0];
+    expect(source, JSON.stringify(history.json())).toBeDefined();
     expect(source.reactions).toEqual([
       expect.objectContaining({ emoji: '👀', is_from_me: false }),
     ]);
@@ -1971,6 +1984,161 @@ describe('WhatsApp API GoWA bridge', () => {
     expect(crossCompany.statusCode).toBe(404);
     expect(providerReactionRequests).toHaveLength(2);
     expect(accountId).toBeGreaterThan(0);
+  });
+
+  it('edits recent own text and revokes own messages only within the active company', async () => {
+    const accountId = await connectAndMarkReady();
+    const [conversation] = await db('whatsapp_conversations').insert({
+      company_id: companyId, account_id: accountId, jid: '628111111111@s.whatsapp.net',
+      name: 'Mutation chat', is_group: false, unread_count: 0, last_message: 'Before edit',
+    }).returning(['id']);
+    const [message] = await db('whatsapp_messages').insert({
+      company_id: companyId, account_id: accountId, conversation_id: conversation.id,
+      external_id: 'provider-message-edit-revoke', direction: 'outbound', message_type: 'text',
+      content: 'Before edit', status: 'sent', create_date: new Date().toISOString(),
+    }).returning(['id']);
+
+    const edited = await app.inject({
+      method: 'POST', url: `/whatsapp/messages/${message.id}/edit`,
+      headers: { authorization: 'Bearer test' }, payload: { content: 'After edit' },
+    });
+    expect(edited.statusCode).toBe(200);
+    expect(edited.json().data).toMatchObject({ content: 'After edit', is_edited: true });
+    expect(providerMessageMutationRequests[0]).toEqual({
+      operation: 'update', messageId: 'provider-message-edit-revoke',
+      body: { phone: '628111111111@s.whatsapp.net', message: 'After edit' },
+    });
+    const editedRecord = await db('whatsapp_messages').where({ id: message.id }).first();
+    expect(editedRecord.content).toBe('After edit');
+    expect(Boolean(editedRecord.is_edited)).toBe(true);
+    expect(Boolean(editedRecord.is_deleted)).toBe(false);
+
+    const revoked = await app.inject({
+      method: 'POST', url: `/whatsapp/messages/${message.id}/revoke`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(revoked.statusCode).toBe(200);
+    expect(providerMessageMutationRequests[1]).toEqual({
+      operation: 'revoke', messageId: 'provider-message-edit-revoke', body: { phone: '628111111111@s.whatsapp.net' },
+    });
+    const revokedRecord = await db('whatsapp_messages').where({ id: message.id }).first();
+    expect(revokedRecord.content).toBe('This message was deleted');
+    expect(Boolean(revokedRecord.is_deleted)).toBe(true);
+    expect((await db('whatsapp_conversations').where({ id: conversation.id }).first()).last_message)
+      .toBe('This message was deleted');
+
+    const [inbound] = await db('whatsapp_messages').insert({
+      company_id: companyId, account_id: accountId, conversation_id: conversation.id,
+      external_id: 'provider-inbound-cannot-edit', direction: 'inbound', message_type: 'text',
+      content: 'Customer message', status: 'received',
+    }).returning(['id']);
+    const inboundEdit = await app.inject({
+      method: 'POST', url: `/whatsapp/messages/${inbound.id}/edit`,
+      headers: { authorization: 'Bearer test' }, payload: { content: 'Attempted edit' },
+    });
+    const inboundRevoke = await app.inject({
+      method: 'POST', url: `/whatsapp/messages/${inbound.id}/revoke`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(inboundEdit.statusCode).toBe(409);
+    expect(inboundRevoke.statusCode).toBe(409);
+
+    const [expired] = await db('whatsapp_messages').insert({
+      company_id: companyId, account_id: accountId, conversation_id: conversation.id,
+      external_id: 'provider-old-text', direction: 'outbound', message_type: 'text',
+      content: 'Too old', status: 'sent', create_date: new Date(Date.now() - 16 * 60_000).toISOString(),
+    }).returning(['id']);
+    const expiredEdit = await app.inject({
+      method: 'POST', url: `/whatsapp/messages/${expired.id}/edit`,
+      headers: { authorization: 'Bearer test' }, payload: { content: 'Too late' },
+    });
+    expect(expiredEdit.statusCode).toBe(409);
+
+    const foreignAccount = await db('whatsapp_accounts').insert({
+      company_id: foreignCompanyId, status: 'connected', gateway_device_id: 'foreign-device',
+    }).returning(['id']);
+    const [foreignConversation] = await db('whatsapp_conversations').insert({
+      company_id: foreignCompanyId, account_id: foreignAccount[0].id,
+      jid: '628999999999@s.whatsapp.net', name: 'Foreign mutation', is_group: false, unread_count: 0,
+    }).returning(['id']);
+    const [foreignMessage] = await db('whatsapp_messages').insert({
+      company_id: foreignCompanyId, account_id: foreignAccount[0].id,
+      conversation_id: foreignConversation.id, external_id: 'foreign-own-message', direction: 'outbound',
+      message_type: 'text', content: 'Foreign message', status: 'sent',
+    }).returning(['id']);
+    const foreignEdit = await app.inject({
+      method: 'POST', url: `/whatsapp/messages/${foreignMessage.id}/edit`,
+      headers: { authorization: 'Bearer test' }, payload: { content: 'Cross-tenant attempt' },
+    });
+    const foreignRevoke = await app.inject({
+      method: 'POST', url: `/whatsapp/messages/${foreignMessage.id}/revoke`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(foreignEdit.statusCode).toBe(404);
+    expect(foreignRevoke.statusCode).toBe(404);
+
+    const deniedEdit = await app.inject({
+      method: 'POST', url: `/whatsapp/messages/${message.id}/edit`,
+      headers: { authorization: 'Bearer test' }, payload: { content: 'Restore it' },
+    });
+    expect(deniedEdit.statusCode).toBe(409);
+    expect(providerMessageMutationRequests).toHaveLength(2);
+  });
+
+  it('applies signed GoWA edit and revoke events idempotently and redacts deleted media', async () => {
+    const accountId = await connectAndMarkReady();
+    process.env.WHATSAPP_WEBHOOK_SECRET = 'test-gowa-webhook-secret';
+    const [conversation] = await db('whatsapp_conversations').insert({
+      company_id: companyId, account_id: accountId, jid: '628222222222@s.whatsapp.net',
+      name: 'Webhook mutation', is_group: false, unread_count: 0,
+    }).returning(['id']);
+    const [message] = await db('whatsapp_messages').insert({
+      company_id: companyId, account_id: accountId, conversation_id: conversation.id,
+      external_id: 'provider-message-webhook-mutation', direction: 'outbound', message_type: 'text',
+      content: 'Before edit', status: 'sent',
+    }).returning(['id']);
+    const mediaKey = `webhook-revoked-${randomUUID()}`;
+    await storage.put(mediaKey, pngFixture());
+    const [mediaMessage] = await db('whatsapp_messages').insert({
+      company_id: companyId, account_id: accountId, conversation_id: conversation.id,
+      external_id: 'provider-message-webhook-delete', direction: 'outbound', message_type: 'image',
+      content: 'An image', status: 'sent', media_key: mediaKey, media_mime_type: 'image/png',
+      media_file_name: 'secret.png',
+    }).returning(['id']);
+    const postEvent = async (event: string, payload: Record<string, unknown>) => {
+      const raw = JSON.stringify({ event, session_id: `moonwitness-company-${companyId}`, payload });
+      return app.inject({
+        method: 'POST', url: `/whatsapp/gowa/webhook/moonwitness-company-${companyId}`,
+        headers: {
+          'content-type': 'application/json',
+          'x-hub-signature-256': `sha256=${createHmac('sha256', process.env.WHATSAPP_WEBHOOK_SECRET!).update(raw).digest('hex')}`,
+        }, payload: raw,
+      });
+    };
+    expect((await postEvent('message.edited', {
+      id: 'edit-event-id', original_message_id: 'provider-message-webhook-mutation', body: 'Edited caption',
+    })).statusCode).toBe(204);
+    const edited = await db('whatsapp_messages').where({ id: message.id }).first();
+    expect(edited.content).toBe('Edited caption');
+    expect(Boolean(edited.is_edited)).toBe(true);
+
+    expect((await postEvent('message.revoked', {
+      id: 'revoke-event-id', revoked_message_id: 'provider-message-webhook-delete',
+    })).statusCode).toBe(204);
+    expect((await postEvent('message.revoked', {
+      id: 'revoke-event-id', revoked_message_id: 'provider-message-webhook-delete',
+    })).statusCode).toBe(204);
+    const revoked = await db('whatsapp_messages').where({ id: mediaMessage.id }).first();
+    expect(Boolean(revoked.is_deleted)).toBe(true);
+    expect(revoked).toMatchObject({
+      content: 'This message was deleted', media_key: null, media_mime_type: null, media_file_name: null,
+    });
+    expect(await storage.get(mediaKey)).toBeNull();
+    const mediaRead = await app.inject({
+      method: 'GET', url: `/whatsapp/media/${mediaMessage.id}`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(mediaRead.statusCode).toBe(404);
   });
 
   it('quotes messages within the same company conversation and forwards the provider reply id', async () => {
@@ -2131,7 +2299,7 @@ describe('WhatsApp API GoWA bridge', () => {
         body: {
           webhook_url: `https://api.moonwitness.test/whatsapp/gowa/webhook/moonwitness-company-${companyId}`,
           webhook_secret: process.env.WHATSAPP_WEBHOOK_SECRET,
-          webhook_events: 'message,message.ack',
+          webhook_events: 'message,message.ack,message.edited,message.revoked,message.deleted',
         },
       },
     ]);

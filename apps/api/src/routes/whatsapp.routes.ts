@@ -450,6 +450,7 @@ function whatsappPermissions(auth: {
     manageConversations: canPerformWhatsAppAction(auth, 'whatsapp.conversation', 'write'),
     createConversation: canPerformWhatsAppAction(auth, 'whatsapp.conversation', 'create'),
     send: canPerformWhatsAppAction(auth, 'whatsapp.message', 'create'),
+    manageMessages: canPerformWhatsAppAction(auth, 'whatsapp.message', 'write'),
   };
 }
 
@@ -488,6 +489,65 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       } | null;
       if (body?.session_id !== account.gateway_device_id)
         return reply.code(403).send({ success: false, error: 'Webhook device mismatch' });
+      if (body?.event === 'message.edited') {
+        const payload = body.payload;
+        const originalId = typeof payload?.original_message_id === 'string'
+          ? payload.original_message_id.slice(0, 255)
+          : '';
+        const editedText = typeof payload?.body === 'string' ? payload.body.slice(0, 8000) : null;
+        if (originalId && editedText !== null) {
+          const target = await app.db('whatsapp_messages')
+            .select('id', 'conversation_id', 'content')
+            .where({ company_id: account.company_id, account_id: account.id, external_id: originalId })
+            .where({ message_type: 'text', is_deleted: false })
+            .first() as { id: number; conversation_id: number; content: string | null } | undefined;
+          if (target) {
+            await app.db('whatsapp_messages').where({ id: target.id, company_id: account.company_id })
+              .update({ content: editedText, is_edited: true, write_date: new Date().toISOString() });
+            await app.db('whatsapp_conversations')
+              .where({ id: target.conversation_id, company_id: account.company_id, last_message: target.content })
+              .update({ last_message: editedText, write_date: new Date().toISOString() });
+          }
+        }
+        return reply.code(204).send();
+      }
+      if (body?.event === 'message.revoked' || body?.event === 'message.deleted') {
+        const payload = body.payload;
+        const targetId = typeof payload?.revoked_message_id === 'string'
+          ? payload.revoked_message_id.slice(0, 255)
+          : typeof payload?.deleted_message_id === 'string'
+            ? payload.deleted_message_id.slice(0, 255)
+            : '';
+        if (targetId) {
+          const target = await app.db('whatsapp_messages')
+            .select('id', 'media_key', 'conversation_id', 'content', 'media_file_name', 'message_type')
+            .where({ company_id: account.company_id, account_id: account.id, external_id: targetId })
+            .first() as { id: number; media_key: string | null; conversation_id: number; content: string | null; media_file_name: string | null; message_type: string } | undefined;
+          if (target) {
+            await app.db('whatsapp_messages').where({ id: target.id, company_id: account.company_id }).update({
+              is_deleted: true,
+              content: 'This message was deleted',
+              media_mime_type: null,
+              media_file_name: null,
+              reactions: '[]',
+              write_date: new Date().toISOString(),
+            });
+            await app.db('whatsapp_conversations')
+              .where({ id: target.conversation_id, company_id: account.company_id })
+              .whereIn('last_message', [...new Set([target.content, target.media_file_name, `[${target.message_type}]`].filter((value): value is string => Boolean(value)))])
+              .update({ last_message: 'This message was deleted', write_date: new Date().toISOString() });
+            if (target.media_key) {
+              await options.attachmentStorage.delete(target.media_key).then(async () => {
+                await app.db('whatsapp_messages').where({ id: target.id, company_id: account.company_id, is_deleted: true })
+                  .update({ media_key: null, write_date: new Date().toISOString() });
+              }).catch((error: unknown) => {
+                req.log.warn({ error: whatsappLogErrorContext(error) }, 'WhatsApp revoked media cleanup failed');
+              });
+            }
+          }
+        }
+        return reply.code(204).send();
+      }
       if (body?.event === 'message') {
         const payload = body.payload;
         const externalId = typeof payload?.id === 'string' ? payload.id.slice(0, 255) : '';
@@ -830,7 +890,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
             body: JSON.stringify({
               webhook_url: callback.toString(),
               webhook_secret: webhookSecret,
-              webhook_events: 'message,message.ack',
+              webhook_events: 'message,message.ack,message.edited,message.revoked,message.deleted',
             }),
           });
         }
@@ -1426,6 +1486,11 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
     );
     for (const item of upstream.data ?? []) {
       if (typeof item.id !== 'string' || !item.id) continue;
+        const tombstone = await app.db('whatsapp_messages')
+          .select('id')
+          .where({ company_id: companyId, external_id: item.id, is_deleted: true })
+          .first();
+        if (tombstone) continue;
       const fromMe = item.is_from_me === true;
       const rawType = typeof item.media_type === 'string' ? item.media_type : 'text';
       const messageType = ['text', 'image', 'video', 'audio', 'document', 'sticker'].includes(
@@ -1508,6 +1573,8 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         'reply_to_external_id',
         'is_forwarded',
         'reactions',
+        'is_edited',
+        'is_deleted',
         'create_date'
       )
       .where({ conversation_id: conversationId, company_id: companyId })
@@ -1515,6 +1582,19 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       .orderBy('id', 'desc')
       .limit(limit)
       .offset(offset);
+    for (const deletedMedia of await app.db('whatsapp_messages')
+      .select('id', 'media_key')
+      .where({ company_id: companyId, conversation_id: conversationId, is_deleted: true })
+      .whereNotNull('media_key')) {
+      try {
+        await options.attachmentStorage.delete(String(deletedMedia.media_key));
+        await app.db('whatsapp_messages')
+          .where({ id: deletedMedia.id, company_id: companyId, is_deleted: true })
+          .update({ media_key: null, write_date: new Date().toISOString() });
+      } catch (error) {
+        req.log.warn({ error: whatsappLogErrorContext(error) }, 'WhatsApp deleted media cleanup retry failed');
+      }
+    }
     const quotedInternalIds = messages
       .map((message) => Number(message.reply_to_message_id))
       .filter((value) => Number.isSafeInteger(value) && value > 0);
@@ -1560,7 +1640,16 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       (!conversation.last_message_at ||
         !Number.isFinite(Date.parse(conversation.last_message_at)) ||
         Date.parse(latestTime) > Date.parse(conversation.last_message_at));
-    const latestContent = latestProviderMessage
+    const latestProviderId = typeof latestProviderMessage?.id === 'string' ? latestProviderMessage.id : null;
+    const latestIsTombstoned = latestProviderId
+      ? Boolean(await app.db('whatsapp_messages')
+          .select('id')
+          .where({ company_id: companyId, external_id: latestProviderId, is_deleted: true })
+          .first())
+      : false;
+    const latestContent = latestIsTombstoned
+      ? 'This message was deleted'
+      : latestProviderMessage
       ? typeof latestProviderMessage.content === 'string' && latestProviderMessage.content
         ? latestProviderMessage.content.slice(0, 2000)
         : `[${String(latestProviderMessage.media_type ?? 'message')}]`
@@ -1679,6 +1768,104 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       });
       await recordWhatsAppAudit(req, 'whatsapp.message', 'react', messageId, companyId);
       return reply.send({ success: true, data: { reactions } });
+    }
+  );
+
+  app.post<{ Params: Params }>(
+    '/whatsapp/messages/:id/edit',
+    whatsappRateLimit(10),
+    async (req, reply) => {
+      const companyId = requireCompany(req, reply);
+      if (!companyId) return;
+      if (!requireWhatsAppAction(req, reply, 'whatsapp.message', 'write')) return;
+      const messageId = id(req.params.id);
+      const body = isRecord(req.body) ? req.body : null;
+      const content = typeof body?.content === 'string' ? body.content.trim() : '';
+      if (!messageId || !body || Object.keys(body).some((key) => key !== 'content') || !content || content.length > 8000)
+        return reply.code(400).send({ success: false, error: 'Message text is required and must be at most 8000 characters' });
+      const message = await WhatsappMessage.query().findOne({ id: messageId, company_id: companyId });
+      if (!message) return reply.code(404).send({ success: false, error: 'Message not found' });
+      const messageAge = Date.now() - Date.parse(String(message.create_date));
+      if (
+        message.direction !== 'outbound' || message.message_type !== 'text' || message.is_deleted ||
+        !message.external_id || /^(pending:|gowa-)/u.test(message.external_id) ||
+        !['sent', 'delivered', 'read'].includes(message.status) ||
+        !Number.isFinite(messageAge) || messageAge < 0 || messageAge > 15 * 60_000
+      ) return reply.code(409).send({ success: false, error: 'Only your recent sent text messages can be edited' });
+      const [conversation, account] = await Promise.all([
+        WhatsappConversation.query().findOne({ id: message.conversation_id, company_id: companyId }),
+        WhatsappAccount.query().findOne({ company_id: companyId }),
+      ]);
+      if (!conversation) return reply.code(404).send({ success: false, error: 'Conversation not found' });
+      if (!account?.gateway_device_id || account.status !== 'connected')
+        return reply.code(409).send({ success: false, error: 'WhatsApp account is not connected' });
+      try {
+        await gowaRequest(`/message/${encodeURIComponent(message.external_id)}/update`, {
+          method: 'POST', deviceId: account.gateway_device_id, contentType: 'application/json',
+          body: JSON.stringify({ phone: conversation.jid, message: content }),
+        });
+      } catch (error) {
+        req.log.error({ error: whatsappLogErrorContext(error) }, 'WhatsApp message edit failed');
+        return reply.code(502).send({ success: false, error: 'Could not edit message' });
+      }
+      await WhatsappMessage.query().where({ id: messageId, company_id: companyId }).patch({
+        content, is_edited: true, write_date: new Date().toISOString(),
+      });
+      await app.db('whatsapp_conversations')
+        .where({ id: conversation.id, company_id: companyId, last_message: message.content })
+        .update({ last_message: content, write_date: new Date().toISOString() });
+      await recordWhatsAppAudit(req, 'whatsapp.message', 'edit', messageId, companyId);
+      return reply.send({ success: true, data: { id: messageId, content, is_edited: true } });
+    }
+  );
+
+  app.post<{ Params: Params }>(
+    '/whatsapp/messages/:id/revoke',
+    whatsappRateLimit(5),
+    async (req, reply) => {
+      const companyId = requireCompany(req, reply);
+      if (!companyId) return;
+      if (!requireWhatsAppAction(req, reply, 'whatsapp.message', 'write')) return;
+      const messageId = id(req.params.id);
+      if (!messageId) return reply.code(400).send({ success: false, error: 'Invalid message ID' });
+      const message = await WhatsappMessage.query().findOne({ id: messageId, company_id: companyId });
+      if (!message) return reply.code(404).send({ success: false, error: 'Message not found' });
+      if (
+        message.direction !== 'outbound' || message.is_deleted || !message.external_id ||
+        /^(pending:|gowa-)/u.test(message.external_id) || !['sent', 'delivered', 'read'].includes(message.status)
+      ) return reply.code(409).send({ success: false, error: 'Only your sent messages can be deleted for everyone' });
+      const [conversation, account] = await Promise.all([
+        WhatsappConversation.query().findOne({ id: message.conversation_id, company_id: companyId }),
+        WhatsappAccount.query().findOne({ company_id: companyId }),
+      ]);
+      if (!conversation) return reply.code(404).send({ success: false, error: 'Conversation not found' });
+      if (!account?.gateway_device_id || account.status !== 'connected')
+        return reply.code(409).send({ success: false, error: 'WhatsApp account is not connected' });
+      try {
+        await gowaRequest(`/message/${encodeURIComponent(message.external_id)}/revoke`, {
+          method: 'POST', deviceId: account.gateway_device_id, contentType: 'application/json',
+          body: JSON.stringify({ phone: conversation.jid }),
+        });
+      } catch (error) {
+        req.log.error({ error: whatsappLogErrorContext(error) }, 'WhatsApp message revoke failed');
+        return reply.code(502).send({ success: false, error: 'Could not delete message for everyone' });
+      }
+      await WhatsappMessage.query().where({ id: messageId, company_id: companyId }).patch({
+        is_deleted: true, content: 'This message was deleted',
+        media_mime_type: null, media_file_name: null, reactions: '[]', write_date: new Date().toISOString(),
+      });
+      if (message.media_key) await options.attachmentStorage.delete(message.media_key).then(async () => {
+        await WhatsappMessage.query().where({ id: messageId, company_id: companyId, is_deleted: true })
+          .patch({ media_key: null, write_date: new Date().toISOString() });
+      }).catch((error: unknown) => {
+        req.log.warn({ error: whatsappLogErrorContext(error) }, 'WhatsApp revoked media cleanup failed');
+      });
+      await app.db('whatsapp_conversations')
+        .where({ id: conversation.id, company_id: companyId })
+        .whereIn('last_message', [...new Set([message.content, message.media_file_name, `[${message.message_type}]`].filter((value): value is string => Boolean(value)))])
+        .update({ last_message: 'This message was deleted', write_date: new Date().toISOString() });
+      await recordWhatsAppAudit(req, 'whatsapp.message', 'revoke', messageId, companyId);
+      return reply.send({ success: true, data: { id: messageId, is_deleted: true } });
     }
   );
 
@@ -2119,7 +2306,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
     const messageId = id(req.params.id);
     if (!messageId) return reply.code(400).send({ success: false, error: 'Invalid message ID' });
     const message = await WhatsappMessage.query().findOne({ id: messageId, company_id: companyId });
-    if (!message || message.message_type === 'text')
+    if (!message || message.message_type === 'text' || message.is_deleted)
       return reply.code(404).send({ success: false, error: 'Media not found' });
     let content: Buffer | null = null;
     let mediaStream: Readable | null = null;

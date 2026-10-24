@@ -34,6 +34,7 @@ type Account = {
     manageConversations: boolean;
     createConversation: boolean;
     send: boolean;
+    manageMessages: boolean;
   };
 };
 type Conversation = {
@@ -85,6 +86,8 @@ type Message = {
     unavailable?: boolean;
   } | null;
   is_forwarded?: boolean;
+  is_edited?: boolean;
+  is_deleted?: boolean;
   reactions?: Array<{
     emoji: string;
     sender_jid: string | null;
@@ -174,6 +177,10 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
   const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
   const [reactingTo, setReactingTo] = useState<Message | null>(null);
   const [reacting, setReacting] = useState(false);
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const [editText, setEditText] = useState('');
+  const [revokingMessage, setRevokingMessage] = useState<Message | null>(null);
+  const [updatingMessage, setUpdatingMessage] = useState(false);
   const [forwardConversationSearch, setForwardConversationSearch] = useState('');
   const [debouncedForwardConversationSearch, setDebouncedForwardConversationSearch] = useState('');
   const [forwardShowArchived, setForwardShowArchived] = useState(false);
@@ -202,6 +209,13 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
   const isNearLatestRef = useRef(true);
   const [hasNewMessages, setHasNewMessages] = useState(false);
   const [qr, setQr] = useState<{ code: string; image: string } | null>(null);
+  const [clockNow, setClockNow] = useState(0);
+  useEffect(() => {
+    const updateClock = () => setClockNow(Date.now());
+    updateClock();
+    const timer = window.setInterval(updateClock, 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
   useEffect(() => {
     try {
       window.localStorage.setItem(inboxPreferenceScope, JSON.stringify(inboxPreferences));
@@ -542,6 +556,37 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
       setReacting(false);
     }
   };
+  const editMessage = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!editingMessage || updatingMessage) return;
+    setUpdatingMessage(true);
+    try {
+      await client.request(`/whatsapp/messages/${editingMessage.id}/edit`, {
+        method: 'POST', body: { content: editText },
+      });
+      setEditingMessage(null);
+      await queryClient.invalidateQueries({ queryKey: scopedQueryKey(['whatsapp']) });
+      toast.success('Message edited');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not edit message');
+    } finally {
+      setUpdatingMessage(false);
+    }
+  };
+  const revokeMessage = async () => {
+    if (!revokingMessage || updatingMessage) return;
+    setUpdatingMessage(true);
+    try {
+      await client.request(`/whatsapp/messages/${revokingMessage.id}/revoke`, { method: 'POST' });
+      setRevokingMessage(null);
+      await queryClient.invalidateQueries({ queryKey: scopedQueryKey(['whatsapp']) });
+      toast.success('Message deleted for everyone');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not delete message');
+    } finally {
+      setUpdatingMessage(false);
+    }
+  };
   const disconnect = async () => {
     try {
       await client.request('/whatsapp/disconnect', { method: 'POST', body: {} });
@@ -578,6 +623,7 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
   const canCreateConversation = account?.permissions?.createConversation ?? false;
   const canManageConversations = account?.permissions?.manageConversations ?? canManage;
   const canSend = account?.permissions?.send ?? false;
+  const canManageMessages = account?.permissions?.manageMessages ?? false;
   const statusIcon = connected ? (
     <SignalIcon className="size-4" />
   ) : (
@@ -828,6 +874,31 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                   {emoji}
                 </Button>
               ))}
+            </div>
+          </section>
+        </div>
+      )}
+      {editingMessage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
+          <form role="dialog" aria-modal="true" aria-labelledby="whatsapp-edit-title" onSubmit={(event) => void editMessage(event)} className="w-full max-w-lg border-2 border-ink bg-cream p-5 shadow-[6px_6px_0_#171717]">
+            <h2 id="whatsapp-edit-title" className="font-display text-xl uppercase">Edit message</h2>
+            <Textarea aria-label="Edited message text" value={editText} onChange={(event) => setEditText(event.target.value)} maxLength={8000} required autoFocus />
+            <p className="mt-2 text-xs text-ink-faint">WhatsApp only allows editing recent text messages, usually within 15 minutes.</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button type="button" variant="outline" disabled={updatingMessage} onClick={() => setEditingMessage(null)}>Cancel</Button>
+              <Button type="submit" disabled={updatingMessage || !editText.trim()}>{updatingMessage ? 'Saving…' : 'Save edit'}</Button>
+            </div>
+          </form>
+        </div>
+      )}
+      {revokingMessage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
+          <section role="alertdialog" aria-modal="true" aria-labelledby="whatsapp-revoke-title" className="w-full max-w-md border-2 border-ink bg-cream p-5 shadow-[6px_6px_0_#171717]">
+            <h2 id="whatsapp-revoke-title" className="font-display text-xl uppercase">Delete for everyone?</h2>
+            <p className="mt-2 text-sm">WhatsApp will try to remove this message for everyone in the conversation.</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button type="button" variant="outline" disabled={updatingMessage} onClick={() => setRevokingMessage(null)}>Cancel</Button>
+              <Button type="button" disabled={updatingMessage} onClick={() => void revokeMessage()}>{updatingMessage ? 'Deleting…' : 'Delete message'}</Button>
             </div>
           </section>
         </div>
@@ -1160,7 +1231,8 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                         {message.sender_jid.split('@')[0]?.split(':')[0]}
                       </p>
                     )}
-                  <p className="whitespace-pre-wrap break-words text-sm">{message.content}</p>
+                  <p className={`whitespace-pre-wrap break-words text-sm ${message.is_deleted ? 'italic text-ink-faint' : ''}`}>{message.content}</p>
+                  {message.is_edited && !message.is_deleted && <span className="ml-2 text-[10px] italic text-ink-faint">Edited</span>}
                   {message.is_forwarded && (
                     <p className="mb-1 font-mono text-[10px] italic text-ink-faint">Forwarded</p>
                   )}
@@ -1177,7 +1249,7 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                         : message.reply_to.content || `[${message.reply_to.message_type || 'media'}]`}
                     </Button>
                   )}
-                  {message.message_type !== 'text' && <MediaPreview message={message} />}
+                  {!message.is_deleted && message.message_type !== 'text' && <MediaPreview message={message} />}
                   {message.media_file_name && (
                     <p className="mt-1 text-xs">{message.media_file_name}</p>
                   )}
@@ -1195,7 +1267,7 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                       ))}
                     </div>
                   )}
-                  {message.content && (
+                  {message.content && !message.is_deleted && (
                     <Button
                       type="button"
                       variant="link"
@@ -1213,7 +1285,7 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                       Copy
                     </Button>
                   )}
-                  {canSend && !['queued', 'sending', 'unknown'].includes(message.status) && (
+                  {canSend && !message.is_deleted && !['queued', 'sending', 'unknown'].includes(message.status) && (
                     <Button
                       type="button"
                       variant="link"
@@ -1224,7 +1296,7 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                       Reply
                     </Button>
                   )}
-                  {canSend && ['received', 'sent', 'delivered', 'read'].includes(message.status) && (
+                  {canSend && !message.is_deleted && ['received', 'sent', 'delivered', 'read'].includes(message.status) && (
                     <Button
                       type="button"
                       variant="link"
@@ -1235,7 +1307,7 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                       React
                     </Button>
                   )}
-                  {canSend && ['received', 'sent', 'delivered', 'read'].includes(message.status) && (
+                  {canSend && !message.is_deleted && ['received', 'sent', 'delivered', 'read'].includes(message.status) && (
                     <Button
                       type="button"
                       variant="link"
@@ -1250,6 +1322,14 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                     >
                       Forward
                     </Button>
+                  )}
+                  {canManageMessages && message.direction === 'outbound' && !message.is_deleted && ['sent', 'delivered', 'read'].includes(message.status) && (
+                    <>
+                      {message.message_type === 'text' && clockNow > 0 && clockNow - Date.parse(message.create_date) >= 0 && clockNow - Date.parse(message.create_date) <= 15 * 60_000 && (
+                        <Button type="button" variant="link" className="ml-3 mt-1 h-auto p-0 text-xs underline" aria-label="Edit message" onClick={() => { setEditText(message.content ?? ''); setEditingMessage(message); }}>Edit</Button>
+                      )}
+                      <Button type="button" variant="link" className="ml-3 mt-1 h-auto p-0 text-xs underline" aria-label="Delete message for everyone" onClick={() => setRevokingMessage(message)}>Delete</Button>
+                    </>
                   )}
                   <p className="mt-2 flex flex-wrap justify-end gap-x-2 text-right font-mono text-[10px] text-ink-faint">
                     <time dateTime={message.create_date}>
