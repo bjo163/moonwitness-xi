@@ -1,6 +1,6 @@
 # Generated API route reference
 
-Extracted from literal Fastify route declarations. Source fingerprint: `1f7657d4d30567dc290670c50bfe0fc992328f1f9fb0a435390fcd97f119fc26`. Generic handler request payloads are not inferred where the source does not declare a static schema.
+Extracted from literal Fastify route declarations. Source fingerprint: `e74e84553ba256692153d5d389d07d489471bbd546554ba69f1b7c5670c88166`. Generic handler request payloads are not inferred where the source does not declare a static schema.
 
 | Method | Path                                              |
 | ------ | ------------------------------------------------- |
@@ -67,10 +67,12 @@ Extracted from literal Fastify route declarations. Source fingerprint: `1f7657d4
 | PUT    | `/notifications/preferences/:channel`             |
 | GET    | `/readyz`                                         |
 | GET    | `/whatsapp/account`                               |
+| GET    | `/whatsapp/agents`                                |
 | POST   | `/whatsapp/connect`                               |
 | GET    | `/whatsapp/conversations`                         |
 | POST   | `/whatsapp/conversations`                         |
 | POST   | `/whatsapp/conversations/:id/archive`             |
+| PUT    | `/whatsapp/conversations/:id/assignment`          |
 | PUT    | `/whatsapp/conversations/:id/labels`              |
 | GET    | `/whatsapp/conversations/:id/messages`            |
 | POST   | `/whatsapp/conversations/:id/messages`            |
@@ -78,12 +80,14 @@ Extracted from literal Fastify route declarations. Source fingerprint: `1f7657d4
 | POST   | `/whatsapp/conversations/:id/notes`               |
 | POST   | `/whatsapp/conversations/:id/pin`                 |
 | POST   | `/whatsapp/conversations/:id/read`                |
+| PUT    | `/whatsapp/conversations/:id/state`               |
 | POST   | `/whatsapp/disconnect`                            |
 | POST   | `/whatsapp/gowa/webhook/:deviceId`                |
 | GET    | `/whatsapp/labels`                                |
 | POST   | `/whatsapp/labels`                                |
 | DELETE | `/whatsapp/labels/:id`                            |
 | GET    | `/whatsapp/media/:id`                             |
+| GET    | `/whatsapp/media/:id/thumbnail`                   |
 | POST   | `/whatsapp/messages/:id/edit`                     |
 | POST   | `/whatsapp/messages/:id/forward`                  |
 | POST   | `/whatsapp/messages/:id/reaction`                 |

@@ -692,6 +692,18 @@
       "valueType": "secret"
     },
     {
+      "name": "WHATSAPP_CLAMAV_URL",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "string"
+    },
+    {
+      "name": "WHATSAPP_FFMPEG_PATH",
+      "configuredInExample": true,
+      "secret": false,
+      "valueType": "string"
+    },
+    {
       "name": "WHATSAPP_GATEWAY_EXPECTED_VERSION",
       "configuredInExample": true,
       "secret": false,
@@ -6377,6 +6389,10 @@
       "path": "/whatsapp/account"
     },
     {
+      "method": "GET",
+      "path": "/whatsapp/agents"
+    },
+    {
       "method": "POST",
       "path": "/whatsapp/connect"
     },
@@ -6391,6 +6407,10 @@
     {
       "method": "POST",
       "path": "/whatsapp/conversations/:id/archive"
+    },
+    {
+      "method": "PUT",
+      "path": "/whatsapp/conversations/:id/assignment"
     },
     {
       "method": "PUT",
@@ -6421,6 +6441,10 @@
       "path": "/whatsapp/conversations/:id/read"
     },
     {
+      "method": "PUT",
+      "path": "/whatsapp/conversations/:id/state"
+    },
+    {
       "method": "POST",
       "path": "/whatsapp/disconnect"
     },
@@ -6443,6 +6467,10 @@
     {
       "method": "GET",
       "path": "/whatsapp/media/:id"
+    },
+    {
+      "method": "GET",
+      "path": "/whatsapp/media/:id/thumbnail"
     },
     {
       "method": "POST",
@@ -6489,5 +6517,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "1f7657d4d30567dc290670c50bfe0fc992328f1f9fb0a435390fcd97f119fc26"
+  "generatedFromSha256": "e74e84553ba256692153d5d389d07d489471bbd546554ba69f1b7c5670c88166"
 }

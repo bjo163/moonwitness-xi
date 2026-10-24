@@ -1,6 +1,6 @@
 # Generated platform reference
 
-Source fingerprint: `1f7657d4d30567dc290670c50bfe0fc992328f1f9fb0a435390fcd97f119fc26`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
+Source fingerprint: `e74e84553ba256692153d5d389d07d489471bbd546554ba69f1b7c5670c88166`. This reference contains package names, script names and environment variable names only; it does not contain local environment values.
 
 ## Workspace packages and apps
 
@@ -79,6 +79,8 @@ Source fingerprint: `1f7657d4d30567dc290670c50bfe0fc992328f1f9fb0a435390fcd97f11
 | `REFRESH_TOKEN_TTL_SECONDS`         | secret         | Yes                       | Yes                      |
 | `RESTORE_DRILL_SCHEMA`              | string         | No                        | No                       |
 | `SUPERADMIN_PASSWORD`               | secret         | Yes                       | Yes                      |
+| `WHATSAPP_CLAMAV_URL`               | string         | Yes                       | No                       |
+| `WHATSAPP_FFMPEG_PATH`              | string         | Yes                       | No                       |
 | `WHATSAPP_GATEWAY_EXPECTED_VERSION` | string         | Yes                       | No                       |
 | `WHATSAPP_GATEWAY_PASSWORD`         | secret         | Yes                       | Yes                      |
 | `WHATSAPP_GATEWAY_TIMEOUT_MS`       | integer        | Yes                       | No                       |
