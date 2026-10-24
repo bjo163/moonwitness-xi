@@ -455,6 +455,37 @@ describe('WhatsApp API GoWA bridge', () => {
     ).toBe(1);
   });
 
+  it('repairs a connected account with a missing GoWA device mapping and allows pairing again', async () => {
+    const [account] = await db('whatsapp_accounts').insert({
+      company_id: companyId,
+      status: 'connected',
+      phone_number: '6281234567890',
+      gateway_device_id: null,
+    }).returning(['id']);
+    const headers = { authorization: 'Bearer test' };
+    const stale = await app.inject({ method: 'GET', url: '/whatsapp/account', headers });
+    expect(stale.statusCode).toBe(200);
+    expect(stale.json().data).toMatchObject({
+      id: account.id,
+      status: 'disconnected',
+      phone_number: null,
+      qr_code: null,
+      last_error: 'WhatsApp device mapping is missing. Connect again.',
+    });
+    await expect(db('whatsapp_accounts').where({ id: account.id }).first())
+      .resolves.toMatchObject({ status: 'disconnected', phone_number: null, gateway_device_id: null });
+
+    const reconnect = await app.inject({ method: 'POST', url: '/whatsapp/connect', headers, payload: {} });
+    expect(reconnect.statusCode).toBe(202);
+    expect(reconnect.json().data.status).toBe('qr');
+    expect(deviceCreateCount).toBe(1);
+    await expect(db('whatsapp_accounts').where({ id: account.id }).first())
+      .resolves.toMatchObject({
+        status: 'qr',
+        gateway_device_id: `moonwitness-company-${companyId}`,
+      });
+  });
+
   it('distinguishes a logged-out WhatsApp account from an unreachable GoWA gateway', async () => {
     const headers = { authorization: 'Bearer test' };
     const connect = await app.inject({ method: 'POST', url: '/whatsapp/connect', headers });

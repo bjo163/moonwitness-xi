@@ -567,7 +567,16 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
     let phoneNumber = account.phone_number;
     let lastError = account.last_error;
     let qrCode: string | null = null;
-    if (account.gateway_device_id) {
+    if (!account.gateway_device_id) {
+      status = 'disconnected';
+      phoneNumber = null;
+      lastError = account.status === 'disconnected'
+        ? account.last_error
+        : 'WhatsApp device mapping is missing. Connect again.';
+      await WhatsappAccount.query()
+        .where({ id: account.id, company_id: companyId })
+        .patch({ status, phone_number: null, qr_code: null, last_error: lastError });
+    } else {
       try {
         const upstream = await gowaRequest<{
           is_connected?: boolean;
@@ -652,7 +661,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         .ignore();
       const account = await WhatsappAccount.query(trx).findOne({ company_id: companyId });
       if (!account) throw new Error('WhatsApp account could not be created');
-      if (account.status === 'qr' && account.qr_code) {
+      if (account.status === 'qr' && account.qr_code && account.gateway_device_id) {
         try {
           const gatewayStatus = await gowaRequest<{
             is_connected?: boolean;
