@@ -84,6 +84,7 @@ export const whatsappManifest = defineAddon({
               'content',
               'status',
               'media_mime_type',
+              'media_scan_status',
             ],
           },
         ],

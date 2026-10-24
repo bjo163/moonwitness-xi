@@ -8,6 +8,8 @@ const repositoryRoot = resolve(import.meta.dirname, '../..');
 const apiPort = env.MW_E2E_API_PORT ?? '3010';
 const boardPort = env.MW_E2E_BOARD_PORT ?? '5174';
 const outboxPort = env.MW_E2E_OUTBOX_PORT ?? '3011';
+const clamavPort = env.MW_E2E_CLAMAV_PORT ?? '3312';
+const clamavHealthPort = env.MW_E2E_CLAMAV_HEALTH_PORT ?? '3313';
 const baseURL = `http://127.0.0.1:${boardPort}`;
 const databaseUrl =
   env.POSTGRES_TEST_URL ?? 'postgresql://postgres:ci-only-password@127.0.0.1:55432/moonwitness_e2e';
@@ -69,6 +71,14 @@ export default defineConfig({
   ],
   webServer: [
     {
+      command: `node scripts/mock-clamd.mjs ${clamavPort} ${clamavHealthPort}`,
+      cwd: repositoryRoot,
+      url: `http://127.0.0.1:${clamavHealthPort}/readyz`,
+      timeout: 120_000,
+      reuseExistingServer: false,
+      env: { ...env, MW_E2E_CLAMAV_PORT: clamavPort, MW_E2E_CLAMAV_HEALTH_PORT: clamavHealthPort },
+    },
+    {
       command: apiCommand,
       cwd: repositoryRoot,
       url: `http://127.0.0.1:${apiPort}/readyz`,
@@ -80,6 +90,7 @@ export default defineConfig({
         API_PORT: apiPort,
         AUTH_LOGIN_RATE_MAX: '100',
         DATABASE_URL: databaseUrl,
+        WHATSAPP_CLAMAV_URL: `tcp://127.0.0.1:${clamavPort}`,
         JWT_SECRET: E2E_JWT_SECRET,
         LOG_TO_FILE: 'false',
         PRINT_ROUTES: 'false',

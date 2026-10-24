@@ -133,6 +133,7 @@ type Message = {
   provider_type?: string | null;
   media_mime_type?: string | null;
   media_file_name?: string | null;
+  media_scan_status?: 'not_applicable' | 'pending' | 'clean' | 'infected';
   sender_jid?: string | null;
   reply_to?: {
     id?: number;
@@ -2092,10 +2093,19 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                             `[${message.reply_to.message_type || 'media'}]`}
                       </Button>
                     )}
-                    {!message.is_deleted &&
-                      !message.provider_type &&
-                      message.message_type !== 'text' && <MediaPreview message={message} />}
-                    {!message.provider_type && message.media_file_name && (
+                    {!message.is_deleted && !message.provider_type &&
+                      message.media_scan_status === 'infected' ? (
+                        <p role="status" className="mt-2 text-xs text-warning">
+                          Attachment blocked by malware scan. It was removed and cannot be downloaded.
+                        </p>
+                      ) : (
+                        !message.is_deleted &&
+                        !message.provider_type &&
+                        message.message_type !== 'text' && <MediaPreview message={message} />
+                      )}
+                    {!message.provider_type &&
+                      message.media_scan_status !== 'infected' &&
+                      message.media_file_name && (
                       <p className="mt-1 text-xs">
                         {safeMediaDownloadName(message.media_file_name).name}
                       </p>

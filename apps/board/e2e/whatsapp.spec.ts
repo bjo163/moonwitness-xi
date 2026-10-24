@@ -310,7 +310,17 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
             media_file_name: 'invoice.html',
             create_date: new Date(Date.now() - 50).toISOString(),
           },
-          ...Array.from({ length: 38 }, (_, index) => ({
+          {
+            id: 64,
+            direction: 'inbound',
+            content: 'Quarantined attachment',
+            status: 'received',
+            message_type: 'image',
+            media_file_name: 'blocked.png',
+            media_scan_status: 'infected',
+            create_date: new Date(Date.now() - 25).toISOString(),
+          },
+          ...Array.from({ length: 37 }, (_, index) => ({
             id: 49 - index,
             direction: 'inbound',
             is_unread: true,
@@ -376,6 +386,12 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
       body: Buffer.from('<!doctype html><script>alert(1)</script>'),
     })
   );
+  await page.route('**/whatsapp/media/64', (route) =>
+    route.fulfill({
+      status: 410,
+      json: { success: false, error: 'Attachment blocked by malware scan' },
+    })
+  );
 
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('/board/whatsapp');
@@ -405,6 +421,9 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
     'download',
     'invoice.html.download'
   );
+  const quarantinedAttachment = page.locator('#whatsapp-message-64');
+  await expect(quarantinedAttachment.getByText(/blocked by malware scan/iu)).toBeVisible();
+  await expect(quarantinedAttachment.getByRole('link', { name: 'Download attachment' })).toHaveCount(0);
   await expect(page.getByText('Group ID: 120363000')).toBeVisible();
   await expect(page.getByRole('separator', { name: 'New messages' })).toBeVisible();
   await expect(

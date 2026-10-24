@@ -74,6 +74,10 @@ export const WhatsappMessage = defineModel('whatsapp.message', {
     media_key: fields.string({ hidden: true, sensitive: true }),
     media_mime_type: fields.string(),
     media_file_name: fields.string(),
+    media_scan_status: fields.enum(['not_applicable', 'pending', 'clean', 'infected'], {
+      required: true,
+      default: 'not_applicable',
+    }),
     sender_jid: fields.string(),
     reply_to_message_id: fields.integer(),
     reply_to_external_id: fields.string({ hidden: true }),

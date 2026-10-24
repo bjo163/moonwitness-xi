@@ -22,6 +22,10 @@ import {
   dispatchQueuedWhatsAppMessage,
   registerWhatsAppOutboxConsumer,
 } from '../src/whatsapp/outbox-consumer.js';
+import {
+  MalwareScannerUnavailableError,
+  type AttachmentScanner,
+} from '../src/whatsapp/clamav-scanner.js';
 
 const postgres = process.env.WHATSAPP_TEST_POSTGRES === 'true';
 
@@ -92,6 +96,8 @@ describe('WhatsApp API GoWA bridge', () => {
   let providerTextSendCount = 0;
   let providerTextSendBodies: Array<Record<string, unknown>> = [];
   let failAttachmentPut = false;
+  let scanAsInfected = false;
+  let scannerUnavailable = false;
   let providerImageSendCount = 0;
   let providerImageReplyIds: string[] = [];
   let providerForwardRequests: Array<{ sourceId: string; body: Record<string, unknown> }> = [];
@@ -111,6 +117,20 @@ describe('WhatsApp API GoWA bridge', () => {
   const previousWebhookUrl = process.env.WHATSAPP_WEBHOOK_URL;
   const previousWebhookSecret = process.env.WHATSAPP_WEBHOOK_SECRET;
   const stored = new Map<string, Buffer>();
+  const attachmentScanner: AttachmentScanner = {
+    async scan(source) {
+      const chunks: Buffer[] = [];
+      for await (const chunk of source) chunks.push(Buffer.from(chunk));
+      if (scannerUnavailable) throw new MalwareScannerUnavailableError();
+      const bytes = Buffer.concat(chunks);
+      return scanAsInfected || bytes.includes(Buffer.from('EICAR-TEST-FILE'))
+        ? { status: 'infected', signature: 'EICAR-Test-Signature' }
+        : { status: 'clean' };
+    },
+    async ping() {
+      return !scannerUnavailable;
+    },
+  };
   const memoryStorage: AttachmentStorage = {
     async put(key, content) {
       stored.set(key, Buffer.from(content));
@@ -215,6 +235,8 @@ describe('WhatsApp API GoWA bridge', () => {
     providerTextSendCount = 0;
     providerTextSendBodies = [];
     failAttachmentPut = false;
+    scanAsInfected = false;
+    scannerUnavailable = false;
     providerImageSendCount = 0;
     providerImageReplyIds = [];
     providerForwardRequests = [];
@@ -404,7 +426,7 @@ describe('WhatsApp API GoWA bridge', () => {
         };
     });
     await app.register(rateLimit, { global: false });
-    await app.register(whatsappRoutes, { attachmentStorage: storage });
+    await app.register(whatsappRoutes, { attachmentStorage: storage, attachmentScanner });
   });
 
   afterEach(async () => {
@@ -2191,6 +2213,108 @@ describe('WhatsApp API GoWA bridge', () => {
       payload: { content: 'Tenant isolation' },
     });
     expect(foreign.statusCode).toBe(404);
+  });
+
+  it('blocks infected outbound media and fails closed if the malware scanner is unavailable', async () => {
+    await connectAndMarkReady();
+    providerChats = [
+      {
+        jid: '628111111111@s.whatsapp.net',
+        name: 'Malware test contact',
+        last_message_time: '2026-10-24T10:00:00Z',
+      },
+    ];
+    const inbox = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations',
+      headers: { authorization: 'Bearer test' },
+    });
+    const conversationId = inbox.json().data[0].id as number;
+    const infectedPayload = multipartPayload(
+      { content: 'Please inspect this file' },
+      { name: 'sample.bin', mime: 'application/octet-stream', bytes: Buffer.from('EICAR-TEST-FILE') }
+    );
+    scanAsInfected = true;
+    const infected = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversationId}/messages`,
+      headers: {
+        authorization: 'Bearer test',
+        'idempotency-key': randomUUID(),
+        'content-type': infectedPayload.contentType,
+      },
+      payload: infectedPayload.payload,
+    });
+    expect(infected.statusCode).toBe(422);
+    expect(infected.json().error).toContain('malware scan');
+    expect(stored.size).toBe(0);
+    expect(await db('outbox_events').where({ event_type: 'whatsapp.message.send' })).toHaveLength(0);
+
+    scanAsInfected = false;
+    scannerUnavailable = true;
+    const unavailablePayload = multipartPayload(
+      { content: 'Retry safely' },
+      { name: 'sample.bin', mime: 'application/octet-stream', bytes: Buffer.from('clean test') }
+    );
+    const unavailable = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversationId}/messages`,
+      headers: {
+        authorization: 'Bearer test',
+        'idempotency-key': randomUUID(),
+        'content-type': unavailablePayload.contentType,
+      },
+      payload: unavailablePayload.payload,
+    });
+    expect(unavailable.statusCode).toBe(503);
+    expect(unavailable.json().error).toContain('malware scanning');
+    expect(stored.size).toBe(0);
+    expect(await db('outbox_events').where({ event_type: 'whatsapp.message.send' })).toHaveLength(0);
+  });
+
+  it('quarantines infected inbound media before linking it to a downloadable message', async () => {
+    const accountId = await connectAndMarkReady();
+    const [conversation] = await db('whatsapp_conversations')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        jid: '628111111111@s.whatsapp.net',
+        name: 'Malware test contact',
+        is_group: false,
+      })
+      .returning(['id']);
+    const [message] = await db('whatsapp_messages')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        conversation_id: conversation.id,
+        external_id: 'incoming-image',
+        direction: 'inbound',
+        message_type: 'image',
+        content: '',
+        status: 'received',
+        media_scan_status: 'pending',
+      })
+      .returning(['id']);
+    providerDownloadBytes = Buffer.from('EICAR-TEST-FILE');
+
+    const infected = await app.inject({
+      method: 'GET',
+      url: `/whatsapp/media/${message.id}`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(infected.statusCode).toBe(410);
+    expect(stored.size).toBe(0);
+    const blockedRow = await db('whatsapp_messages').where({ id: message.id }).first();
+    expect(blockedRow).toMatchObject({ media_scan_status: 'infected', media_key: null });
+
+    const repeat = await app.inject({
+      method: 'GET',
+      url: `/whatsapp/media/${message.id}`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(repeat.statusCode).toBe(410);
+    expect(stored.size).toBe(0);
   });
 
   it('queues a company-scoped forward and uses GoWA source IDs instead of re-uploading media', async () => {
@@ -4035,7 +4159,7 @@ describe('WhatsApp API GoWA bridge', () => {
       'application/octet-stream'
     );
     expect(streamPutCount).toBe(1);
-    expect(streamGetCount).toBe(1);
+    expect(streamGetCount).toBe(2);
     expect(bufferGetCount).toBe(0);
     const cachedResponse = await app.inject({
       method: 'GET',
@@ -4043,7 +4167,7 @@ describe('WhatsApp API GoWA bridge', () => {
       headers: { authorization: 'Bearer test' },
     });
     expect(cachedResponse.body).toBe(providerDownloadBytes.toString());
-    expect(streamGetCount).toBe(2);
+    expect(streamGetCount).toBe(3);
     expect(bufferGetCount).toBe(0);
   });
 

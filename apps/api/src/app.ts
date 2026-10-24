@@ -58,6 +58,7 @@ import { installPrivacySafeNotFoundHandler } from './not-found.js';
 import { isRecord } from '@moonwitness/types';
 import observabilityPlugin from './plugins/observability.plugin.js';
 import { createAttachmentStorage } from './storage/attachment-storage.js';
+import { createAttachmentScanner, type AttachmentScanner } from './whatsapp/clamav-scanner.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -82,6 +83,8 @@ export interface BuildAppOptions {
   checkWhatsAppGateway?: () => Promise<boolean>;
   /** Overrides attachment storage for isolated tests or custom providers. */
   attachmentStorage?: AttachmentStorage;
+  /** Overrides the malware scanner for isolated tests. */
+  attachmentScanner?: AttachmentScanner | null;
   /** @deprecated Use attachmentStorage; retained for existing test/app callers. */
   attachmentStorageDirectory?: string;
 }
@@ -305,6 +308,10 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   });
   await app.register(whatsappRoutes, {
     attachmentStorage,
+    attachmentScanner:
+      options.attachmentScanner === undefined
+        ? createAttachmentScanner()
+        : options.attachmentScanner,
   });
   await app.register(jobsRoutes);
   await app.register(notificationRoutes);

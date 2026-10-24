@@ -17,6 +17,16 @@ services:
       timeout: 5s
       retries: 10
 
+  # Private local malware scanner for WhatsApp media; never expose clamd beyond loopback.
+  clamav:
+    image: clamav/clamav-debian:1.5.4
+    container_name: moonwitness_clamav
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:3310:3310'
+    volumes:
+      - clamav_db:/var/lib/clamav
+
   # Dev-only free-tier LLM gateway. Loopback-bound; dashboard password is preset below.
   omniroute:
     image: diegosouzapw/omniroute:latest
@@ -34,4 +44,5 @@ services:
 
 volumes:
   pgdata:
+  clamav_db:
   omniroute_data:

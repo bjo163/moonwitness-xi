@@ -15,8 +15,13 @@ import { whatsappLogErrorContext } from '../whatsapp/log-redaction.js';
 import { OutboxEvent } from '@moonwitness/jobs';
 import { WHATSAPP_SEND_EVENT } from '../whatsapp/outbox-consumer.js';
 import { enqueueNotification } from '@moonwitness/orm-notification';
+import {
+  createAttachmentScanner,
+  MalwareScannerUnavailableError,
+  type AttachmentScanner,
+} from '../whatsapp/clamav-scanner.js';
 
-type Options = { attachmentStorage: AttachmentStorage };
+type Options = { attachmentStorage: AttachmentStorage; attachmentScanner?: AttachmentScanner | null };
 type Params = { id: string };
 
 function whatsappRateLimit(max: number) {
@@ -45,6 +50,9 @@ class MediaStorageError extends Error {
 }
 class MediaIncompleteError extends Error {}
 class MediaEmptyError extends Error {}
+class MediaScanInfectedError extends Error {
+  readonly statusCode = 422;
+}
 
 type OutgoingUpload = {
   fields: Record<string, string>;
@@ -56,7 +64,8 @@ type OutgoingUpload = {
 
 async function parseOutgoingUpload(
   req: FastifyRequest,
-  storage: AttachmentStorage
+  storage: AttachmentStorage,
+  scanner: AttachmentScanner
 ): Promise<OutgoingUpload> {
   const fields: Record<string, string> = {};
   if (req.isMultipart() === false && req.headers['content-type']?.includes('application/json')) {
@@ -141,6 +150,9 @@ async function parseOutgoingUpload(
         });
       if (mediaMime === 'application/octet-stream' && detectedMime) mediaMime = detectedMime;
       mediaDigest = digest.digest('hex');
+      const scanResult = await scanStoredAttachment(storage, mediaKey, scanner);
+      if (scanResult.status === 'infected')
+        throw new MediaScanInfectedError('Attachment was blocked by the malware scanner');
     }
     if (fileCount === 0) mediaKey = null;
     return { fields, mediaKey, mediaMime, mediaFileName, mediaDigest };
@@ -148,6 +160,18 @@ async function parseOutgoingUpload(
     if (mediaKey) await storage.delete(mediaKey).catch(() => undefined);
     throw error;
   }
+}
+
+async function scanStoredAttachment(
+  storage: AttachmentStorage,
+  key: string,
+  scanner: AttachmentScanner
+) {
+  const stream = await storage.getStream?.(key);
+  if (stream) return scanner.scan(stream);
+  const bytes = await storage.get(key);
+  if (!bytes) throw new MediaStorageError('Attachment was not found in storage');
+  return scanner.scan(Readable.from([bytes]));
 }
 
 const rawWebhookBodies = new WeakMap<FastifyRequest, Buffer>();
@@ -639,6 +663,10 @@ async function recordWhatsAppAudit(
 }
 
 export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) => {
+  const attachmentScanner =
+    options.attachmentScanner === undefined
+      ? createAttachmentScanner()
+      : options.attachmentScanner;
   await app.register(multipart, {
     limits: { fileSize: MAX_ATTACHMENT_BYTES, files: 1, fields: 5, fieldSize: 16 * 1024 },
   });
@@ -2397,6 +2425,8 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
             : typeInfo.providerType
               ? null
               : mediaDefaultMime(messageType),
+        media_scan_status:
+          !typeInfo.providerType && GOWA_MEDIA_TYPES.has(messageType) ? 'pending' : 'not_applicable',
         media_file_name:
           !typeInfo.providerType && typeof item.filename === 'string'
             ? item.filename.slice(0, 255)
@@ -2439,6 +2469,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         'provider_type',
         'media_mime_type',
         'media_file_name',
+        'media_scan_status',
         'sender_jid',
         'reply_to_message_id',
         'reply_to_external_id',
@@ -2933,8 +2964,15 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       const conversationId = id(req.params.id);
       let upload: OutgoingUpload;
       try {
-        upload = await parseOutgoingUpload(req, options.attachmentStorage);
+        if (!attachmentScanner) throw new MalwareScannerUnavailableError();
+        upload = await parseOutgoingUpload(req, options.attachmentStorage, attachmentScanner);
       } catch (error) {
+        if (error instanceof MediaScanInfectedError)
+          return reply.code(422).send({ success: false, error: 'Attachment blocked by malware scan' });
+        if (error instanceof MalwareScannerUnavailableError)
+          return reply
+            .code(503)
+            .send({ success: false, error: 'Attachment malware scanning is temporarily unavailable' });
         const status =
           isRecord(error) && typeof error.statusCode === 'number' ? error.statusCode : 400;
         return reply.code(status).send({
@@ -3067,6 +3105,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
             media_key: mediaKey,
             media_mime_type: mediaKey ? mediaMime : null,
             media_file_name: fileName,
+            media_scan_status: mediaKey ? 'clean' : 'not_applicable',
             reply_to_message_id: quotedMessage?.id ?? null,
             reply_to_external_id: quotedMessage?.external_id ?? null,
           } as never);
@@ -3344,6 +3383,51 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       message.is_deleted
     )
       return reply.code(404).send({ success: false, error: 'Media not found' });
+    if (message.media_scan_status === 'infected')
+      return reply.code(410).send({ success: false, error: 'Attachment blocked by malware scan' });
+    if (!attachmentScanner)
+      return reply
+        .code(503)
+        .send({ success: false, error: 'Attachment malware scanning is temporarily unavailable' });
+
+    if (message.media_key && message.media_scan_status !== 'clean') {
+      try {
+        const scanResult = await scanStoredAttachment(
+          options.attachmentStorage,
+          message.media_key,
+          attachmentScanner
+        );
+        if (scanResult.status === 'infected') {
+          await options.attachmentStorage.delete(message.media_key).catch((error: unknown) => {
+            req.log.warn(
+              { error: whatsappLogErrorContext(error) },
+              'WhatsApp quarantined attachment cleanup failed'
+            );
+          });
+          await WhatsappMessage.query()
+            .where({ id: message.id, company_id: companyId })
+            .patch({ media_key: null, media_mime_type: null, media_scan_status: 'infected' });
+          message.media_key = null;
+          message.media_mime_type = null;
+          message.media_scan_status = 'infected';
+          return reply
+            .code(410)
+            .send({ success: false, error: 'Attachment blocked by malware scan' });
+        }
+        await WhatsappMessage.query()
+          .where({ id: message.id, company_id: companyId })
+          .patch({ media_scan_status: 'clean' });
+        message.media_scan_status = 'clean';
+      } catch (error) {
+        req.log.error(
+          { error: whatsappLogErrorContext(error) },
+          'WhatsApp malware scan failed'
+        );
+        return reply
+          .code(503)
+          .send({ success: false, error: 'Attachment malware scanning is temporarily unavailable' });
+      }
+    }
     let content: Buffer | null = null;
     let mediaStream: Readable | null = null;
     let verifiedMime: string | null = null;
@@ -3400,8 +3484,33 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
             mediaKey
           );
           verifiedMime = streamed.mime;
+          const scanResult = await scanStoredAttachment(
+            options.attachmentStorage,
+            mediaKey,
+            attachmentScanner
+          );
+          if (scanResult.status === 'infected') {
+            await options.attachmentStorage.delete(mediaKey).catch(() => undefined);
+            await WhatsappMessage.query()
+              .where({ id: message.id, company_id: companyId })
+              .patch({ media_scan_status: 'infected' });
+            message.media_scan_status = 'infected';
+            return reply
+              .code(410)
+              .send({ success: false, error: 'Attachment blocked by malware scan' });
+          }
         } catch (error) {
           await options.attachmentStorage.delete(mediaKey).catch(() => undefined);
+          if (error instanceof MalwareScannerUnavailableError) {
+            req.log.error(
+              { error: whatsappLogErrorContext(error) },
+              'WhatsApp malware scan failed'
+            );
+            return reply.code(503).send({
+              success: false,
+              error: 'Attachment malware scanning is temporarily unavailable',
+            });
+          }
           if (error instanceof MediaTooLargeError) {
             return reply
               .code(413)
@@ -3430,6 +3539,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
           .patch({
             media_key: mediaKey,
             media_mime_type: verifiedMime,
+            media_scan_status: 'clean',
             media_file_name: safeFileName(metadata.filename) ?? message.media_file_name,
           });
         message.media_key = mediaKey;
@@ -3454,6 +3564,28 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         if (!content.length)
           return reply.code(404).send({ success: false, error: 'Media not found' });
         verifiedMime = sniffMime(content) ?? 'application/octet-stream';
+        let scanResult;
+        try {
+          scanResult = await attachmentScanner.scan(Readable.from([content]));
+        } catch (error) {
+          req.log.error(
+            { error: whatsappLogErrorContext(error) },
+            'WhatsApp malware scan failed'
+          );
+          return reply.code(503).send({
+            success: false,
+            error: 'Attachment malware scanning is temporarily unavailable',
+          });
+        }
+        if (scanResult.status === 'infected') {
+          await WhatsappMessage.query()
+            .where({ id: message.id, company_id: companyId })
+            .patch({ media_scan_status: 'infected' });
+          message.media_scan_status = 'infected';
+          return reply
+            .code(410)
+            .send({ success: false, error: 'Attachment blocked by malware scan' });
+        }
         const mediaKey = randomUUID();
         await options.attachmentStorage.put(mediaKey, content);
         await WhatsappMessage.query()
@@ -3461,6 +3593,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
           .patch({
             media_key: mediaKey,
             media_mime_type: verifiedMime,
+            media_scan_status: 'clean',
             media_file_name: safeFileName(metadata.filename) ?? message.media_file_name,
           });
         message.media_key = mediaKey;
