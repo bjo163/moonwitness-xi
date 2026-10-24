@@ -61,7 +61,7 @@ const approvedReference: CanonicalPassageReference = Object.freeze({
   sourceSha256: '6ff83b01099fb7992b5f7fa101cfab3d6556607ca6b1fe69d53cb76f97027760',
 });
 const approvedManifestPath = 'corpus/manifests/tanzil-quran-text-v1.1-uthmani-q7-46.json';
-const approvedManifestSha256 = 'b337ab7cdbee714f7f31a1b0036971d51bfaa7d906b55f250ed57a1c37316811';
+const approvedManifestSha256 = '1a0cdab80255d194e8a66fc7a25ab5799b539a56909c23886bf8a34cbec959c8';
 const approvedAttribution =
   'Tanzil Quran Text. Copyright (C) 2007-2021 Tanzil Project. License: Creative Commons Attribution 3.0 (CC BY 3.0). Source: https://tanzil.net/ . This Q7:46 line is reproduced verbatim without modification. See https://tanzil.net/docs/Text_License and https://creativecommons.org/licenses/by/3.0/ .';
 const visibilityValues = new Set<RetrievalVisibility>([
