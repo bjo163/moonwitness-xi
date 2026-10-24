@@ -89,6 +89,30 @@ test('brand, typography, and homepage proof use canonical assets and correct spe
     ).toBe(false);
     await page.screenshot({ path: testInfo.outputPath(`editorial-proof-${viewport.name}.png`) });
   }
+
+  const copyViewport = { width: 320, height: 844 };
+  await page.setViewportSize(copyViewport);
+  await page.goto('./#typography');
+  const copyStress = page.getByTestId('typography-copy-stress');
+  await expect(copyStress).toContainText('Rp1.234.567');
+  await expect(copyStress).toContainText('24/10/2026');
+  await expect(copyStress).toContainText('naïve');
+  await expect(copyStress.getByText(/pertanggungjawaban/u)).toBeVisible();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
+  ).toBe(true);
+  const bodyCopy = copyStress.locator('p');
+  const bodyMetrics = await bodyCopy.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+    height: element.getBoundingClientRect().height,
+    lineHeight: Number.parseFloat(getComputedStyle(element).lineHeight),
+  }));
+  expect(bodyMetrics.scrollWidth).toBeLessThanOrEqual(bodyMetrics.clientWidth);
+  expect(bodyMetrics.height).toBeGreaterThan(bodyMetrics.lineHeight * 2);
+  await copyStress.screenshot({
+    path: resolve(process.cwd(), '../../docs/design/ui-catalog/typography-indonesian-320.png'),
+  });
 });
 
 test('canonical icon SVGs match generated React wrappers in a browser contact sheet', async ({

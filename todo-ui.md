@@ -157,7 +157,7 @@ Gunakan Road Rage sebagai brush display, Anton untuk judul condensed dan KPI, Sp
 - [x] Hindari synthetic bold untuk face yang hanya memiliki satu weight.
 - [x] Tetapkan skala hero, masthead, section title, label, body, dan metadata.
 - [x] Batasi lettering brush pada logo, judul pendek, dan CTA pendek.
-- [ ] Uji teks bahasa Indonesia, angka, tanda baca, kata panjang, dan wrapping.
+- [x] Uji teks bahasa Indonesia, angka, tanda baca, kata panjang, dan wrapping di lebar 320 px. Bukti: UI Catalog test assertion tidak ada horizontal overflow, teks panjang membungkus, angka/tanda baca/diakritik tampil, screenshot direview visual: `docs/design/ui-catalog/typography-indonesian-320.png`.
 - [ ] Uji fallback font dan cegah layout shift.
 - [ ] Muat font hanya pada route yang membutuhkannya.
 - [ ] Preload hanya face yang dipakai pada viewport pertama.

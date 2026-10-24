@@ -353,6 +353,12 @@ a:focus-visible {
 .type-specimen-body > strong {
   font: 600 1.1rem/1.4 var(--mw-font-sans);
 }
+.type-specimen-body > p {
+  max-width: 58ch;
+  margin: 0;
+  font: 400 0.95rem/1.55 var(--mw-font-sans);
+  overflow-wrap: anywhere;
+}
 .type-specimen-mono > strong {
   font: 0.82rem/1.6 var(--mw-font-mono);
 }

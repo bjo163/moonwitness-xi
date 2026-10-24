@@ -558,6 +558,14 @@ function CatalogContent() {
                     <span>JetBrains Mono · identifiers and metadata</span>
                     <strong>MW:STORY:EDITORIAL-001 · 14:32 UTC</strong>
                   </div>
+                  <div className="type-specimen type-specimen-body" data-testid="typography-copy-stress">
+                    <span>Space Grotesk · Indonesian copy, punctuation, numbers, and long words</span>
+                    <p>
+                      Kisah lintas generasi ini memuat pertanggungjawaban, angka Rp1.234.567, tanggal
+                      24/10/2026, tanda baca—termasuk “kutipan”, (kurung), dan tanda tanya?—serta
+                      karakter naïve yang harus tetap terbaca.
+                    </p>
+                  </div>
                 </div>
               </Example>
             </Section>
