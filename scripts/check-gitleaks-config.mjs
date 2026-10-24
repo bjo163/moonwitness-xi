@@ -35,6 +35,13 @@ const allowedLines = [
   exactLine(['^', String.raw`\s*`, '"tokensSha256": "', tokenHash, '"$']),
   exactLine(['^', String.raw`\s*`, 'idempotency', 'Key: ', "'duplicate-", 'vote-0001', "',$"]),
   exactLine(['^', String.raw`\s*`, 'idempotency', 'Key: ', "'reject-", 'decision-0001', "',$"]),
+  exactLine([
+    '^',
+    String.raw`\s*`,
+    'idempotency_key: ',
+    "'synthetic-resurrection-revoke-001',",
+    String.raw`\r?$`,
+  ]),
 ];
 const exactHistoricalLine = (segments) =>
   new RegExp(`^\\s*${segments.join('').replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}$`, 'u').source;
@@ -88,6 +95,10 @@ export const expectedAllowlistExpressions = [
 
 export function validateGitleaksSetup(workflow, config) {
   const problems = [];
+  const runtimeSecretRule = config.match(
+    /\[\[rules\]\]\s*id\s*=\s*"moonwitness-runtime-secret"([\s\S]*?)(?=\n\[\[|\s*$)/u
+  )?.[1];
+  const runtimeSecretRegex = runtimeSecretRule?.match(/regex\s*=\s*'''(.*?)'''/su)?.[1];
   if (!actionReference.test(workflow))
     problems.push('Gitleaks Action must use a pinned full SHA and version.');
   if (!/^\s*contents:\s*read\s*$/m.test(workflow))
@@ -109,8 +120,8 @@ export function validateGitleaksSetup(workflow, config) {
   // A CRLF-terminated line otherwise escapes the `$` anchor and reads as a clean scan.
   if (
     !runtimeSecretRulePin.test(config) ||
-    !config.includes(`(${paddedBase64Class})`) ||
-    !config.includes(String.raw`\r?$`)
+    !runtimeSecretRegex?.includes(`(${paddedBase64Class})`) ||
+    !runtimeSecretRegex.endsWith(String.raw`\r?$`)
   ) {
     problems.push(
       'MoonWitness runtime secret detection must cover high-entropy JWT, metrics, and WhatsApp credentials.'

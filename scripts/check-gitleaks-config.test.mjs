@@ -30,6 +30,21 @@ test('accepts least-privilege full-history scanning with exact reviewed fixtures
   assert.deepEqual(validateGitleaksSetup(workflow, config), []);
 });
 
+test('synthetic resurrection fixture allowlist matches only its exact line', () => {
+  const [source] = expectedAllowlistExpressions.slice(3, 4);
+  const matcher = new RegExp(source, 'u');
+  const line = "    idempotency_key: 'synthetic-resurrection-revoke-001',";
+
+  assert.match(line, matcher);
+  assert.match(`${line}\r`, matcher);
+  assert.doesNotMatch(
+    line.replace('synthetic-resurrection-revoke-001', 'synthetic-resurrection-revoke-002'),
+    matcher
+  );
+  assert.doesNotMatch(line.replace('idempotency_key', 'idempotencyKey'), matcher);
+  assert.doesNotMatch(`${line} // changed`, matcher);
+});
+
 test('historical scanner exceptions match only the seven exact false-positive source lines', () => {
   const tokenHash = [
     '269a6e000da6fa28',
@@ -61,7 +76,7 @@ test('historical scanner exceptions match only the seven exact false-positive so
       'duplicate checks, stale snapshots, revoked permissions, and malformed/untrusted webhook or issue events.',
     ].join(''),
   ];
-  const matchers = expectedAllowlistExpressions.slice(3).map((source) => new RegExp(source, 'u'));
+  const matchers = expectedAllowlistExpressions.slice(4).map((source) => new RegExp(source, 'u'));
 
   assert.equal(historicalLines.length, matchers.length);
   for (const [index, line] of historicalLines.entries()) {
@@ -98,7 +113,7 @@ test('rejects workflow trust-boundary and allowlist regressions', () => {
     'a base64url-only value class must not pass the guard for padded session keys'
   );
   assert.ok(
-    validateGitleaksSetup(workflow, config.replace('\\r?$', '$')).some((issue) =>
+    validateGitleaksSetup(workflow, config.replace('(?:#.*)?\\r?$', '(?:#.*)?$')).some((issue) =>
       /WhatsApp credentials/u.test(issue)
     ),
     'dropping CRLF tolerance would let a secret commit read as a clean scan'

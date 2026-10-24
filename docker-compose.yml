@@ -25,7 +25,7 @@ services:
     stop_grace_period: 40s
     environment:
       DATA_DIR: /app/data
-      JWT_SECRET: dev-only-omniroute-jwt-secret-0123456789-change-me
+      JWT_SECRET: dev-only-moonwitness-secret-change-me
       INITIAL_PASSWORD: moonwitness-omniroute
     ports:
       - '127.0.0.1:20128:20128'
