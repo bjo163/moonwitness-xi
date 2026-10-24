@@ -1573,10 +1573,17 @@ function MessageComposer({
     sendLock.current = true;
     setSending(true);
     try {
-      const body = new FormData();
-      body.set('content', draft.trim());
-      if (replyTo) body.set('reply_to_message_id', String(replyTo.id));
-      if (file) body.set('media', file, file.name);
+      const body: FormData | Record<string, unknown> = file
+        ? new FormData()
+        : {
+            content: draft.trim(),
+            ...(replyTo ? { reply_to_message_id: replyTo.id } : {}),
+          };
+      if (body instanceof FormData) {
+        body.set('content', draft.trim());
+        if (replyTo) body.set('reply_to_message_id', String(replyTo.id));
+        body.set('media', file!, file!.name);
+      }
       await client.request(`/whatsapp/conversations/${conversationId}/messages`, {
         method: 'POST',
         headers: { 'Idempotency-Key': idempotencyKey.current },
