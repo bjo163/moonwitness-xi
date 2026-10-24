@@ -198,7 +198,7 @@ Gunakan Road Rage sebagai brush display, Anton untuk judul condensed dan KPI, Sp
 - [x] Lengkapi upload/download, filter/sort, calendar, workflow, check, warning, error, dan info. Bukti: `docs/design/assets/icon-contact-sheet-current.png`.
 - [ ] Uji versi stroke/filled dan ukuran optiknya.
 - [ ] Uji icon pada 16, 20, 24, dan 32 px, termasuk focus dan disabled.
-- [x] Generate React wrappers typed dari sumber SVG canonical. Bukti: `pnpm test:ui` lulus; 50 ikon typed terbangun dari inventory.
+- [x] Generate React wrappers typed dari sumber SVG canonical. Bukti: `pnpm test:ui` lulus; 54 ikon typed terbangun dari inventory dan tes membaca jumlah dari manifest.
 - Selesaikan migrasi icon langsung sebelum menutup pekerjaan ini; setelah semua kelompok di bawah lulus pemeriksaan visual, tambahkan gate yang melarang import `lucide-react` dari app.
 - [x] Migrasikan icon story workbench ke `KnowledgeIcon`, `WarningIcon`, dan `SaveIcon`; periksa desktop, tablet, mobile, serta ejaan. Bukti: baseline `workbench-filled-{desktop-1440,tablet-1024,mobile-390}`.
 - [x] Migrasikan ikon auth ke ikon canonical public UI dan `LoadingSpinner` shared; label tombol menunjukkan submit aktif. Bukti: `docs/design/ui-catalog/auth-login-{desktop-1440,mobile-390,loading-mobile-390}.png`; visual audit responsif dan keyboard lulus; ejaan `MOONWITNESS` diperiksa.
@@ -587,7 +587,7 @@ Pertahankan satu command manual/otomatis: **`pnpm board:ui:check`**.
 - [x] Uji Button as Link dan disabled behavior. Bukti: package test mengecek semantik `aria-disabled`/tabindex; UI Catalog E2E membuktikan link enabled menavigasi, link disabled mempertahankan URL, dan keduanya memakai Button shared.
 - [x] Uji controlled/disabled/error/loading states. Bukti: `apps/ui-catalog/tests/catalog.spec.ts` menguji input dan checkbox controlled, tombol disabled, field validation dengan `aria-invalid`/`aria-describedby`, skeleton `aria-busy`, serta chart loading/error; screenshot states diperiksa visual di `test-results/ui-catalog/catalog-shared-controls-ex-32dea-lidation-and-loading-states/`.
 - [x] Uji Table sort, selection, pagination, dan overflow. Bukti: UI Catalog E2E menguji sort keyboard, seleksi semua/baris, pagination terkendali, region overflow bernama/focusable dengan Arrow Left/Right dan Home/End, serta body tanpa overflow; screenshot mobile diperiksa di `test-results/ui-catalog/catalog-shared-table-keeps-90b7b-ion-and-overflow-accessible/table-mobile.png`.
-- [x] Uji canonical SVG dan generated React wrapper. Bukti: `packages/ui/tests/icons.test.mjs` membandingkan atribut pada 50 wrapper; UI Catalog merender semua pasangan di browser dan memeriksa ukuran render, lalu contact sheet diperiksa visual dan disimpan di `docs/design/ui-catalog/canonical-vs-react-icons.png`.
+- [x] Uji canonical SVG dan generated React wrapper. Bukti: `packages/ui/tests/icons.test.mjs` membandingkan atribut pada seluruh 54 wrapper sesuai manifest; UI Catalog merender semua pasangan di browser dan memeriksa ukuran render, lalu contact sheet diperiksa visual dan disimpan di `docs/design/ui-catalog/canonical-vs-react-icons.png`.
 - [x] Uji inventory, lisensi, package exports, dan generator deterministik. Bukti: `pnpm test:assets` (24/24) memeriksa exact inventory, provenance/hash font, dan isi tarball; `pnpm assets:generate` dijalankan dua kali dan hash seluruh media tetap identik.
 - [x] Uji mute persistence, lazy load, dan playback failure. `packages/ui/tests/audio.test.mjs` mencakup preference, gating, constructor/reject, dan overlap; UI Catalog E2E membuktikan default mute, toggle tersimpan setelah reload, tanpa request audio saat muted, dan request baru saat cue eksplisit dimainkan. Screenshot label ditinjau dan disimpan di `docs/design/ui-catalog/sound-toggle-enabled-state.png`.
 - [x] Uji reduced-motion tanpa kehilangan informasi state. Bukti: UI Catalog E2E mengonfirmasi animasi dekoratif berhenti pada `prefers-reduced-motion: reduce` sementara label “Story saved” dan “Loading preview…” tetap terlihat; screenshot diperiksa visual dan ejaan di `docs/design/ui-catalog/reduced-motion-states.png`.
@@ -620,7 +620,7 @@ Pertahankan satu command manual/otomatis: **`pnpm board:ui:check`**.
 - [ ] Smoke test runtime Docker dan asset response.
 - [ ] Pertahankan budget JS/CSS existing tanpa menaikkannya untuk menyembunyikan regresi.
 - [ ] Target hero desktop maksimal sekitar 500 KB.
-- [ ] Target hero mobile maksimal sekitar 220 KB.
+- [x] Target hero mobile maksimal sekitar 220 KB. Output WebP 920×1150 berukuran 214,252 byte; test aset membatasi ukuran ≤220,000 byte. Screenshot home mobile/desktop serta ejaan `MOONWITNESS` direview: `docs/design/ui-catalog/homepage-hero-mobile-budget.png` dan `homepage-hero-desktop-budget.png`.
 - [x] Jaga masthead Board dan Story workbench pada target sekitar 180 KB. Bukti: `packages/assets/illustrations/board-masthead.webp` 168 KB; `packages/assets/illustrations/story-workbench-masthead.webp` 177 KB.
 - [ ] Target font viewport awal maksimal sekitar 160 KB.
 - [ ] Ukur transfer cold load, lazy assets, dan layout shift melalui browser.

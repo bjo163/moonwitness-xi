@@ -19,8 +19,8 @@ const generated = [
     source: 'source/artwork/home-hero-master.png',
     path: 'illustrations/home-hero-mobile.webp',
     variant: 'mobile',
-    width: 960,
-    height: 1200,
+    width: 920,
+    height: 1150,
     quality: 52,
   },
   {

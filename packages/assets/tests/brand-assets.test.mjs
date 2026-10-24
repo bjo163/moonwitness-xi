@@ -98,6 +98,10 @@ test('manifest describes all stable brand and icon exports with unique paths', (
     'pause',
     'volume',
     'volume-off',
+    'lock',
+    'mail',
+    'visibility',
+    'visibility-off',
     'archive',
     'book-open',
     'story',
@@ -245,6 +249,14 @@ test('brand master is hand-authored vector and artwork has intentional optimized
     assert.equal(metadata.width, asset.width);
     assert.equal(metadata.height, asset.height);
   }
+});
+
+test('mobile homepage hero stays within its reviewed 220 KB transfer budget', async () => {
+  const heroPath = resolve(packageRoot, 'illustrations/home-hero-mobile.webp');
+  const [metadata, file] = await Promise.all([sharp(heroPath).metadata(), stat(heroPath)]);
+  assert.equal(metadata.width, 920);
+  assert.equal(metadata.height, 1150);
+  assert.ok(file.size <= 220_000, `mobile hero is ${file.size} bytes; target is 220000 bytes`);
 });
 
 test('package exports only framework-independent static assets', async () => {

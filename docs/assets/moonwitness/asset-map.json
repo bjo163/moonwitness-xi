@@ -4,9 +4,9 @@
   "generatedFrom": "packages/assets/manifest.json and packages/ui/src/styles/tokens.css",
   "sources": {
     "assetManifest": "manifest.json",
-    "assetManifestSha256": "182c0f9e215a6d39eedbc291cf9d8d25ea4444798353b2de4d6dcb13392550d9",
+    "assetManifestSha256": "e23076113663e15c77f0045e029b3bf7d29465514731dd7aae7883392953f284",
     "tokens": "packages/ui/src/styles/tokens.css",
-    "tokensSha256": "c95c112b247fa59ec5f9cc5b6aa62a54fb9e5c44956bc41701330a76e76b9060"
+    "tokensSha256": "960dbbc0bf8a2c0beaa14d5cdc8525f40499dde8e353fb32ee7f429e57590b47"
   },
   "assets": [
     {
@@ -455,6 +455,24 @@
       "sha256": "99843c6b20e8f2c316cc38bbef009c36232e72e6dcfa953e66fcebffac109851"
     },
     {
+      "source": "packages/assets/icons/lock.svg",
+      "output": "docs/assets/moonwitness/icons/lock.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "49227c948f496dc1a73e66b598c712509b5f095aaab616f76f18b16a76e99460"
+    },
+    {
+      "source": "packages/assets/icons/mail.svg",
+      "output": "docs/assets/moonwitness/icons/mail.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "022dc2a83bdb03d7000f1694701393d4166ece17ee093a437adb7fc553b51478"
+    },
+    {
       "source": "packages/assets/icons/menu.svg",
       "output": "docs/assets/moonwitness/icons/menu.svg",
       "kind": "icon",
@@ -635,6 +653,24 @@
       "sha256": "c963535de86ae01b73185df62501d49f33bdebe12c6380770f78cf1cba0355a8"
     },
     {
+      "source": "packages/assets/icons/visibility-off.svg",
+      "output": "docs/assets/moonwitness/icons/visibility-off.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "f78ff4809ef8ce5c8831aa69d20d4726e91e074aaa6614deb8688deefa128e70"
+    },
+    {
+      "source": "packages/assets/icons/visibility.svg",
+      "output": "docs/assets/moonwitness/icons/visibility.svg",
+      "kind": "icon",
+      "format": "svg",
+      "width": 24,
+      "height": 24,
+      "sha256": "988c7cdb0883173ac0e711e497600d45ba286260427e5cc2cf0f3d9fd88b337c"
+    },
+    {
       "source": "packages/assets/icons/volume-off.svg",
       "output": "docs/assets/moonwitness/icons/volume-off.svg",
       "kind": "icon",
@@ -687,6 +723,24 @@
       "width": 164,
       "height": 152,
       "sha256": "f632b7f056d2190cff7a00ca064198cdaab0a5e7e4d79d717ee7619ca46d1273"
+    },
+    {
+      "source": "packages/assets/illustrations/auth-login-desktop.webp",
+      "output": "docs/assets/moonwitness/illustrations/auth-login-desktop.webp",
+      "kind": "artwork",
+      "format": "webp",
+      "width": 1200,
+      "height": 1200,
+      "sha256": "0738d1227281351018bc79fe26fc67d54ccfac3c3037537ceaf6940882e887cd"
+    },
+    {
+      "source": "packages/assets/illustrations/auth-login-mobile.webp",
+      "output": "docs/assets/moonwitness/illustrations/auth-login-mobile.webp",
+      "kind": "artwork",
+      "format": "webp",
+      "width": 1000,
+      "height": 600,
+      "sha256": "88aef79883f6c5f3619945bdbbf63feedccfc292a65df38cfbffbd21e998b716"
     },
     {
       "source": "packages/assets/illustrations/board-masthead.webp",
@@ -756,9 +810,9 @@
       "output": "docs/assets/moonwitness/illustrations/home-hero-mobile.webp",
       "kind": "artwork",
       "format": "webp",
-      "width": 960,
-      "height": 1200,
-      "sha256": "82c2a31f553d4e01ad28880dd130621288efe43c362b0d2cd6594a5071f4f2e9"
+      "width": 920,
+      "height": 1150,
+      "sha256": "7a25b3674166099d17595e7ff7404948b69082e3b70e06ada4e460d5c31d26ba"
     },
     {
       "source": "packages/assets/illustrations/no-activity-dark.svg",
@@ -903,7 +957,7 @@
     {
       "source": "packages/ui/src/styles/tokens.css",
       "output": "docs/assets/moonwitness/styles/tokens.css",
-      "sha256": "c95c112b247fa59ec5f9cc5b6aa62a54fb9e5c44956bc41701330a76e76b9060"
+      "sha256": "960dbbc0bf8a2c0beaa14d5cdc8525f40499dde8e353fb32ee7f429e57590b47"
     }
   ]
 }

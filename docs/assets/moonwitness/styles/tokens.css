@@ -103,7 +103,15 @@
   --mw-shadow-ink-lg: 6px 6px 0 0 var(--mw-ink);
   --mw-motion-fast: 120ms;
   --mw-motion-normal: 160ms;
-  --mw-motion-ease: ease;
+  --mw-motion-slow: 220ms;
+  --mw-motion-delay: 200ms;
+  --mw-motion-draw: 700ms;
+  --mw-motion-effect: 1200ms;
+  --mw-motion-pulse: 1600ms;
+  --mw-motion-progress: 1400ms;
+  --mw-motion-spin: 800ms;
+  --mw-motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --mw-motion-ease-emphasis: cubic-bezier(0.34, 1.56, 0.64, 1);
   --mw-layer-base: 0;
   --mw-layer-raised: 10;
   --mw-layer-sticky: 20;
@@ -131,5 +139,6 @@
   :root {
     --mw-motion-fast: 0ms;
     --mw-motion-normal: 0ms;
+    --mw-motion-slow: 0ms;
   }
 }
