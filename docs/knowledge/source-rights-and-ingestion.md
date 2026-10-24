@@ -17,7 +17,7 @@ be referenced for research while byte ingestion or publication remains denied.
 - Rights state defaults to `unknown`; missing, ambiguous, disputed, expired, or
   unreviewed terms are not permission.
 - `unknown`, `review_pending`, `restricted`, `disputed`, and `withdrawn` block
-  copying source bytes into an XI release and block public byte publication.
+  copying source bytes into an XIV release and block public byte publication.
 - Metadata-only reference is the fallback when source bytes are not authorized.
   It may contain a stable source identity, edition/locator, retrieval metadata,
   a digest where the bytes were lawfully obtained for hashing, and a reference
@@ -45,7 +45,7 @@ mark missing evidence explicitly:
 - rights state, review decision and scope, reviewer identity/role, decision
   date, supporting evidence reference, known attribution wording, and
   documented restrictions/expiry;
-- parser/transform recipe and version, output digest, and the XI release(s)
+- parser/transform recipe and version, output digest, and the XIV release(s)
   that contain or reference the source.
 
 The rights decision must distinguish permission to read or analyze from

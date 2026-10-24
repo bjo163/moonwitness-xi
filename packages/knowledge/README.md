@@ -1,6 +1,6 @@
 # @moonwitness/knowledge
 
-Offline, typed structural contracts for the XI core knowledge record envelope,
+Offline, typed structural contracts for the XIV core knowledge record envelope,
 explicit canonical identity resolution, and PROV-inspired provenance graphs.
 
 The JSON Schema at `schemas/knowledge-record.schema.json` is the canonical
@@ -26,7 +26,7 @@ provenance schema is also available at
 The activity mapping is PROV-inspired: activities correspond to `prov:Activity`,
 actors to `prov:Agent` / `prov:wasAssociatedWith`, used inputs and sources to
 `prov:used`, and generated records to `prov:wasGeneratedBy`. Method IDs and
-versions are explicit XI contract fields; this package does not claim to be an
+versions are explicit XIV contract fields; this package does not claim to be an
 RDF runtime or infer causation from timestamps. Rights clearance remains a
 separate gate. Visibility values follow the accepted K0-005 vocabulary; records
 must state a visibility explicitly. Fixtures and tests use synthetic data only.

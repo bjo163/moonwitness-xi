@@ -120,10 +120,10 @@ test('committed Pages assets match the public package manifest and shared UI tok
   );
   const nestedPagesUrl = new URL(
     '../assets/moonwitness/brand/readme-banner.svg',
-    'https://example.github.io/moonwitness-xi/design/brand-assets.html'
+    'https://example.github.io/moonwitness-xiv/design/brand-assets.html'
   );
   assert.equal(
     nestedPagesUrl.pathname,
-    '/moonwitness-xi/assets/moonwitness/brand/readme-banner.svg'
+    '/moonwitness-xiv/assets/moonwitness/brand/readme-banner.svg'
   );
 });

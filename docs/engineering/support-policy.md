@@ -22,6 +22,6 @@ Monthly upstream support review dates, accountable owner, and primary source lin
 - Browser failure reports/traces/screenshots/video use explicit 7-day artifact retention in CI. Repository-level artifact/log retention is inherited (`artifact_and_log_retention_days` is unset in the repository API); actual log retention remains unverified.
 - Scheduled reliability: GitHub schedules are best-effort; workflows must be manually runnable and M8.10 must find stale/missed runs.
 
-Measure one workflow's wall-clock duration with `gh api repos/bjo163/moonwitness-xi/actions/runs/RUN_ID --jq '[.run_started_at,.updated_at]'`; convert the timestamps to minutes. This includes queue time and is a conservative workflow-level budget, not a job-duration or app-latency benchmark.
+Measure one workflow's wall-clock duration with `gh api repos/bjo163/moonwitness-xiv/actions/runs/RUN_ID --jq '[.run_started_at,.updated_at]'`; convert the timestamps to minutes. This includes queue time and is a conservative workflow-level budget, not a job-duration or app-latency benchmark.
 
 Before calling these supported policy, confirm the chosen runtime is still maintained, CI/container parity passes, and dependency compatibility is verified. Upgrade supported major versions with dedicated matrix and release notes.

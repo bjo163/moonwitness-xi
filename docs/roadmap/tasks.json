@@ -1387,7 +1387,7 @@
       "title": "Centralization ADR and deployment boundary",
       "milestone": "K0",
       "dependsOn": [],
-      "output": "Accepted ADR centralizing XI knowledge ownership and recording the existing deployment boundary and acceptance responsibilities; deployment changes require a separate reviewed ADR 0001 amendment",
+      "output": "Accepted ADR centralizing XIV knowledge ownership and recording the existing deployment boundary and acceptance responsibilities; deployment changes require a separate reviewed ADR 0001 amendment",
       "detailFile": "docs/roadmap/12-local-ai-rebuild.md",
       "labels": ["local-ai-rebuild"],
       "priority": "p0",
@@ -1396,7 +1396,7 @@
     },
     {
       "id": "K0-002",
-      "title": "Exact-SHA XI baseline and local capability survey",
+      "title": "Exact-SHA XIV baseline and local capability survey",
       "milestone": "K0",
       "dependsOn": [],
       "output": "Read-only baseline of build/test state, branches, Postgres, RAM/CPU/GPU/storage/network, and known failures",

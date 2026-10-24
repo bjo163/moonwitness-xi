@@ -23,7 +23,7 @@
     "reviewer": "bjo163",
     "decision_date": "2026-10-16",
     "evidence_ref": "docs/roadmap/evidence/K2-005.md#source-specific-rights-decision",
-    "scope": "Only the exact Tanzil Quran Text v1.1 Uthmani Q7:46 source line is stored and redistributed in the MoonWitness XI repository under the published CC BY 3.0 attribution terms. Preserve this line verbatim and include the notice below. No model training, no transformed source copy, no runtime fetch, and no permission is asserted for other verses, editions, translations, or derived uses."
+    "scope": "Only the exact Tanzil Quran Text v1.1 Uthmani Q7:46 source line is stored and redistributed in the MoonWitness XIV repository under the published CC BY 3.0 attribution terms. Preserve this line verbatim and include the notice below. No model training, no transformed source copy, no runtime fetch, and no permission is asserted for other verses, editions, translations, or derived uses."
   },
   "attribution": {
     "text": "Tanzil Quran Text. Copyright (C) 2007-2021 Tanzil Project. License: Creative Commons Attribution 3.0 (CC BY 3.0). Source: https://tanzil.net/ . This Q7:46 line is reproduced verbatim without modification. See https://tanzil.net/docs/Text_License and https://creativecommons.org/licenses/by/3.0/ .",

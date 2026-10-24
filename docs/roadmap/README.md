@@ -1,6 +1,6 @@
 # Panduan Roadmap MoonWitness
 
-Roadmap ini terdiri dari 148 kartu M-series dan 65 kartu K-series (213 task). Checklist `ROADMAP.md` tetap sumber status. K-series melacak rebuild knowledge XI dan berada di [kartu AI lokal](12-local-ai-rebuild.md). Mulai dari [jalur rilis aktif](ACTIVE-PLAN.md) untuk melihat gate yang benar-benar menahan rilis dan [backlog tertunda](EXECUTION-BACKLOG.md) untuk item yang tetap dilacak tetapi tidak perlu menghambat rilis pertama. Riwayat batch lama ada di [arsip eksekusi](EXECUTION-HISTORY-2026-10-15.md).
+Roadmap ini terdiri dari 148 kartu M-series dan 65 kartu K-series (213 task). Checklist `ROADMAP.md` tetap sumber status. K-series melacak rebuild knowledge XIV dan berada di [kartu AI lokal](12-local-ai-rebuild.md). Mulai dari [jalur rilis aktif](ACTIVE-PLAN.md) untuk melihat gate yang benar-benar menahan rilis dan [backlog tertunda](EXECUTION-BACKLOG.md) untuk item yang tetap dilacak tetapi tidak perlu menghambat rilis pertama. Riwayat batch lama ada di [arsip eksekusi](EXECUTION-HISTORY-2026-10-15.md).
 
 ## Urutan membaca untuk agen baru
 

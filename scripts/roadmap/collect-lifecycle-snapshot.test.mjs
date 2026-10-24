@@ -90,8 +90,8 @@ test('selects exact same-repository dev-to-main PR gate and ignores duplicate pu
             pull_requests: [
               {
                 number: 24,
-                head: { ref: 'dev', sha: devSha, repo: { full_name: 'bjo163/moonwitness-xi' } },
-                base: { ref: 'main', repo: { full_name: 'bjo163/moonwitness-xi' } },
+                head: { ref: 'dev', sha: devSha, repo: { full_name: 'bjo163/moonwitness-xiv' } },
+                base: { ref: 'main', repo: { full_name: 'bjo163/moonwitness-xiv' } },
               },
             ],
           },
@@ -104,8 +104,8 @@ test('selects exact same-repository dev-to-main PR gate and ignores duplicate pu
             pull_requests: [
               {
                 number: 24,
-                head: { ref: 'dev', sha: devSha, repo: { full_name: 'bjo163/moonwitness-xi' } },
-                base: { ref: 'main', repo: { full_name: 'bjo163/moonwitness-xi' } },
+                head: { ref: 'dev', sha: devSha, repo: { full_name: 'bjo163/moonwitness-xiv' } },
+                base: { ref: 'main', repo: { full_name: 'bjo163/moonwitness-xiv' } },
               },
             ],
           },
@@ -125,8 +125,8 @@ test('selects exact same-repository dev-to-main PR gate and ignores duplicate pu
             pull_requests: [
               {
                 number: 7,
-                head: { ref: 'feature', sha: devSha, repo: { full_name: 'fork/moonwitness-xi' } },
-                base: { ref: 'main', repo: { full_name: 'bjo163/moonwitness-xi' } },
+                head: { ref: 'feature', sha: devSha, repo: { full_name: 'fork/moonwitness-xiv' } },
+                base: { ref: 'main', repo: { full_name: 'bjo163/moonwitness-xiv' } },
               },
             ],
           },
@@ -152,12 +152,12 @@ test('selects exact same-repository dev-to-main PR gate and ignores duplicate pu
         head: {
           ref: 'dev',
           sha: devSha,
-          repo: { full_name: 'bjo163/moonwitness-xi' },
+          repo: { full_name: 'bjo163/moonwitness-xiv' },
         },
-        base: { ref: 'main', repo: { full_name: 'bjo163/moonwitness-xi' } },
+        base: { ref: 'main', repo: { full_name: 'bjo163/moonwitness-xiv' } },
       },
       devSha,
-      'bjo163/moonwitness-xi',
+      'bjo163/moonwitness-xiv',
       24
     ),
     true
@@ -166,11 +166,11 @@ test('selects exact same-repository dev-to-main PR gate and ignores duplicate pu
     isExactDevMainPullRequest(
       {
         number: 24,
-        head: { ref: 'dev', sha: devSha, repo: { full_name: 'fork/moonwitness-xi' } },
-        base: { ref: 'main', repo: { full_name: 'bjo163/moonwitness-xi' } },
+        head: { ref: 'dev', sha: devSha, repo: { full_name: 'fork/moonwitness-xiv' } },
+        base: { ref: 'main', repo: { full_name: 'bjo163/moonwitness-xiv' } },
       },
       devSha,
-      'bjo163/moonwitness-xi',
+      'bjo163/moonwitness-xiv',
       24
     ),
     false
@@ -179,11 +179,11 @@ test('selects exact same-repository dev-to-main PR gate and ignores duplicate pu
     isExactDevMainPullRequest(
       {
         number: 25,
-        head: { ref: 'dev', sha: devSha, repo: { full_name: 'bjo163/moonwitness-xi' } },
-        base: { ref: 'main', repo: { full_name: 'bjo163/moonwitness-xi' } },
+        head: { ref: 'dev', sha: devSha, repo: { full_name: 'bjo163/moonwitness-xiv' } },
+        base: { ref: 'main', repo: { full_name: 'bjo163/moonwitness-xiv' } },
       },
       devSha,
-      'bjo163/moonwitness-xi',
+      'bjo163/moonwitness-xiv',
       24
     ),
     false
@@ -229,7 +229,7 @@ test('fails immediately when a completed PR CI run omits its technical gate', ()
 test('returns an unverified snapshot immediately when no exact-source PR run exists', async () => {
   let workflowReads = 0;
   const result = await readCurrentDevPullRequestTechnicalGate({
-    repository: 'bjo163/moonwitness-xi',
+    repository: 'bjo163/moonwitness-xiv',
     sourceSha: devSha,
     readDevHead: async () => devSha,
     readWorkflowRuns: async () => {
@@ -254,20 +254,20 @@ test('captures a pending exact-source gate without waiting or treating it as ver
     pull_requests: [
       {
         number: 24,
-        head: { ref: 'dev', sha: devSha, repo: { full_name: 'bjo163/moonwitness-xi' } },
-        base: { ref: 'main', sha: mainSha, repo: { full_name: 'bjo163/moonwitness-xi' } },
+        head: { ref: 'dev', sha: devSha, repo: { full_name: 'bjo163/moonwitness-xiv' } },
+        base: { ref: 'main', sha: mainSha, repo: { full_name: 'bjo163/moonwitness-xiv' } },
       },
     ],
   };
   const result = await readCurrentDevPullRequestTechnicalGate({
-    repository: 'bjo163/moonwitness-xi',
+    repository: 'bjo163/moonwitness-xiv',
     sourceSha: devSha,
     readDevHead: async () => devSha,
     readWorkflowRuns: async () => [{ workflow_runs: [run] }],
     readPullRequest: async () => ({
       number: 24,
-      head: { ref: 'dev', sha: devSha, repo: { full_name: 'bjo163/moonwitness-xi' } },
-      base: { ref: 'main', sha: mainSha, repo: { full_name: 'bjo163/moonwitness-xi' } },
+      head: { ref: 'dev', sha: devSha, repo: { full_name: 'bjo163/moonwitness-xiv' } },
+      base: { ref: 'main', sha: mainSha, repo: { full_name: 'bjo163/moonwitness-xiv' } },
     }),
     readJobs: async () => [
       { jobs: [{ id: 25, name: 'ci-technical-gate', status: 'in_progress', conclusion: null }] },
@@ -313,13 +313,13 @@ test('treats a PR head change during exact-run validation as a stale no-op', asy
     pull_requests: [
       {
         number: 24,
-        head: { ref: 'dev', sha: devSha, repo: { full_name: 'bjo163/moonwitness-xi' } },
-        base: { ref: 'main', repo: { full_name: 'bjo163/moonwitness-xi' } },
+        head: { ref: 'dev', sha: devSha, repo: { full_name: 'bjo163/moonwitness-xiv' } },
+        base: { ref: 'main', repo: { full_name: 'bjo163/moonwitness-xiv' } },
       },
     ],
   };
   const result = await readCurrentDevPullRequestTechnicalGate({
-    repository: 'bjo163/moonwitness-xi',
+    repository: 'bjo163/moonwitness-xiv',
     sourceSha: devSha,
     readDevHead: async () => (++headReads === 1 ? devSha : 'f'.repeat(40)),
     readWorkflowRuns: async () => [{ workflow_runs: [run] }],
@@ -328,9 +328,9 @@ test('treats a PR head change during exact-run validation as a stale no-op', asy
       head: {
         ref: 'dev',
         sha: 'f'.repeat(40),
-        repo: { full_name: 'bjo163/moonwitness-xi' },
+        repo: { full_name: 'bjo163/moonwitness-xiv' },
       },
-      base: { ref: 'main', repo: { full_name: 'bjo163/moonwitness-xi' } },
+      base: { ref: 'main', repo: { full_name: 'bjo163/moonwitness-xiv' } },
     }),
     readJobs: async () => assert.fail('stale run must not read gate jobs'),
   });

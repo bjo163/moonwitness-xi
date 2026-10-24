@@ -56,7 +56,7 @@ The repository currently has the `v1.0.0-rc.1` tag without a published GitHub Re
 Download the release asset `release-images.tar`, `release-image-manifest.json`, `release-api.spdx.json`, `release-board.spdx.json`, `release-artifacts.sha256`, and `release-assets.sha256` from the exact tag workflow artifact (for the full transport bundle) or download the SBOM assets from the GitHub Release. Verify transport checksums and all signer identities with:
 
 ```sh
-pnpm release:verify-attestations -- bjo163/moonwitness-xi bjo163/moonwitness-xi/.github/workflows/release.yml v1.2.3 ./release-images
+pnpm release:verify-attestations -- bjo163/moonwitness-xiv bjo163/moonwitness-xiv/.github/workflows/release.yml v1.2.3 ./release-images
 ```
 
 The verifier rejects checksum, source SHA, version, repository, or signer workflow mismatches, then calls `gh attestation verify` for each file and both OCI images. Release assets can also be checked directly with `gh release verify-asset <tag> <file>`.

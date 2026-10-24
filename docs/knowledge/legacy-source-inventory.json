@@ -4,7 +4,7 @@
   "status": "local_rebuild_no_legacy_import",
   "reviewedAt": "2026-10-15",
   "reviewScope": {
-    "repository": "moonwitness-xi",
+    "repository": "moonwitness-xiv",
     "trackedFilesSearched": true,
     "legacyCheckoutsPresent": false,
     "publicRemoteRefsAudited": true,
@@ -459,7 +459,7 @@
       "tags": []
     }
   ],
-  "decisionPolicy": "Architecture decision approved by the project owner on 2026-10-15: rebuild selected functionality inside moonwitness-xi; do not connect to legacy repositories at runtime, through APIs, submodules, or fetches, and do not migrate legacy source records or copy legacy code/content in this rebuild. Legacy repository references below are historical metadata for traceability only. Reimplement desired behavior from approved requirements and newly authored material. This does not grant rights to copy legacy bytes or clear any external content for future import.",
+  "decisionPolicy": "Architecture decision approved by the project owner on 2026-10-15: rebuild selected functionality inside moonwitness-xiv; do not connect to legacy repositories at runtime, through APIs, submodules, or fetches, and do not migrate legacy source records or copy legacy code/content in this rebuild. Legacy repository references below are historical metadata for traceability only. Reimplement desired behavior from approved requirements and newly authored material. This does not grant rights to copy legacy bytes or clear any external content for future import.",
   "candidates": [
     {
       "candidateId": "legacy-rgbl",
@@ -566,14 +566,14 @@
     }
   ],
   "completionGates": [
-    "Rebuild selected functionality from approved requirements and newly authored material within moonwitness-xi; do not add runtime links, API dependencies, submodules, fetches, legacy code, or legacy source-record imports.",
+    "Rebuild selected functionality from approved requirements and newly authored material within moonwitness-xiv; do not add runtime links, API dependencies, submodules, fetches, legacy code, or legacy source-record imports.",
     "Keep the pinned repository and artifact observations as historical metadata only; do not treat them as inputs to this rebuild.",
     "If a future task proposes importing any external content, reopen this ledger and require exact-file rights and privacy review before import.",
     "Historical record migration is out of scope for this rebuild; no old-ID reconciliation or alias resolution is claimed."
   ],
   "nonClaims": [
     "No source-specific rights clearance is established; this decision authorizes no copying or importing.",
-    "Eight public repository references and root README files were observed read-only; no repository checkout or corpus source file was copied into XI.",
+    "Eight public repository references and root README files were observed read-only; no repository checkout or corpus source file was copied into XIV.",
     "Private design-family contents and old identifiers were not inspected or verified.",
     "No historical metrics or fixes are verified by this inventory.",
     "No old identifiers or alias conflicts were reconciled; legacy records are not migrated by this rebuild."

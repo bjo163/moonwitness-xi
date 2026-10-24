@@ -6,7 +6,7 @@ const validEntry = {
   id: 'MW-123',
   test: 'board list filter renders consistently',
   owner: '@maintainer',
-  issue: 'https://github.com/bjo163/moonwitness-xi/issues/123',
+  issue: 'https://github.com/bjo163/moonwitness-xiv/issues/123',
   reason: 'Intermittent browser timing under investigation.',
   expiresOn: '2026-10-10',
 };

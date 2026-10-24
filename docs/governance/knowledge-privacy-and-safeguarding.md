@@ -19,7 +19,7 @@ Use the following classifications, compatible with ADR 0004:
 | Classification    | Default access and handling                                                                                                                               |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `PUBLIC_APPROVED` | Only a specific reviewed publication projection; never an automatic property of an imported source.                                                       |
-| `INTERNAL`        | Authenticated, role- and tenant-bounded XI users with a work need.                                                                                        |
+| `INTERNAL`        | Authenticated, role- and tenant-bounded XIV users with a work need.                                                                                       |
 | `CONFIDENTIAL`    | Explicitly granted, least-privilege access; no public search or previews.                                                                                 |
 | `RESTRICTED`      | Named authorized handlers/stewards only; private by default, with access recorded.                                                                        |
 | `CHILD_SENSITIVE` | Deny public access and general-purpose search, AI, notifications, and analytics. Synthetic fixtures only until an authorized safeguarding process exists. |
@@ -30,7 +30,7 @@ classification must propagate without downgrade; a public projection needs an
 explicit reviewer decision and a reviewed, minimized copy. A public record
 cannot be made from private data merely by removing a name.
 
-Use existing XI authentication and tenant boundaries. Do not introduce a
+Use existing XIV authentication and tenant boundaries. Do not introduce a
 parallel identity/role system in this policy. Never trust `created_by`, tenant,
 or reviewer identity from an untrusted request body.
 

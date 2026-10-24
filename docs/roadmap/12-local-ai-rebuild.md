@@ -19,11 +19,11 @@ The source planning bundle is `MOONWITNESS_XI_LOCAL_AI_REBUILD_PLAN_2026-10-15/`
 - Priority: P0; risk: approval-required.
 - Depends on: none.
 - File scope: `docs/decisions/`, `docs/architecture/`.
-- Deliverable: Accepted ADR centralizing XI knowledge ownership and recording the existing deployment boundary and acceptance responsibilities. Any deployment change requires a separate reviewed amendment to ADR 0001.
+- Deliverable: Accepted ADR centralizing XIV knowledge ownership and recording the existing deployment boundary and acceptance responsibilities. Any deployment change requires a separate reviewed amendment to ADR 0001.
 - Acceptance: Reviewed/accepted ADR explicitly separates canonical knowledge from runtime and does not bypass existing branch rules.
 - Verification target: `pnpm docs:check:built and pnpm test:roadmap where affected`. This is a target, not evidence that the command exists or has passed.
 
-## K0-002 — Exact-SHA XI baseline and local capability survey
+## K0-002 — Exact-SHA XIV baseline and local capability survey
 
 - Priority: P0; risk: normal.
 - Depends on: none.

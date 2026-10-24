@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://moonwitness.dev/schemas/provenance-graph.schema.json",
-  "title": "MoonWitness XI PROV-inspired provenance graph",
+  "title": "MoonWitness XIV PROV-inspired provenance graph",
   "description": "Offline provenance envelope with a scoped ID/kind record index and explicit derivations. Full record envelopes require separate validation.",
   "type": "object",
   "additionalProperties": false,

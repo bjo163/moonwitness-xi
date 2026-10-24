@@ -37,7 +37,7 @@ Treat these as baseline debt, then address in focused changes with behavior test
 
 ## Current hosted snapshot — 2026-10-16 — `2d87286`
 
-Exact-source CI run [38822624487](https://github.com/bjo163/moonwitness-xi/actions/runs/38822624487) used Ubuntu 24.04, Node 22, pnpm 11.17.0, and frozen workspace install. Source SHA: `2d872862510096732f52f7ec3cd4779ec0044539`. This commit changes roadmap evidence only; CI ran against that exact tree.
+Exact-source CI run [38822624487](https://github.com/bjo163/moonwitness-xiv/actions/runs/38822624487) used Ubuntu 24.04, Node 22, pnpm 11.17.0, and frozen workspace install. Source SHA: `2d872862510096732f52f7ec3cd4779ec0044539`. This commit changes roadmap evidence only; CI ran against that exact tree.
 
 | Check                                                   | Exact-source result | Scope and caveat                                                                                                                                                                                                   |
 | ------------------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -47,7 +47,7 @@ Exact-source CI run [38822624487](https://github.com/bjo163/moonwitness-xi/actio
 | PostgreSQL integration + application restore drill      | Pass                | Dedicated PostgreSQL 16 service; `REQUIRE_POSTGRES_TESTS=true`; JUnit report scan and upload passed.                                                                                                               |
 | Board and docs portal browser                           | Pass                | Chromium Board suite and portal navigation/responsive suite passed; sanitized browser reports uploaded.                                                                                                            |
 | Container smoke/security                                | Pass                | Exact CI container job passed.                                                                                                                                                                                     |
-| CodeQL / Gitleaks                                       | Pass                | CodeQL run [38822624376](https://github.com/bjo163/moonwitness-xi/actions/runs/38822624376); Gitleaks run [38822624204](https://github.com/bjo163/moonwitness-xi/actions/runs/38822624204).                        |
+| CodeQL / Gitleaks                                       | Pass                | CodeQL run [38822624376](https://github.com/bjo163/moonwitness-xiv/actions/runs/38822624376); Gitleaks run [38822624204](https://github.com/bjo163/moonwitness-xiv/actions/runs/38822624204).                      |
 | `ci-technical-gate`                                     | Pass                | All required technical lanes passed.                                                                                                                                                                               |
 | Final `ci-gate`                                         | Blocked             | Failed only because no fresh CODEOWNER approval existed for this exact SHA; this is an external promotion gate, not a technical test failure.                                                                      |
 

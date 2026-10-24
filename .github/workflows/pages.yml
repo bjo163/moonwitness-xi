@@ -197,22 +197,22 @@ jobs:
           set -euo pipefail
           kind=next
           source_ref=main
-          base_path=/moonwitness-xi/next/
+          base_path=/moonwitness-xiv/next/
           channel=next
           if [[ "$EVENT_NAME" == "workflow_dispatch" && "$PUBLISH" == "true" && "$SELECTED_REF" == v* ]]; then
             kind=stable
             source_ref="$SELECTED_REF"
-            base_path="/moonwitness-xi/$SELECTED_REF/"
+            base_path="/moonwitness-xiv/$SELECTED_REF/"
             channel=stable
           elif [[ "$EVENT_NAME" == "workflow_dispatch" && "$PUBLISH" != "true" ]]; then
             kind=preview
             source_ref=dev
-            base_path=/moonwitness-xi/
+            base_path=/moonwitness-xiv/
             channel=preview
           elif [[ "$EVENT_REF" == refs/heads/dev ]]; then
             kind=preview
             source_ref=dev
-            base_path=/moonwitness-xi/
+            base_path=/moonwitness-xiv/
             channel=preview
           elif [[ "$SELECTED_REF" != main ]]; then
             source_ref="$SOURCE_SHA"
