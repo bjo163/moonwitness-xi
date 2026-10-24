@@ -74,6 +74,7 @@ type Message = {
   retryable?: boolean;
   last_error?: string | null;
   message_type: string;
+  provider_type?: string | null;
   media_mime_type?: string | null;
   media_file_name?: string | null;
   sender_jid?: string | null;
@@ -82,6 +83,7 @@ type Message = {
     direction?: string;
     content?: string | null;
     message_type?: string;
+    provider_type?: string | null;
     media_file_name?: string | null;
     unavailable?: boolean;
   } | null;
@@ -98,6 +100,20 @@ type Message = {
   create_date: string;
 };
 const reactionEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '🎉'];
+const providerTypeLabels: Record<string, string> = {
+  contact: 'Contact card',
+  location: 'Location',
+  live_location: 'Live location',
+  poll: 'Poll',
+  call: 'Call event',
+  event: 'Event',
+  protocol: 'System message',
+  view_once: 'View-once media',
+};
+
+function messageFallbackLabel(providerType?: string | null): string {
+  return providerType ? (providerTypeLabels[providerType] ?? 'Unsupported message type') : '';
+}
 
 function summarizeReactions(reactions: Message['reactions'] = []) {
   const summary = new Map<string, { emoji: string; count: number; includesMe: boolean }>();
@@ -1296,9 +1312,13 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                         </p>
                       )}
                     <p
-                      className={`whitespace-pre-wrap break-words text-sm ${message.is_deleted ? 'italic text-ink-faint' : ''}`}
+                      className={`whitespace-pre-wrap break-words text-sm ${message.is_deleted || message.provider_type ? 'italic text-ink-faint' : ''}`}
                     >
-                      {message.content}
+                      {message.is_deleted
+                        ? 'This message was deleted'
+                        : message.provider_type
+                          ? messageFallbackLabel(message.provider_type)
+                          : message.content}
                     </p>
                     {message.is_edited && !message.is_deleted && (
                       <span className="ml-2 text-[10px] italic text-ink-faint">Edited</span>
@@ -1317,13 +1337,14 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                         {message.reply_to.unavailable
                           ? 'Quoted message unavailable'
                           : message.reply_to.content ||
+                            messageFallbackLabel(message.reply_to.provider_type) ||
                             `[${message.reply_to.message_type || 'media'}]`}
                       </Button>
                     )}
-                    {!message.is_deleted && message.message_type !== 'text' && (
-                      <MediaPreview message={message} />
-                    )}
-                    {message.media_file_name && (
+                    {!message.is_deleted &&
+                      !message.provider_type &&
+                      message.message_type !== 'text' && <MediaPreview message={message} />}
+                    {!message.provider_type && message.media_file_name && (
                       <p className="mt-1 text-xs">{message.media_file_name}</p>
                     )}
                     {summarizeReactions(message.reactions).length > 0 && (
@@ -1340,7 +1361,7 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                         ))}
                       </div>
                     )}
-                    {message.content && !message.is_deleted && (
+                    {message.content && !message.is_deleted && !message.provider_type && (
                       <Button
                         type="button"
                         variant="link"
@@ -1360,6 +1381,7 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                     )}
                     {canSend &&
                       !message.is_deleted &&
+                      !message.provider_type &&
                       !['queued', 'sending', 'unknown'].includes(message.status) && (
                         <Button
                           type="button"
@@ -1373,6 +1395,7 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                       )}
                     {canSend &&
                       !message.is_deleted &&
+                      !message.provider_type &&
                       ['received', 'sent', 'delivered', 'read'].includes(message.status) && (
                         <Button
                           type="button"
@@ -1386,6 +1409,7 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                       )}
                     {canSend &&
                       !message.is_deleted &&
+                      !message.provider_type &&
                       ['received', 'sent', 'delivered', 'read'].includes(message.status) && (
                         <Button
                           type="button"
@@ -1405,6 +1429,7 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                     {canManageMessages &&
                       message.direction === 'outbound' &&
                       !message.is_deleted &&
+                      !message.provider_type &&
                       ['sent', 'delivered', 'read'].includes(message.status) && (
                         <>
                           {message.message_type === 'text' &&

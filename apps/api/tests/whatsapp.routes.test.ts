@@ -2323,6 +2323,71 @@ describe('WhatsApp API GoWA bridge', () => {
     expect(mediaRead.statusCode).toBe(404);
   });
 
+  it('stores view-once and future GoWA message types as safe non-downloadable placeholders', async () => {
+    await connectAndMarkReady();
+    const jid = '628444555666@s.whatsapp.net';
+    providerChats = [{ jid, name: 'Safe type chat' }];
+    providerMessages = [
+      {
+        id: 'provider-view-once-message',
+        chat_jid: jid,
+        media_type: 'image',
+        view_once: true,
+        content: 'This caption must stay hidden',
+        timestamp: '2026-10-24T10:00:00Z',
+        is_from_me: false,
+      },
+      {
+        id: 'provider-future-message',
+        chat_jid: jid,
+        media_type: 'future_event_card',
+        content: '',
+        timestamp: '2026-10-24T10:01:00Z',
+        is_from_me: false,
+      },
+    ];
+    const inbox = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations',
+      headers: { authorization: 'Bearer test' },
+    });
+    const conversationId = inbox
+      .json()
+      .data.find((conversation: { jid: string }) => conversation.jid === jid).id;
+    const history = await app.inject({
+      method: 'GET',
+      url: `/whatsapp/conversations/${conversationId}/messages`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(history.statusCode).toBe(200);
+    const viewOnce = history
+      .json()
+      .data.find((message: { provider_type?: string }) => message.provider_type === 'view_once');
+    const futureType = history
+      .json()
+      .data.find(
+        (message: { provider_type?: string }) => message.provider_type === 'future_event_card'
+      );
+    expect(viewOnce).toMatchObject({
+      message_type: 'text',
+      provider_type: 'view_once',
+      content: 'View-once media',
+      media_mime_type: null,
+    });
+    expect(viewOnce.content).not.toContain('This caption must stay hidden');
+    expect(futureType).toMatchObject({
+      message_type: 'text',
+      provider_type: 'future_event_card',
+      content: '',
+    });
+    const mediaRead = await app.inject({
+      method: 'GET',
+      url: `/whatsapp/media/${viewOnce.id}`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(mediaRead.statusCode).toBe(404);
+  });
+
   it('quotes messages within the same company conversation and forwards the provider reply id', async () => {
     await connectAndMarkReady();
     providerChats = [{ jid: '123456@g.us', name: 'Quoted group' }];
@@ -2623,6 +2688,58 @@ describe('WhatsApp API GoWA bridge', () => {
         content: privateMessage.body,
       },
     ]);
+
+    expect(
+      (
+        await postMessage({
+          id: 'webhook-view-once-private',
+          chat_id: privateMessage.chat_id,
+          from: privateMessage.from,
+          timestamp: '2026-10-24T10:00:10Z',
+          is_from_me: false,
+          image: 'statics/media/private-view-once.jpg',
+          view_once: true,
+          body: 'Do not expose this caption',
+        })
+      ).statusCode
+    ).toBe(204);
+    expect(
+      (
+        await postMessage({
+          id: 'webhook-future-type-private',
+          chat_id: privateMessage.chat_id,
+          from: privateMessage.from,
+          timestamp: '2026-10-24T10:00:20Z',
+          is_from_me: false,
+          media_type: 'future_interactive_card',
+        })
+      ).statusCode
+    ).toBe(204);
+    const safeProviderMessages = await db('whatsapp_messages')
+      .where({ company_id: companyId })
+      .whereIn('external_id', ['webhook-view-once-private', 'webhook-future-type-private']);
+    const viewOnceMessage = safeProviderMessages.find(
+      (message) => message.external_id === 'webhook-view-once-private'
+    );
+    expect(viewOnceMessage).toMatchObject({
+      message_type: 'text',
+      provider_type: 'view_once',
+      content: 'View-once media',
+      media_file_name: null,
+    });
+    const futureTypeMessage = safeProviderMessages.find(
+      (message) => message.external_id === 'webhook-future-type-private'
+    );
+    expect(futureTypeMessage).toMatchObject({
+      message_type: 'text',
+      provider_type: 'future_interactive_card',
+    });
+    const viewOnceRead = await app.inject({
+      method: 'GET',
+      url: `/whatsapp/media/${viewOnceMessage.id}`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(viewOnceRead.statusCode).toBe(404);
 
     const contactLid = '251556368777322@lid';
     expect(

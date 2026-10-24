@@ -408,6 +408,44 @@ function mediaDefaultMime(type: string): string | null {
       return null;
   }
 }
+
+const GOWA_MEDIA_TYPES = new Set(['image', 'video', 'audio', 'document', 'sticker']);
+const GOWA_KNOWN_NON_MEDIA_TYPES = new Set([
+  'text',
+  'contact',
+  'location',
+  'live_location',
+  'poll',
+  'call',
+  'event',
+  'protocol',
+  'view_once',
+]);
+
+function classifyGoWaMessageType(
+  rawType: unknown,
+  viewOnce = false
+): {
+  messageType: 'text' | 'image' | 'video' | 'audio' | 'document' | 'sticker';
+  providerType: string | null;
+} {
+  const value = typeof rawType === 'string' ? rawType.trim().toLowerCase() : '';
+  if (viewOnce || value === 'view_once' || value.startsWith('view_once_')) {
+    return { messageType: 'text', providerType: 'view_once' };
+  }
+  if (GOWA_MEDIA_TYPES.has(value)) {
+    return {
+      messageType: value as 'image' | 'video' | 'audio' | 'document' | 'sticker',
+      providerType: null,
+    };
+  }
+  if (!value || value === 'text') return { messageType: 'text', providerType: null };
+  if (GOWA_KNOWN_NON_MEDIA_TYPES.has(value)) return { messageType: 'text', providerType: value };
+  return {
+    messageType: 'text',
+    providerType: /^[a-z][a-z0-9_]{0,39}$/u.test(value) ? value : 'unsupported',
+  };
+}
 function requireCompany(
   req: { auth: { companyId?: number } | null },
   reply: { code: (n: number) => { send: (x: unknown) => unknown } }
@@ -520,6 +558,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
               external_id: originalId,
             })
             .where({ message_type: 'text', is_deleted: false })
+            .whereNull('provider_type')
             .first()) as
             { id: number; conversation_id: number; content: string | null } | undefined;
           if (target) {
@@ -668,20 +707,44 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
             );
           }
         );
-        const messageType = mediaField === 'video_note' ? 'video' : (mediaField ?? 'text');
+        const structuredField = [
+          'contact',
+          'location',
+          'live_location',
+          'poll',
+          'call',
+          'event',
+          'protocol',
+        ].find((field) => payload?.[field] !== undefined && payload[field] !== null);
+        const viewOnce = payload?.view_once === true || payload?.is_view_once === true;
+        const typeInfo = classifyGoWaMessageType(
+          viewOnce
+            ? 'view_once'
+            : mediaField === 'video_note'
+              ? 'video'
+              : (mediaField ?? payload?.media_type ?? structuredField),
+          viewOnce
+        );
+        const messageType = typeInfo.messageType;
+        const providerType = typeInfo.providerType;
         const mediaValue = mediaField ? payload?.[mediaField] : null;
-        const content = typeof payload?.body === 'string' ? payload.body.slice(0, 8000) : '';
+        const content =
+          providerType === 'view_once'
+            ? 'View-once media'
+            : typeof payload?.body === 'string'
+              ? payload.body.slice(0, 8000)
+              : '';
         const replyToExternalId = providerReplyId(payload?.context_metadata);
         const chatName = typeof payload?.chat_name === 'string' ? payload.chat_name.trim() : '';
-        const preserveConversationName = isGroup || fromMe;
+        const senderDisplayName =
+          typeof payload?.sender_display_name === 'string'
+            ? payload.sender_display_name.trim()
+            : '';
+        const fromName = typeof payload?.from_name === 'string' ? payload.from_name.trim() : '';
+        const preserveConversationName =
+          isGroup || fromMe || (!chatName && !senderDisplayName && !fromName);
         const conversationName =
-          chatName ||
-          (preserveConversationName
-            ? jid
-            : (typeof payload?.sender_display_name === 'string' &&
-                payload.sender_display_name.trim()) ||
-              (typeof payload?.from_name === 'string' && payload.from_name.trim()) ||
-              jid);
+          chatName || (preserveConversationName ? jid : senderDisplayName || fromName || jid);
         await app.db.transaction(async (trx) => {
           let conversationJid = jid;
           if (!isGroup && jid.endsWith('@lid')) {
@@ -710,7 +773,9 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
               name: conversationName.slice(0, 255),
               is_group: isGroup,
               unread_count: 0,
-              last_message: content || (mediaField ? `[${mediaField}]` : ''),
+              last_message:
+                content ||
+                (providerType ? `[${providerType}]` : mediaField ? `[${mediaField}]` : ''),
               last_message_at: timestamp,
             })
             .onConflict(['company_id', 'jid'])
@@ -767,17 +832,20 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
               external_id: externalId,
               direction: fromMe ? 'outbound' : 'inbound',
               message_type: messageType,
+              provider_type: providerType,
               content,
               status: fromMe ? 'sent' : 'received',
-              media_mime_type: mediaField
-                ? typeof payload?.mime_type === 'string'
-                  ? safeMime(payload.mime_type)
-                  : mediaDefaultMime(messageType)
-                : null,
+              media_mime_type:
+                mediaField && !providerType
+                  ? typeof payload?.mime_type === 'string'
+                    ? safeMime(payload.mime_type)
+                    : mediaDefaultMime(messageType)
+                  : null,
               media_file_name:
-                typeof payload?.filename === 'string'
+                !providerType && typeof payload?.filename === 'string'
                   ? payload.filename.slice(0, 255)
-                  : mediaValue &&
+                  : !providerType &&
+                      mediaValue &&
                       typeof mediaValue === 'object' &&
                       'filename' in mediaValue &&
                       typeof mediaValue.filename === 'string'
@@ -1263,17 +1331,11 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
               const timestamp = providerTimestamp(item.timestamp);
               if (!timestamp) continue;
               const fromMe = item.is_from_me === true;
-              const rawType = typeof item.media_type === 'string' ? item.media_type : 'text';
-              const messageType = [
-                'text',
-                'image',
-                'video',
-                'audio',
-                'document',
-                'sticker',
-              ].includes(rawType)
-                ? rawType
-                : 'text';
+              const typeInfo = classifyGoWaMessageType(
+                item.media_type,
+                item.view_once === true || item.is_view_once === true
+              );
+              const messageType = typeInfo.messageType;
               recentMessages.set(item.id, {
                 company_id: companyId,
                 account_id: account.id,
@@ -1281,16 +1343,24 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
                 external_id: item.id.slice(0, 255),
                 direction: fromMe ? 'outbound' : 'inbound',
                 message_type: messageType,
-                content: typeof item.content === 'string' ? item.content.slice(0, 8000) : '',
+                provider_type: typeInfo.providerType,
+                content:
+                  typeInfo.providerType === 'view_once'
+                    ? 'View-once media'
+                    : typeof item.content === 'string'
+                      ? item.content.slice(0, 8000)
+                      : '',
                 status: fromMe ? 'sent' : 'received',
                 media_mime_type:
-                  item.mime_type !== undefined
+                  !typeInfo.providerType && item.mime_type !== undefined
                     ? safeMime(item.mime_type)
-                    : mediaDefaultMime(messageType),
+                    : typeInfo.providerType
+                      ? null
+                      : mediaDefaultMime(messageType),
                 media_file_name:
-                  typeof item.filename === 'string'
+                  !typeInfo.providerType && typeof item.filename === 'string'
                     ? item.filename.slice(0, 255)
-                    : typeof item.file_name === 'string'
+                    : !typeInfo.providerType && typeof item.file_name === 'string'
                       ? item.file_name.slice(0, 255)
                       : null,
                 sender_jid:
@@ -1308,18 +1378,32 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
                 .db('whatsapp_messages')
                 .insert(recentMessageRows.slice(index, index + 25))
                 .onConflict(['company_id', 'external_id'])
-                .merge(['content', 'status', 'write_date']);
+                .merge(['content', 'status', 'provider_type', 'write_date']);
             }
-            const itemType =
-              typeof latestMessage.item.media_type === 'string'
-                ? latestMessage.item.media_type.slice(0, 24)
-                : '';
-            const preview =
-              typeof latestMessage.item.content === 'string' && latestMessage.item.content
-                ? latestMessage.item.content.slice(0, 8_000)
-                : itemType
-                  ? `[${itemType}]`
-                  : '[message]';
+            const latestTypeInfo = classifyGoWaMessageType(
+              latestMessage.item.media_type,
+              latestMessage.item.view_once === true || latestMessage.item.is_view_once === true
+            );
+            const latestWasDeleted =
+              typeof latestMessage.item.id === 'string' &&
+              Boolean(
+                await app
+                  .db('whatsapp_messages')
+                  .select('id')
+                  .where({
+                    company_id: companyId,
+                    external_id: latestMessage.item.id,
+                    is_deleted: true,
+                  })
+                  .first()
+              );
+            const preview = latestWasDeleted
+              ? 'This message was deleted'
+              : latestTypeInfo.providerType === 'view_once'
+                ? 'View-once media'
+                : typeof latestMessage.item.content === 'string' && latestMessage.item.content
+                  ? latestMessage.item.content.slice(0, 8_000)
+                  : `[${latestTypeInfo.providerType ?? latestTypeInfo.messageType}]`;
             await app
               .db('whatsapp_conversations')
               .where({ company_id: companyId, jid })
@@ -1640,15 +1724,19 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         .first();
       if (tombstone) continue;
       const fromMe = item.is_from_me === true;
-      const rawType = typeof item.media_type === 'string' ? item.media_type : 'text';
-      const messageType = ['text', 'image', 'video', 'audio', 'document', 'sticker'].includes(
-        rawType
-      )
-        ? rawType
-        : 'text';
+      const typeInfo = classifyGoWaMessageType(
+        item.media_type,
+        item.view_once === true || item.is_view_once === true
+      );
+      const messageType = typeInfo.messageType;
       const timestamp = providerTimestamp(item.timestamp);
       if (!timestamp) continue;
-      const content = typeof item.content === 'string' ? item.content.slice(0, 8000) : '';
+      const content =
+        typeInfo.providerType === 'view_once'
+          ? 'View-once media'
+          : typeof item.content === 'string'
+            ? item.content.slice(0, 8000)
+            : '';
       const externalId = item.id.slice(0, 255);
       const replyToExternalId = providerReplyId(item.context_metadata);
       if (fromMe) {
@@ -1672,14 +1760,19 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         external_id: externalId,
         direction: fromMe ? 'outbound' : 'inbound',
         message_type: messageType,
+        provider_type: typeInfo.providerType,
         content,
         status: fromMe ? 'sent' : 'received',
         media_mime_type:
-          item.mime_type !== undefined ? safeMime(item.mime_type) : mediaDefaultMime(messageType),
+          !typeInfo.providerType && item.mime_type !== undefined
+            ? safeMime(item.mime_type)
+            : typeInfo.providerType
+              ? null
+              : mediaDefaultMime(messageType),
         media_file_name:
-          typeof item.filename === 'string'
+          !typeInfo.providerType && typeof item.filename === 'string'
             ? item.filename.slice(0, 255)
-            : typeof item.file_name === 'string'
+            : !typeInfo.providerType && typeof item.file_name === 'string'
               ? item.file_name.slice(0, 255)
               : null,
         sender_jid:
@@ -1693,7 +1786,8 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         create_date: timestamp,
       };
       const importedMessagePatch = {
-        content: typeof item.content === 'string' ? item.content.slice(0, 8000) : '',
+        content,
+        provider_type: typeInfo.providerType,
         status: fromMe ? 'sent' : 'received',
         reply_to_external_id: replyToExternalId,
         ...(Array.isArray(item.reactions) ? { reactions } : {}),
@@ -1714,6 +1808,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         'retryable',
         'last_error',
         'message_type',
+        'provider_type',
         'media_mime_type',
         'media_file_name',
         'sender_jid',
@@ -1758,7 +1853,15 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       quotedInternalIds.length || quotedExternalIds.length
         ? await app
             .db('whatsapp_messages')
-            .select('id', 'external_id', 'direction', 'content', 'message_type', 'media_file_name')
+            .select(
+              'id',
+              'external_id',
+              'direction',
+              'content',
+              'message_type',
+              'provider_type',
+              'media_file_name'
+            )
             .where({ company_id: companyId, conversation_id: conversationId })
             .andWhere((query) => {
               if (quotedInternalIds.length) query.whereIn('id', quotedInternalIds);
@@ -1806,12 +1909,18 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
             .first()
         )
       : false;
+    const latestTypeInfo = classifyGoWaMessageType(
+      latestProviderMessage?.media_type,
+      latestProviderMessage?.view_once === true || latestProviderMessage?.is_view_once === true
+    );
     const latestContent = latestIsTombstoned
       ? 'This message was deleted'
       : latestProviderMessage
-        ? typeof latestProviderMessage.content === 'string' && latestProviderMessage.content
-          ? latestProviderMessage.content.slice(0, 2000)
-          : `[${String(latestProviderMessage.media_type ?? 'message')}]`
+        ? latestTypeInfo.providerType === 'view_once'
+          ? '[View-once media]'
+          : typeof latestProviderMessage.content === 'string' && latestProviderMessage.content
+            ? latestProviderMessage.content.slice(0, 2000)
+            : `[${latestTypeInfo.providerType ?? String(latestProviderMessage.media_type ?? 'message')}]`
         : null;
     if (offset === 0) {
       await WhatsappConversation.query()
@@ -1853,6 +1962,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
                 direction: quoted.direction,
                 content: quoted.content,
                 message_type: quoted.message_type,
+                provider_type: quoted.provider_type,
                 media_file_name: quoted.media_file_name,
               }
             : message.reply_to_message_id || message.reply_to_external_id
@@ -1888,6 +1998,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       if (!message) return reply.code(404).send({ success: false, error: 'Message not found' });
       if (
         !message.external_id ||
+        message.provider_type ||
         message.external_id.startsWith('pending:') ||
         message.external_id.startsWith('gowa-') ||
         !['received', 'sent', 'delivered', 'read'].includes(message.status)
@@ -1974,6 +2085,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       if (
         message.direction !== 'outbound' ||
         message.message_type !== 'text' ||
+        message.provider_type ||
         message.is_deleted ||
         !message.external_id ||
         /^(pending:|gowa-)/u.test(message.external_id) ||
@@ -2037,6 +2149,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       if (!message) return reply.code(404).send({ success: false, error: 'Message not found' });
       if (
         message.direction !== 'outbound' ||
+        message.provider_type ||
         message.is_deleted ||
         !message.external_id ||
         /^(pending:|gowa-)/u.test(message.external_id) ||
@@ -2410,6 +2523,10 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       ]);
       if (!source)
         return reply.code(404).send({ success: false, error: 'Source message not found' });
+      if (source.provider_type)
+        return reply
+          .code(409)
+          .send({ success: false, error: 'This message type cannot be forwarded yet' });
       if (!destination)
         return reply
           .code(404)
@@ -2584,7 +2701,12 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
     const messageId = id(req.params.id);
     if (!messageId) return reply.code(400).send({ success: false, error: 'Invalid message ID' });
     const message = await WhatsappMessage.query().findOne({ id: messageId, company_id: companyId });
-    if (!message || message.message_type === 'text' || message.is_deleted)
+    if (
+      !message ||
+      message.provider_type ||
+      !GOWA_MEDIA_TYPES.has(message.message_type) ||
+      message.is_deleted
+    )
       return reply.code(404).send({ success: false, error: 'Media not found' });
     let content: Buffer | null = null;
     let mediaStream: Readable | null = null;

@@ -56,6 +56,7 @@ export const WhatsappMessage = defineModel('whatsapp.message', {
       required: true,
       default: 'text',
     }),
+    provider_type: fields.string(),
     content: fields.text(),
     status: fields.enum(
       ['received', 'queued', 'sending', 'sent', 'delivered', 'read', 'failed', 'unknown'],

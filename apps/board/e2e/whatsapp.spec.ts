@@ -54,7 +54,7 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
         },
       });
     }
-    if (url.searchParams.get('offset') === '50') {
+    if (Number(url.searchParams.get('offset')) >= 50) {
       return route.fulfill({
         json: {
           success: true,
@@ -161,7 +161,7 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
       return;
     }
     const url = new URL(route.request().url());
-    if (url.searchParams.get('offset') === '50') {
+    if (Number(url.searchParams.get('offset')) >= 50) {
       await route.fulfill({
         json: {
           success: true,
@@ -205,7 +205,7 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
             is_deleted: messageDeleted,
             message_type: 'text',
             reply_to: { id: 50, content: 'Can you help?', message_type: 'text' },
-            create_date: new Date().toISOString(),
+            create_date: new Date(Date.now() - 60_000).toISOString(),
           },
           {
             id: 56,
@@ -231,6 +231,24 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
             retryable: true,
             last_error: 'Gateway rejected the message',
             message_type: 'text',
+            create_date: new Date().toISOString(),
+          },
+          {
+            id: 59,
+            direction: 'inbound',
+            content: 'View-once media',
+            status: 'received',
+            message_type: 'text',
+            provider_type: 'view_once',
+            create_date: new Date().toISOString(),
+          },
+          {
+            id: 60,
+            direction: 'inbound',
+            content: '',
+            status: 'received',
+            message_type: 'text',
+            provider_type: 'future_interactive_card',
             create_date: new Date().toISOString(),
           },
           {
@@ -265,7 +283,7 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
             message_type: 'image',
             create_date: new Date(Date.now() - 250).toISOString(),
           },
-          ...Array.from({ length: 43 }, (_, index) => ({
+          ...Array.from({ length: 41 }, (_, index) => ({
             id: 49 - index,
             direction: 'inbound',
             is_unread: true,
@@ -327,6 +345,12 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
       .filter({ hasText: 'Can you help?' })
       .getByText('Received', { exact: true })
   ).toBeVisible();
+  const viewOnceArticle = page.locator('#whatsapp-message-59');
+  await expect(viewOnceArticle.getByText('View-once media')).toBeVisible();
+  await expect(viewOnceArticle.getByRole('button', { name: 'Reply to message' })).toHaveCount(0);
+  const unknownTypeArticle = page.locator('#whatsapp-message-60');
+  await expect(unknownTypeArticle.getByText('Unsupported message type')).toBeVisible();
+  await expect(unknownTypeArticle.getByRole('button', { name: 'Forward message' })).toHaveCount(0);
   await expect(
     page.locator('article').filter({ hasText: 'A failed reply' }).getByRole('button', {
       name: 'Retry send',
@@ -431,7 +455,7 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   await ownReply.getByRole('button', { name: 'Edit message' }).click();
   await page.getByLabel('Edited message text').fill('Edited reply text');
   await page.getByRole('button', { name: 'Save edit' }).click();
-  await expect(ownReply.getByText('Edited')).toBeVisible();
+  await expect(ownReply.getByText('Edited', { exact: true })).toBeVisible();
   await expect(ownReply.getByText('Edited reply text')).toBeVisible();
   await ownReply.getByRole('button', { name: 'Delete message for everyone' }).click();
   await page
