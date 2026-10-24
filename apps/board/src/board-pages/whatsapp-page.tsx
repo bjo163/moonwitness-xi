@@ -84,6 +84,7 @@ type Message = {
     media_file_name?: string | null;
     unavailable?: boolean;
   } | null;
+  is_forwarded?: boolean;
   create_date: string;
 };
 type ConversationFilter = 'all' | 'unread' | 'private' | 'groups';
@@ -147,6 +148,13 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
   const [loadingMoreConversations, setLoadingMoreConversations] = useState(false);
   const [markingRead, setMarkingRead] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
+  const [forwarding, setForwarding] = useState(false);
+  const forwardIdempotencyKey = useRef<{
+    sourceId: number;
+    destinationId: number;
+    key: string;
+  } | null>(null);
   const loadingMoreConversationsRef = useRef(false);
   const [olderPage, setOlderPage] = useState<{
     conversationId: number;
@@ -403,6 +411,35 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
       toast.error(error instanceof Error ? error.message : 'Could not start WhatsApp connection');
     }
   };
+  const forwardTo = async (destination: Conversation) => {
+    if (!forwardingMessage || forwarding) return;
+    if (
+      forwardIdempotencyKey.current?.sourceId !== forwardingMessage.id ||
+      forwardIdempotencyKey.current?.destinationId !== destination.id
+    ) {
+      forwardIdempotencyKey.current = {
+        sourceId: forwardingMessage.id,
+        destinationId: destination.id,
+        key: crypto.randomUUID(),
+      };
+    }
+    setForwarding(true);
+    try {
+      await client.request(`/whatsapp/messages/${forwardingMessage.id}/forward`, {
+        method: 'POST',
+        headers: { 'Idempotency-Key': forwardIdempotencyKey.current.key },
+        body: { conversation_id: destination.id },
+      });
+      forwardIdempotencyKey.current = null;
+      setForwardingMessage(null);
+      await queryClient.invalidateQueries({ queryKey: scopedQueryKey(['whatsapp']) });
+      toast.success('Forward queued');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Message could not be forwarded');
+    } finally {
+      setForwarding(false);
+    }
+  };
   const disconnect = async () => {
     try {
       await client.request('/whatsapp/disconnect', { method: 'POST', body: {} });
@@ -570,6 +607,51 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
   return (
     <main className="mx-auto flex min-h-full w-full max-w-7xl flex-col gap-5 p-4 md:p-8">
       <Breadcrumbs items={[{ label: 'WhatsApp' }]} />
+      {forwardingMessage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="whatsapp-forward-title"
+            className="w-full max-w-md border-2 border-ink bg-cream p-5 shadow-[6px_6px_0_#171717]"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="whatsapp-forward-title" className="font-display text-xl uppercase">
+                  Forward message
+                </h2>
+                <p className="mt-1 line-clamp-2 text-sm text-ink-faint">
+                  {forwardingMessage.content || `[${forwardingMessage.message_type}]`}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={forwarding}
+                onClick={() => setForwardingMessage(null)}
+              >
+                Cancel
+              </Button>
+            </div>
+            <div className="mt-4 max-h-72 space-y-2 overflow-y-auto" aria-label="Forward destinations">
+              {(conversationsQuery.data?.items ?? []).map((conversation) => (
+                <Button
+                  key={conversation.id}
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-start text-left"
+                  disabled={forwarding}
+                  aria-label={`Forward to ${conversation.name}`}
+                  onClick={() => void forwardTo(conversation)}
+                >
+                  {conversation.name}
+                  {conversation.is_group ? ' · Group' : ''}
+                </Button>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
       {(accountQuery.isError || conversationsQuery.isError || messagesQuery.isError) && (
         <div role="alert" className="flex flex-wrap items-center justify-between gap-3 border-2 border-ink bg-pink p-3 text-sm">
           <p>
@@ -899,6 +981,9 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                       </p>
                     )}
                   <p className="whitespace-pre-wrap break-words text-sm">{message.content}</p>
+                  {message.is_forwarded && (
+                    <p className="mb-1 font-mono text-[10px] italic text-ink-faint">Forwarded</p>
+                  )}
                   {message.reply_to && (
                     <Button
                       type="button"
@@ -943,6 +1028,17 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                       onClick={() => setReplyingTo(message)}
                     >
                       Reply
+                    </Button>
+                  )}
+                  {canSend && ['received', 'sent', 'delivered', 'read'].includes(message.status) && (
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="ml-3 mt-1 h-auto p-0 text-xs underline"
+                      aria-label="Forward message"
+                      onClick={() => setForwardingMessage(message)}
+                    >
+                      Forward
                     </Button>
                   )}
                   <p className="mt-2 flex flex-wrap justify-end gap-x-2 text-right font-mono text-[10px] text-ink-faint">

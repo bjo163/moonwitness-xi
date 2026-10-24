@@ -85,6 +85,16 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
     });
   });
   const sentMessages: string[] = [];
+  const forwardedMessages: Array<{ sourceId: string; body: Record<string, unknown>; key: string }> = [];
+  await page.route('**/whatsapp/messages/*/forward', async (route) => {
+    const sourceId = new URL(route.request().url()).pathname.split('/').at(-2) ?? '';
+    forwardedMessages.push({
+      sourceId,
+      body: route.request().postDataJSON() as Record<string, unknown>,
+      key: route.request().headers()['idempotency-key'] ?? '',
+    });
+    await route.fulfill({ status: 202, json: { success: true, data: { status: 'queued' } } });
+  });
   await page.route('**/whatsapp/conversations/42/messages*', async (route) => {
     if (route.request().method() === 'POST') {
       const expectedMessages = [
@@ -329,6 +339,15 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
     'Draft before newline',
     'Quoted response',
   ]);
+  await page.locator('#whatsapp-message-50').getByRole('button', { name: 'Forward message' }).click();
+  await page.getByRole('dialog', { name: 'Forward message' }).getByRole('button', { name: 'Forward to Rani Putri' }).click();
+  await expect(page.getByText('Forward queued')).toBeVisible();
+  expect(forwardedMessages).toHaveLength(1);
+  expect(forwardedMessages[0]).toMatchObject({
+    sourceId: '50',
+    body: { conversation_id: 43 },
+  });
+  expect(forwardedMessages[0]?.key).toBeTruthy();
   await page.getByLabel('Search conversations by name, number, or message').fill('Rani');
   await expect(page.getByRole('button', { name: /Rani Putri/u })).toBeVisible();
   await page.getByLabel('Search conversations by name, number, or message').fill('');

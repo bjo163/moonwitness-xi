@@ -212,7 +212,18 @@ export async function dispatchQueuedWhatsAppMessage(
     }
 
     let sent: { id?: string; message_id?: string } | undefined;
-    if (message.media_key) {
+    if (message.forward_from_external_id) {
+      providerCallStarted = true;
+      sent = await gowaRequest<{ id?: string; message_id?: string }>(
+        `/message/${encodeURIComponent(message.forward_from_external_id)}/forward`,
+        {
+          method: 'POST',
+          deviceId: account.gateway_device_id,
+          contentType: 'application/json',
+          body: JSON.stringify({ phone: conversation.jid }),
+        }
+      );
+    } else if (message.media_key) {
       const bytes = await storage.get(message.media_key);
       if (!bytes?.byteLength) {
         await patchMessage(messageId, companyId, {

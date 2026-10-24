@@ -1459,6 +1459,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         'sender_jid',
         'reply_to_message_id',
         'reply_to_external_id',
+        'is_forwarded',
         'create_date'
       )
       .where({ conversation_id: conversationId, company_id: companyId })
@@ -1812,6 +1813,123 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
             ? 'Media storage or queue is unavailable. Try again.'
             : 'Message could not be queued. Try again.',
         });
+      }
+    }
+  );
+
+  app.post<{ Params: Params }>(
+    '/whatsapp/messages/:id/forward',
+    whatsappRateLimit(20),
+    async (req, reply) => {
+      const companyId = requireCompany(req, reply);
+      if (!companyId) return;
+      if (!requireWhatsAppAction(req, reply, 'whatsapp.message', 'create')) return;
+      const sourceId = id(req.params.id);
+      const body = isRecord(req.body) ? req.body : null;
+      if (
+        !sourceId ||
+        !body ||
+        Object.keys(body).some((key) => key !== 'conversation_id') ||
+        !Number.isSafeInteger(body.conversation_id) ||
+        Number(body.conversation_id) < 1
+      )
+        return reply.code(400).send({ success: false, error: 'Invalid forward request' });
+      const idempotencyKey = req.headers['idempotency-key'];
+      if (
+        typeof idempotencyKey !== 'string' ||
+        idempotencyKey.length < 8 ||
+        idempotencyKey.length > 128 ||
+        !/^[A-Za-z0-9._:-]+$/u.test(idempotencyKey)
+      )
+        return reply
+          .code(400)
+          .send({ success: false, error: 'A valid Idempotency-Key is required' });
+      const [source, destination, account] = await Promise.all([
+        WhatsappMessage.query().findOne({ id: sourceId, company_id: companyId }),
+        WhatsappConversation.query().findOne({
+          id: Number(body.conversation_id),
+          company_id: companyId,
+        }),
+        WhatsappAccount.query().findOne({ company_id: companyId }),
+      ]);
+      if (!source)
+        return reply.code(404).send({ success: false, error: 'Source message not found' });
+      if (!destination)
+        return reply.code(404).send({ success: false, error: 'Destination conversation not found' });
+      const requestHash = createHash('sha256')
+        .update(JSON.stringify({ source_message_id: source.id, destination_conversation_id: destination.id }))
+        .digest('hex');
+      const existing = await WhatsappMessage.query().findOne({
+        company_id: companyId,
+        idempotency_key: idempotencyKey,
+      });
+      if (existing) {
+        if (existing.request_hash !== requestHash)
+          return reply
+            .code(409)
+            .send({ success: false, error: 'Idempotency key was used for another message' });
+        return reply.code(202).send({ success: true, data: existing });
+      }
+      if (!source.external_id || source.external_id.startsWith('pending:') || source.external_id.startsWith('gowa-'))
+        return reply.code(409).send({ success: false, error: 'Source message is not available to forward' });
+      if (!['received', 'sent', 'delivered', 'read'].includes(source.status))
+        return reply.code(409).send({ success: false, error: 'Source message is not available to forward' });
+      if (!account?.gateway_device_id || account.status !== 'connected')
+        return reply.code(409).send({ success: false, error: 'WhatsApp account is not connected' });
+      try {
+        const forwarded = await app.db.transaction(async (trx) => {
+          const inserted = await WhatsappMessage.query(trx).insertAndFetch({
+            company_id: companyId,
+            account_id: account.id,
+            conversation_id: destination.id,
+            external_id: `pending:${idempotencyKey}`.slice(0, 255),
+            idempotency_key: idempotencyKey,
+            request_hash: requestHash,
+            direction: 'outbound',
+            message_type: source.message_type,
+            content: source.content,
+            status: 'queued',
+            attempt_count: 0,
+            retryable: false,
+            media_mime_type: source.media_mime_type,
+            media_file_name: source.media_file_name,
+            is_forwarded: true,
+            forward_from_external_id: source.external_id,
+          } as never);
+          await OutboxEvent.query(trx).insert({
+            event_type: WHATSAPP_SEND_EVENT,
+            aggregate_model: 'whatsapp.message',
+            aggregate_id: inserted.id,
+            company_id: companyId,
+            payload: JSON.stringify({ message_id: inserted.id }),
+            status: 'pending',
+            attempts: 0,
+            max_attempts: 4,
+            available_at: new Date().toISOString(),
+          });
+          await WhatsappConversation.query(trx)
+            .where({ id: destination.id, company_id: companyId })
+            .patch({
+              last_message: source.content || source.media_file_name || `[${source.message_type}]`,
+              last_message_at: new Date().toISOString(),
+            });
+          await recordWhatsAppAudit(req, 'whatsapp.message', 'forward_queued', inserted.id, companyId, trx);
+          return inserted;
+        });
+        return reply.code(202).send({ success: true, data: forwarded });
+      } catch (error) {
+        req.log.error({ error: whatsappLogErrorContext(error) }, 'WhatsApp forward queue failed');
+        const raced = await WhatsappMessage.query().findOne({
+          company_id: companyId,
+          idempotency_key: idempotencyKey,
+        });
+        if (raced?.request_hash === requestHash)
+          return reply.code(202).send({ success: true, data: raced });
+        if (raced)
+          return reply
+            .code(409)
+            .send({ success: false, error: 'Idempotency key was used for another message' });
+        return reply.code(503).send({ success: false, error: 'Message could not be queued. Try again.' });
       }
     }
   );

@@ -64,6 +64,7 @@ describe('WhatsApp API GoWA bridge', () => {
   let failAttachmentPut = false;
   let providerImageSendCount = 0;
   let providerImageReplyIds: string[] = [];
+  let providerForwardRequests: Array<{ sourceId: string; body: Record<string, unknown> }> = [];
   let providerDownloadBytes = Buffer.alloc(0);
   let providerDownloadDeclaredLength: number | null = null;
   let providerDownloadFileName = 'incoming.png';
@@ -174,6 +175,7 @@ describe('WhatsApp API GoWA bridge', () => {
     failAttachmentPut = false;
     providerImageSendCount = 0;
     providerImageReplyIds = [];
+    providerForwardRequests = [];
     providerDownloadBytes = pngFixture();
     providerDownloadDeclaredLength = null;
     providerDownloadFileName = 'incoming.png';
@@ -283,6 +285,13 @@ describe('WhatsApp API GoWA bridge', () => {
           form instanceof FormData ? String(form.get('reply_message_id') ?? '') : ''
         );
         return json({ message_id: 'sent-image-id' });
+      }
+      if (/^\/message\/.+\/forward$/u.test(url.pathname) && method === 'POST') {
+        providerForwardRequests.push({
+          sourceId: decodeURIComponent(url.pathname.slice('/message/'.length).replace(/\/forward$/u, '')),
+          body: JSON.parse(String(init?.body)) as Record<string, unknown>,
+        });
+        return json({ message_id: `forwarded-${providerForwardRequests.length}` });
       }
       if (/^\/devices\/moonwitness-company-\d+\/logout$/u.test(url.pathname)) return json({});
       if (url.pathname === '/message/incoming-image/download')
@@ -1718,6 +1727,109 @@ describe('WhatsApp API GoWA bridge', () => {
       payload: { content: 'Tenant isolation' },
     });
     expect(foreign.statusCode).toBe(404);
+  });
+
+  it('queues a company-scoped forward and uses GoWA source IDs instead of re-uploading media', async () => {
+    const accountId = await connectAndMarkReady();
+    providerChats = [
+      { jid: '123456@g.us', name: 'Forward source', is_group: true },
+      { jid: '628111111111@s.whatsapp.net', name: 'Forward destination' },
+    ];
+    const inbox = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations',
+      headers: { authorization: 'Bearer test' },
+    });
+    const sourceConversationId = inbox.json().data.find(
+      (chat: { is_group: boolean }) => chat.is_group
+    ).id as number;
+    const destination = inbox.json().data.find(
+      (chat: { is_group: boolean }) => !chat.is_group
+    );
+    const [source] = await db('whatsapp_messages')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        conversation_id: sourceConversationId,
+        external_id: 'source-provider-image-id',
+        direction: 'inbound',
+        message_type: 'image',
+        content: 'Image from group',
+        status: 'received',
+        media_mime_type: 'image/png',
+        media_file_name: 'source.png',
+      })
+      .returning(['id']);
+
+    const headers = { authorization: 'Bearer test', 'idempotency-key': randomUUID() };
+    const forwarded = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/messages/${source.id}/forward`,
+      headers,
+      payload: { conversation_id: destination.id },
+    });
+    expect(forwarded.statusCode).toBe(202);
+    expect(forwarded.json().data).toMatchObject({
+      direction: 'outbound',
+      message_type: 'image',
+      media_file_name: 'source.png',
+      is_forwarded: true,
+      status: 'queued',
+    });
+    const forwardedId = forwarded.json().data.id as number;
+    const duplicate = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/messages/${source.id}/forward`,
+      headers,
+      payload: { conversation_id: destination.id },
+    });
+    expect(duplicate.statusCode).toBe(202);
+    expect(duplicate.json().data.id).toBe(forwardedId);
+    const event = await db('outbox_events')
+      .where({ aggregate_id: forwardedId, event_type: 'whatsapp.message.send' })
+      .first();
+    await dispatchQueuedWhatsAppMessage(forwardedId, companyId, event.id, storage);
+    expect(providerForwardRequests).toEqual([
+      {
+        sourceId: 'source-provider-image-id',
+        body: { phone: '628111111111@s.whatsapp.net' },
+      },
+    ]);
+    expect((await db('whatsapp_messages').where({ id: forwardedId }).first()).status).toBe('sent');
+
+    const [foreignAccount] = await db('whatsapp_accounts')
+      .insert({ company_id: foreignCompanyId, status: 'connected', gateway_device_id: 'foreign-device' })
+      .returning(['id']);
+    const [foreignConversation] = await db('whatsapp_conversations')
+      .insert({
+        company_id: foreignCompanyId,
+        account_id: foreignAccount.id,
+        jid: '628999999999@s.whatsapp.net',
+        name: 'Foreign destination',
+        is_group: false,
+        unread_count: 0,
+      })
+      .returning(['id']);
+    const [foreignSource] = await db('whatsapp_messages')
+      .insert({
+        company_id: foreignCompanyId,
+        account_id: foreignAccount.id,
+        conversation_id: foreignConversation.id,
+        external_id: 'foreign-source-id',
+        direction: 'inbound',
+        message_type: 'text',
+        content: 'Foreign message',
+        status: 'received',
+      })
+      .returning(['id']);
+    const foreignForward = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/messages/${foreignSource.id}/forward`,
+      headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
+      payload: { conversation_id: destination.id },
+    });
+    expect(foreignForward.statusCode).toBe(404);
+    expect(providerForwardRequests).toHaveLength(1);
   });
 
   it('quotes messages within the same company conversation and forwards the provider reply id', async () => {
