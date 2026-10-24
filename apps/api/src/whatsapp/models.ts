@@ -71,6 +71,8 @@ export const WhatsappMessage = defineModel('whatsapp.message', {
     media_mime_type: fields.string(),
     media_file_name: fields.string(),
     sender_jid: fields.string(),
+    reply_to_message_id: fields.integer(),
+    reply_to_external_id: fields.string({ hidden: true }),
   },
 });
 

@@ -243,6 +243,19 @@ function providerTimestamp(value: unknown): string | null {
   return Number.isFinite(milliseconds) ? new Date(milliseconds).toISOString() : null;
 }
 
+function providerReplyId(value: unknown): string | null {
+  if (typeof value === 'string') {
+    try {
+      value = JSON.parse(value) as unknown;
+    } catch {
+      return null;
+    }
+  }
+  if (!isRecord(value)) return null;
+  const id = value.replied_to_id;
+  return typeof id === 'string' && id.length > 0 && id.length <= 255 ? id : null;
+}
+
 const AMBIGUOUS_SEND_MATCH_WINDOW_MS = 2 * 60 * 1_000;
 
 async function reconcileAmbiguousOutboundMessage(input: {
@@ -465,6 +478,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         const messageType = mediaField === 'video_note' ? 'video' : mediaField ?? 'text';
         const mediaValue = mediaField ? payload?.[mediaField] : null;
         const content = typeof payload?.body === 'string' ? payload.body.slice(0, 8000) : '';
+        const replyToExternalId = providerReplyId(payload?.context_metadata);
         const chatName = typeof payload?.chat_name === 'string' ? payload.chat_name.trim() : '';
         const preserveConversationName = isGroup || fromMe;
         const conversationName = chatName || (preserveConversationName
@@ -559,6 +573,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
                   ? mediaValue.filename.slice(0, 255)
                   : null,
               sender_jid: senderJid,
+              reply_to_external_id: replyToExternalId,
             })
             .onConflict(['company_id', 'external_id'])
             .ignore()
@@ -1382,6 +1397,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       if (!timestamp) continue;
       const content = typeof item.content === 'string' ? item.content.slice(0, 8000) : '';
       const externalId = item.id.slice(0, 255);
+      const replyToExternalId = providerReplyId(item.context_metadata);
       if (fromMe) {
         await reconcileAmbiguousOutboundMessage({
           db: app.db,
@@ -1418,12 +1434,14 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
               : typeof item.sender_jid === 'string'
                 ? item.sender_jid.slice(0, 255)
                 : null,
+          reply_to_external_id: replyToExternalId,
           create_date: timestamp,
         })
         .onConflict(['company_id', 'external_id'])
         .merge({
           content: typeof item.content === 'string' ? item.content.slice(0, 8000) : '',
           status: fromMe ? 'sent' : 'received',
+          reply_to_external_id: replyToExternalId,
           write_date: new Date().toISOString(),
         });
     }
@@ -1439,6 +1457,8 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         'media_mime_type',
         'media_file_name',
         'sender_jid',
+        'reply_to_message_id',
+        'reply_to_external_id',
         'create_date'
       )
       .where({ conversation_id: conversationId, company_id: companyId })
@@ -1446,6 +1466,26 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       .orderBy('id', 'desc')
       .limit(limit)
       .offset(offset);
+    const quotedInternalIds = messages
+      .map((message) => Number(message.reply_to_message_id))
+      .filter((value) => Number.isSafeInteger(value) && value > 0);
+    const quotedExternalIds = messages
+      .map((message) => message.reply_to_external_id)
+      .filter((value): value is string => typeof value === 'string' && value.length > 0);
+    const quotedRows = quotedInternalIds.length || quotedExternalIds.length
+      ? await app.db('whatsapp_messages')
+          .select('id', 'external_id', 'direction', 'content', 'message_type', 'media_file_name')
+          .where({ company_id: companyId, conversation_id: conversationId })
+          .andWhere((query) => {
+            if (quotedInternalIds.length) query.whereIn('id', quotedInternalIds);
+            if (quotedExternalIds.length) {
+              if (quotedInternalIds.length) query.orWhereIn('external_id', quotedExternalIds);
+              else query.whereIn('external_id', quotedExternalIds);
+            }
+          })
+      : [];
+    const quoteById = new Map(quotedRows.map((row) => [String(row.id), row]));
+    const quoteByExternalId = new Map(quotedRows.map((row) => [String(row.external_id), row]));
     const readCursor = (await app
       .db('whatsapp_conversation_reads')
       .select('last_read_message_id', 'last_read_at')
@@ -1488,15 +1528,32 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
     return {
       success: true,
       data: messages.map((message) => {
+        const quoted = (message.reply_to_message_id != null
+          ? quoteById.get(String(message.reply_to_message_id))
+          : undefined) ?? (message.reply_to_external_id
+          ? quoteByExternalId.get(String(message.reply_to_external_id))
+          : undefined);
         const messageAt = Date.parse(String(message.create_date));
         const afterReadCursor =
           !Number.isFinite(lastReadAt) ||
           messageAt > lastReadAt ||
           (messageAt === lastReadAt && Number(message.id) > lastReadMessageId);
+        const { reply_to_external_id: _replyToExternalId, ...publicMessage } = message;
         return {
-          ...message,
+          ...publicMessage,
           is_last_read: Number.isFinite(lastReadAt) && Number(message.id) === lastReadMessageId,
           is_unread: message.direction === 'inbound' && afterReadCursor,
+          reply_to: quoted
+            ? {
+                id: quoted.id,
+                direction: quoted.direction,
+                content: quoted.content,
+                message_type: quoted.message_type,
+                media_file_name: quoted.media_file_name,
+              }
+            : message.reply_to_message_id || message.reply_to_external_id
+              ? { unavailable: true }
+              : null,
         };
       }),
     };
@@ -1588,10 +1645,19 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         !conversationId ||
         !body ||
         Object.keys(body).some(
-          (k) => !['content', 'media_base64', 'media_mime_type', 'media_file_name'].includes(k)
+          (k) =>
+            ![
+              'content',
+              'media_base64',
+              'media_mime_type',
+              'media_file_name',
+              'reply_to_message_id',
+            ].includes(k)
         ) ||
         typeof body.content !== 'string' ||
-        body.content.length > 8000
+        body.content.length > 8000 ||
+        (body.reply_to_message_id !== undefined &&
+          (!Number.isSafeInteger(body.reply_to_message_id) || Number(body.reply_to_message_id) < 1))
       )
         return reply.code(400).send({ success: false, error: 'Invalid message payload' });
       const idempotencyKey = req.headers['idempotency-key'];
@@ -1610,6 +1676,21 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       });
       if (!conversation)
         return reply.code(404).send({ success: false, error: 'Conversation not found' });
+      let quotedMessage: { id: number; external_id: string } | undefined;
+      if (body.reply_to_message_id !== undefined) {
+        quotedMessage = await WhatsappMessage.query().findOne({
+          id: Number(body.reply_to_message_id),
+          company_id: companyId,
+          conversation_id: conversationId,
+        });
+        if (!quotedMessage)
+          return reply.code(404).send({ success: false, error: 'Quoted message not found' });
+        if (!quotedMessage.external_id || quotedMessage.external_id.startsWith('pending:'))
+          return reply.code(409).send({
+            success: false,
+            error: 'Quoted message is not available on WhatsApp yet',
+          });
+      }
       const account = await WhatsappAccount.query().findOne({ company_id: companyId });
       if (!body.content.trim() && typeof body.media_base64 !== 'string')
         return reply
@@ -1643,6 +1724,8 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
           JSON.stringify({
             conversation_id: conversationId,
             content: body.content,
+            reply_to_message_id: quotedMessage?.id ?? null,
+            reply_to_external_id: quotedMessage?.external_id ?? null,
             media_mime_type: mediaMime,
             media_file_name: fileName,
           })
@@ -1685,6 +1768,8 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
             media_key: mediaKey,
             media_mime_type: mediaKey ? mediaMime : null,
             media_file_name: fileName,
+            reply_to_message_id: quotedMessage?.id ?? null,
+            reply_to_external_id: quotedMessage?.external_id ?? null,
           } as never);
           await OutboxEvent.query(trx).insert({
             event_type: WHATSAPP_SEND_EVENT,

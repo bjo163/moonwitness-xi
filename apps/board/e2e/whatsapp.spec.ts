@@ -88,10 +88,11 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   await page.route('**/whatsapp/conversations/42/messages*', async (route) => {
     if (route.request().method() === 'POST') {
       const expectedMessages = [
-        'Thanks, I will take a look.\nChecking this multiline reply.',
-        'Draft before newline',
+        { content: 'Thanks, I will take a look.\nChecking this multiline reply.' },
+        { content: 'Draft before newline' },
+        { content: 'Quoted response', reply_to_message_id: 50 },
       ];
-      expect(route.request().postDataJSON()).toMatchObject({ content: expectedMessages[sentMessages.length] });
+      expect(route.request().postDataJSON()).toMatchObject(expectedMessages[sentMessages.length]);
       expect(route.request().headers()['idempotency-key']).toBeTruthy();
       sentMessages.push(route.request().postDataJSON().content);
       await route.fulfill({
@@ -140,6 +141,7 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
             content: 'A sent reply',
             status: 'sent',
             message_type: 'text',
+            reply_to: { id: 50, content: 'Can you help?', message_type: 'text' },
             create_date: new Date().toISOString(),
           },
           {
@@ -276,17 +278,20 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   await page.getByRole('button', { name: 'Mark latest as read' }).click();
   await page.getByRole('button', { name: 'Load more conversations' }).click();
   await expect(page.getByRole('button', { name: /Older conversation/u })).toBeVisible();
-  await expect(page.locator('article').getByText('Can you help?')).toBeVisible();
+  await expect(page.locator('#whatsapp-message-50').getByText('Can you help?')).toBeVisible();
   await expect(page.locator('article time').first()).toHaveAttribute(
     'datetime',
     /^\d{4}-\d{2}-\d{2}T/u
   );
   await expect(page.locator('article time').first()).not.toHaveText('—');
-  await page.getByRole('button', { name: 'Load older messages' }).click();
+  const loadOlderButton = page.getByRole('button', { name: 'Load older messages' });
+  if (await loadOlderButton.isVisible().catch(() => false)) await loadOlderButton.click();
   await expect(page.locator('article').getByText('Older history')).toBeVisible();
-  const inboundMessage = page.locator('article').filter({ hasText: 'Can you help?' });
+  const inboundMessage = page.locator('#whatsapp-message-50');
   await inboundMessage.getByRole('button', { name: 'Copy message' }).click();
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('Can you help?');
+  await page.getByRole('button', { name: 'Jump to quoted message' }).click();
+  await expect(page.locator('#whatsapp-message-50')).toBeFocused();
   const messageScroller = page.locator('div.overflow-y-auto').last();
   await expect.poll(() => messageScroller.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
   await page.locator('article').last().scrollIntoViewIfNeeded();
@@ -312,6 +317,18 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   await expect(composer).toHaveValue('Draft before newline\n');
   await composer.press('Control+Enter');
   await expect(composer).toHaveValue('');
+  const replyTarget = page.locator('#whatsapp-message-50');
+  await replyTarget.getByRole('button', { name: 'Reply to message' }).click();
+  await expect(page.getByText('Replying to: Can you help?')).toBeVisible();
+  await composer.fill('Quoted response');
+  await composer.press('Control+Enter');
+  await expect(composer).toHaveValue('');
+  await expect(page.getByText('Replying to: Can you help?')).toHaveCount(0);
+  expect(sentMessages).toEqual([
+    'Thanks, I will take a look.\nChecking this multiline reply.',
+    'Draft before newline',
+    'Quoted response',
+  ]);
   await page.getByLabel('Search conversations by name, number, or message').fill('Rani');
   await expect(page.getByRole('button', { name: /Rani Putri/u })).toBeVisible();
   await page.getByLabel('Search conversations by name, number, or message').fill('');

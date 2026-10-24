@@ -60,8 +60,10 @@ describe('WhatsApp API GoWA bridge', () => {
   let textSendFailureStatus = 503;
   let acceptThenTimeout = false;
   let providerTextSendCount = 0;
+  let providerTextSendBodies: Array<Record<string, unknown>> = [];
   let failAttachmentPut = false;
   let providerImageSendCount = 0;
+  let providerImageReplyIds: string[] = [];
   let providerDownloadBytes = Buffer.alloc(0);
   let providerDownloadDeclaredLength: number | null = null;
   let providerDownloadFileName = 'incoming.png';
@@ -168,8 +170,10 @@ describe('WhatsApp API GoWA bridge', () => {
     textSendFailureStatus = 503;
     acceptThenTimeout = false;
     providerTextSendCount = 0;
+    providerTextSendBodies = [];
     failAttachmentPut = false;
     providerImageSendCount = 0;
+    providerImageReplyIds = [];
     providerDownloadBytes = pngFixture();
     providerDownloadDeclaredLength = null;
     providerDownloadFileName = 'incoming.png';
@@ -250,6 +254,7 @@ describe('WhatsApp API GoWA bridge', () => {
       }
       if (url.pathname === '/send/message') {
         providerTextSendCount++;
+        providerTextSendBodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
         if (failTextBeforeAcceptance) {
           failTextBeforeAcceptance = false;
           throw new Error('simulated network failure before provider acceptance');
@@ -273,6 +278,10 @@ describe('WhatsApp API GoWA bridge', () => {
       }
       if (url.pathname === '/send/image') {
         providerImageSendCount++;
+        const form = init?.body;
+        providerImageReplyIds.push(
+          form instanceof FormData ? String(form.get('reply_message_id') ?? '') : ''
+        );
         return json({ message_id: 'sent-image-id' });
       }
       if (/^\/devices\/moonwitness-company-\d+\/logout$/u.test(url.pathname)) return json({});
@@ -1636,6 +1645,18 @@ describe('WhatsApp API GoWA bridge', () => {
       'published'
     );
 
+    const [imageQuoteTarget] = await db('whatsapp_messages')
+      .insert({
+        company_id: companyId,
+        account_id: await db('whatsapp_accounts').where({ company_id: companyId }).first().then((row) => row.id),
+        conversation_id: privateId,
+        external_id: 'private-image-quote-target',
+        direction: 'inbound',
+        message_type: 'text',
+        content: 'Image context',
+        status: 'received',
+      })
+      .returning(['id']);
     const sentImage = await app.inject({
       method: 'POST',
       url: `/whatsapp/conversations/${privateId}/messages`,
@@ -1645,6 +1666,7 @@ describe('WhatsApp API GoWA bridge', () => {
         media_base64: pngFixture().toString('base64'),
         media_mime_type: 'image/png',
         media_file_name: 'test.png',
+        reply_to_message_id: imageQuoteTarget.id,
       },
     });
     expect(sentImage.statusCode).toBe(202);
@@ -1658,6 +1680,7 @@ describe('WhatsApp API GoWA bridge', () => {
       .where({ aggregate_id: imageMessageId, event_type: 'whatsapp.message.send' })
       .first();
     await dispatchQueuedWhatsAppMessage(imageMessageId, companyId, imageEvent.id, storage);
+    expect(providerImageReplyIds.at(-1)).toBe('private-image-quote-target');
     expect((await db('whatsapp_messages').where({ id: imageMessageId }).first()).status).toBe(
       'sent'
     );
@@ -1695,6 +1718,103 @@ describe('WhatsApp API GoWA bridge', () => {
       payload: { content: 'Tenant isolation' },
     });
     expect(foreign.statusCode).toBe(404);
+  });
+
+  it('quotes messages within the same company conversation and forwards the provider reply id', async () => {
+    await connectAndMarkReady();
+    providerChats = [{ jid: '123456@g.us', name: 'Quoted group' }];
+    providerMessages = [
+      {
+        id: 'group-original-id',
+        chat_jid: '123456@g.us',
+        content: 'Original group message',
+        timestamp: '2026-10-24T10:00:00Z',
+        is_from_me: false,
+      },
+      {
+        id: 'group-reply-id',
+        chat_jid: '123456@g.us',
+        content: 'Existing quote reply',
+        timestamp: '2026-10-24T10:01:00Z',
+        is_from_me: false,
+        context_metadata: { replied_to_id: 'group-original-id' },
+      },
+    ];
+    const inbox = await app.inject({
+      method: 'GET',
+      url: '/whatsapp/conversations',
+      headers: { authorization: 'Bearer test' },
+    });
+    const conversationId = inbox.json().data[0].id as number;
+    const history = await app.inject({
+      method: 'GET',
+      url: `/whatsapp/conversations/${conversationId}/messages`,
+      headers: { authorization: 'Bearer test' },
+    });
+    const original = history.json().data.find(
+      (item: { content: string }) => item.content === 'Original group message'
+    );
+    const existingReply = history.json().data.find(
+      (item: { content: string }) => item.content === 'Existing quote reply'
+    );
+    expect(existingReply.reply_to).toMatchObject({
+      id: original.id,
+      content: 'Original group message',
+    });
+
+    const [foreignConversation] = await db('whatsapp_conversations')
+      .insert({
+        company_id: companyId,
+        account_id: (await db('whatsapp_accounts').where({ company_id: companyId }).first()).id,
+        jid: '628222222222@s.whatsapp.net',
+        name: 'Other conversation',
+        is_group: false,
+        unread_count: 0,
+      })
+      .returning(['id']);
+    const [foreignMessage] = await db('whatsapp_messages')
+      .insert({
+        company_id: companyId,
+        account_id: (await db('whatsapp_accounts').where({ company_id: companyId }).first()).id,
+        conversation_id: foreignConversation.id,
+        external_id: 'other-conversation-message',
+        direction: 'inbound',
+        message_type: 'text',
+        content: 'Do not quote across conversations',
+        status: 'received',
+      })
+      .returning(['id']);
+    const crossConversationQuote = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversationId}/messages`,
+      headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
+      payload: { content: 'Invalid quote', reply_to_message_id: foreignMessage.id },
+    });
+    expect(crossConversationQuote.statusCode).toBe(404);
+
+    const sent = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/conversations/${conversationId}/messages`,
+      headers: { authorization: 'Bearer test', 'idempotency-key': randomUUID() },
+      payload: { content: 'Reply from Board', reply_to_message_id: original.id },
+    });
+    expect(sent.statusCode).toBe(202);
+    const messageId = sent.json().data.id as number;
+    const event = await db('outbox_events')
+      .where({ aggregate_id: messageId, event_type: 'whatsapp.message.send' })
+      .first();
+    await dispatchQueuedWhatsAppMessage(messageId, companyId, event.id, storage);
+    expect(providerTextSendBodies.at(-1)).toMatchObject({
+      phone: '123456@g.us',
+      message: 'Reply from Board',
+      reply_message_id: 'group-original-id',
+    });
+    const persisted = await db('whatsapp_messages').where({ id: messageId }).first();
+    expect(persisted).toMatchObject({
+      reply_to_message_id: original.id,
+      reply_to_external_id: 'group-original-id',
+      status: 'sent',
+    });
   });
 
   it('keeps pre-acceptance network failures ambiguous and treats GoWA 4xx as permanent', async () => {

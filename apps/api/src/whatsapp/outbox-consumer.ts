@@ -245,6 +245,7 @@ export async function dispatchQueuedWhatsAppMessage(
                 : 'file';
       const form = new FormData();
       form.set('phone', conversation.jid);
+      if (message.reply_to_external_id) form.set('reply_message_id', message.reply_to_external_id);
       if (message.content?.trim()) form.set('caption', message.content);
       form.set(
         field,
@@ -263,7 +264,13 @@ export async function dispatchQueuedWhatsAppMessage(
         method: 'POST',
         deviceId: account.gateway_device_id,
         contentType: 'application/json',
-        body: JSON.stringify({ phone: conversation.jid, message: message.content ?? '' }),
+        body: JSON.stringify({
+          phone: conversation.jid,
+          message: message.content ?? '',
+          ...(message.reply_to_external_id
+            ? { reply_message_id: message.reply_to_external_id }
+            : {}),
+        }),
       });
     }
 

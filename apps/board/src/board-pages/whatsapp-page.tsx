@@ -76,6 +76,14 @@ type Message = {
   media_mime_type?: string | null;
   media_file_name?: string | null;
   sender_jid?: string | null;
+  reply_to?: {
+    id?: number;
+    direction?: string;
+    content?: string | null;
+    message_type?: string;
+    media_file_name?: string | null;
+    unavailable?: boolean;
+  } | null;
   create_date: string;
 };
 type ConversationFilter = 'all' | 'unread' | 'private' | 'groups';
@@ -123,7 +131,10 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
   );
   const { selectedConversationId: selected, conversationFilter, showArchived } = inboxPreferences;
   const setSelected = (selectedConversationId: number | null) =>
-    setInboxPreferences((current) => ({ ...current, selectedConversationId }));
+    {
+      setReplyingTo(null);
+      setInboxPreferences((current) => ({ ...current, selectedConversationId }));
+    };
   const setConversationFilter = (conversationFilter: ConversationFilter) =>
     setInboxPreferences((current) => ({ ...current, conversationFilter }));
   const setShowArchived = (showArchived: boolean) =>
@@ -135,6 +146,7 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
   const [startingChat, setStartingChat] = useState(false);
   const [loadingMoreConversations, setLoadingMoreConversations] = useState(false);
   const [markingRead, setMarkingRead] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const loadingMoreConversationsRef = useRef(false);
   const [olderPage, setOlderPage] = useState<{
     conversationId: number;
@@ -493,6 +505,52 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
       }
     }
   };
+  const jumpToQuotedMessage = async (message: Message) => {
+    const targetId = message.reply_to?.id;
+    const conversationId = activeConversation?.id;
+    if (!targetId || !conversationId) return;
+    if (!document.getElementById(`whatsapp-message-${targetId}`)) {
+      if (loadingOlderRef.current === conversationId) return;
+      loadingOlderRef.current = conversationId;
+      setLoadingOlderConversationId(conversationId);
+      let offset = olderMessageOffset;
+      let hasMore = hasOlderMessages;
+      const loaded = [...olderMessages];
+      try {
+        while (hasMore && offset < 5_000 && activeConversationIdRef.current === conversationId) {
+          const page = (
+            await client.request<{ data: Message[] }>(
+              `/whatsapp/conversations/${conversationId}/messages?limit=50&offset=${offset}`
+            )
+          ).data;
+          loaded.push(...page);
+          offset += page.length;
+          hasMore = page.length === 50;
+          if (page.some((item) => item.id === targetId)) break;
+        }
+        setOlderPage((current) => {
+          const existing = current?.conversationId === conversationId ? current.messages : [];
+          const byId = new Map([...existing, ...loaded].map((item) => [item.id, item]));
+          return { conversationId, messages: [...byId.values()], nextOffset: offset, hasMore };
+        });
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Could not load the quoted message');
+        return;
+      } finally {
+        loadingOlderRef.current = null;
+        setLoadingOlderConversationId((current) => (current === conversationId ? null : current));
+      }
+      if (!loaded.some((item) => item.id === targetId)) {
+        toast.error('Quoted message is outside the available history');
+        return;
+      }
+    }
+    window.requestAnimationFrame(() => {
+      const element = document.getElementById(`whatsapp-message-${targetId}`);
+      element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element?.focus({ preventScroll: true });
+    });
+  };
   const qrImage = account?.qr_code?.startsWith('data:image/')
     ? account.qr_code
     : qr && qr.code === account?.qr_code
@@ -829,6 +887,8 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                     </div>
                   )}
                   <article
+                    id={`whatsapp-message-${message.id}`}
+                    tabIndex={-1}
                     className={`group relative max-w-[85%] border-2 border-ink p-3 ${message.direction === 'outbound' ? 'ml-auto bg-pink/30' : 'mr-auto bg-white'}`}
                   >
                   {activeConversation?.is_group &&
@@ -839,6 +899,19 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                       </p>
                     )}
                   <p className="whitespace-pre-wrap break-words text-sm">{message.content}</p>
+                  {message.reply_to && (
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="mb-2 block h-auto w-full border-l-2 border-magenta pl-2 text-left text-xs text-ink-faint hover:text-ink"
+                      onClick={() => void jumpToQuotedMessage(message)}
+                      aria-label="Jump to quoted message"
+                    >
+                      {message.reply_to.unavailable
+                        ? 'Quoted message unavailable'
+                        : message.reply_to.content || `[${message.reply_to.message_type || 'media'}]`}
+                    </Button>
+                  )}
                   {message.message_type !== 'text' && <MediaPreview message={message} />}
                   {message.media_file_name && (
                     <p className="mt-1 text-xs">{message.media_file_name}</p>
@@ -859,6 +932,17 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                       }}
                     >
                       Copy
+                    </Button>
+                  )}
+                  {canSend && !['queued', 'sending', 'unknown'].includes(message.status) && (
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="mt-1 h-auto p-0 text-xs underline"
+                      aria-label="Reply to message"
+                      onClick={() => setReplyingTo(message)}
+                    >
+                      Reply
                     </Button>
                   )}
                   <p className="mt-2 flex flex-wrap justify-end gap-x-2 text-right font-mono text-[10px] text-ink-faint">
@@ -913,6 +997,8 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
               <MessageComposer
                 key={activeConversation.id}
                 conversationId={activeConversation.id}
+                replyTo={replyingTo}
+                onCancelReply={() => setReplyingTo(null)}
                 sendOnEnter={inboxPreferences.sendOnEnter}
                 onSendOnEnterChange={(sendOnEnter) =>
                   setInboxPreferences((current) => ({ ...current, sendOnEnter }))
@@ -941,10 +1027,14 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
 
 function MessageComposer({
   conversationId,
+  replyTo,
+  onCancelReply,
   sendOnEnter,
   onSendOnEnterChange,
 }: {
   conversationId: number;
+  replyTo: Message | null;
+  onCancelReply: () => void;
   sendOnEnter: boolean;
   onSendOnEnterChange: (value: boolean) => void;
 }) {
@@ -955,6 +1045,9 @@ function MessageComposer({
   const sendLock = useRef(false);
   const idempotencyKey = useRef(crypto.randomUUID());
   const fileInput = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    idempotencyKey.current = crypto.randomUUID();
+  }, [replyTo?.id]);
   const send = async (event: FormEvent) => {
     event.preventDefault();
     if (sendLock.current || (!draft.trim() && !file)) return;
@@ -978,6 +1071,7 @@ function MessageComposer({
         headers: { 'Idempotency-Key': idempotencyKey.current },
         body: {
           content: draft.trim(),
+          ...(replyTo ? { reply_to_message_id: replyTo.id } : {}),
           ...(file
             ? {
                 media_base64,
@@ -989,6 +1083,7 @@ function MessageComposer({
       });
       setDraft('');
       setFile(null);
+      onCancelReply();
       idempotencyKey.current = crypto.randomUUID();
       if (fileInput.current) fileInput.current.value = '';
       await queryClient.invalidateQueries({ queryKey: scopedQueryKey(['whatsapp']) });
@@ -1010,6 +1105,16 @@ function MessageComposer({
 
   return (
     <form onSubmit={send} className="flex flex-col gap-2 border-t-2 border-ink p-3">
+      {replyTo && (
+        <div className="flex items-start justify-between gap-3 border-l-2 border-magenta bg-cream p-2 text-xs">
+          <p className="min-w-0 truncate">
+            Replying to: {replyTo.content || `[${replyTo.message_type}]`}
+          </p>
+          <Button type="button" variant="link" className="h-auto p-0 underline" onClick={onCancelReply}>
+            Cancel reply
+          </Button>
+        </div>
+      )}
       <div className="flex items-center gap-2">
         <label
           className="cursor-pointer rounded border-2 border-ink p-2 hover:bg-pink/20"
