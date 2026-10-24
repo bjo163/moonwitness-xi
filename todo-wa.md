@@ -86,7 +86,7 @@ Legenda: **P0** penghambat keselamatan/keandalan; **P1** inbox v1; **P2** media 
 - [ ] **P1-25** Catatan internal yang tidak dikirim ke WhatsApp.
 - [ ] **P1-26** Keyboard navigation, pencarian cepat, dan waktu lokal yang aksesibel.
 - [ ] **P1-27** Verifikasi layout ponsel untuk daftar chat, navigasi kembali, composer, dan QR. (UI: `WUI-01`, `WUI-07`)
-- [ ] **P1-28** Receipt delivered/read; model mengenal status ini tetapi sinkronisasi sekarang memetakan outbound sebagai sent.
+- [ ] **P1-28** Receipt delivered/read kini diterapkan lewat webhook GoWA `message.ack` bertanda tangan dan Board menampilkan label Delivered/Read. Route/config tests mencakup transisi monotonic serta replay; masih perlu receipt live dari device GoWA untuk menutup.
 - [ ] **P1-29** Indikator status terkirim, diterima, dibaca, gagal pada setiap bubble pesan. (UI: `WUI-04`)
 - [ ] **P1-30** Timestamp lokal pada tiap pesan. (UI: `WUI-04`)
 - [ ] **P1-31** Enter untuk kirim dan Shift+Enter untuk baris baru dengan preferensi. (UI: `WUI-05`)

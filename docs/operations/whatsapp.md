@@ -21,8 +21,17 @@ differ. The API and Compose development fallback is `https://wa.moonwitness.biz.
 Open `http://localhost:5173/board/whatsapp` and choose **Connect WhatsApp**. The API creates a
 stable GoWA device slot for the active company, requests its QR, and proxies the QR image to the
 Board. Scan it from WhatsApp → Linked devices. Board polls account status, conversations, and
-messages from the API; messages are sent through GoWA's REST endpoints, including group chats
-and media.
+messages from the API as a refresh and recovery path. When inbound webhooks are configured, GoWA
+also pushes `message` and `message.ack` events to the API; these update the company-scoped message
+cache and outbound delivery/read status. Messages are sent through GoWA's REST endpoints, including
+group chats and media.
+
+To enable webhooks, set `WHATSAPP_WEBHOOK_URL` to the public HTTPS origin of this API and set
+`WHATSAPP_WEBHOOK_SECRET` to a random secret of at least 32 characters. Configure both in the API
+environment; the API sets a device-specific callback when the company connects. GoWA must be able
+to reach this origin over HTTPS. The callback verifies GoWA's `X-Hub-Signature-256` HMAC against
+the raw request body and checks the GoWA `session_id` against the mapped device. Leave both values
+unset to use REST polling only. Do not use a localhost URL for a hosted GoWA instance.
 
 GoWA owns WhatsApp credentials and chat history in its own storage on the hosted deployment. The
 Moonwitness database stores the company-to-device mapping and a company-scoped inbox cache. API
@@ -129,8 +138,9 @@ production environment. Use a private network and HTTPS where traffic crosses ho
 production Compose file does not start another WhatsApp runtime; GoWA remains the owner of
 paired sessions and its own persistent storage.
 
-The API makes outbound REST calls to GoWA. The Board inbox polls GoWA's chat REST API, so no
-inbound webhook or shared internal token is required.
+The API makes outbound REST calls to GoWA. Device-specific webhooks are optional; the Board inbox
+keeps polling GoWA's chat REST API as a recovery path. No shared internal token is used between
+services.
 
 ## Verification
 
@@ -140,10 +150,12 @@ inbound webhook or shared internal token is required.
 - `curl -u "$WHATSAPP_GATEWAY_USERNAME:$WHATSAPP_GATEWAY_PASSWORD" "$WHATSAPP_GATEWAY_URL/app/info"`
   checks the hosted provider. The app-info response reports its deployed GoWA version.
 
-The current `/chats` response does not expose an authoritative unread count. The current Board
-derives counts from recently synchronized inbound messages and per-user read cursors. GoWA
-maintainers document that consumers must derive unread state from message events or their own
-last-seen tracking ([discussion](https://github.com/aldinokemal/go-whatsapp-web-multidevice/discussions/520)); use a webhook/event consumer to remove the 100-message polling bound before treating the badge as complete.
+The current `/chats` response does not expose an authoritative unread count. With the webhook
+enabled, new message events enter the cache immediately and unread state is derived from cached
+inbound messages and per-user read cursors. Polling still syncs up to 100 recent messages as a
+recovery path, so historical messages that predate webhook activation may remain missing. GoWA
+maintainers likewise describe deriving unread state from message events or last-seen tracking
+([discussion](https://github.com/aldinokemal/go-whatsapp-web-multidevice/discussions/520)).
 
 The provider is a linked-device WhatsApp integration, not the official Meta WhatsApp Business
 Platform. Keep normal WhatsApp messaging policies and rate limits in mind.
