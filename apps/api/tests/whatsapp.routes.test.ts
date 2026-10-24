@@ -316,6 +316,7 @@ describe('WhatsApp API GoWA bridge', () => {
     await app.close();
     for (const table of [
       'outbox_events',
+      'whatsapp_conversation_aliases',
       'whatsapp_conversation_reads',
       'whatsapp_messages',
       'whatsapp_conversations',
@@ -1878,10 +1879,132 @@ describe('WhatsApp API GoWA bridge', () => {
       { account_id: accountId, conversation_id: privateConversation.id, direction: 'inbound', status: 'received', content: privateMessage.body },
     ]);
 
+    const contactLid = '251556368777322@lid';
+    expect((await postMessage({
+      id: 'webhook-private-lid-before-map',
+      chat_id: contactLid,
+      from: contactLid,
+      timestamp: '2026-10-24T10:00:30Z',
+      is_from_me: false,
+      body: 'First seen as a LID',
+    })).statusCode).toBe(204);
+    const lidConversation = await db('whatsapp_conversations')
+      .where({ company_id: companyId, jid: contactLid })
+      .first();
+    const lidMessage = await db('whatsapp_messages')
+      .where({ company_id: companyId, external_id: 'webhook-private-lid-before-map' })
+      .first();
+    await db('whatsapp_conversation_reads').insert({
+      company_id: companyId,
+      conversation_id: lidConversation.id,
+      user_id: 1,
+      last_read_message_id: lidMessage.id,
+      last_read_at: lidMessage.create_date,
+    });
+    const canonicalPhoneJid = '628333444555@s.whatsapp.net';
+    expect((await postMessage({
+      id: 'webhook-private-lid-after-map',
+      chat_id: canonicalPhoneJid,
+      from: canonicalPhoneJid,
+      from_lid: contactLid,
+      timestamp: '2026-10-24T10:00:45Z',
+      is_from_me: false,
+      body: 'Resolved to a phone JID',
+    })).statusCode).toBe(204);
+    const conversationsAfterLidResolution = await db('whatsapp_conversations')
+      .where({ company_id: companyId })
+      .whereIn('jid', [contactLid, canonicalPhoneJid]);
+    expect(conversationsAfterLidResolution).toHaveLength(1);
+    expect(conversationsAfterLidResolution[0]).toMatchObject({ jid: canonicalPhoneJid });
+    const mergedMessages = await db('whatsapp_messages')
+      .where({ company_id: companyId })
+      .whereIn('external_id', [
+        'webhook-private-lid-before-map',
+        'webhook-private-lid-after-map',
+      ]);
+    expect(new Set(mergedMessages.map((message) => message.conversation_id))).toEqual(
+      new Set([conversationsAfterLidResolution[0].id])
+    );
+    expect(await db('whatsapp_conversation_aliases').where({
+      company_id: companyId,
+      alias_jid: contactLid,
+      conversation_id: conversationsAfterLidResolution[0].id,
+    })).toHaveLength(1);
+    expect(await db('whatsapp_conversation_reads').where({
+      company_id: companyId,
+      conversation_id: conversationsAfterLidResolution[0].id,
+      user_id: 1,
+      last_read_message_id: lidMessage.id,
+    })).toHaveLength(1);
+    expect((await postMessage({
+      id: 'webhook-private-lid-after-known-map',
+      chat_id: contactLid,
+      from: contactLid,
+      timestamp: '2026-10-24T10:00:48Z',
+      is_from_me: false,
+      body: 'Still grouped after the LID mapping is known',
+    })).statusCode).toBe(204);
+    const conversationsAfterKnownLid = await db('whatsapp_conversations')
+      .where({ company_id: companyId })
+      .whereIn('jid', [contactLid, canonicalPhoneJid]);
+    expect(conversationsAfterKnownLid).toHaveLength(1);
+    expect(conversationsAfterKnownLid[0].jid).toBe(canonicalPhoneJid);
+    expect(await db('whatsapp_messages').where({
+      company_id: companyId,
+      external_id: 'webhook-private-lid-after-known-map',
+      conversation_id: conversationsAfterLidResolution[0].id,
+    })).toHaveLength(1);
+    const foreignDeviceId = 'moonwitness-company-foreign-lid-test';
+    await db('whatsapp_accounts').insert({
+      company_id: foreignCompanyId,
+      gateway_device_id: foreignDeviceId,
+      status: 'connected',
+    });
+    const foreignJid = '628444555666@s.whatsapp.net';
+    const foreignPayload = {
+      event: 'message',
+      session_id: foreignDeviceId,
+      payload: {
+        id: 'webhook-foreign-lid-map',
+        chat_id: foreignJid,
+        from: foreignJid,
+        from_lid: contactLid,
+        timestamp: '2026-10-24T10:00:50Z',
+        is_from_me: false,
+        body: 'Same LID in another company',
+      },
+    };
+    const foreignRaw = JSON.stringify(foreignPayload);
+    const foreignResponse = await app.inject({
+      method: 'POST',
+      url: `/whatsapp/gowa/webhook/${foreignDeviceId}`,
+      headers: {
+        'content-type': 'application/json',
+        'x-hub-signature-256': `sha256=${createHmac('sha256', process.env.WHATSAPP_WEBHOOK_SECRET!)
+          .update(foreignRaw)
+          .digest('hex')}`,
+      },
+      payload: foreignRaw,
+    });
+    expect(foreignResponse.statusCode).toBe(204);
+    const mainCompanyAlias = await db('whatsapp_conversation_aliases')
+      .where({ company_id: companyId, alias_jid: contactLid })
+      .first();
+    const foreignCompanyAlias = await db('whatsapp_conversation_aliases')
+      .where({ company_id: foreignCompanyId, alias_jid: contactLid })
+      .first();
+    expect(Number(mainCompanyAlias.conversation_id)).toBe(conversationsAfterLidResolution[0].id);
+    expect(Number(foreignCompanyAlias.conversation_id)).not.toBe(conversationsAfterLidResolution[0].id);
+    expect(await db('whatsapp_conversations').where({
+      company_id: foreignCompanyId,
+      jid: foreignJid,
+    })).toHaveLength(1);
+
     expect((await postMessage({
       id: 'webhook-group-image-1',
       chat_id: '120363123456789@g.us',
       from: '628222222222@s.whatsapp.net',
+      from_lid: '251556368777322@lid',
       sender_display_name: 'Group sender',
       timestamp: '2026-10-24T10:01:00Z',
       is_from_me: false,
@@ -1907,6 +2030,10 @@ describe('WhatsApp API GoWA bridge', () => {
       status: 'received',
     });
     expect(groupMessage.media_key).toBeNull();
+    expect(await db('whatsapp_conversation_aliases').where({
+      company_id: companyId,
+      alias_jid: '251556368777322@lid',
+    })).toHaveLength(1);
 
     const sentAt = new Date().toISOString();
     const [pendingMessage] = await db('whatsapp_messages').insert({

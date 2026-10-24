@@ -5,6 +5,7 @@ import { PassThrough, Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import type { AttachmentStorage } from '@moonwitness/orm-storage';
 import { WhatsappAccount, WhatsappConversation, WhatsappMessage } from '../whatsapp/models.js';
+import { attachPrivateLidAlias } from '../whatsapp/conversation-identity.js';
 import { isRecord, MAX_ATTACHMENT_BYTES, MAX_ATTACHMENT_REQUEST_BYTES } from '@moonwitness/types';
 
 import { mediaType, mimeMatchesSignature, safeMime, sniffMime } from '../whatsapp/media.js';
@@ -437,11 +438,26 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       if (body?.event === 'message') {
         const payload = body.payload;
         const externalId = typeof payload?.id === 'string' ? payload.id.slice(0, 255) : '';
-        const jid = typeof payload?.chat_id === 'string' ? payload.chat_id : '';
+        const providerJid = typeof payload?.chat_id === 'string' ? payload.chat_id : '';
         const timestamp = providerTimestamp(payload?.timestamp);
+        const fromMe = payload?.is_from_me === true;
+        const senderJid = typeof payload?.from === 'string' ? payload.from.slice(0, 255) : null;
+        const isGroup = providerJid.endsWith('@g.us');
+        const jid = !isGroup && !fromMe && typeof senderJid === 'string' &&
+          /^[^\s@]{1,200}@s\.whatsapp\.net$/u.test(senderJid) && providerJid.endsWith('@lid')
+          ? senderJid
+          : providerJid;
+        const fromLid = typeof payload?.from_lid === 'string' && /^[^\s@]{1,200}@lid$/u.test(payload.from_lid)
+          ? payload.from_lid
+          : null;
+        const chatLid = typeof payload?.chat_lid === 'string' && /^[^\s@]{1,200}@lid$/u.test(payload.chat_lid)
+          ? payload.chat_lid
+          : null;
+        const lidAliasJids = !isGroup && !fromMe && senderJid === jid
+          ? [...new Set([fromLid, chatLid, providerJid.endsWith('@lid') ? providerJid : null].filter((value): value is string => Boolean(value)))]
+          : [];
         if (!externalId || !/^[^\s@]{1,200}@(s\.whatsapp\.net|g\.us|lid)$/u.test(jid) || !timestamp)
           return reply.code(204).send();
-        const fromMe = payload?.is_from_me === true;
         const mediaField = ['image', 'video', 'video_note', 'audio', 'document', 'sticker'].find((field) => {
           const value = payload?.[field];
           return (typeof value === 'string' && value.length > 0) || (value !== null && typeof value === 'object');
@@ -449,8 +465,6 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         const messageType = mediaField === 'video_note' ? 'video' : mediaField ?? 'text';
         const mediaValue = mediaField ? payload?.[mediaField] : null;
         const content = typeof payload?.body === 'string' ? payload.body.slice(0, 8000) : '';
-        const senderJid = typeof payload?.from === 'string' ? payload.from.slice(0, 255) : null;
-        const isGroup = jid.endsWith('@g.us');
         const chatName = typeof payload?.chat_name === 'string' ? payload.chat_name.trim() : '';
         const preserveConversationName = isGroup || fromMe;
         const conversationName = chatName || (preserveConversationName
@@ -459,11 +473,27 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
             (typeof payload?.from_name === 'string' && payload.from_name.trim()) ||
             jid);
         await app.db.transaction(async (trx) => {
+          let conversationJid = jid;
+          if (!isGroup && jid.endsWith('@lid')) {
+            const knownAlias = (await trx('whatsapp_conversation_aliases')
+              .select('conversation_id')
+              .where({ company_id: account.company_id, alias_jid: jid })
+              .first()) as { conversation_id: number } | undefined;
+            if (knownAlias) {
+              const knownConversation = (await trx('whatsapp_conversations')
+                .select('jid')
+                .where({ company_id: account.company_id, id: knownAlias.conversation_id })
+                .first()) as { jid: string } | undefined;
+              if (knownConversation && /^[^\s@]{1,200}@s\.whatsapp\.net$/u.test(knownConversation.jid)) {
+                conversationJid = knownConversation.jid;
+              }
+            }
+          }
           const [conversation] = await trx('whatsapp_conversations')
             .insert({
               company_id: account.company_id,
               account_id: account.id,
-              jid,
+              jid: conversationJid,
               name: conversationName.slice(0, 255),
               is_group: isGroup,
               unread_count: 0,
@@ -487,12 +517,22 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
             })
             .returning(['id']);
           const storedConversation = conversation ?? (await trx('whatsapp_conversations')
-            .where({ company_id: account.company_id, jid }).first('id'));
+            .where({ company_id: account.company_id, jid: conversationJid }).first('id'));
           if (!storedConversation) throw new Error('GoWA webhook conversation upsert failed');
+          let conversationId = Number(storedConversation.id);
+          for (const aliasJid of lidAliasJids) {
+            conversationId = await attachPrivateLidAlias(
+              trx,
+              account.company_id,
+              conversationId,
+              conversationJid,
+              aliasJid
+            );
+          }
           if (fromMe && await reconcileAmbiguousOutboundMessage({
             db: trx,
             companyId: account.company_id,
-            conversationId: storedConversation.id,
+            conversationId,
             externalId,
             content,
             messageType,
@@ -502,7 +542,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
             .insert({
               company_id: account.company_id,
               account_id: account.id,
-              conversation_id: storedConversation.id,
+              conversation_id: conversationId,
               external_id: externalId,
               direction: fromMe ? 'outbound' : 'inbound',
               message_type: messageType,
@@ -525,7 +565,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
             .returning(['id']);
           if (inserted.length && !fromMe) {
             await trx('whatsapp_conversations')
-              .where({ id: storedConversation.id, company_id: account.company_id })
+              .where({ id: conversationId, company_id: account.company_id })
               .increment('unread_count', 1);
           }
         });

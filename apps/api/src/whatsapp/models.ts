@@ -86,3 +86,14 @@ export const WhatsappConversationRead = defineModel('whatsapp.conversation.read'
     last_read_at: fields.string({ required: true }),
   },
 });
+
+export const WhatsappConversationAlias = defineModel('whatsapp.conversation.alias', {
+  table: 'whatsapp_conversation_aliases',
+  order: 'id asc',
+  unique: [['company', 'alias_jid']],
+  fields: {
+    company: fields.belongsTo(Company, { required: true }),
+    conversation: fields.belongsTo(WhatsappConversation, { required: true }),
+    alias_jid: fields.string({ required: true, hidden: true }),
+  },
+});
