@@ -90,7 +90,7 @@ Legenda: **P0** penghambat keselamatan/keandalan; **P1** inbox v1; **P2** media 
 - [x] **P1-29** Setiap bubble menampilkan label status `Sent`, `Received`, `Delivered`, `Read`, `Failed`, dan fallback `Status unavailable`; pesan gagal yang retryable menyediakan aksi Retry. E2E Chromium membuktikan kelima status dan tombol retry tampil pada pesan yang tepat; API route tests memverifikasi receipt monotonic.
 - [x] **P1-30** Setiap bubble menampilkan waktu lokal dari `create_date` memakai bahasa dan zona waktu Board yang tersimpan; elemen `<time>` mempertahankan timestamp ISO untuk aksesibilitas/integrasi. E2E Chromium WhatsApp memverifikasi timestamp valid dirender.
 - [x] **P1-31** Composer memakai textarea: default Enter mengirim dan Shift+Enter membuat baris baru; checkbox `Press Enter to send` mematikan mode tersebut sehingga Enter membuat baris baru dan Ctrl/Cmd+Enter mengirim. Preferensi disimpan bersama preferensi inbox per user-company. E2E Chromium menguji kedua perilaku dan persistensi checkbox setelah reload.
-- [ ] **P1-32** Indikator sedang mengirim dan perlindungan klik ganda lintas tab/perangkat. (UI: `WUI-05`)
+- [ ] **P1-32** Bagian indikator selesai: tombol composer berubah menjadi `Sending…`, memakai accessible name `Sending message`, dan nonaktif selama HTTP send berlangsung; E2E menguji state pending dengan respons API tertunda. Submit lock hanya melindungi instance composer dan kunci idempotensi melindungi retry dengan key yang sama; duplicate-send lintas tab/perangkat dengan key berbeda masih belum dicegah.
 - [ ] **P1-33** Balas/quote pesan dengan tautan ke pesan asal.
 - [ ] **P1-34** Forward pesan jika API GoWA mendukung.
 - [ ] **P1-35** Edit/hapus/unsend pesan milik sendiri sesuai batas waktu WhatsApp, jika didukung.

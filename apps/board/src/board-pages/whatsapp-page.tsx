@@ -1036,9 +1036,9 @@ function MessageComposer({
         <Button
           type="submit"
           disabled={sending || (!draft.trim() && !file)}
-          aria-label="Send message"
+          aria-label={sending ? 'Sending message' : 'Send message'}
         >
-          <SendIcon className="size-4" />
+          {sending ? 'Sending…' : <SendIcon className="size-4" />}
         </Button>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">

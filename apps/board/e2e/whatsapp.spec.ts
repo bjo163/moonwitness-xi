@@ -398,6 +398,7 @@ test('connect shows QR, media is sent, and failures preserve the draft', async (
       expect(route.request().headers()['idempotency-key']).toBeTruthy();
       expect(payload.media_file_name).toBe('sample.txt');
       expect(Buffer.from(payload.media_base64, 'base64').toString()).toBe('test attachment');
+      await new Promise((resolve) => setTimeout(resolve, 500));
       queued = true;
       return route.fulfill({
         status: 202,
@@ -443,6 +444,7 @@ test('connect shows QR, media is sent, and failures preserve the draft', async (
   });
   await expect(page.getByText('Attached: sample.txt')).toBeVisible();
   await page.getByRole('button', { name: 'Send message' }).click();
+  await expect(page.getByRole('button', { name: 'Sending message' })).toBeDisabled();
   await expect(page.getByPlaceholder('Write a message…')).toHaveValue('');
   await expect(page.locator('article').getByText('sent')).toBeVisible();
   fail = true;
