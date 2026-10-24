@@ -1852,6 +1852,36 @@ describe('WhatsApp API GoWA bridge', () => {
       status: 'received',
     });
     expect(groupMessage.media_key).toBeNull();
+
+    const sentAt = new Date().toISOString();
+    const [pendingMessage] = await db('whatsapp_messages').insert({
+      company_id: companyId,
+      account_id: accountId,
+      conversation_id: privateConversation.id,
+      external_id: `pending:${randomUUID()}`,
+      direction: 'outbound',
+      message_type: 'text',
+      content: 'Echo before HTTP acknowledgement',
+      status: 'sending',
+      create_date: sentAt,
+    }).returning(['id']);
+    expect((await postMessage({
+      id: 'webhook-outbound-echo-1',
+      chat_id: privateMessage.chat_id,
+      from: '6281234567890@s.whatsapp.net',
+      sender_display_name: 'My WhatsApp account',
+      timestamp: sentAt,
+      is_from_me: true,
+      body: 'Echo before HTTP acknowledgement',
+    })).statusCode).toBe(204);
+    const reconciled = await db('whatsapp_messages')
+      .where({ company_id: companyId, id: pendingMessage.id })
+      .first();
+    expect(reconciled).toMatchObject({ external_id: 'webhook-outbound-echo-1', status: 'sent' });
+    expect(await db('whatsapp_messages')
+      .where({ company_id: companyId, external_id: 'webhook-outbound-echo-1' })).toHaveLength(1);
+    expect((await db('whatsapp_conversations').where({ id: privateConversation.id }).first()).name)
+      .toBe('Webhook Contact');
   });
 
   it('stores one durable send per idempotency key and rejects changed content', async () => {

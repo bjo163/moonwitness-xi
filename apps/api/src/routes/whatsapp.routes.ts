@@ -255,18 +255,17 @@ async function reconcileAmbiguousOutboundMessage(input: {
 }): Promise<boolean> {
   const timestampMs = Date.parse(input.timestamp);
   if (!Number.isFinite(timestampMs)) return false;
-  const existing = await WhatsappMessage.query().findOne({
-    company_id: input.companyId,
-    external_id: input.externalId,
-  });
-  const pending = await WhatsappMessage.query()
+  const existing = await input.db('whatsapp_messages')
+    .where({ company_id: input.companyId, external_id: input.externalId })
+    .first();
+  const pending = await input.db('whatsapp_messages')
     .where({
       company_id: input.companyId,
       conversation_id: input.conversationId,
       direction: 'outbound',
       message_type: input.messageType,
     })
-    .where((builder) =>
+    .where((builder: Knex.QueryBuilder) =>
       input.content
         ? builder.where('content', input.content)
         : builder.where('content', '').orWhereNull('content')
@@ -452,11 +451,13 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         const content = typeof payload?.body === 'string' ? payload.body.slice(0, 8000) : '';
         const senderJid = typeof payload?.from === 'string' ? payload.from.slice(0, 255) : null;
         const isGroup = jid.endsWith('@g.us');
-        const conversationName = isGroup
-          ? (typeof payload?.chat_name === 'string' && payload.chat_name.trim()) || jid
+        const chatName = typeof payload?.chat_name === 'string' ? payload.chat_name.trim() : '';
+        const preserveConversationName = isGroup || fromMe;
+        const conversationName = chatName || (preserveConversationName
+          ? jid
           : (typeof payload?.sender_display_name === 'string' && payload.sender_display_name.trim()) ||
             (typeof payload?.from_name === 'string' && payload.from_name.trim()) ||
-            jid;
+            jid);
         await app.db.transaction(async (trx) => {
           const [conversation] = await trx('whatsapp_conversations')
             .insert({
@@ -472,7 +473,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
             .onConflict(['company_id', 'jid'])
             .merge({
               account_id: account.id,
-              name: isGroup && conversationName === jid
+              name: preserveConversationName && !chatName
                 ? trx.raw('whatsapp_conversations.name')
                 : conversationName.slice(0, 255),
               is_group: isGroup,
@@ -488,6 +489,15 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
           const storedConversation = conversation ?? (await trx('whatsapp_conversations')
             .where({ company_id: account.company_id, jid }).first('id'));
           if (!storedConversation) throw new Error('GoWA webhook conversation upsert failed');
+          if (fromMe && await reconcileAmbiguousOutboundMessage({
+            db: trx,
+            companyId: account.company_id,
+            conversationId: storedConversation.id,
+            externalId,
+            content,
+            messageType,
+            timestamp,
+          })) return;
           const inserted = await trx('whatsapp_messages')
             .insert({
               company_id: account.company_id,
