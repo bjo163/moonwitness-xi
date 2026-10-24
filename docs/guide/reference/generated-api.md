@@ -1,6 +1,6 @@
 # Generated API route reference
 
-Extracted from literal Fastify route declarations. Source fingerprint: `cf8847e440572496901b168e9bd0e402dbd6b4f3cac80133cd2c1334ba1f07f6`. Generic handler request payloads are not inferred where the source does not declare a static schema.
+Extracted from literal Fastify route declarations. Source fingerprint: `2579e383cc1fad28e3c660406c7e3dc9a7c56982d9d2094a5e520e209573e00d`. Generic handler request payloads are not inferred where the source does not declare a static schema.
 
 | Method | Path                                              |
 | ------ | ------------------------------------------------- |
@@ -73,6 +73,8 @@ Extracted from literal Fastify route declarations. Source fingerprint: `cf8847e4
 | POST   | `/whatsapp/conversations/:id/archive`             |
 | GET    | `/whatsapp/conversations/:id/messages`            |
 | POST   | `/whatsapp/conversations/:id/messages`            |
+| GET    | `/whatsapp/conversations/:id/notes`               |
+| POST   | `/whatsapp/conversations/:id/notes`               |
 | POST   | `/whatsapp/conversations/:id/pin`                 |
 | POST   | `/whatsapp/conversations/:id/read`                |
 | POST   | `/whatsapp/disconnect`                            |

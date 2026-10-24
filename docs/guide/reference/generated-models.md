@@ -1,6 +1,6 @@
 # Generated model and addon reference
 
-Source fingerprint: `cf8847e440572496901b168e9bd0e402dbd6b4f3cac80133cd2c1334ba1f07f6`. Seed values and field defaults are intentionally omitted.
+Source fingerprint: `2579e383cc1fad28e3c660406c7e3dc9a7c56982d9d2094a5e520e209573e00d`. Seed values and field defaults are intentionally omitted.
 
 ## Addon `auth`
 
@@ -452,7 +452,7 @@ Models: 15; declared views: 3; menu entries: 3; seed rows: 26.
 
 Version: `1.0.0`; dependencies: `base`, `jobs`.
 
-Models: 3; declared views: 3; menu entries: 3; seed rows: 8.
+Models: 3; declared views: 3; menu entries: 3; seed rows: 9.
 
 | Model                       | Table                      | Field             | Kind      | Required | Optional | Default    | Relation                |
 | --------------------------- | -------------------------- | ----------------- | --------- | -------- | -------- | ---------- | ----------------------- |
@@ -489,7 +489,7 @@ Models: 3; declared views: 3; menu entries: 3; seed rows: 8.
 
 - Seed coverage: `base.model_access` has 2 declared seed row(s); seed values are not included.
 - Seed coverage: `notification.preference` has 4 declared seed row(s); seed values are not included.
-- Seed coverage: `notification.template` has 2 declared seed row(s); seed values are not included.
+- Seed coverage: `notification.template` has 3 declared seed row(s); seed values are not included.
 
 ### Seeded model access rules
 

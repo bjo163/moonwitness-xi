@@ -4946,7 +4946,7 @@
       ],
       "views": ["notification.notification", "notification.preference", "notification.template"],
       "seeds": {
-        "notification.template": 2,
+        "notification.template": 3,
         "notification.preference": 4,
         "base.model_access": 2
       },
@@ -6401,6 +6401,14 @@
       "path": "/whatsapp/conversations/:id/messages"
     },
     {
+      "method": "GET",
+      "path": "/whatsapp/conversations/:id/notes"
+    },
+    {
+      "method": "POST",
+      "path": "/whatsapp/conversations/:id/notes"
+    },
+    {
       "method": "POST",
       "path": "/whatsapp/conversations/:id/pin"
     },
@@ -6465,5 +6473,5 @@
       "path": "/workflows/instances/:id/actions"
     }
   ],
-  "generatedFromSha256": "cf8847e440572496901b168e9bd0e402dbd6b4f3cac80133cd2c1334ba1f07f6"
+  "generatedFromSha256": "2579e383cc1fad28e3c660406c7e3dc9a7c56982d9d2094a5e520e209573e00d"
 }
