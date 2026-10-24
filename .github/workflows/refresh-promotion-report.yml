@@ -1,22 +1,15 @@
 name: Refresh promotion report
 
+# Parked from scheduled/push triggers on 2026-10-24: the repo owner asked for a
+# thin delivery path, so this workflow runs only when started by hand.
 on:
-  workflow_run:
-    workflows:
-      - CI
-      - Documentation Pages
-      - CodeQL
-      - Gitleaks
-      - Roadmap issue sync
-      - Roadmap progress report
-    types: [completed]
-    branches: [dev]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: repository-write-coordinator
+  group: promotion-pr-metadata
   cancel-in-progress: false
 
 jobs:

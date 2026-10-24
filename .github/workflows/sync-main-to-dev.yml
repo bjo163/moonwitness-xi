@@ -1,17 +1,17 @@
 name: Sync main into dev
 
+# Parked from scheduled/push triggers on 2026-10-24: the repo owner asked for a
+# thin delivery path, so this workflow runs only when started by hand.
 on:
   push:
     branches: [main]
-  schedule:
-    - cron: '17 * * * *'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: repository-write-coordinator
+  group: dev-branch-updates
   cancel-in-progress: false
 
 jobs:
@@ -29,40 +29,4 @@ jobs:
         env:
           EXPECTED_MAIN_SHA: ${{ github.sha }}
           EVENT_REF: ${{ github.ref }}
-        run: |
-          set -euo pipefail
-          if [[ "$EVENT_REF" != "refs/heads/main" ]]; then
-            echo "Sync must run from main, received $EVENT_REF" >&2
-            exit 1
-          fi
-
-          current_main="$(git ls-remote origin refs/heads/main | cut -f1)"
-          if [[ "$current_main" != "$EXPECTED_MAIN_SHA" ]]; then
-            echo "Skipping stale sync for $EXPECTED_MAIN_SHA; main is now $current_main"
-            exit 0
-          fi
-
-          git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main refs/heads/dev:refs/remotes/origin/dev
-          expected_dev="$(git rev-parse refs/remotes/origin/dev)"
-          if git merge-base --is-ancestor refs/remotes/origin/main "$expected_dev"; then
-            echo "dev already contains current main"
-            exit 0
-          fi
-
-          git checkout --detach "$expected_dev"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git merge --no-ff --no-edit refs/remotes/origin/main
-
-          current_main="$(git ls-remote origin refs/heads/main | cut -f1)"
-          current_dev="$(git ls-remote origin refs/heads/dev | cut -f1)"
-          if [[ "$current_main" != "$EXPECTED_MAIN_SHA" ]]; then
-            echo "main advanced during synchronization; no push performed"
-            exit 0
-          fi
-          if [[ "$current_dev" != "$expected_dev" ]]; then
-            echo "dev advanced during synchronization; refusing to overwrite it" >&2
-            exit 1
-          fi
-
-          node scripts/push-expected-ref.mjs origin HEAD refs/heads/dev "$expected_dev"
+        run: node scripts/sync-main-to-dev.mjs

@@ -6,6 +6,8 @@ import { renderMetrics } from '../observability/metrics.js';
 
 interface HealthRoutesOptions {
   metricsToken?: string;
+  checkAttachmentStorage?: () => Promise<boolean>;
+  checkWhatsAppGateway?: () => Promise<boolean>;
 }
 
 export const healthRoutes: FastifyPluginAsync<HealthRoutesOptions> = async (fastify, options) => {
@@ -15,13 +17,17 @@ export const healthRoutes: FastifyPluginAsync<HealthRoutesOptions> = async (fast
 
   const readiness = async (reply: FastifyReply) => {
     const dbOk = await fastify.testConnection();
+    const storageOk = options.checkAttachmentStorage
+      ? await options.checkAttachmentStorage().catch(() => false)
+      : true;
 
-    const status = dbOk ? 200 : 503;
+    const status = dbOk && storageOk ? 200 : 503;
     const responseBody: HealthResponse = {
-      status: dbOk ? 'healthy' : 'unhealthy',
+      status: dbOk && storageOk ? 'healthy' : 'unhealthy',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       database: dbOk ? 'connected' : 'disconnected',
+      attachmentStorage: storageOk ? 'connected' : 'disconnected',
       registeredModels: Registry.getNames(),
     };
     return reply.header('Cache-Control', 'no-store').status(status).send(responseBody);
@@ -29,6 +35,20 @@ export const healthRoutes: FastifyPluginAsync<HealthRoutesOptions> = async (fast
 
   fastify.get<{ Reply: HealthResponse }>('/readyz', async (_req, reply) => readiness(reply));
   fastify.get<{ Reply: HealthResponse }>('/health', async (_req, reply) => readiness(reply));
+
+  fastify.get('/whatsapp/readyz', async (_req, reply) => {
+    const reachable = options.checkWhatsAppGateway
+      ? await options.checkWhatsAppGateway().catch(() => false)
+      : false;
+    return reply
+      .header('Cache-Control', 'no-store')
+      .status(reachable ? 200 : 503)
+      .send({
+        status: reachable ? 'reachable' : 'unreachable',
+        gateway: reachable ? 'connected' : 'disconnected',
+        timestamp: new Date().toISOString(),
+      });
+  });
 
   fastify.get('/metrics', async (request, reply) => {
     const token = options.metricsToken;

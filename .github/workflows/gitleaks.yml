@@ -1,12 +1,8 @@
 name: Gitleaks
 
+# Parked from scheduled/push triggers on 2026-10-24: the repo owner asked for a
+# thin delivery path, so this workflow runs only when started by hand.
 on:
-  pull_request:
-    branches: [dev, main]
-  push:
-    branches: [main]
-  schedule:
-    - cron: '41 5 * * 1'
   workflow_dispatch:
 
 permissions:

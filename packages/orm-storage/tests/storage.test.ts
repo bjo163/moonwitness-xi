@@ -1,9 +1,11 @@
 import { mkdtemp, readFile, readdir, rm, symlink, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { Readable } from 'node:stream';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   LocalFileAttachmentStorage,
+  reconcileAttachmentStorage,
   reconcileLocalAttachmentStorage,
   type AttachmentReference,
 } from '../src/index.js';
@@ -45,6 +47,30 @@ describe('LocalFileAttachmentStorage', () => {
     const listed: string[] = [];
     for await (const object of storage.list()) listed.push(object.key);
     expect(listed).toEqual([keyA]);
+  });
+
+  it('stores and reads bounded attachment streams without materializing a Buffer', async () => {
+    const storage = await storageFixture();
+    const content = Buffer.from('streamed attachment bytes');
+    await expect(storage.putStream(keyA, Readable.from([content]), 128)).resolves.toMatchObject({
+      key: keyA,
+      sizeBytes: content.length,
+      checksum: expect.stringMatching(/^[a-f0-9]{64}$/u),
+    });
+    const stream = await storage.getStream(keyA);
+    expect(stream).not.toBeNull();
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream!) chunks.push(Buffer.from(chunk));
+    expect(Buffer.concat(chunks)).toEqual(content);
+  });
+
+  it('removes a partial stream object when the size limit is exceeded', async () => {
+    const storage = await storageFixture();
+    await expect(storage.putStream(keyA, Readable.from([Buffer.alloc(5)]), 4)).rejects.toThrow(
+      /size limit/u
+    );
+    await expect(storage.get(keyA)).resolves.toBeNull();
+    expect(await readdir(storage.directory)).toEqual([]);
   });
 
   it.skipIf(process.platform === 'win32')(
@@ -193,5 +219,43 @@ describe('LocalFileAttachmentStorage', () => {
       })
     ).rejects.toThrow('olderThan must not be in the future when apply is enabled');
     await expect(storage.get(keyA)).resolves.toEqual(Buffer.from('fresh object'));
+  });
+});
+
+describe('provider-neutral attachment reconciliation', () => {
+  it('reports legacy non-UUID references without querying storage or treating them as missing', async () => {
+    const storage = await storageFixture();
+    await storage.put(keyA, Buffer.from('unrelated object'));
+    const report = await reconcileAttachmentStorage(
+      storage,
+      references([{ storageKey: 'acme-proposal.pdf' }]),
+      { apply: false, olderThan: new Date('2025-01-01T00:00:00.000Z'), limit: 10 }
+    );
+
+    expect(report).toMatchObject({
+      missing: [],
+      corrupt: [],
+      unsupportedReferences: ['acme-proposal.pdf'],
+    });
+    await expect(storage.get(keyA)).resolves.toEqual(Buffer.from('unrelated object'));
+  });
+
+  it('protects WhatsApp media references while detecting and deleting stale orphan objects', async () => {
+    const storage = await storageFixture();
+    await storage.put(keyA, Buffer.from('referenced WhatsApp media'));
+    await storage.put(keyB, Buffer.from('orphan media'));
+    const staleDate = new Date('2020-01-01T00:00:00.000Z');
+    await Promise.all(
+      [keyA, keyB].map((key) => utimes(path.join(storage.directory, key), staleDate, staleDate))
+    );
+
+    const report = await reconcileAttachmentStorage(storage, references([{ storageKey: keyA }]), {
+      apply: true,
+      olderThan: new Date('2025-01-01T00:00:00.000Z'),
+      limit: 10,
+    });
+    expect(report).toMatchObject({ orphaned: [keyB], deleted: [keyB], missing: [], corrupt: [] });
+    await expect(storage.get(keyA)).resolves.toEqual(Buffer.from('referenced WhatsApp media'));
+    await expect(storage.get(keyB)).resolves.toBeNull();
   });
 });
