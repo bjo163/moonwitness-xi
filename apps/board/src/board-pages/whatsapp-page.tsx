@@ -149,6 +149,10 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
   const [markingRead, setMarkingRead] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
+  const [forwardConversationSearch, setForwardConversationSearch] = useState('');
+  const [debouncedForwardConversationSearch, setDebouncedForwardConversationSearch] = useState('');
+  const [forwardShowArchived, setForwardShowArchived] = useState(false);
+  const [loadingMoreForwardDestinations, setLoadingMoreForwardDestinations] = useState(false);
   const [forwarding, setForwarding] = useState(false);
   const forwardIdempotencyKey = useRef<{
     sourceId: number;
@@ -187,6 +191,13 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
     );
     return () => window.clearTimeout(timer);
   }, [conversationSearch]);
+  useEffect(() => {
+    const timer = window.setTimeout(
+      () => setDebouncedForwardConversationSearch(forwardConversationSearch.trim()),
+      250
+    );
+    return () => window.clearTimeout(timer);
+  }, [forwardConversationSearch]);
   const accountQuery = useQuery({
     queryKey: scopedQueryKey(['whatsapp', 'account']),
     queryFn: async () => (await client.request<{ data: Account }>('/whatsapp/account')).data,
@@ -226,6 +237,26 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
     },
     enabled: accountQuery.data?.status === 'connected',
     refetchInterval: 5000,
+    refetchIntervalInBackground: false,
+  });
+  const forwardDestinationsQueryKey = scopedQueryKey([
+    'whatsapp',
+    'forward-destinations',
+    debouncedForwardConversationSearch,
+    forwardShowArchived,
+  ]);
+  const forwardDestinationsQuery = useQuery({
+    queryKey: forwardDestinationsQueryKey,
+    queryFn: async () => {
+      const page = (
+        await client.request<{ data: Conversation[] }>(
+          `/whatsapp/conversations?limit=50&offset=0&archived=${forwardShowArchived}&unread=false${debouncedForwardConversationSearch ? `&search=${encodeURIComponent(debouncedForwardConversationSearch)}` : ''}`
+        )
+      ).data;
+      return { items: page, nextOffset: page.length, hasMore: page.length === 50 } satisfies ConversationPage;
+    },
+    enabled: Boolean(forwardingMessage) && accountQuery.data?.status === 'connected',
+    refetchInterval: false,
     refetchIntervalInBackground: false,
   });
   const filteredConversations = (conversationsQuery.data?.items ?? []).filter((conversation) => {
@@ -311,6 +342,33 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
     } finally {
       loadingMoreConversationsRef.current = false;
       setLoadingMoreConversations(false);
+    }
+  };
+
+  const loadMoreForwardDestinations = async () => {
+    const current = queryClient.getQueryData<ConversationPage>(forwardDestinationsQueryKey);
+    if (!current?.hasMore || loadingMoreForwardDestinations) return;
+    setLoadingMoreForwardDestinations(true);
+    try {
+      const page = (
+        await client.request<{ data: Conversation[] }>(
+          `/whatsapp/conversations?limit=50&offset=${current.nextOffset}&archived=${forwardShowArchived}&unread=false${debouncedForwardConversationSearch ? `&search=${encodeURIComponent(debouncedForwardConversationSearch)}` : ''}`
+        )
+      ).data;
+      queryClient.setQueryData<ConversationPage>(forwardDestinationsQueryKey, (latest) => {
+        const latestPage = latest ?? current;
+        const ids = new Set(latestPage.items.map((conversation) => conversation.id));
+        const uniquePage = page.filter((conversation) => !ids.has(conversation.id));
+        return {
+          items: [...latestPage.items, ...uniquePage],
+          nextOffset: current.nextOffset + page.length,
+          hasMore: page.length === 50,
+        };
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not load more destinations');
+    } finally {
+      setLoadingMoreForwardDestinations(false);
     }
   };
 
@@ -633,8 +691,31 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                 Cancel
               </Button>
             </div>
-            <div className="mt-4 max-h-72 space-y-2 overflow-y-auto" aria-label="Forward destinations">
-              {(conversationsQuery.data?.items ?? []).map((conversation) => (
+            <div className="mt-4 space-y-3">
+              <Input
+                aria-label="Search forward destinations"
+                placeholder="Search chats and groups"
+                value={forwardConversationSearch}
+                onChange={(event) => setForwardConversationSearch(event.target.value)}
+              />
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={forwardShowArchived}
+                  onChange={(event) => setForwardShowArchived(event.target.checked)}
+                  aria-label="Include archived conversations"
+                />
+                Include archived conversations
+              </label>
+              {forwardDestinationsQuery.isError && (
+                <div role="alert" className="flex items-center justify-between gap-3 text-sm">
+                  <span>Destinations could not be loaded.</span>
+                  <Button type="button" variant="link" onClick={() => void forwardDestinationsQuery.refetch()}>
+                    Retry
+                  </Button>
+                </div>
+              )}
+              <div className="max-h-72 space-y-2 overflow-y-auto" aria-label="Forward destinations">
+              {(forwardDestinationsQuery.data?.items ?? []).map((conversation) => (
                 <Button
                   key={conversation.id}
                   type="button"
@@ -648,6 +729,22 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                   {conversation.is_group ? ' · Group' : ''}
                 </Button>
               ))}
+              {forwardDestinationsQuery.isLoading && <Skeleton className="h-10 w-full" />}
+              {!forwardDestinationsQuery.isLoading && !forwardDestinationsQuery.data?.items.length && (
+                <p className="p-3 text-sm text-ink-faint">No matching conversations.</p>
+              )}
+              {forwardDestinationsQuery.data?.hasMore && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  disabled={loadingMoreForwardDestinations}
+                  onClick={() => void loadMoreForwardDestinations()}
+                >
+                  {loadingMoreForwardDestinations ? 'Loading…' : 'Load more destinations'}
+                </Button>
+              )}
+              </div>
             </div>
           </section>
         </div>
@@ -1036,7 +1133,12 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                       variant="link"
                       className="ml-3 mt-1 h-auto p-0 text-xs underline"
                       aria-label="Forward message"
-                      onClick={() => setForwardingMessage(message)}
+                      onClick={() => {
+                        setForwardConversationSearch('');
+                        setDebouncedForwardConversationSearch('');
+                        setForwardShowArchived(false);
+                        setForwardingMessage(message);
+                      }}
                     >
                       Forward
                     </Button>

@@ -22,10 +22,32 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   );
   let failSearchConversationLoad = false;
   let includeNewInboundMessage = false;
+  const forwardDestinationQueries: Array<{ archived: string | null; offset: string | null }> = [];
   await page.route('**/whatsapp/conversations*', (route) => {
     const url = new URL(route.request().url());
+    if (url.searchParams.has('unread')) {
+      forwardDestinationQueries.push({
+        archived: url.searchParams.get('archived'),
+        offset: url.searchParams.get('offset'),
+      });
+    }
     if (failSearchConversationLoad && url.searchParams.get('search') === 'trigger-error') {
       return route.fulfill({ status: 503, json: { success: false, error: 'temporary failure' } });
+    }
+    if (url.searchParams.get('search')?.toLocaleLowerCase() === 'older destination') {
+      return route.fulfill({
+        json: {
+          success: true,
+          data: [{
+            id: 99,
+            jid: '628999000111@s.whatsapp.net',
+            name: 'Older destination',
+            is_group: false,
+            is_archived: false,
+            unread_count: 0,
+          }],
+        },
+      });
     }
     if (url.searchParams.get('offset') === '50') {
       return route.fulfill({
@@ -340,14 +362,24 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
     'Quoted response',
   ]);
   await page.locator('#whatsapp-message-50').getByRole('button', { name: 'Forward message' }).click();
-  await page.getByRole('dialog', { name: 'Forward message' }).getByRole('button', { name: 'Forward to Rani Putri' }).click();
+  const forwardDialog = page.getByRole('dialog', { name: 'Forward message' });
+  await forwardDialog.getByRole('textbox', { name: 'Search forward destinations' }).fill('Older destination');
+  await forwardDialog.getByRole('button', { name: 'Forward to Older destination' }).click();
   await expect(page.getByText('Forward queued')).toBeVisible();
   expect(forwardedMessages).toHaveLength(1);
   expect(forwardedMessages[0]).toMatchObject({
     sourceId: '50',
-    body: { conversation_id: 43 },
+    body: { conversation_id: 99 },
   });
   expect(forwardedMessages[0]?.key).toBeTruthy();
+  await page.locator('#whatsapp-message-50').getByRole('button', { name: 'Forward message' }).click();
+  const secondForwardDialog = page.getByRole('dialog', { name: 'Forward message' });
+  await expect(secondForwardDialog.getByRole('button', { name: 'Load more destinations' })).toBeVisible();
+  await secondForwardDialog.getByRole('button', { name: 'Load more destinations' }).click();
+  await expect(secondForwardDialog.getByRole('button', { name: 'Forward to Older conversation' })).toBeVisible();
+  await secondForwardDialog.getByRole('checkbox', { name: 'Include archived conversations' }).check();
+  await expect.poll(() => forwardDestinationQueries.some((query) => query.archived === 'true')).toBe(true);
+  await secondForwardDialog.getByRole('button', { name: 'Cancel' }).click();
   await page.getByLabel('Search conversations by name, number, or message').fill('Rani');
   await expect(page.getByRole('button', { name: /Rani Putri/u })).toBeVisible();
   await page.getByLabel('Search conversations by name, number, or message').fill('');
