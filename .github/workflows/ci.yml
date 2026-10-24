@@ -280,6 +280,7 @@ jobs:
         continue-on-error: true
         run: node scripts/summarize-playwright-failures.mjs test-results/junit/board-e2e.xml
       - name: Test documentation portal routing, search, and responsive navigation
+        if: always()
         run: pnpm test:docs-portal
       - name: Scan browser reports for secrets before artifact upload
         id: scan_browser_reports
