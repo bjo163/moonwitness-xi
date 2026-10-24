@@ -93,6 +93,9 @@ if (!packageManager) {
 }
 
 await runPreflight('flaky-policy', 'node', ['scripts/check-flaky-policy.mjs']);
+// The Board web server serves apps/board/public, which is not checked in; without this
+// copy every /illustrations, /brand and /sounds request in the browser lane returns 404.
+await runPreflight('board-public-assets', 'node', ['scripts/copy-board-public-assets.mjs']);
 if (built) {
   stderr.write('Using the existing workspace build for Board E2E.\n');
 } else {
