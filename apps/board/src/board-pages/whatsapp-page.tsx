@@ -230,6 +230,7 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
     setInboxPreferences((current) => ({ ...current, showArchived }));
   const [newPhone, setNewPhone] = useState('');
   const [conversationSearch, setConversationSearch] = useState('');
+  const conversationSearchRef = useRef<HTMLInputElement>(null);
   const [newLabelName, setNewLabelName] = useState('');
   const [pendingLabelDeleteId, setPendingLabelDeleteId] = useState<number | null>(null);
   const [assignmentPanelOpen, setAssignmentPanelOpen] = useState(false);
@@ -301,6 +302,24 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
     );
     return () => window.clearTimeout(timer);
   }, [conversationSearch]);
+  useEffect(() => {
+    const focusConversationSearch = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== '/' || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+        return;
+      }
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable || target.closest('input, textarea, select, [role="textbox"]'))
+      ) {
+        return;
+      }
+      event.preventDefault();
+      conversationSearchRef.current?.focus();
+    };
+    window.addEventListener('keydown', focusConversationSearch);
+    return () => window.removeEventListener('keydown', focusConversationSearch);
+  }, []);
   useEffect(() => {
     const timer = window.setTimeout(
       () => setDebouncedForwardConversationSearch(forwardConversationSearch.trim()),
@@ -1272,7 +1291,31 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
       )}
       {connected && (
         <section className="grid min-h-[60vh] flex-1 overflow-hidden border-2 border-ink bg-paper shadow-[4px_4px_0_0_var(--ink)] md:grid-cols-[minmax(240px,0.38fr)_1fr]">
-          <aside className="border-b-2 border-ink md:border-b-0 md:border-r-2">
+          <aside
+            aria-label="Conversation inbox"
+            className="border-b-2 border-ink md:border-b-0 md:border-r-2"
+            onKeyDown={(event) => {
+              if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+              const target = event.target;
+              if (!(target instanceof HTMLElement)) return;
+              const current = target.closest<HTMLButtonElement>('[data-wa-conversation]');
+              if (!current) return;
+              const buttons = Array.from(
+                event.currentTarget.querySelectorAll<HTMLButtonElement>('[data-wa-conversation]')
+              );
+              const currentIndex = buttons.indexOf(current);
+              if (currentIndex < 0 || buttons.length < 2) return;
+              const nextIndex =
+                event.key === 'Home'
+                  ? 0
+                  : event.key === 'End'
+                    ? buttons.length - 1
+                    : (currentIndex + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) %
+                      buttons.length;
+              event.preventDefault();
+              buttons[nextIndex]?.focus();
+            }}
+          >
             <div className="border-b-2 border-ink p-4">
               <div className="flex items-center justify-between gap-2">
                 <h2 className="font-display text-lg uppercase">Conversations</h2>
@@ -1283,12 +1326,18 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                 )}
               </div>
               <Input
+                ref={conversationSearchRef}
                 aria-label="Search conversations by name, number, or message"
+                aria-describedby="whatsapp-search-shortcut-help"
+                aria-keyshortcuts="/"
                 className="mt-3"
                 placeholder="Search name, number, or message"
                 value={conversationSearch}
                 onChange={(event) => setConversationSearch(event.target.value)}
               />
+              <p id="whatsapp-search-shortcut-help" className="mt-1 text-xs text-ink-faint">
+                Press / to focus search. In the conversation list, use ↑/↓ to move and Home/End to jump.
+              </p>
               <div className="mt-2 flex flex-wrap gap-2" aria-label="Conversation filters">
                 {(['all', 'unread', 'private', 'groups'] as const).map((filter) => (
                   <Button
@@ -1509,6 +1558,7 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                 <Button
                   key={conversation.id}
                   type="button"
+                  data-wa-conversation
                   onClick={() => setSelected(conversation.id)}
                   variant="ghost"
                   className={`h-auto w-full justify-start border-b border-ink/20 p-4 text-left hover:bg-pink/20 ${activeConversation?.id === conversation.id ? 'bg-pink/30' : ''}`}
@@ -2097,7 +2147,10 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                         </>
                       )}
                     <p className="mt-2 flex flex-wrap justify-end gap-x-2 text-right font-mono text-[10px] text-ink-faint">
-                      <time dateTime={message.create_date}>
+                      <time
+                        dateTime={message.create_date}
+                        aria-label={`Message time: ${formatDateTime(message.create_date, 'dateTime')}`}
+                      >
                         {formatDateTime(message.create_date, 'dateTime')}
                       </time>
                       <span>{messageStatusLabel[message.status] ?? 'Status unavailable'}</span>

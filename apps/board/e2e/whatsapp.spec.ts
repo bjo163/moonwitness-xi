@@ -452,6 +452,7 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   });
   expect(forwardedMessages[0]?.key).toBeTruthy();
   const ownReply = page.locator('#whatsapp-message-52');
+  await expect(ownReply.locator('time')).toHaveAttribute('aria-label', /^Message time:/u);
   await ownReply.getByRole('button', { name: 'Edit message' }).click();
   await page.getByLabel('Edited message text').fill('Edited reply text');
   await page.getByRole('button', { name: 'Save edit' }).click();
@@ -483,9 +484,25 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
     .poll(() => forwardDestinationQueries.some((query) => query.archived === 'true'))
     .toBe(true);
   await secondForwardDialog.getByRole('button', { name: 'Cancel' }).click();
-  await page.getByLabel('Search conversations by name, number, or message').fill('Rani');
+  const conversationSearch = page.getByLabel('Search conversations by name, number, or message');
+  const projectChat = page.getByRole('button', { name: /Project group/u });
+  const raniChat = page.getByRole('button', { name: /Rani Putri/u });
+  await raniChat.focus();
+  await page.keyboard.press('ArrowUp');
+  await expect(projectChat).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(raniChat).toBeFocused();
+  await page.keyboard.press('Home');
+  await expect(projectChat).toBeFocused();
+  await page.keyboard.press('End');
+  await expect(page.getByRole('button', { name: /Contact 47/u })).toBeFocused();
+  await projectChat.focus();
+  await page.keyboard.press('/');
+  await expect(conversationSearch).toBeFocused();
+  await expect(conversationSearch).toHaveAttribute('aria-keyshortcuts', '/');
+  await conversationSearch.fill('Rani');
   await expect(page.getByRole('button', { name: /Rani Putri/u })).toBeVisible();
-  await page.getByLabel('Search conversations by name, number, or message').fill('');
+  await conversationSearch.fill('');
   await page.getByRole('button', { name: 'Groups' }).click();
   await expect(page.getByRole('button', { name: /Project group/u })).toBeVisible();
   await expect(page.getByRole('button', { name: /Rani Putri/u })).toHaveCount(0);
