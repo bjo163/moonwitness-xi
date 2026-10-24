@@ -212,3 +212,23 @@ These rows inventory the _verification machinery itself_, which M10.01 asks for:
 These rows are measurement, not closure: naming the baseline gap does not produce a Linux screenshot, and naming the suppressed report does not identify the leak. Two rows are exceptions because their gap stopped being measurement: `CI-CATALOG-BUDGET-GUARDRAIL`, closed by a decision the owner made and recorded, and `UI-CATALOG-BASE-PATH`, closed by a two-line repair; both are documented here so a future reader knows which ceiling was raised, and which assertion was corrected, and why.
 
 These rows are inventory and measurement only: naming them does not close M10.01, and the two P0 gaps above are owner decisions about production posture rather than repairs I can make silently.
+
+## CI reduced to one build-and-test gate on owner instruction — 2026-10-24
+
+The repo owner asked for a fast delivery path and named the multi-lane stack, the `automation` matrix and the security scans as the cost. Every line citation in the section above points at the pre-slimming `.github/workflows/ci.yml`, which is the history those rows measured; this section records what replaced it, so a future verdict reads the new shape rather than the old one.
+
+Measured shape, before and after: `ci.yml` went from **555 lines / 9 jobs / 64 `run:` steps** (`plan`, `quality`, `automation`, `integration`, `browser`, `ui`, `containers`, `ci-technical-gate`, `ci-gate`) to **59 lines / 1 job / 5 `run:` steps**. The job is still literally named `ci-gate` because ruleset `24436095` on `refs/heads/main` requires a status check whose context is exactly `ci-gate`; any other name would leave every `dev`-to-`main` pull request permanently unmergeable, which is why the surviving job took that name instead of the gate job keeping it.
+
+Still enforced on every push to `dev`/`main` and every pull request, inside that one job: `pnpm lint`, `pnpm format:check`, `pnpm typecheck` (which is `pnpm build` plus the Board typecheck), and `pnpm test:unit:ci` against a PostgreSQL 16 service with `REQUIRE_POSTGRES_TESTS: 'true'`. `scripts/unit-runner-policy.mjs` previously skipped five contracts in GitHub Actions because a dedicated job owned them; with one job there is nobody to hand them to, so the Board bundle budget contract, the production Board budget, versioned documentation, brand assets and shared UI tokens now run in the same job as everywhere else, which keeps hosted verdicts identical to local `pnpm test:unit`.
+
+No longer enforced automatically, each still available by hand (`workflow_dispatch`) or as a local script, and no workflow file was deleted:
+
+- The PostgreSQL integration suite (`pnpm test:integration:built`), the JUnit report artifacts and the isolated backup/restore drill.
+- Board browser acceptance and visual regression (`pnpm test:e2e`, `pnpm test:docs-portal`) — so the 13 missing `-chromium-linux.png` baselines stop being a red lane, and stop being a verdict too.
+- Container composition, `scripts/smoke-containers.sh`, and the three Trivy SARIF scans of the workspace lockfile, api image and board image.
+- The `automation` matrix: action-pin and workflow-trust policy, secret and roadmap policy, release/ promotion scripting suites, platform and dependency policy suites.
+- `Gitleaks` history scanning and `CodeQL` analysis.
+- The `plan` job's affected-lane selection, Conventional-Commit validation, and promotion-risk classification (the risk classifier still runs in `promote.yml`, which keeps maintaining the promotion pull request).
+- `Roadmap issue sync` (daily + on `ROADMAP.md` pushes), `Roadmap progress report`, `Refresh promotion report`, `Temporary generated-output recovery`, `Ubuntu runner candidate`, `Sync main into dev` hourly cron (the `push: main` trigger stays), scheduled browser matrix, deep regression, external doc links, dependency update plan, monthly platform audit.
+
+Two known consequences the owner should weigh rather than rediscover: the branch no longer proves the product builds inside Docker or that a secret never entered history, and `scripts/ci-concurrency.test.mjs`, `scripts/ci-diagnostics.test.mjs`, `scripts/ci-build-reuse.test.mjs`, `scripts/ci-gate.test.mjs`, `scripts/review-ci-evidence.test.mjs`, `scripts/select-affected.test.mjs`, `scripts/check-action-pins.test.mjs`, `scripts/check-action-tag-pins.test.mjs`, `scripts/check-gitleaks-config.test.mjs` and the `pnpm test:release-*` / `test:platform-*` families still assert against the 9-job file and now fail when run. They are reachable only from parked suites and from a human, so they do not block delivery — and they are listed here instead of deleted because removing verification machinery is an owner decision, not a side effect of mine.

@@ -1,12 +1,8 @@
 name: CodeQL
 
+# Parked from scheduled/push triggers on 2026-10-24: the repo owner asked for a
+# thin delivery path, so this workflow runs only when started by hand.
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [dev, main]
-  schedule:
-    - cron: '23 5 * * 1'
   workflow_dispatch:
 
 permissions:

@@ -1,12 +1,8 @@
 name: Ubuntu runner candidate
 
+# Parked from scheduled/push triggers on 2026-10-24: the repo owner asked for a
+# thin delivery path, so this workflow runs only when started by hand.
 on:
-  push:
-    branches: [dev]
-    paths:
-      - .github/workflows/ubuntu-runner-candidate.yml
-      - docs/engineering/runtime-support-review.json
-      - docs/engineering/support-policy.md
   workflow_dispatch:
 
 permissions:

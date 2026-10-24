@@ -1,18 +1,8 @@
 name: Roadmap issue sync
 
+# Parked from scheduled/push triggers on 2026-10-24: the repo owner asked for a
+# thin delivery path, so this workflow runs only when started by hand.
 on:
-  push:
-    branches: [dev]
-    paths:
-      - 'ROADMAP.md'
-      - 'docs/roadmap/**'
-      - 'scripts/roadmap/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - '.github/actions/setup-pnpm/action.yml'
-      - '.github/workflows/roadmap-issue-plan.yml'
-  schedule:
-    - cron: '13 9 * * *'
   workflow_dispatch:
     inputs:
       apply:
