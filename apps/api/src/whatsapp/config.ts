@@ -57,4 +57,30 @@ export function readWhatsAppGatewayConfig(
 
 export function validateWhatsAppProductionConfig(env: NodeJS.ProcessEnv = process.env): void {
   if (env.NODE_ENV === 'production') readWhatsAppGatewayConfig(env);
+  const webhookUrl = env.WHATSAPP_WEBHOOK_URL;
+  const webhookSecret = env.WHATSAPP_WEBHOOK_SECRET;
+  if (Boolean(webhookUrl) !== Boolean(webhookSecret)) {
+    throw new Error('WHATSAPP_WEBHOOK_URL and WHATSAPP_WEBHOOK_SECRET must be configured together');
+  }
+  if (!webhookUrl || !webhookSecret) return;
+  if (webhookSecret.length < 32) {
+    throw new Error('WHATSAPP_WEBHOOK_SECRET must contain at least 32 characters');
+  }
+  let url: URL;
+  try {
+    url = new URL(webhookUrl);
+  } catch {
+    throw new Error('WHATSAPP_WEBHOOK_URL must be a valid public http or https origin');
+  }
+  if (
+    !['http:', 'https:'].includes(url.protocol) ||
+    url.username ||
+    url.password ||
+    url.pathname !== '/' ||
+    url.search ||
+    url.hash ||
+    (env.NODE_ENV === 'production' && url.protocol !== 'https:')
+  ) {
+    throw new Error('WHATSAPP_WEBHOOK_URL must be an origin; production requires https');
+  }
 }

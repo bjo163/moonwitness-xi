@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { readWhatsAppGatewayConfig } from '../src/whatsapp/config.js';
+import {
+  readWhatsAppGatewayConfig,
+  validateWhatsAppProductionConfig,
+} from '../src/whatsapp/config.js';
 import { GowaError, gowaRequest } from '../src/whatsapp/gowa-client.js';
 
 afterEach(() => {
@@ -47,6 +50,41 @@ describe('WhatsApp gateway configuration', () => {
     expect(() => readWhatsAppGatewayConfig({ WHATSAPP_GATEWAY_TIMEOUT_MS: '100' })).toThrow(
       'WHATSAPP_GATEWAY_TIMEOUT_MS'
     );
+  });
+
+  it('requires a valid HTTPS origin and strong paired secret for production receipts', () => {
+    const base = {
+      NODE_ENV: 'production',
+      WHATSAPP_GATEWAY_USERNAME: 'tenant',
+      WHATSAPP_GATEWAY_PASSWORD: 'unique-gateway-password',
+    };
+    expect(() =>
+      validateWhatsAppProductionConfig({
+        ...base,
+        WHATSAPP_WEBHOOK_URL: 'https://api.example.test',
+      })
+    ).toThrow('configured together');
+    expect(() =>
+      validateWhatsAppProductionConfig({
+        ...base,
+        WHATSAPP_WEBHOOK_URL: 'http://api.example.test',
+        WHATSAPP_WEBHOOK_SECRET: 'a'.repeat(40),
+      })
+    ).toThrow('production requires https');
+    expect(() =>
+      validateWhatsAppProductionConfig({
+        ...base,
+        WHATSAPP_WEBHOOK_URL: 'https://api.example.test',
+        WHATSAPP_WEBHOOK_SECRET: 'short',
+      })
+    ).toThrow('at least 32 characters');
+    expect(() =>
+      validateWhatsAppProductionConfig({
+        ...base,
+        WHATSAPP_WEBHOOK_URL: 'https://api.example.test',
+        WHATSAPP_WEBHOOK_SECRET: 'a'.repeat(40),
+      })
+    ).not.toThrow();
   });
 
   it('does not expose upstream error text in API errors', async () => {

@@ -42,6 +42,7 @@ function isPublic(url: string): boolean {
     url === '/livez' ||
     url === '/readyz' ||
     url === '/whatsapp/readyz' ||
+    url === '/whatsapp/gowa/webhook/:deviceId' ||
     url === '/metrics' ||
     url.startsWith('/docs') ||
     url === '/auth/register' ||

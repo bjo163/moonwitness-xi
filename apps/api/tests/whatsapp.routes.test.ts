@@ -12,7 +12,7 @@ import {
 } from '@moonwitness/orm-storage';
 import { whatsappRoutes } from '../src/routes/whatsapp.routes.js';
 import { whatsappManifest } from '../src/whatsapp/manifest.js';
-import { randomUUID } from 'node:crypto';
+import { createHmac, randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
 import { MAX_ATTACHMENT_BYTES } from '@moonwitness/types';
 import { dispatchOneOutboxEvent, jobsManifest } from '@moonwitness/jobs';
@@ -48,6 +48,7 @@ describe('WhatsApp API GoWA bridge', () => {
   let providerChats: Array<Record<string, unknown>> = [];
   let providerChatRequests: URL[] = [];
   let providerChatActions: Array<{ path: string; body: Record<string, unknown> }> = [];
+  let providerWebhookUpdates: Array<{ path: string; body: Record<string, unknown> }> = [];
   let providerMessages: Array<Record<string, unknown>> = [];
   let providerMessageRequests: URL[] = [];
   let providerReadRequests: URL[] = [];
@@ -68,6 +69,8 @@ describe('WhatsApp API GoWA bridge', () => {
   let streamGetCount = 0;
   let bufferGetCount = 0;
   const previousGateway = process.env.WHATSAPP_GATEWAY_URL;
+  const previousWebhookUrl = process.env.WHATSAPP_WEBHOOK_URL;
+  const previousWebhookSecret = process.env.WHATSAPP_WEBHOOK_SECRET;
   const stored = new Map<string, Buffer>();
   const memoryStorage: AttachmentStorage = {
     async put(key, content) {
@@ -143,6 +146,8 @@ describe('WhatsApp API GoWA bridge', () => {
 
   beforeEach(async () => {
     process.env.WHATSAPP_GATEWAY_URL = 'http://gowa.test';
+    delete process.env.WHATSAPP_WEBHOOK_URL;
+    delete process.env.WHATSAPP_WEBHOOK_SECRET;
     deviceExists = false;
     providerConnected = false;
     qrExpired = false;
@@ -151,6 +156,7 @@ describe('WhatsApp API GoWA bridge', () => {
     providerChats = [];
     providerChatRequests = [];
     providerChatActions = [];
+    providerWebhookUpdates = [];
     providerMessages = [];
     providerMessageRequests = [];
     providerReadRequests = [];
@@ -187,6 +193,10 @@ describe('WhatsApp API GoWA bridge', () => {
         deviceCreateCount++;
         deviceExists = true;
         return json({ device_id: 'moonwitness-company-' + companyId });
+      }
+      if (/^\/devices\/[^/]+\/webhook$/u.test(url.pathname) && method === 'PATCH') {
+        providerWebhookUpdates.push({ path: url.pathname, body: JSON.parse(String(init?.body)) as Record<string, unknown> });
+        return json({});
       }
       if (/^\/devices\/[^/]+$/u.test(url.pathname) && method === 'GET')
         return deviceExists
@@ -320,6 +330,10 @@ describe('WhatsApp API GoWA bridge', () => {
   afterAll(async () => {
     if (previousGateway === undefined) delete process.env.WHATSAPP_GATEWAY_URL;
     else process.env.WHATSAPP_GATEWAY_URL = previousGateway;
+    if (previousWebhookUrl === undefined) delete process.env.WHATSAPP_WEBHOOK_URL;
+    else process.env.WHATSAPP_WEBHOOK_URL = previousWebhookUrl;
+    if (previousWebhookSecret === undefined) delete process.env.WHATSAPP_WEBHOOK_SECRET;
+    else process.env.WHATSAPP_WEBHOOK_SECRET = previousWebhookSecret;
     if (postgres) await db.raw(`DROP SCHEMA "${schema}" CASCADE`);
     await db.destroy();
   });
@@ -1670,6 +1684,105 @@ describe('WhatsApp API GoWA bridge', () => {
     expect(failed.status).toBe('failed');
     expect(Boolean(failed.retryable)).toBe(false);
     expect(failed.last_error).toContain('400');
+  });
+
+  it('registers the signed receipt callback with GoWA when webhook configuration is complete', async () => {
+    process.env.WHATSAPP_WEBHOOK_URL = 'https://api.moonwitness.test';
+    process.env.WHATSAPP_WEBHOOK_SECRET = 'test-webhook-secret-that-is-at-least-32-chars';
+    const response = await app.inject({
+      method: 'POST',
+      url: '/whatsapp/connect',
+      headers: { authorization: 'Bearer test' },
+      payload: {},
+    });
+    expect(response.statusCode).toBe(202);
+    expect(providerWebhookUpdates).toEqual([
+      {
+        path: `/devices/moonwitness-company-${companyId}/webhook`,
+        body: {
+          webhook_url: `https://api.moonwitness.test/whatsapp/gowa/webhook/moonwitness-company-${companyId}`,
+          webhook_secret: process.env.WHATSAPP_WEBHOOK_SECRET,
+          webhook_events: 'message.ack',
+        },
+      },
+    ]);
+  });
+
+  it('authenticates GoWA receipts and applies delivery states monotonically within one company', async () => {
+    const accountId = await connectAndMarkReady();
+    process.env.WHATSAPP_WEBHOOK_SECRET = 'test-gowa-webhook-secret';
+    const [conversation] = await db('whatsapp_conversations').insert({
+      company_id: companyId,
+      account_id: accountId,
+      jid: '628111111111@s.whatsapp.net',
+      name: 'Receipt test',
+      is_group: false,
+      unread_count: 0,
+    }).returning(['id']);
+    const [outbound] = await db('whatsapp_messages').insert({
+      company_id: companyId,
+      account_id: accountId,
+      conversation_id: conversation.id,
+      external_id: 'receipt-test-message',
+      direction: 'outbound',
+      message_type: 'text',
+      content: 'receipt test',
+      status: 'sent',
+    }).returning(['id']);
+    const [foreignAccount] = await db('whatsapp_accounts').insert({
+      company_id: foreignCompanyId,
+      gateway_device_id: 'moonwitness-company-foreign',
+      status: 'connected',
+    }).returning(['id']);
+    const [foreignConversation] = await db('whatsapp_conversations').insert({
+      company_id: foreignCompanyId,
+      account_id: foreignAccount.id,
+      jid: '628222222222@s.whatsapp.net',
+      name: 'Foreign receipt test',
+      is_group: false,
+      unread_count: 0,
+    }).returning(['id']);
+    await db('whatsapp_messages').insert({
+      company_id: foreignCompanyId,
+      account_id: foreignAccount.id,
+      conversation_id: foreignConversation.id,
+      external_id: 'receipt-test-message',
+      direction: 'outbound',
+      message_type: 'text',
+      content: 'foreign receipt test',
+      status: 'sent',
+    });
+
+    const sendReceipt = async (
+      receiptType: 'delivered' | 'read',
+      signatureSecret = process.env.WHATSAPP_WEBHOOK_SECRET!,
+      sessionId = `moonwitness-company-${companyId}`
+    ) => {
+      const raw = JSON.stringify({
+        event: 'message.ack',
+        session_id: sessionId,
+        payload: { ids: ['receipt-test-message'], receipt_type: receiptType },
+      });
+      return app.inject({
+        method: 'POST',
+        url: `/whatsapp/gowa/webhook/moonwitness-company-${companyId}`,
+        headers: {
+          'content-type': 'application/json',
+          'x-hub-signature-256': `sha256=${createHmac('sha256', signatureSecret).update(raw).digest('hex')}`,
+        },
+        payload: raw,
+      });
+    };
+
+    expect((await sendReceipt('read', 'wrong-secret')).statusCode).toBe(401);
+    expect((await sendReceipt('read', process.env.WHATSAPP_WEBHOOK_SECRET!, 'another-device')).statusCode).toBe(403);
+    expect((await db('whatsapp_messages').where({ id: outbound.id }).first()).status).toBe('sent');
+    expect((await sendReceipt('delivered')).statusCode).toBe(204);
+    expect((await db('whatsapp_messages').where({ id: outbound.id }).first()).status).toBe('delivered');
+    expect((await sendReceipt('read')).statusCode).toBe(204);
+    expect((await sendReceipt('delivered')).statusCode).toBe(204);
+    expect((await db('whatsapp_messages').where({ id: outbound.id }).first()).status).toBe('read');
+    expect((await db('whatsapp_messages').where({ company_id: foreignCompanyId }).first()).status).toBe('sent');
   });
 
   it('stores one durable send per idempotency key and rejects changed content', async () => {

@@ -70,6 +70,16 @@ const statusLabel: Record<string, string> = {
   reconnecting: 'Reconnecting',
   error: 'Connection error',
 };
+const messageStatusLabel: Record<string, string> = {
+  queued: 'Queued',
+  sending: 'Sending',
+  sent: 'Sent',
+  delivered: 'Delivered',
+  read: 'Read',
+  received: 'Received',
+  failed: 'Failed',
+  unknown: 'Status unknown',
+};
 
 export function WhatsappPage() {
   const queryClient = useQueryClient();
@@ -708,7 +718,7 @@ export function WhatsappPage() {
                     <p className="mt-1 text-xs">{message.media_file_name}</p>
                   )}
                   <p className="mt-2 text-right font-mono text-[10px] text-ink-faint">
-                    {message.status}
+                    {messageStatusLabel[message.status] ?? 'Status unavailable'}
                   </p>
                   {message.last_error && (
                     <p role="status" className="mt-1 text-xs text-red-700">

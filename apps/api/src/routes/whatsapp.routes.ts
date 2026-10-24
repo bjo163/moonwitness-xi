@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import type { Knex } from 'knex';
 import { PassThrough, Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -37,6 +37,37 @@ function whatsappRateLimit(max: number) {
 class MediaTooLargeError extends Error {}
 class MediaIncompleteError extends Error {}
 class MediaEmptyError extends Error {}
+
+const rawWebhookBodies = new WeakMap<FastifyRequest, Buffer>();
+const MAX_GOWA_WEBHOOK_BYTES = 256 * 1024;
+
+function captureGowaWebhookBody() {
+  return async function captureRawBody(request: FastifyRequest, _reply: unknown, payload: Readable): Promise<Readable> {
+    const chunks: Buffer[] = [];
+    let total = 0;
+    for await (const chunk of payload) {
+      const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as Uint8Array);
+      total += bytes.length;
+      if (total > MAX_GOWA_WEBHOOK_BYTES) {
+        const error = new Error('GoWA webhook payload too large') as Error & { statusCode: number };
+        error.statusCode = 413;
+        throw error;
+      }
+      chunks.push(bytes);
+    }
+    const raw = Buffer.concat(chunks, total);
+    rawWebhookBodies.set(request, raw);
+    return Readable.from([raw]);
+  };
+}
+
+function validGowaWebhookSignature(raw: Buffer, signature: unknown): boolean {
+  const secret = process.env.WHATSAPP_WEBHOOK_SECRET;
+  if (!secret || typeof signature !== 'string' || !/^sha256=[a-f0-9]{64}$/iu.test(signature)) return false;
+  const supplied = Buffer.from(signature.slice('sha256='.length), 'hex');
+  const expected = createHmac('sha256', secret).update(raw).digest();
+  return supplied.length === expected.length && timingSafeEqual(supplied, expected);
+}
 
 function safeFileName(value: unknown): string | null {
   if (typeof value !== 'string') return null;
@@ -388,6 +419,40 @@ async function recordWhatsAppAudit(
 }
 
 export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) => {
+  app.post<{ Params: { deviceId: string } }>(
+    '/whatsapp/gowa/webhook/:deviceId',
+    { bodyLimit: MAX_GOWA_WEBHOOK_BYTES, preParsing: captureGowaWebhookBody() },
+    async (req, reply) => {
+      const raw = rawWebhookBodies.get(req);
+      if (!raw || !validGowaWebhookSignature(raw, req.headers['x-hub-signature-256']))
+        return reply.code(401).send({ success: false, error: 'Invalid webhook signature' });
+      const account = await WhatsappAccount.query().findOne({ gateway_device_id: req.params.deviceId });
+      if (!account) return reply.code(404).send({ success: false, error: 'Unknown device' });
+      const body = req.body as {
+        event?: unknown;
+        session_id?: unknown;
+        payload?: { ids?: unknown; receipt_type?: unknown };
+      } | null;
+      if (body?.session_id !== account.gateway_device_id)
+        return reply.code(403).send({ success: false, error: 'Webhook device mismatch' });
+      if (body?.event !== 'message.ack') return reply.code(204).send();
+      const receipt = body.payload;
+      const status = receipt?.receipt_type === 'read' ? 'read' : receipt?.receipt_type === 'delivered' ? 'delivered' : null;
+      const ids = Array.isArray(receipt?.ids)
+        ? [...new Set(receipt.ids.filter((value): value is string => typeof value === 'string' && value.length > 0))].slice(0, 100)
+        : [];
+      if (!status || ids.length === 0) return reply.code(204).send();
+      const eligibleStatuses = status === 'read' ? ['sent', 'delivered'] : ['sent'];
+      for (const externalId of ids) {
+        await app.db('whatsapp_messages')
+          .where({ company_id: account.company_id, external_id: externalId, direction: 'outbound' })
+          .whereIn('status', eligibleStatuses)
+          .update({ status, write_date: new Date().toISOString() });
+      }
+      return reply.code(204).send();
+    }
+  );
+
   app.get('/whatsapp/account', async (req, reply) => {
     const companyId = requireCompany(req, reply);
     if (!companyId) return;
@@ -544,6 +609,28 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
             body: JSON.stringify({
               device_id: deviceId,
               display_name: `Moonwitness company ${companyId}`,
+            }),
+          });
+        }
+        const webhookOrigin = process.env.WHATSAPP_WEBHOOK_URL;
+        const webhookSecret = process.env.WHATSAPP_WEBHOOK_SECRET;
+        if (Boolean(webhookOrigin) !== Boolean(webhookSecret)) throw new Error('GoWA webhook URL and secret must be configured together');
+        if (webhookOrigin && webhookSecret) {
+          const origin = new URL(webhookOrigin);
+          if (
+            webhookSecret.length < 32 ||
+            !['http:', 'https:'].includes(origin.protocol) ||
+            origin.username || origin.password || origin.pathname !== '/' || origin.search || origin.hash ||
+            (process.env.NODE_ENV === 'production' && origin.protocol !== 'https:')
+          ) throw new Error('Invalid GoWA webhook configuration');
+          const callback = new URL(`/whatsapp/gowa/webhook/${encodeURIComponent(deviceId)}`, origin);
+          await gowaRequest(`/devices/${encodeURIComponent(deviceId)}/webhook`, {
+            method: 'PATCH',
+            contentType: 'application/json',
+            body: JSON.stringify({
+              webhook_url: callback.toString(),
+              webhook_secret: webhookSecret,
+              webhook_events: 'message.ack',
             }),
           });
         }
