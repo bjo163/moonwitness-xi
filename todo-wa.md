@@ -89,7 +89,7 @@ Legenda: **P0** penghambat keselamatan/keandalan; **P1** inbox v1; **P2** media 
 - [ ] **P1-28** Receipt delivered/read kini diterapkan lewat webhook GoWA `message.ack` bertanda tangan dan Board menampilkan label Delivered/Read. Route/config tests mencakup transisi monotonic serta replay; masih perlu receipt live dari device GoWA untuk menutup.
 - [x] **P1-29** Setiap bubble menampilkan label status `Sent`, `Received`, `Delivered`, `Read`, `Failed`, dan fallback `Status unavailable`; pesan gagal yang retryable menyediakan aksi Retry. E2E Chromium membuktikan kelima status dan tombol retry tampil pada pesan yang tepat; API route tests memverifikasi receipt monotonic.
 - [x] **P1-30** Setiap bubble menampilkan waktu lokal dari `create_date` memakai bahasa dan zona waktu Board yang tersimpan; elemen `<time>` mempertahankan timestamp ISO untuk aksesibilitas/integrasi. E2E Chromium WhatsApp memverifikasi timestamp valid dirender.
-- [ ] **P1-31** Enter untuk kirim dan Shift+Enter untuk baris baru dengan preferensi. (UI: `WUI-05`)
+- [x] **P1-31** Composer memakai textarea: default Enter mengirim dan Shift+Enter membuat baris baru; checkbox `Press Enter to send` mematikan mode tersebut sehingga Enter membuat baris baru dan Ctrl/Cmd+Enter mengirim. Preferensi disimpan bersama preferensi inbox per user-company. E2E Chromium menguji kedua perilaku dan persistensi checkbox setelah reload.
 - [ ] **P1-32** Indikator sedang mengirim dan perlindungan klik ganda lintas tab/perangkat. (UI: `WUI-05`)
 - [ ] **P1-33** Balas/quote pesan dengan tautan ke pesan asal.
 - [ ] **P1-34** Forward pesan jika API GoWA mendukung.

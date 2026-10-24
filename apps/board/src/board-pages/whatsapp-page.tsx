@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '@moonwitness/client';
 import {
@@ -13,8 +13,10 @@ import {
 } from '@moonwitness/ui/icons';
 import { toast } from '@moonwitness/ui/components/toast';
 import { Button } from '@moonwitness/ui/components/button';
+import { Checkbox } from '@moonwitness/ui/components/checkbox';
 import { Input } from '@moonwitness/ui/components/input';
 import { Skeleton } from '@moonwitness/ui/components/skeleton';
+import { Textarea } from '@moonwitness/ui/components/textarea';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 import { client } from '@/lib/client';
 import { scopedQueryKey } from '@/lib/query-scope';
@@ -81,11 +83,13 @@ type WhatsAppInboxPreferences = {
   selectedConversationId: number | null;
   conversationFilter: ConversationFilter;
   showArchived: boolean;
+  sendOnEnter: boolean;
 };
 const defaultInboxPreferences: WhatsAppInboxPreferences = {
   selectedConversationId: null,
   conversationFilter: 'all',
   showArchived: false,
+  sendOnEnter: true,
 };
 const statusLabel: Record<string, string> = {
   disconnected: 'Not connected',
@@ -888,7 +892,14 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                 )}
             </div>
             {activeConversation && canSend ? (
-              <MessageComposer key={activeConversation.id} conversationId={activeConversation.id} />
+              <MessageComposer
+                key={activeConversation.id}
+                conversationId={activeConversation.id}
+                sendOnEnter={inboxPreferences.sendOnEnter}
+                onSendOnEnterChange={(sendOnEnter) =>
+                  setInboxPreferences((current) => ({ ...current, sendOnEnter }))
+                }
+              />
             ) : activeConversation ? (
               <p className="border-t-2 border-ink p-3 text-sm text-ink-faint">
                 You have view-only access to WhatsApp messages.
@@ -910,7 +921,15 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
   );
 }
 
-function MessageComposer({ conversationId }: { conversationId: number }) {
+function MessageComposer({
+  conversationId,
+  sendOnEnter,
+  onSendOnEnterChange,
+}: {
+  conversationId: number;
+  sendOnEnter: boolean;
+  onSendOnEnterChange: (value: boolean) => void;
+}) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -962,6 +981,14 @@ function MessageComposer({ conversationId }: { conversationId: number }) {
       setSending(false);
     }
   };
+  const handleComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    const shouldSend = sendOnEnter
+      ? event.key === 'Enter' && !event.shiftKey
+      : event.key === 'Enter' && (event.ctrlKey || event.metaKey);
+    if (!shouldSend) return;
+    event.preventDefault();
+    event.currentTarget.form?.requestSubmit();
+  };
 
   return (
     <form onSubmit={send} className="flex flex-col gap-2 border-t-2 border-ink p-3">
@@ -992,15 +1019,19 @@ function MessageComposer({ conversationId }: { conversationId: number }) {
             }}
           />
         </label>
-        <Input
+        <Textarea
           value={draft}
           onChange={(event) => {
             setDraft(event.target.value);
             idempotencyKey.current = crypto.randomUUID();
           }}
           placeholder="Write a message…"
+          aria-label="Write a message"
           maxLength={8000}
           disabled={sending}
+          rows={2}
+          onKeyDown={handleComposerKeyDown}
+          className="min-h-10 resize-y"
         />
         <Button
           type="submit"
@@ -1010,7 +1041,19 @@ function MessageComposer({ conversationId }: { conversationId: number }) {
           <SendIcon className="size-4" />
         </Button>
       </div>
-      <p className="text-[10px] text-ink-faint">Media files up to 10 MiB</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <label className="flex items-center gap-2 text-xs text-ink-faint">
+          <Checkbox
+            checked={sendOnEnter}
+            onChange={(event) => onSendOnEnterChange(event.target.checked)}
+            aria-label="Press Enter to send"
+          />
+          Press Enter to send
+        </label>
+        <p className="text-[10px] text-ink-faint">
+          {sendOnEnter ? 'Shift+Enter for a new line' : 'Ctrl+Enter to send'} · Media files up to 10 MiB
+        </p>
+      </div>
       {file && (
         <p className="text-xs">
           Attached: {file.name}{' '}
@@ -1140,6 +1183,7 @@ function readWhatsAppInboxPreferences(key: string): WhatsAppInboxPreferences {
         ? (value.conversationFilter as ConversationFilter)
         : defaultInboxPreferences.conversationFilter,
       showArchived: typeof value.showArchived === 'boolean' ? value.showArchived : false,
+      sendOnEnter: typeof value.sendOnEnter === 'boolean' ? value.sendOnEnter : true,
     };
   } catch {
     return { ...defaultInboxPreferences };

@@ -84,15 +84,19 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
       },
     });
   });
+  const sentMessages: string[] = [];
   await page.route('**/whatsapp/conversations/42/messages*', async (route) => {
     if (route.request().method() === 'POST') {
-      expect(route.request().postDataJSON()).toMatchObject({
-        content: 'Thanks, I will take a look.',
-      });
+      const expectedMessages = [
+        'Thanks, I will take a look.\nChecking this multiline reply.',
+        'Draft before newline',
+      ];
+      expect(route.request().postDataJSON()).toMatchObject({ content: expectedMessages[sentMessages.length] });
       expect(route.request().headers()['idempotency-key']).toBeTruthy();
+      sentMessages.push(route.request().postDataJSON().content);
       await route.fulfill({
         status: 202,
-        json: { success: true, data: { id: 51, status: 'queued' } },
+        json: { success: true, data: { id: 50 + sentMessages.length, status: 'queued' } },
       });
       return;
     }
@@ -287,10 +291,23 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   await expect(page.getByRole('button', { name: 'New messages · Jump to latest' })).toBeVisible({ timeout: 10_000 });
   await page.getByRole('button', { name: 'New messages · Jump to latest' }).click();
   await expect(page.locator('article').getByText('New inbound message')).toBeVisible();
-  await page.getByPlaceholder('Write a message…').fill('Thanks, I will take a look.');
-  await page.getByRole('button', { name: 'Send message' }).click();
-  await expect(page.getByPlaceholder('Write a message…')).toHaveValue('');
+  const composer = page.getByPlaceholder('Write a message…');
+  await composer.fill('Thanks, I will take a look.');
+  await composer.press('Shift+Enter');
+  await composer.pressSequentially('Checking this multiline reply.');
+  await expect(composer).toHaveValue(
+    'Thanks, I will take a look.\nChecking this multiline reply.'
+  );
+  await composer.press('Enter');
+  await expect(composer).toHaveValue('');
   await expect(page.locator('article').getByText('Sent', { exact: true })).toBeVisible();
+  const enterToSend = page.getByRole('checkbox', { name: 'Press Enter to send' });
+  await enterToSend.uncheck();
+  await composer.fill('Draft before newline');
+  await composer.press('Enter');
+  await expect(composer).toHaveValue('Draft before newline\n');
+  await composer.press('Control+Enter');
+  await expect(composer).toHaveValue('');
   await page.getByLabel('Search conversations by name, number, or message').fill('Rani');
   await expect(page.getByRole('button', { name: /Rani Putri/u })).toBeVisible();
   await page.getByLabel('Search conversations by name, number, or message').fill('');
@@ -316,6 +333,7 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   await expect(page.getByRole('heading', { name: 'Contact 0' })).toBeVisible();
   await expect(page.getByText('+628200000000')).toBeVisible();
   await page.reload();
+  await expect(page.getByRole('checkbox', { name: 'Press Enter to send' })).not.toBeChecked();
   await expect(page.getByRole('button', { name: 'Private' })).toHaveAttribute(
     'aria-pressed',
     'true'
