@@ -280,6 +280,14 @@
       "height": 24
     },
     {
+      "path": "icons/bolt.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
       "path": "icons/book-open.svg",
       "kind": "icon",
       "variant": "currentColor",
@@ -312,6 +320,22 @@
       "height": 24
     },
     {
+      "path": "icons/chevrons-left.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/chevrons-right.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
       "path": "icons/close.svg",
       "kind": "icon",
       "variant": "currentColor",
@@ -321,6 +345,14 @@
     },
     {
       "path": "icons/code.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/columns.svg",
       "kind": "icon",
       "variant": "currentColor",
       "format": "svg",
@@ -417,6 +449,14 @@
     },
     {
       "path": "icons/globe.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/grid.svg",
       "kind": "icon",
       "variant": "currentColor",
       "format": "svg",
@@ -672,6 +712,22 @@
       "height": 24
     },
     {
+      "path": "icons/sort-ascending.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/sort-descending.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
       "path": "icons/sort.svg",
       "kind": "icon",
       "variant": "currentColor",
@@ -697,6 +753,14 @@
     },
     {
       "path": "icons/sun.svg",
+      "kind": "icon",
+      "variant": "currentColor",
+      "format": "svg",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "icons/tag.svg",
       "kind": "icon",
       "variant": "currentColor",
       "format": "svg",

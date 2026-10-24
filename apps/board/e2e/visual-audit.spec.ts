@@ -219,6 +219,70 @@ test('canonical page icons remain legible on Knowledge, Profile, Settings, and W
   }
 });
 
+test('canonical data-view icons remain legible on lists, forms, tags, and relations', async ({
+  page,
+}) => {
+  await mkdir(catalogDirectory, { recursive: true });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/login');
+  await page.getByLabel('Email or Username').fill('superadmin');
+  await page.getByLabel('Password', { exact: true }).fill(E2E_SUPERADMIN_PASSWORD);
+  await page.getByRole('button', { name: 'Enter the Shadow' }).click();
+  await expect(page).toHaveURL(/\/board$/u);
+
+  for (const viewport of [
+    { name: 'desktop-1440', width: 1440, height: 1000 },
+    { name: 'mobile-390', width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto('/board/m/base.partner');
+    await expect(page.getByRole('heading', { name: 'Partners' })).toBeVisible();
+    const acmeRecord =
+      viewport.name === 'mobile-390'
+        ? page
+            .locator('article')
+            .filter({ has: page.getByRole('heading', { name: 'Acme Studio', exact: true }) })
+            .first()
+        : page.getByRole('row').filter({ hasText: 'Acme Studio' }).first();
+    await expect(acmeRecord).toBeVisible();
+    await expectNoHorizontalOverflow(page, `list/icons/${viewport.name}`);
+    await page.locator('nextjs-portal').evaluateAll((elements) => {
+      elements.forEach((element) => element.remove());
+    });
+    await page.screenshot({
+      path: path.join(catalogDirectory, `board-list-icons-${viewport.name}.png`),
+      fullPage: true,
+      animations: 'disabled',
+    });
+
+    await acmeRecord.getByRole('checkbox').check();
+    await expect(page.getByRole('button', { name: 'Tag Records' })).toBeVisible();
+    await page.screenshot({
+      path: path.join(catalogDirectory, `board-list-bulk-actions-${viewport.name}.png`),
+      fullPage: false,
+      animations: 'disabled',
+    });
+    await acmeRecord.getByRole('button', { name: 'Open →' }).click();
+    await expect(page).toHaveURL(/\/board\/m\/base\.partner\/\d+/u);
+    await expect(page.getByRole('heading', { name: /Partner #\d+/u })).toBeVisible();
+    await expectNoHorizontalOverflow(page, `record/icons/${viewport.name}`);
+    await page.screenshot({
+      path: path.join(catalogDirectory, `board-record-icons-${viewport.name}.png`),
+      fullPage: true,
+      animations: 'disabled',
+    });
+
+    await page.goto('/board/m/base.partner/new');
+    await expect(page.getByRole('heading', { name: 'New Partner' })).toBeVisible();
+    await expectNoHorizontalOverflow(page, `form/icons/${viewport.name}`);
+    await page.screenshot({
+      path: path.join(catalogDirectory, `board-form-icons-${viewport.name}.png`),
+      fullPage: true,
+      animations: 'disabled',
+    });
+  }
+});
+
 test('ordinary-user dashboard has a verified visual baseline', async ({ page }) => {
   await mkdir(auditDirectory, { recursive: true });
   await page.setViewportSize({ width: 1440, height: 1000 });
@@ -366,13 +430,34 @@ test('mobile overlays keep accessible names, keyboard dismissal, focus return, a
 });
 
 async function expectNoHorizontalOverflow(page: Page, label: string) {
-  const dimensions = await page.evaluate(() => ({
-    clientWidth: document.documentElement.clientWidth,
-    scrollWidth: document.documentElement.scrollWidth,
-  }));
+  const dimensions = await page.evaluate(() => {
+    const clientWidth = document.documentElement.clientWidth;
+    const offenders = Array.from(document.body.querySelectorAll<HTMLElement>('*'))
+      .map((element) => {
+        const bounds = element.getBoundingClientRect();
+        return {
+          tag: element.tagName.toLowerCase(),
+          className: typeof element.className === 'string' ? element.className : '',
+          left: Math.round(bounds.left),
+          right: Math.round(bounds.right),
+          scrollWidth: element.scrollWidth,
+          clientWidth: element.clientWidth,
+        };
+      })
+      .filter(
+        (element) =>
+          element.right > clientWidth + 1 && element.left >= -1 && element.clientWidth > 0
+      )
+      .slice(0, 8);
+    return {
+      clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      offenders,
+    };
+  });
   expect(
     dimensions.scrollWidth,
-    `${label} has unintended horizontal overflow (${dimensions.scrollWidth}px > ${dimensions.clientWidth}px)`
+    `${label} has unintended horizontal overflow (${dimensions.scrollWidth}px > ${dimensions.clientWidth}px); offenders: ${JSON.stringify(dimensions.offenders)}`
   ).toBeLessThanOrEqual(dimensions.clientWidth);
 }
 

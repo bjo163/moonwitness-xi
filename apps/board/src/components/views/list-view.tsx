@@ -12,26 +12,25 @@ import { Button } from '@moonwitness/ui/components/button';
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  Archive,
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-  Columns3,
-  Download,
-  Filter,
-  LayoutGrid,
-  Loader2,
-  Plus,
-  Search,
-  Table,
-  Tag,
-  Upload,
-  X,
-} from 'lucide-react';
+  ArchiveIcon,
+  AddIcon,
+  ChevronRightIcon,
+  ChevronsLeftIcon,
+  ChevronsRightIcon,
+  CloseIcon,
+  ColumnsIcon,
+  DownloadIcon,
+  FilterIcon,
+  GridIcon,
+  ModelIcon,
+  SearchIcon,
+  SortAscendingIcon,
+  SortDescendingIcon,
+  SortIcon,
+  TagIcon,
+  UploadIcon,
+} from '@moonwitness/ui/icons';
+import { LoadingSpinner } from '@moonwitness/ui/components/effects';
 import type { Domain, ResolvedViews } from '@moonwitness/client';
 import { client } from '@/lib/client';
 import { formatDateTime } from '@/lib/date-format';
@@ -467,7 +466,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
               className="press gap-2 shadow-ink-sm"
               title="Import records from CSV"
             >
-              <Upload className="size-5 text-lime" />
+              <UploadIcon className="size-5 text-lime" />
               <span className="font-display tracking-wider">Import CSV</span>
             </Button>
             <Button
@@ -476,7 +475,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
               size="lg"
               className="press gap-2 shadow-ink"
             >
-              <Plus className="size-5" strokeWidth={3} />
+              <AddIcon className="size-5" strokeWidth={3} />
               <span className="font-display tracking-wider">New {toSingular(views.title)}</span>
             </Button>
           </div>
@@ -487,7 +486,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
       <div className="flex flex-wrap items-center justify-between gap-4">
         {/* Search Input */}
         <div className="relative w-full max-w-sm sm:w-80">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-faint" />
+          <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-faint" />
           <Input
             id="search-input"
             placeholder={`Search ${views.title.toLowerCase()}...`}
@@ -505,7 +504,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
           {filters.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-1 font-mono text-xs uppercase text-ink-faint mr-1">
-                <Filter className="size-3.5" /> Filters:
+                <FilterIcon className="size-3.5" /> Filters:
               </div>
               {filters.map((filter, idx) => {
                 const active = activeFilterIndex === idx;
@@ -541,7 +540,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                     className="ml-1 hover:text-pink transition-colors"
                     title="Remove filter"
                   >
-                    <X className="size-3" />
+                    <CloseIcon className="size-3" />
                   </Button>
                 </span>
               ))}
@@ -553,13 +552,13 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                     type="button"
                     className="inline-flex items-center gap-1 border-2 border-dashed border-ink/40 bg-card px-2 py-0.5 font-mono text-xs font-semibold text-ink-faint hover:border-ink hover:text-ink hover:bg-paper-raised transition-colors"
                   >
-                    <Plus className="size-3" /> Filter
+                    <AddIcon className="size-3" /> Filter
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent align="start" className="w-64 p-3 space-y-3 font-sans">
                   <div className="font-display text-xs uppercase tracking-wider text-ink border-b border-ink/20 pb-1.5 flex items-center justify-between">
                     <span>Add Custom Filter</span>
-                    <Filter className="size-3 text-lime" />
+                    <FilterIcon className="size-3 text-lime" />
                   </div>
 
                   <div className="space-y-2 font-mono text-xs">
@@ -653,7 +652,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                     className="ml-1 hover:text-pink transition-colors"
                     title="Remove filter"
                   >
-                    <X className="size-3" />
+                    <CloseIcon className="size-3" />
                   </Button>
                 </span>
               ))}
@@ -665,7 +664,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                 className="inline-flex items-center gap-1 border-2 border-dashed border-ink/40 bg-card px-2 py-0.5 font-mono text-xs font-semibold text-ink-faint hover:border-ink hover:text-ink hover:bg-paper-raised transition-colors"
                 title="Open Advanced Query Builder"
               >
-                <Filter className="size-3 text-lime" /> Advanced Query
+                <FilterIcon className="size-3 text-lime" /> Advanced Query
                 {advancedRules.length > 0 && (
                   <span className="ml-1 border border-ink bg-ink px-1 text-[10px] text-paper">
                     {advancedRules.length}
@@ -701,7 +700,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
               )}
               title="Table View"
             >
-              <Table className="size-3.5" />
+              <ModelIcon className="size-3.5" />
               <span className="hidden sm:inline">Table</span>
             </Button>
             <Button
@@ -715,7 +714,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
               )}
               title="Cards Grid View"
             >
-              <LayoutGrid className="size-3.5" />
+              <GridIcon className="size-3.5" />
               <span className="hidden sm:inline">Grid</span>
             </Button>
             <Button
@@ -729,7 +728,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
               )}
               title="Kanban Pipeline Stages"
             >
-              <Columns3 className="size-3.5" />
+              <ColumnsIcon className="size-3.5" />
               <span className="hidden sm:inline">Pipeline</span>
             </Button>
           </div>
@@ -889,18 +888,18 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                           <span>{col.label}</span>
                           {isSorted ? (
                             sortState.dir === 'asc' ? (
-                              <ArrowUp
+                              <SortAscendingIcon
                                 className="size-3.5 text-lime-600 dark:text-lime"
                                 strokeWidth={3}
                               />
                             ) : (
-                              <ArrowDown
+                              <SortDescendingIcon
                                 className="size-3.5 text-lime-600 dark:text-lime"
                                 strokeWidth={3}
                               />
                             )
                           ) : (
-                            <ArrowUpDown className="size-3 text-ink-faint opacity-30 hover:opacity-100" />
+                            <SortIcon className="size-3 text-ink-faint opacity-30 hover:opacity-100" />
                           )}
                         </div>
                       </TableHeader>
@@ -944,7 +943,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                             size="sm"
                             className="mt-2"
                           >
-                            <Plus className="size-4" /> Create Record
+                            <AddIcon className="size-4" /> Create Record
                           </Button>
                         )}
                       </div>
@@ -1015,7 +1014,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
               </p>
               {views.permissions.create && (
                 <Button onClick={onCreateRecord} variant="outline" size="sm" className="mt-3">
-                  <Plus className="size-4" /> Create Record
+                  <AddIcon className="size-4" /> Create Record
                 </Button>
               )}
             </div>
@@ -1328,7 +1327,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
             onClick={() => setPage(1)}
             title="First Page"
           >
-            <ChevronsLeft className="size-4" />
+            <ChevronsLeftIcon className="size-4" />
           </Button>
           <Button
             variant="outline"
@@ -1337,7 +1336,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             title="Previous Page"
           >
-            <ChevronLeft className="size-4" />
+            <ChevronRightIcon className="size-4 rotate-180" />
           </Button>
 
           <span className="border-2 border-ink bg-paper-raised px-3 py-1 font-bold">
@@ -1351,7 +1350,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             title="Next Page"
           >
-            <ChevronRight className="size-4" />
+            <ChevronRightIcon className="size-4" />
           </Button>
           <Button
             variant="outline"
@@ -1360,7 +1359,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
             onClick={() => setPage(totalPages)}
             title="Last Page"
           >
-            <ChevronsRight className="size-4" />
+            <ChevronsRightIcon className="size-4" />
           </Button>
         </div>
       </div>
@@ -1381,9 +1380,9 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
               className="gap-1.5 hover:bg-pink hover:text-on-pink"
             >
               {isBulkArchiving ? (
-                <Loader2 className="size-3.5 animate-spin" />
+                <LoadingSpinner className="size-3.5" />
               ) : (
-                <Archive className="size-3.5" />
+                <ArchiveIcon className="size-3.5" />
               )}
               Bulk Archive
             </Button>
@@ -1400,9 +1399,9 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
                 title="Tag selected records"
               >
                 {isMassTagging ? (
-                  <Loader2 className="size-3.5 animate-spin" />
+                  <LoadingSpinner className="size-3.5" />
                 ) : (
-                  <Tag className="size-3.5" />
+                  <TagIcon className="size-3.5" />
                 )}
                 Tag Records
               </Button>
@@ -1410,7 +1409,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
             <PopoverContent align="center" className="w-56 p-2 space-y-2 font-sans shadow-ink-lg">
               <div className="flex items-center justify-between border-b border-ink/20 pb-1.5 px-1 font-display text-xs uppercase tracking-wider text-ink">
                 <span>Assign Sticker Tag</span>
-                <Tag className="size-3 text-lime" />
+                <TagIcon className="size-3 text-lime" />
               </div>
               {availableTags.length === 0 ? (
                 <div className="p-3 text-center font-mono text-xs text-ink-faint">
@@ -1438,7 +1437,7 @@ export function ListView({ model, views, onOpenRecord, onCreateRecord }: ListVie
           </Popover>
 
           <Button variant="outline" size="sm" onClick={handleExportCsv} className="gap-1.5">
-            <Download className="size-3.5" />
+            <DownloadIcon className="size-3.5" />
             Export CSV
           </Button>
 

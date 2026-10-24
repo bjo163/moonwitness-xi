@@ -392,6 +392,46 @@ const icons = [
     paths: '<path d="m3 9 9-5 9 5M4 10h16M5 10v9m4-9v9m6-9v9m4-9v9M3 20h18M2.5 22h19"/>',
   },
   {
+    name: 'bolt',
+    title: 'Model action',
+    paths: '<path d="m13 2-8 11h6l-1 9 9-12h-6l1-8Z"/>',
+  },
+  {
+    name: 'chevrons-left',
+    title: 'Previous page group',
+    paths: '<path d="m17 5-7 7 7 7M9 5l-7 7 7 7"/>',
+  },
+  {
+    name: 'chevrons-right',
+    title: 'Next page group',
+    paths: '<path d="m7 5 7 7-7 7m8-14 7 7-7 7"/>',
+  },
+  {
+    name: 'columns',
+    title: 'Table columns',
+    paths: '<rect x="3" y="4" width="18" height="16" rx="1"/><path d="M9 4v16m6-16v16"/>',
+  },
+  {
+    name: 'grid',
+    title: 'Grid view',
+    paths: '<rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/>',
+  },
+  {
+    name: 'sort-ascending',
+    title: 'Sort ascending',
+    paths: '<path d="M12 19V5m-6 6 6-6 6 6"/>',
+  },
+  {
+    name: 'sort-descending',
+    title: 'Sort descending',
+    paths: '<path d="M12 5v14m-6-6 6 6 6-6"/>',
+  },
+  {
+    name: 'tag',
+    title: 'Tag',
+    paths: '<path d="m20.5 13.5-7 7a2 2 0 0 1-2.8 0l-7.2-7.2V3.5h9.8l7.2 7.2a2 2 0 0 1 0 2.8Z"/><circle cx="8" cy="8" r="1.25"/>',
+  },
+  {
     name: 'credit-card',
     title: 'Credit card',
     paths: '<rect x="2.5" y="5" width="19" height="14" rx="1.5"/><path d="M3 9h18m-15 6h4m-4 2h2"/>',

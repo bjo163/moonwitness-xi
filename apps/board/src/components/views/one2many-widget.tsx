@@ -7,7 +7,8 @@ import {
   TableCell,
 } from '@moonwitness/ui/components/table';
 import { useMemo, useState } from 'react';
-import { ExternalLink, Loader2, Plus, Trash2 } from 'lucide-react';
+import { AddIcon, DeleteIcon, ExternalLinkIcon } from '@moonwitness/ui/icons';
+import { LoadingSpinner } from '@moonwitness/ui/components/effects';
 import Link from 'next/link';
 import type { Domain, FieldMeta } from '@moonwitness/client';
 import { useRecordMutations, useRecords, useViews } from '@/hooks/use-model';
@@ -82,7 +83,7 @@ export function One2ManyWidget({ field, parentModel, parentId, isCreate }: One2M
   };
 
   return (
-    <div className="space-y-3">
+    <div className="min-w-0 max-w-full space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="font-display text-sm uppercase tracking-wider text-ink">
@@ -100,12 +101,12 @@ export function One2ManyWidget({ field, parentModel, parentId, isCreate }: One2M
           className="gap-1 font-mono text-xs hover:bg-lime hover:text-on-accent"
         >
           <Link href={`/board/m/${targetModel}/new?${createParams.toString()}`}>
-            <Plus className="size-3.5" /> Add New
+            <AddIcon className="size-3.5" /> Add New
           </Link>
         </Button>
       </div>
 
-      <div className="ink-panel overflow-hidden bg-card">
+      <div className="ink-panel max-w-full overflow-hidden bg-card">
         {viewsLoading || recordsLoading ? (
           <div className="p-4 space-y-2">
             <Skeleton className="h-6 w-full bg-ink/10" />
@@ -144,7 +145,7 @@ export function One2ManyWidget({ field, parentModel, parentId, isCreate }: One2M
                           title="Open record in full view"
                         >
                           <Link href={`/board/m/${targetModel}/${row.id}`}>
-                            <ExternalLink className="size-3" />
+                            <ExternalLinkIcon className="size-3" />
                           </Link>
                         </Button>
                         <Button
@@ -156,9 +157,9 @@ export function One2ManyWidget({ field, parentModel, parentId, isCreate }: One2M
                           title="Archive item"
                         >
                           {deletingId === row.id ? (
-                            <Loader2 className="size-3 animate-spin" />
+                            <LoadingSpinner className="size-3" />
                           ) : (
-                            <Trash2 className="size-3" />
+                            <DeleteIcon className="size-3" />
                           )}
                         </Button>
                       </div>

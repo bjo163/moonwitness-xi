@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Tag as TagIcon, X } from 'lucide-react';
+import { AddIcon, CloseIcon, TagIcon } from '@moonwitness/ui/icons';
 import { client } from '@/lib/client';
 import { scopedQueryKey } from '@/lib/query-scope';
 import { Button } from '@moonwitness/ui/components/button';
@@ -140,7 +140,7 @@ export function TagsWidget({ model, recordId }: TagsWidgetProps) {
               className="ml-0.5 text-ink-faint hover:text-pink transition-colors"
               title="Remove tag"
             >
-              <X className="size-3" />
+              <CloseIcon className="size-3" />
             </Button>
           </span>
         );
@@ -153,7 +153,7 @@ export function TagsWidget({ model, recordId }: TagsWidgetProps) {
             type="button"
             className="inline-flex items-center gap-1 border-2 border-dashed border-ink/40 bg-card px-2 py-0.5 font-mono text-xs font-semibold text-ink-faint hover:border-ink hover:text-ink hover:bg-paper-raised transition-colors"
           >
-            <Plus className="size-3" /> Tag
+            <AddIcon className="size-3" /> Tag
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-56 p-3 space-y-3 font-sans">
