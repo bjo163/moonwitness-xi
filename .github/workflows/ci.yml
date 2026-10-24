@@ -6,7 +6,7 @@ on:
   pull_request_review:
     types: [submitted, dismissed]
   push:
-    branches: [main]
+    branches: [dev, main]
   workflow_dispatch:
 
 permissions:
@@ -47,6 +47,12 @@ jobs:
               printf '%s\n' 'projects=[]'
               printf '%s\n' 'automation-suites=[]'
               printf '%s\n' 'plan={"mode":"review-approval","reason":"reuse-exact-head-technical-evidence","projects":[]}'
+            } >> "$GITHUB_OUTPUT"
+          elif [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF" == "refs/heads/dev" ]]; then
+            {
+              printf '%s\n' 'projects=["quality","automation"]'
+              printf '%s\n' 'automation-suites=["workflow"]'
+              printf '%s\n' 'plan={"mode":"dev-push","reason":"thin-validation-on-integration-branch","projects":["quality","automation"]}'
             } >> "$GITHUB_OUTPUT"
           elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" || "$BASE_REF" == "main" || "$GITHUB_REF" == "refs/heads/main" ]]; then
             {

@@ -24,9 +24,12 @@ test('CI cancels stale runs only within the same target branch and event type', 
   assert.equal(group('dev', 'push'), group('dev', 'push'));
 });
 
-test('technical CI runs once per dev SHA through its PR; main pushes remain fully validated', () => {
+test('technical CI plans full validation on main and a thin lane on dev pushes', () => {
   assert.match(workflow, /^ {2}pull_request:\r?\n {4}branches: \[dev, main\]$/mu);
-  assert.match(workflow, /^ {2}push:\r?\n {4}branches: \[main\]$/mu);
+  assert.match(workflow, /^ {2}push:\r?\n {4}branches: \[dev, main\]$/mu);
+  assert.match(workflow, /GITHUB_EVENT_NAME" == "push" && "\$GITHUB_REF" == "refs\/heads\/dev"/u);
+  assert.match(workflow, /'projects=\["quality","automation"\]'/u);
+  assert.match(workflow, /"reason":"thin-validation-on-integration-branch"/u);
 
   for (const source of [codeqlWorkflow, gitleaksWorkflow]) {
     assert.match(source, /^ {2}pull_request:\r?\n {4}branches: \[dev, main\]$/mu);
