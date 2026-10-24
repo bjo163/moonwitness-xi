@@ -133,6 +133,90 @@ describe('MoonWitnessClient', () => {
     }
   });
 
+  it('reports authenticated blob download progress and preserves the response MIME type', async () => {
+    const requests: Array<{ headers: Record<string, string>; url: string }> = [];
+    class FakeXMLHttpRequest extends EventTarget {
+      upload = new EventTarget();
+      status = 200;
+      statusText = 'OK';
+      responseType = '';
+      response: Blob | null = new Blob(['image'], { type: 'image/png' });
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      onabort: (() => void) | null = null;
+      headers: Record<string, string> = {};
+      url = '';
+      open(_method: string, url: string) { this.url = url; }
+      setRequestHeader(name: string, value: string) { this.headers[name] = value; }
+      send() {
+        requests.push({ headers: this.headers, url: this.url });
+        const progress = new Event('progress');
+        Object.defineProperties(progress, {
+          loaded: { value: 8 },
+          total: { value: 16 },
+          lengthComputable: { value: true },
+        });
+        this.dispatchEvent(progress);
+        this.onload?.();
+      }
+      abort() { this.onabort?.(); }
+    }
+    vi.stubGlobal('XMLHttpRequest', FakeXMLHttpRequest);
+    try {
+      const { client } = makeClient((url) =>
+        url.pathname === '/auth/login' ? json(tokens('download-token')) : json({})
+      );
+      await client.login({ login: 'alice', password: 'pw' });
+      const progress: Array<{ loadedBytes: number; totalBytes: number | null; percent: number | null }> = [];
+      const blob = await client.requestBlobWithDownloadProgress('/whatsapp/media/7', {
+        query: { variant: 'preview' },
+        onDownloadProgress: (event) => progress.push(event),
+      });
+      expect(await blob.text()).toBe('image');
+      expect(blob.type).toBe('image/png');
+      expect(requests[0]?.headers.Authorization).toBe('Bearer download-token');
+      expect(requests[0]?.url).toContain('variant=preview');
+      expect(progress).toEqual([{ loadedBytes: 8, totalBytes: 16, percent: 50 }]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('cancels an in-flight blob download with AbortError', async () => {
+    let sent = false;
+    class FakeXMLHttpRequest extends EventTarget {
+      upload = new EventTarget();
+      status = 200;
+      statusText = 'OK';
+      responseType = '';
+      response: Blob | null = null;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      onabort: (() => void) | null = null;
+      open(_method: string, _url: string) {}
+      setRequestHeader(_name: string, _value: string) {}
+      send() { sent = true; }
+      abort() { this.onabort?.(); }
+    }
+    vi.stubGlobal('XMLHttpRequest', FakeXMLHttpRequest);
+    try {
+      const { client } = makeClient((url) =>
+        url.pathname === '/auth/login' ? json(tokens('download-token')) : json({})
+      );
+      await client.login({ login: 'alice', password: 'pw' });
+      const controller = new AbortController();
+      const pending = client.requestBlobWithDownloadProgress('/whatsapp/media/7', {
+        signal: controller.signal,
+        onDownloadProgress: () => {},
+      });
+      await vi.waitFor(() => expect(sent).toBe(true));
+      controller.abort();
+      await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('removes all trailing slashes from the configured API URL', () => {
     const { client } = makeClient(() => json({}), 'http://api.test////');
     expect(client.baseUrl).toBe('http://api.test');

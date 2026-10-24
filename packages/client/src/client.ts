@@ -10,6 +10,7 @@ import {
   ModelRepository,
   type HttpClient,
   type RequestOptions,
+  type DownloadProgressOptions,
   type UploadProgressOptions,
 } from './repository.js';
 import type {
@@ -496,6 +497,122 @@ export class MoonWitnessClient implements HttpClient {
   async requestWithUploadProgress<T>(path: string, options: UploadProgressOptions): Promise<T> {
     await this.hydrated;
     return this.uploadWithProgress<T>(path, options, false);
+  }
+
+  /** Authenticated blob download with browser progress and cancellation support. */
+  async requestBlobWithDownloadProgress(
+    path: string,
+    options: DownloadProgressOptions
+  ): Promise<Blob> {
+    await this.hydrated;
+    return this.downloadWithProgress(path, options, false);
+  }
+
+  private async downloadWithProgress(
+    path: string,
+    options: DownloadProgressOptions,
+    isRetry: boolean
+  ): Promise<Blob> {
+    if (typeof XMLHttpRequest === 'undefined') {
+      throw new ApiError('Download progress is unavailable in this environment', 0, 'DownloadError');
+    }
+    if (options.signal?.aborted) {
+      throw Object.assign(new Error('Download was cancelled'), { name: 'AbortError' });
+    }
+
+    const url = new URL(`${this.baseUrl}${path.startsWith('/') ? path : `/${path}`}`);
+    for (const [key, value] of Object.entries(options.query ?? {})) {
+      if (value !== undefined) url.searchParams.append(key, String(value));
+    }
+    const headers: Record<string, string> = { Accept: '*/*', ...options.headers };
+    const sentToken = this.tokens?.access_token;
+    if (sentToken) headers.Authorization = `Bearer ${sentToken}`;
+    const effectiveCompanyId = this.getCompanyId();
+    if (effectiveCompanyId) headers['X-Company-Id'] = String(effectiveCompanyId);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open(options.method?.toUpperCase() ?? 'GET', url.toString());
+    xhr.responseType = 'blob';
+    for (const [name, value] of Object.entries(headers)) xhr.setRequestHeader(name, value);
+    xhr.addEventListener('progress', (event) => {
+      options.onDownloadProgress({
+        loadedBytes: event.loaded,
+        totalBytes: event.lengthComputable ? event.total : null,
+        percent: event.lengthComputable
+          ? Math.min(100, Math.round((event.loaded / Math.max(event.total, 1)) * 100))
+          : null,
+      });
+    });
+
+    const response = await new Promise<{ status: number; statusText: string; blob: Blob | null }>(
+      (resolve, reject) => {
+        const onAbort = () => xhr.abort();
+        const cleanup = () => options.signal?.removeEventListener('abort', onAbort);
+        xhr.onload = () => {
+          cleanup();
+          resolve({ status: xhr.status, statusText: xhr.statusText, blob: xhr.response });
+        };
+        xhr.onerror = () => {
+          cleanup();
+          reject(new ApiError('Network request failed', 0, 'NetworkError'));
+        };
+        xhr.onabort = () => {
+          cleanup();
+          reject(Object.assign(new Error('Download was cancelled'), { name: 'AbortError' }));
+        };
+        options.signal?.addEventListener('abort', onAbort, { once: true });
+        if (options.signal?.aborted) {
+          onAbort();
+          return;
+        }
+        try {
+          xhr.send();
+        } catch (error) {
+          cleanup();
+          reject(error);
+        }
+      }
+    );
+
+    if (response.status === 401 && !isRetry && this.tokens?.refresh_token) {
+      if (this.tokens.access_token === sentToken) {
+        try {
+          await this.refreshAfterUnauthorized(sentToken);
+        } catch {
+          throw new AuthenticationError('Session expired');
+        }
+      }
+      return this.downloadWithProgress(path, options, true);
+    }
+
+    if (response.status < 200 || response.status >= 300) {
+      let json: unknown = null;
+      const text = response.blob ? await response.blob.text() : '';
+      if (text) {
+        try {
+          json = JSON.parse(text);
+        } catch {
+          json = { error: text };
+        }
+      }
+      const body = (json ?? {}) as ErrorBody;
+      const message = body.error ?? body.message ?? `HTTP ${response.status} ${response.statusText}`;
+      switch (response.status) {
+        case 400:
+          throw new ValidationError(message, body.data);
+        case 401:
+          throw new AuthenticationError(message, body.data);
+        case 403:
+          throw new PermissionDeniedError(message, body.data);
+        case 404:
+          throw new NotFoundError(message, body.data);
+        case 409:
+          throw new ConflictError(message, body.data);
+        default:
+          throw new ApiError(message, response.status, body.type, body.data);
+      }
+    }
+    return response.blob ?? new Blob();
   }
 
   private async uploadWithProgress<T>(

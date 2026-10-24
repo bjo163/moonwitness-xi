@@ -2505,14 +2505,34 @@ function MessageComposer({
 function MediaPreview({ message }: { message: Message }) {
   const [url, setUrl] = useState<string | null>(null);
   const [mimeType, setMimeType] = useState<string | null>(null);
+  const [downloadProgress, setDownloadProgress] = useState<UploadProgressState | null>({
+    percent: 0,
+    bytesPerSecond: 0,
+  });
   const [failed, setFailed] = useState(false);
   const [failureMessage, setFailureMessage] = useState('Attachment could not be loaded.');
   const [attempt, setAttempt] = useState(0);
+  const downloadAbortController = useRef<AbortController | null>(null);
   useEffect(() => {
     let active = true;
     let objectUrl: string | null = null;
+    const controller = new AbortController();
+    downloadAbortController.current = controller;
+    const previousProgress = { loadedBytes: 0, sampledAt: performance.now() };
     void client
-      .request<Blob>(`/whatsapp/media/${message.id}`, { responseType: 'blob' })
+      .requestBlobWithDownloadProgress(`/whatsapp/media/${message.id}`, {
+        signal: controller.signal,
+        onDownloadProgress: (progress) => {
+          if (!active) return;
+          const sampledAt = performance.now();
+          const durationMs = Math.max(1, sampledAt - previousProgress.sampledAt);
+          const bytesPerSecond =
+            Math.max(0, progress.loadedBytes - previousProgress.loadedBytes) * (1000 / durationMs);
+          previousProgress.loadedBytes = progress.loadedBytes;
+          previousProgress.sampledAt = sampledAt;
+          setDownloadProgress({ percent: progress.percent, bytesPerSecond });
+        },
+      })
       .then((blob) => {
         if (active) {
           objectUrl = URL.createObjectURL(blob);
@@ -2525,9 +2545,14 @@ function MediaPreview({ message }: { message: Message }) {
           setFailureMessage(mediaLoadFailureMessage(error));
           setFailed(true);
         }
+      })
+      .finally(() => {
+        if (downloadAbortController.current === controller) downloadAbortController.current = null;
+        if (active) setDownloadProgress(null);
       });
     return () => {
       active = false;
+      controller.abort();
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [message.id, attempt]);
@@ -2544,6 +2569,7 @@ function MediaPreview({ message }: { message: Message }) {
             setFailureMessage('Attachment could not be loaded.');
             setUrl(null);
             setMimeType(null);
+            setDownloadProgress({ percent: 0, bytesPerSecond: 0 });
             setAttempt((value) => value + 1);
           }}
         >
@@ -2551,7 +2577,43 @@ function MediaPreview({ message }: { message: Message }) {
         </Button>
       </div>
     );
-  if (!url) return <p className="mt-2 text-xs text-ink-faint">Loading attachment…</p>;
+  if (!url)
+    return (
+      <div className="mt-2 space-y-2" aria-live="polite">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+          <p role="status">
+            {downloadProgress?.percent === null || !downloadProgress
+              ? `Downloading attachment · ${formatTransferRate(downloadProgress?.bytesPerSecond ?? 0)}`
+              : `Downloading attachment · ${downloadProgress.percent}% · ${formatTransferRate(downloadProgress.bytesPerSecond)}`}
+          </p>
+          {!failed && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => downloadAbortController.current?.abort()}
+            >
+              Cancel download
+            </Button>
+          )}
+        </div>
+        {!failed && downloadProgress && (
+          <div
+            role="progressbar"
+            aria-label={`Download progress for ${message.media_file_name ?? 'attachment'}`}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={downloadProgress.percent ?? undefined}
+            className="h-2 overflow-hidden border border-ink bg-paper-raised"
+          >
+            <div
+              className="h-full bg-pink transition-[width] duration-150"
+              style={{ width: `${downloadProgress.percent ?? 0}%` }}
+            />
+          </div>
+        )}
+      </div>
+    );
   if (mimeType?.startsWith('image/'))
     return (
       <a href={url} target="_blank" rel="noreferrer">
@@ -2578,6 +2640,8 @@ function MediaPreview({ message }: { message: Message }) {
 }
 
 function mediaLoadFailureMessage(error: unknown): string {
+  if (error instanceof Error && error.name === 'AbortError')
+    return 'Download cancelled. Try again when ready.';
   const message = error instanceof Error ? error.message : '';
   if (message.includes('10 MiB'))
     return 'This media exceeds the 10 MiB limit and cannot be cached.';

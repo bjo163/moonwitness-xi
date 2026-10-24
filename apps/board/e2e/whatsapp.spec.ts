@@ -283,7 +283,16 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
             message_type: 'image',
             create_date: new Date(Date.now() - 250).toISOString(),
           },
-          ...Array.from({ length: 41 }, (_, index) => ({
+          {
+            id: 61,
+            direction: 'inbound',
+            content: 'Download progress attachment',
+            status: 'received',
+            message_type: 'image',
+            media_file_name: 'download.png',
+            create_date: new Date(Date.now() - 100).toISOString(),
+          },
+          ...Array.from({ length: 40 }, (_, index) => ({
             id: 49 - index,
             direction: 'inbound',
             is_unread: true,
@@ -314,11 +323,42 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
       json: { success: false, error: 'WhatsApp gateway returned incomplete media' },
     })
   );
+  let releaseDownload!: () => void;
+  const downloadGate = new Promise<void>((resolve) => {
+    releaseDownload = resolve;
+  });
+  let downloadCancelled = false;
+  let downloadAttempts = 0;
+  await page.route('**/whatsapp/media/61', async (route) => {
+    downloadAttempts += 1;
+    if (downloadAttempts === 1) {
+      await downloadGate;
+      if (downloadCancelled) return route.abort();
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      body: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l0sAAAAASUVORK5CYII=',
+        'base64'
+      ),
+    });
+  });
 
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('/board/whatsapp');
   await expect(page.getByText('+6281234567890')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Project group' })).toBeVisible();
+  await expect(
+    page.getByRole('progressbar', { name: 'Download progress for download.png' })
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Cancel download' })).toBeVisible();
+  await page.getByRole('button', { name: 'Cancel download' }).click();
+  downloadCancelled = true;
+  releaseDownload();
+  await expect(page.getByText('Download cancelled. Try again when ready.')).toBeVisible();
+  await page.getByRole('button', { name: 'Try again' }).last().click();
+  await expect(page.locator('img[alt="download.png"]')).toBeVisible();
   await expect(page.getByText('Group ID: 120363000')).toBeVisible();
   await expect(page.getByRole('separator', { name: 'New messages' })).toBeVisible();
   await expect(

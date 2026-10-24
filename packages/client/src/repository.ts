@@ -28,6 +28,11 @@ export interface UploadProgressOptions extends RequestOptions {
   onUploadProgress: (progress: UploadProgress) => void;
 }
 
+export interface DownloadProgressOptions extends Omit<RequestOptions, 'body' | 'responseType'> {
+  signal?: AbortSignal;
+  onDownloadProgress: (progress: UploadProgress) => void;
+}
+
 export interface HttpClient {
   request<T>(path: string, options?: RequestOptions): Promise<T>;
 }
