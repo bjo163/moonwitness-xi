@@ -31,6 +31,7 @@ export interface UploadProgressOptions extends RequestOptions {
 export interface DownloadProgressOptions extends Omit<RequestOptions, 'body' | 'responseType'> {
   signal?: AbortSignal;
   onDownloadProgress: (progress: UploadProgress) => void;
+  onDownloadResponse?: (headers: Readonly<Record<string, string>>) => void;
 }
 
 export interface HttpClient {

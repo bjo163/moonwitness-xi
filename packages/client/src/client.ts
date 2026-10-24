@@ -514,7 +514,11 @@ export class MoonWitnessClient implements HttpClient {
     isRetry: boolean
   ): Promise<Blob> {
     if (typeof XMLHttpRequest === 'undefined') {
-      throw new ApiError('Download progress is unavailable in this environment', 0, 'DownloadError');
+      throw new ApiError(
+        'Download progress is unavailable in this environment',
+        0,
+        'DownloadError'
+      );
     }
     if (options.signal?.aborted) {
       throw Object.assign(new Error('Download was cancelled'), { name: 'AbortError' });
@@ -550,6 +554,16 @@ export class MoonWitnessClient implements HttpClient {
         const cleanup = () => options.signal?.removeEventListener('abort', onAbort);
         xhr.onload = () => {
           cleanup();
+          const headers: Record<string, string> = {};
+          const rawHeaders = xhr.getAllResponseHeaders?.() ?? '';
+          for (const line of rawHeaders.trim().split(/[\r\n]+/u)) {
+            const separator = line.indexOf(':');
+            if (separator > 0)
+              headers[line.slice(0, separator).trim().toLowerCase()] = line
+                .slice(separator + 1)
+                .trim();
+          }
+          options.onDownloadResponse?.(headers);
           resolve({ status: xhr.status, statusText: xhr.statusText, blob: xhr.response });
         };
         xhr.onerror = () => {
@@ -596,7 +610,8 @@ export class MoonWitnessClient implements HttpClient {
         }
       }
       const body = (json ?? {}) as ErrorBody;
-      const message = body.error ?? body.message ?? `HTTP ${response.status} ${response.statusText}`;
+      const message =
+        body.error ?? body.message ?? `HTTP ${response.status} ${response.statusText}`;
       switch (response.status) {
         case 400:
           throw new ValidationError(message, body.data);
@@ -705,7 +720,8 @@ export class MoonWitnessClient implements HttpClient {
     }
     if (response.status < 200 || response.status >= 300) {
       const body = (json ?? {}) as ErrorBody;
-      const message = body.error ?? body.message ?? `HTTP ${response.status} ${response.statusText}`;
+      const message =
+        body.error ?? body.message ?? `HTTP ${response.status} ${response.statusText}`;
       switch (response.status) {
         case 400:
           throw new ValidationError(message, body.data);

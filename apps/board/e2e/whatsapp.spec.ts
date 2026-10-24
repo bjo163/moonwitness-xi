@@ -320,7 +320,16 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
             media_scan_status: 'infected',
             create_date: new Date(Date.now() - 25).toISOString(),
           },
-          ...Array.from({ length: 37 }, (_, index) => ({
+          {
+            id: 65,
+            direction: 'inbound',
+            content: 'Video preview',
+            status: 'received',
+            message_type: 'video',
+            media_file_name: 'clip.mp4',
+            create_date: new Date(Date.now() - 10).toISOString(),
+          },
+          ...Array.from({ length: 36 }, (_, index) => ({
             id: 49 - index,
             direction: 'inbound',
             is_unread: true,
@@ -339,13 +348,13 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   await page.route('**/whatsapp/conversations/42/read', (route) =>
     route.fulfill({ json: { success: true, data: { marked: true, message_id: 50 } } })
   );
-  await page.route('**/whatsapp/media/53', (route) =>
+  await page.route('**/whatsapp/media/53/thumbnail', (route) =>
     route.fulfill({
       status: 503,
       json: { success: false, error: 'Media storage is temporarily unavailable' },
     })
   );
-  await page.route('**/whatsapp/media/54', (route) =>
+  await page.route('**/whatsapp/media/54/thumbnail', (route) =>
     route.fulfill({
       status: 502,
       json: { success: false, error: 'WhatsApp gateway returned incomplete media' },
@@ -357,7 +366,7 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   });
   let downloadCancelled = false;
   let downloadAttempts = 0;
-  await page.route('**/whatsapp/media/61', async (route) => {
+  await page.route('**/whatsapp/media/61/thumbnail', async (route) => {
     downloadAttempts += 1;
     if (downloadAttempts === 1) {
       await downloadGate;
@@ -372,6 +381,36 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
       ),
     });
   });
+  let fullImageLoads = 0;
+  await page.route('**/whatsapp/media/61', async (route) => {
+    fullImageLoads++;
+    return route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      body: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l0sAAAAASUVORK5CYII=',
+        'base64'
+      ),
+    });
+  });
+  await page.route('**/whatsapp/media/65/thumbnail', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'image/jpeg',
+      headers: { 'X-Original-Content-Type': 'video/mp4', 'X-Original-Content-Length': '1024' },
+      body: Buffer.from(
+        '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAb/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdAB//2Q==',
+        'base64'
+      ),
+    })
+  );
+  await page.route('**/whatsapp/media/65', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'video/mp4',
+      body: Buffer.from([0, 0, 0, 24, 102, 116, 121, 112]),
+    })
+  );
   await page.route('**/whatsapp/media/62', (route) =>
     route.fulfill({
       status: 200,
@@ -407,7 +446,18 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   releaseDownload();
   await expect(page.getByText('Download cancelled. Try again when ready.')).toBeVisible();
   await page.getByRole('button', { name: 'Try again' }).last().click();
+  await expect(page.locator('img[alt="download.png preview"]')).toBeVisible();
+  await expect(
+    progressAttachment.getByRole('button', { name: 'Load original image' })
+  ).toBeVisible();
+  await progressAttachment.getByRole('button', { name: 'Load original image' }).click();
   await expect(page.locator('img[alt="download.png"]')).toBeVisible();
+  expect(fullImageLoads).toBe(1);
+  const videoPreview = page.locator('#whatsapp-message-65');
+  await expect(videoPreview.locator('img[alt="clip.mp4 preview"]')).toBeVisible();
+  await expect(videoPreview.getByText(/Original 1\.0 KB/u)).toBeVisible();
+  await videoPreview.getByRole('button', { name: 'Load video' }).click();
+  await expect(videoPreview.locator('video[controls]')).toBeVisible();
   const pdfPreview = page.getByTitle('Sandboxed PDF preview: statement.pdf');
   await expect(pdfPreview).toBeVisible();
   await expect(pdfPreview).toHaveAttribute('sandbox', '');
@@ -417,13 +467,14 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   await expect(
     page.getByText('Potentially active file type (.html) is renamed for safer download.')
   ).toBeVisible();
-  await expect(dangerousAttachment.getByRole('link', { name: 'Download attachment' })).toHaveAttribute(
-    'download',
-    'invoice.html.download'
-  );
+  await expect(
+    dangerousAttachment.getByRole('link', { name: 'Download attachment' })
+  ).toHaveAttribute('download', 'invoice.html.download');
   const quarantinedAttachment = page.locator('#whatsapp-message-64');
   await expect(quarantinedAttachment.getByText(/blocked by malware scan/iu)).toBeVisible();
-  await expect(quarantinedAttachment.getByRole('link', { name: 'Download attachment' })).toHaveCount(0);
+  await expect(
+    quarantinedAttachment.getByRole('link', { name: 'Download attachment' })
+  ).toHaveCount(0);
   await expect(page.getByText('Group ID: 120363000')).toBeVisible();
   await expect(page.getByRole('separator', { name: 'New messages' })).toBeVisible();
   await expect(
@@ -651,9 +702,9 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   await page.getByRole('button', { name: 'Back to conversations' }).click();
   await expect(conversationList).toBeVisible();
   await page.setViewportSize({ width: 320, height: 720 });
-  expect(
-    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
-  ).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true
+  );
   await page.screenshot({ path: '../../test-results/whatsapp-board.png', fullPage: true });
 });
 
@@ -1066,9 +1117,9 @@ test('connect shows QR, media is sent, and failures preserve the draft', async (
   const qrCode = page.getByAltText('WhatsApp connection QR code');
   await expect(qrCode).toBeVisible();
   expect((await qrCode.boundingBox())?.width).toBeLessThanOrEqual(256);
-  expect(
-    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
-  ).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true
+  );
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByRole('button', { name: 'Cancel connection' }).click();
   await expect(page.getByRole('button', { name: 'Connect WhatsApp' })).toBeVisible();
@@ -1088,7 +1139,9 @@ test('connect shows QR, media is sent, and failures preserve the draft', async (
   });
   await expect(page.getByText('Attached: sample.txt')).toBeVisible();
   await page.getByRole('button', { name: 'Send message' }).click();
-  await expect(page.getByRole('progressbar', { name: 'Upload progress for sample.txt' })).toBeVisible();
+  await expect(
+    page.getByRole('progressbar', { name: 'Upload progress for sample.txt' })
+  ).toBeVisible();
   await expect(page.getByRole('button', { name: 'Cancel upload' })).toBeVisible();
   await page.getByRole('button', { name: 'Cancel upload' }).click();
   await expect(page.getByPlaceholder('Write a message…')).toHaveValue('Test caption');

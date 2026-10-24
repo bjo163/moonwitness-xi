@@ -59,6 +59,7 @@ import { isRecord } from '@moonwitness/types';
 import observabilityPlugin from './plugins/observability.plugin.js';
 import { createAttachmentStorage } from './storage/attachment-storage.js';
 import { createAttachmentScanner, type AttachmentScanner } from './whatsapp/clamav-scanner.js';
+import { createVideoPoster } from './whatsapp/media-thumbnail.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -85,6 +86,8 @@ export interface BuildAppOptions {
   attachmentStorage?: AttachmentStorage;
   /** Overrides the malware scanner for isolated tests. */
   attachmentScanner?: AttachmentScanner | null;
+  /** Overrides video poster generation for isolated tests. */
+  createVideoPoster?: typeof createVideoPoster;
   /** @deprecated Use attachmentStorage; retained for existing test/app callers. */
   attachmentStorageDirectory?: string;
 }
@@ -312,6 +315,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       options.attachmentScanner === undefined
         ? createAttachmentScanner()
         : options.attachmentScanner,
+    createVideoPoster: options.createVideoPoster,
   });
   await app.register(jobsRoutes);
   await app.register(notificationRoutes);

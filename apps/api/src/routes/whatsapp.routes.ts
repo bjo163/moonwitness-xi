@@ -20,8 +20,17 @@ import {
   MalwareScannerUnavailableError,
   type AttachmentScanner,
 } from '../whatsapp/clamav-scanner.js';
+import {
+  createImageThumbnail,
+  createVideoPoster,
+  type MediaThumbnail,
+} from '../whatsapp/media-thumbnail.js';
 
-type Options = { attachmentStorage: AttachmentStorage; attachmentScanner?: AttachmentScanner | null };
+type Options = {
+  attachmentStorage: AttachmentStorage;
+  attachmentScanner?: AttachmentScanner | null;
+  createVideoPoster?: typeof createVideoPoster;
+};
 type Params = { id: string };
 
 function whatsappRateLimit(max: number) {
@@ -60,6 +69,7 @@ type OutgoingUpload = {
   mediaMime: string;
   mediaFileName: string | null;
   mediaDigest: string;
+  mediaSizeBytes: number | null;
 };
 
 async function parseOutgoingUpload(
@@ -88,12 +98,14 @@ async function parseOutgoingUpload(
       mediaMime: 'application/octet-stream',
       mediaFileName: null,
       mediaDigest: '',
+      mediaSizeBytes: null,
     };
   }
   let mediaKey: string | null = null;
   let mediaMime = 'application/octet-stream';
   let mediaFileName: string | null = null;
   let mediaDigest = '';
+  let mediaSizeBytes = 0;
   let fileCount = 0;
   try {
     for await (const part of req.parts({ limits: { fileSize: MAX_ATTACHMENT_BYTES, files: 1 } })) {
@@ -120,6 +132,7 @@ async function parseOutgoingUpload(
       const inspector = new Transform({
         transform(chunk: Buffer | Uint8Array, _encoding, callback) {
           const bytes = Buffer.from(chunk);
+          mediaSizeBytes += bytes.byteLength;
           digest.update(bytes);
           if (prefixLength < 64 * 1024) {
             const sample = bytes.subarray(0, 64 * 1024 - prefixLength);
@@ -155,7 +168,14 @@ async function parseOutgoingUpload(
         throw new MediaScanInfectedError('Attachment was blocked by the malware scanner');
     }
     if (fileCount === 0) mediaKey = null;
-    return { fields, mediaKey, mediaMime, mediaFileName, mediaDigest };
+    return {
+      fields,
+      mediaKey,
+      mediaMime,
+      mediaFileName,
+      mediaDigest,
+      mediaSizeBytes: mediaKey ? mediaSizeBytes : null,
+    };
   } catch (error) {
     if (mediaKey) await storage.delete(mediaKey).catch(() => undefined);
     throw error;
@@ -287,14 +307,18 @@ function createMediaInspector(headers: Headers) {
       callback();
     },
   });
-  return { transform, getPrefix: () => Buffer.concat(prefix, prefixBytes) };
+  return {
+    transform,
+    getPrefix: () => Buffer.concat(prefix, prefixBytes),
+    getSize: () => totalBytes,
+  };
 }
 
 async function streamResponseToStorage(
   response: Response,
   storage: AttachmentStorage,
   key: string
-): Promise<{ mime: string }> {
+): Promise<{ mime: string; size: number }> {
   if (!response.body) throw new Error('WhatsApp gateway returned an empty media body');
   const readable = Readable.fromWeb(
     response.body as import('node:stream/web').ReadableStream<Uint8Array>
@@ -322,7 +346,10 @@ async function streamResponseToStorage(
     await storage.delete(key).catch(() => undefined);
     throw new MediaEmptyError('WhatsApp gateway returned empty media');
   }
-  return { mime: sniffMime(inspector.getPrefix()) ?? 'application/octet-stream' };
+  return {
+    mime: sniffMime(inspector.getPrefix()) ?? 'application/octet-stream',
+    size: inspector.getSize(),
+  };
 }
 
 async function peekReadable(
@@ -664,9 +691,7 @@ async function recordWhatsAppAudit(
 
 export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) => {
   const attachmentScanner =
-    options.attachmentScanner === undefined
-      ? createAttachmentScanner()
-      : options.attachmentScanner;
+    options.attachmentScanner === undefined ? createAttachmentScanner() : options.attachmentScanner;
   await app.register(multipart, {
     limits: { fileSize: MAX_ATTACHMENT_BYTES, files: 1, fields: 5, fieldSize: 16 * 1024 },
   });
@@ -743,6 +768,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
             .select(
               'id',
               'media_key',
+              'media_thumbnail_key',
               'conversation_id',
               'content',
               'media_file_name',
@@ -757,6 +783,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
             | {
                 id: number;
                 media_key: string | null;
+                media_thumbnail_key: string | null;
                 conversation_id: number;
                 content: string | null;
                 media_file_name: string | null;
@@ -790,13 +817,20 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
                 write_date: new Date().toISOString(),
               });
             if (target.media_key) {
-              await options.attachmentStorage
-                .delete(target.media_key)
+              await Promise.all(
+                [target.media_key, target.media_thumbnail_key]
+                  .filter((key): key is string => Boolean(key))
+                  .map((key) => options.attachmentStorage.delete(key))
+              )
                 .then(async () => {
                   await app
                     .db('whatsapp_messages')
                     .where({ id: target.id, company_id: account.company_id, is_deleted: true })
-                    .update({ media_key: null, write_date: new Date().toISOString() });
+                    .update({
+                      media_key: null,
+                      media_thumbnail_key: null,
+                      write_date: new Date().toISOString(),
+                    });
                 })
                 .catch((error: unknown) => {
                   req.log.warn(
@@ -2426,7 +2460,9 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
               ? null
               : mediaDefaultMime(messageType),
         media_scan_status:
-          !typeInfo.providerType && GOWA_MEDIA_TYPES.has(messageType) ? 'pending' : 'not_applicable',
+          !typeInfo.providerType && GOWA_MEDIA_TYPES.has(messageType)
+            ? 'pending'
+            : 'not_applicable',
         media_file_name:
           !typeInfo.providerType && typeof item.filename === 'string'
             ? item.filename.slice(0, 255)
@@ -2486,15 +2522,22 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       .offset(offset);
     for (const deletedMedia of await app
       .db('whatsapp_messages')
-      .select('id', 'media_key')
+      .select('id', 'media_key', 'media_thumbnail_key')
       .where({ company_id: companyId, conversation_id: conversationId, is_deleted: true })
       .whereNotNull('media_key')) {
       try {
-        await options.attachmentStorage.delete(String(deletedMedia.media_key));
+        if (typeof deletedMedia.media_key === 'string')
+          await options.attachmentStorage.delete(deletedMedia.media_key);
+        if (typeof deletedMedia.media_thumbnail_key === 'string')
+          await options.attachmentStorage.delete(deletedMedia.media_thumbnail_key);
         await app
           .db('whatsapp_messages')
           .where({ id: deletedMedia.id, company_id: companyId, is_deleted: true })
-          .update({ media_key: null, write_date: new Date().toISOString() });
+          .update({
+            media_key: null,
+            media_thumbnail_key: null,
+            write_date: new Date().toISOString(),
+          });
       } catch (error) {
         req.log.warn(
           { error: whatsappLogErrorContext(error) },
@@ -2850,12 +2893,19 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         write_date: new Date().toISOString(),
       });
       if (message.media_key)
-        await options.attachmentStorage
-          .delete(message.media_key)
+        await Promise.all(
+          [message.media_key, message.media_thumbnail_key]
+            .filter((key): key is string => Boolean(key))
+            .map((key) => options.attachmentStorage.delete(key))
+        )
           .then(async () => {
             await WhatsappMessage.query()
               .where({ id: messageId, company_id: companyId, is_deleted: true })
-              .patch({ media_key: null, write_date: new Date().toISOString() });
+              .patch({
+                media_key: null,
+                media_thumbnail_key: null,
+                write_date: new Date().toISOString(),
+              });
           })
           .catch((error: unknown) => {
             req.log.warn(
@@ -2968,11 +3018,16 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         upload = await parseOutgoingUpload(req, options.attachmentStorage, attachmentScanner);
       } catch (error) {
         if (error instanceof MediaScanInfectedError)
-          return reply.code(422).send({ success: false, error: 'Attachment blocked by malware scan' });
+          return reply
+            .code(422)
+            .send({ success: false, error: 'Attachment blocked by malware scan' });
         if (error instanceof MalwareScannerUnavailableError)
           return reply
             .code(503)
-            .send({ success: false, error: 'Attachment malware scanning is temporarily unavailable' });
+            .send({
+              success: false,
+              error: 'Attachment malware scanning is temporarily unavailable',
+            });
         const status =
           isRecord(error) && typeof error.statusCode === 'number' ? error.statusCode : 400;
         return reply.code(status).send({
@@ -3103,7 +3158,9 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
             attempt_count: 0,
             retryable: false,
             media_key: mediaKey,
+            media_thumbnail_key: null,
             media_mime_type: mediaKey ? mediaMime : null,
+            media_size_bytes: upload.mediaSizeBytes,
             media_file_name: fileName,
             media_scan_status: mediaKey ? 'clean' : 'not_applicable',
             reply_to_message_id: quotedMessage?.id ?? null,
@@ -3370,6 +3427,118 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
     }
   );
 
+  app.get<{ Params: Params }>('/whatsapp/media/:id/thumbnail', async (req, reply) => {
+    const companyId = requireCompany(req, reply);
+    if (!companyId) return;
+    const messageId = id(req.params.id);
+    if (!messageId) return reply.code(400).send({ success: false, error: 'Invalid message ID' });
+    let message = await WhatsappMessage.query().findOne({ id: messageId, company_id: companyId });
+    if (
+      !message ||
+      message.provider_type ||
+      message.is_deleted ||
+      !['image', 'video'].includes(message.message_type)
+    )
+      return reply.code(404).send({ success: false, error: 'Media preview not found' });
+    if (message.media_scan_status === 'infected')
+      return reply.code(410).send({ success: false, error: 'Attachment blocked by malware scan' });
+
+    if (message.media_thumbnail_key) {
+      try {
+        const cached = await options.attachmentStorage.get(message.media_thumbnail_key);
+        if (cached?.length) {
+          const cachedReply = reply
+            .header('Cache-Control', 'private, max-age=3600')
+            .header('Vary', 'Authorization, X-Company-Id')
+            .header('X-Original-Content-Type', safeMime(message.media_mime_type))
+            .header('X-Content-Type-Options', 'nosniff')
+            .header('Content-Security-Policy', "default-src 'none'; sandbox; base-uri 'none'");
+          if (message.media_size_bytes !== null && message.media_size_bytes !== undefined)
+            cachedReply.header('X-Original-Content-Length', String(message.media_size_bytes));
+          return cachedReply
+            .type(message.message_type === 'image' ? 'image/webp' : 'image/jpeg')
+            .send(cached);
+        }
+        await WhatsappMessage.query()
+          .where({ id: message.id, company_id: companyId })
+          .patch({ media_thumbnail_key: null });
+        message.media_thumbnail_key = null;
+      } catch (error) {
+        req.log.warn(
+          { error: whatsappLogErrorContext(error) },
+          'WhatsApp thumbnail cache lookup failed'
+        );
+      }
+    }
+
+    const original = await app.inject({
+      method: 'GET',
+      url: `/whatsapp/media/${messageId}`,
+      headers: {
+        authorization: req.headers.authorization,
+        'x-company-id': String(companyId),
+      },
+    });
+    if (original.statusCode !== 200)
+      return reply
+        .code(original.statusCode)
+        .type(original.headers['content-type'] ?? 'application/json')
+        .send(original.rawPayload);
+
+    const originalMime = original.headers['content-type']?.split(';', 1)[0]?.toLowerCase() ?? '';
+    if (!originalMime.startsWith('image/') && !originalMime.startsWith('video/'))
+      return reply.code(415).send({ success: false, error: 'This media type cannot be previewed' });
+
+    let thumbnail: MediaThumbnail;
+    try {
+      thumbnail = originalMime.startsWith('video/')
+        ? await (options.createVideoPoster ?? createVideoPoster)(original.rawPayload)
+        : await createImageThumbnail(original.rawPayload);
+    } catch (error) {
+      req.log.warn(
+        { error: whatsappLogErrorContext(error) },
+        'WhatsApp thumbnail generation failed'
+      );
+      return reply.code(415).send({ success: false, error: 'Media preview is unavailable' });
+    }
+
+    message =
+      (await WhatsappMessage.query().findOne({ id: messageId, company_id: companyId })) ?? message;
+    if (message.media_scan_status !== 'clean' || !message.media_key)
+      return reply.code(503).send({ success: false, error: 'Media is not ready for preview' });
+    await WhatsappMessage.query()
+      .where({ id: messageId, company_id: companyId })
+      .patch({ media_size_bytes: original.rawPayload.length });
+    message.media_size_bytes = original.rawPayload.length;
+    const thumbnailKey = randomUUID();
+    try {
+      await options.attachmentStorage.put(thumbnailKey, thumbnail.bytes);
+      const updated = await WhatsappMessage.query()
+        .where({ id: messageId, company_id: companyId, media_key: message.media_key })
+        .patch({ media_thumbnail_key: thumbnailKey });
+      if (!updated) {
+        await options.attachmentStorage.delete(thumbnailKey).catch(() => undefined);
+        return reply.code(404).send({ success: false, error: 'Media preview not found' });
+      }
+    } catch (error) {
+      await options.attachmentStorage.delete(thumbnailKey).catch(() => undefined);
+      req.log.warn(
+        { error: whatsappLogErrorContext(error) },
+        'WhatsApp thumbnail cache write failed'
+      );
+    }
+
+    return reply
+      .header('Cache-Control', 'private, max-age=3600')
+      .header('Vary', 'Authorization, X-Company-Id')
+      .header('X-Content-Type-Options', 'nosniff')
+      .header('Content-Security-Policy', "default-src 'none'; sandbox; base-uri 'none'")
+      .header('X-Original-Content-Type', originalMime)
+      .header('X-Original-Content-Length', String(original.rawPayload.length))
+      .type(thumbnail.contentType)
+      .send(thumbnail.bytes);
+  });
+
   app.get<{ Params: Params }>('/whatsapp/media/:id', async (req, reply) => {
     const companyId = requireCompany(req, reply);
     if (!companyId) return;
@@ -3404,9 +3573,16 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
               'WhatsApp quarantined attachment cleanup failed'
             );
           });
-          await WhatsappMessage.query()
-            .where({ id: message.id, company_id: companyId })
-            .patch({ media_key: null, media_mime_type: null, media_scan_status: 'infected' });
+          if (message.media_thumbnail_key)
+            await options.attachmentStorage
+              .delete(message.media_thumbnail_key)
+              .catch(() => undefined);
+          await WhatsappMessage.query().where({ id: message.id, company_id: companyId }).patch({
+            media_key: null,
+            media_thumbnail_key: null,
+            media_mime_type: null,
+            media_scan_status: 'infected',
+          });
           message.media_key = null;
           message.media_mime_type = null;
           message.media_scan_status = 'infected';
@@ -3419,18 +3595,19 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
           .patch({ media_scan_status: 'clean' });
         message.media_scan_status = 'clean';
       } catch (error) {
-        req.log.error(
-          { error: whatsappLogErrorContext(error) },
-          'WhatsApp malware scan failed'
-        );
+        req.log.error({ error: whatsappLogErrorContext(error) }, 'WhatsApp malware scan failed');
         return reply
           .code(503)
-          .send({ success: false, error: 'Attachment malware scanning is temporarily unavailable' });
+          .send({
+            success: false,
+            error: 'Attachment malware scanning is temporarily unavailable',
+          });
       }
     }
     let content: Buffer | null = null;
     let mediaStream: Readable | null = null;
     let verifiedMime: string | null = null;
+    let verifiedSize: number | null = null;
     try {
       if (message.media_key && options.attachmentStorage.getStream) {
         const cachedStream = await options.attachmentStorage.getStream(message.media_key);
@@ -3444,6 +3621,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       }
       if (!mediaStream && message.media_key)
         content = await options.attachmentStorage.get(message.media_key);
+      if (content) verifiedSize = content.length;
     } catch (error) {
       req.log.error(
         { error: whatsappLogErrorContext(error) },
@@ -3484,6 +3662,7 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
             mediaKey
           );
           verifiedMime = streamed.mime;
+          verifiedSize = streamed.size;
           const scanResult = await scanStoredAttachment(
             options.attachmentStorage,
             mediaKey,
@@ -3538,7 +3717,9 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
           .where({ id: message.id, company_id: companyId })
           .patch({
             media_key: mediaKey,
+            media_thumbnail_key: null,
             media_mime_type: verifiedMime,
+            media_size_bytes: verifiedSize,
             media_scan_status: 'clean',
             media_file_name: safeFileName(metadata.filename) ?? message.media_file_name,
           });
@@ -3564,14 +3745,12 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         if (!content.length)
           return reply.code(404).send({ success: false, error: 'Media not found' });
         verifiedMime = sniffMime(content) ?? 'application/octet-stream';
+        verifiedSize = content.length;
         let scanResult;
         try {
           scanResult = await attachmentScanner.scan(Readable.from([content]));
         } catch (error) {
-          req.log.error(
-            { error: whatsappLogErrorContext(error) },
-            'WhatsApp malware scan failed'
-          );
+          req.log.error({ error: whatsappLogErrorContext(error) }, 'WhatsApp malware scan failed');
           return reply.code(503).send({
             success: false,
             error: 'Attachment malware scanning is temporarily unavailable',
@@ -3592,7 +3771,9 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
           .where({ id: message.id, company_id: companyId })
           .patch({
             media_key: mediaKey,
+            media_thumbnail_key: null,
             media_mime_type: verifiedMime,
+            media_size_bytes: verifiedSize,
             media_scan_status: 'clean',
             media_file_name: safeFileName(metadata.filename) ?? message.media_file_name,
           });
@@ -3609,6 +3790,12 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
         .where({ id: message.id, company_id: companyId })
         .patch({ media_mime_type: verifiedMime });
       message.media_mime_type = verifiedMime;
+    }
+    if (verifiedSize !== null && message.media_size_bytes !== verifiedSize) {
+      await WhatsappMessage.query()
+        .where({ id: message.id, company_id: companyId })
+        .patch({ media_size_bytes: verifiedSize });
+      message.media_size_bytes = verifiedSize;
     }
     await recordWhatsAppAudit(req, 'whatsapp.message', 'media_access', message.id, companyId);
     const mime = safeMime(message.media_mime_type);

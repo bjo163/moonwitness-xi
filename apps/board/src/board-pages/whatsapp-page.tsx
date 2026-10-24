@@ -101,18 +101,62 @@ function safeMediaDownloadName(fileName: string | null | undefined): {
   name: string;
   blockedExtension: string | null;
 } {
-  const original = (fileName ?? 'attachment')
-    .normalize('NFC')
-    .replace(/[\\/\p{Cc}\u202a-\u202e\u2066-\u2069]/gu, '_')
-    .trim()
-    .replace(/[. ]+$/u, '')
-    .slice(0, 200) || 'attachment';
+  const original =
+    (fileName ?? 'attachment')
+      .normalize('NFC')
+      .replace(/[\\/\p{Cc}\u202a-\u202e\u2066-\u2069]/gu, '_')
+      .trim()
+      .replace(/[. ]+$/u, '')
+      .slice(0, 200) || 'attachment';
   const extension = original.match(/\.([a-z0-9]{1,12})$/iu)?.[1]?.toLowerCase();
   const blocked = new Set([
-    'ade', 'adp', 'bat', 'cmd', 'com', 'cpl', 'dll', 'docm', 'exe', 'hta', 'htm', 'html', 'jar',
-    'js', 'jse', 'lnk', 'mht', 'mhtml', 'msi', 'msp', 'ocx', 'pif', 'potm', 'ppam', 'pps', 'pptm',
-    'ps1', 'reg', 'scf', 'scr', 'sct', 'shb', 'shs', 'svg', 'url', 'vb', 'vbe', 'vbs', 'ws', 'wsc',
-    'wsf', 'wsh', 'xlsm', 'xlam', 'xll', 'xsl', 'xml',
+    'ade',
+    'adp',
+    'bat',
+    'cmd',
+    'com',
+    'cpl',
+    'dll',
+    'docm',
+    'exe',
+    'hta',
+    'htm',
+    'html',
+    'jar',
+    'js',
+    'jse',
+    'lnk',
+    'mht',
+    'mhtml',
+    'msi',
+    'msp',
+    'ocx',
+    'pif',
+    'potm',
+    'ppam',
+    'pps',
+    'pptm',
+    'ps1',
+    'reg',
+    'scf',
+    'scr',
+    'sct',
+    'shb',
+    'shs',
+    'svg',
+    'url',
+    'vb',
+    'vbe',
+    'vbs',
+    'ws',
+    'wsc',
+    'wsf',
+    'wsh',
+    'xlsm',
+    'xlam',
+    'xll',
+    'xsl',
+    'xml',
   ]);
   if (extension && blocked.has(extension)) {
     return { name: `${original}.download`, blockedExtension: `.${extension}` };
@@ -1384,7 +1428,8 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                 onChange={(event) => setConversationSearch(event.target.value)}
               />
               <p id="whatsapp-search-shortcut-help" className="mt-1 text-xs text-ink-faint">
-                Press / to focus search. In the conversation list, use ↑/↓ to move and Home/End to jump.
+                Press / to focus search. In the conversation list, use ↑/↓ to move and Home/End to
+                jump.
               </p>
               <div className="mt-2 flex flex-wrap gap-2" aria-label="Conversation filters">
                 {(['all', 'unread', 'private', 'groups'] as const).map((filter) => (
@@ -2093,23 +2138,24 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                             `[${message.reply_to.message_type || 'media'}]`}
                       </Button>
                     )}
-                    {!message.is_deleted && !message.provider_type &&
-                      message.media_scan_status === 'infected' ? (
-                        <p role="status" className="mt-2 text-xs text-warning">
-                          Attachment blocked by malware scan. It was removed and cannot be downloaded.
-                        </p>
-                      ) : (
-                        !message.is_deleted &&
-                        !message.provider_type &&
-                        message.message_type !== 'text' && <MediaPreview message={message} />
-                      )}
+                    {!message.is_deleted &&
+                    !message.provider_type &&
+                    message.media_scan_status === 'infected' ? (
+                      <p role="status" className="mt-2 text-xs text-warning">
+                        Attachment blocked by malware scan. It was removed and cannot be downloaded.
+                      </p>
+                    ) : (
+                      !message.is_deleted &&
+                      !message.provider_type &&
+                      message.message_type !== 'text' && <MediaPreview message={message} />
+                    )}
                     {!message.provider_type &&
                       message.media_scan_status !== 'infected' &&
                       message.media_file_name && (
-                      <p className="mt-1 text-xs">
-                        {safeMediaDownloadName(message.media_file_name).name}
-                      </p>
-                    )}
+                        <p className="mt-1 text-xs">
+                          {safeMediaDownloadName(message.media_file_name).name}
+                        </p>
+                      )}
                     {summarizeReactions(message.reactions).length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1" aria-label="Message reactions">
                         {summarizeReactions(message.reactions).map((reaction) => (
@@ -2363,23 +2409,26 @@ function MessageComposer({
         body,
       } as const;
       if (body instanceof FormData && abortController) {
-        await client.requestWithUploadProgress(`/whatsapp/conversations/${conversationId}/messages`, {
-          ...requestOptions,
-          body,
-          signal: abortController.signal,
-          onUploadProgress: (progress) => {
-            const sampledAt = performance.now();
-            const previous = previousUploadProgress.current;
-            const durationMs = Math.max(1, sampledAt - previous.sampledAt);
-            const bytesPerSecond =
-              Math.max(0, progress.loadedBytes - previous.loadedBytes) * (1000 / durationMs);
-            previousUploadProgress.current = {
-              loadedBytes: progress.loadedBytes,
-              sampledAt,
-            };
-            setUploadProgress({ percent: progress.percent, bytesPerSecond });
-          },
-        });
+        await client.requestWithUploadProgress(
+          `/whatsapp/conversations/${conversationId}/messages`,
+          {
+            ...requestOptions,
+            body,
+            signal: abortController.signal,
+            onUploadProgress: (progress) => {
+              const sampledAt = performance.now();
+              const previous = previousUploadProgress.current;
+              const durationMs = Math.max(1, sampledAt - previous.sampledAt);
+              const bytesPerSecond =
+                Math.max(0, progress.loadedBytes - previous.loadedBytes) * (1000 / durationMs);
+              previousUploadProgress.current = {
+                loadedBytes: progress.loadedBytes,
+                sampledAt,
+              };
+              setUploadProgress({ percent: progress.percent, bytesPerSecond });
+            },
+          }
+        );
       } else {
         await client.request(`/whatsapp/conversations/${conversationId}/messages`, requestOptions);
       }
@@ -2548,6 +2597,10 @@ function MediaPreview({ message }: { message: Message }) {
   const [url, setUrl] = useState<string | null>(null);
   const [mimeType, setMimeType] = useState<string | null>(null);
   const [sizeBytes, setSizeBytes] = useState<number | null>(null);
+  const [thumbnailSizeBytes, setThumbnailSizeBytes] = useState<number | null>(null);
+  const [mode, setMode] = useState<'thumbnail' | 'original'>(
+    message.message_type === 'image' || message.message_type === 'video' ? 'thumbnail' : 'original'
+  );
   const [downloadProgress, setDownloadProgress] = useState<UploadProgressState | null>({
     percent: 0,
     bytesPerSecond: 0,
@@ -2560,10 +2613,18 @@ function MediaPreview({ message }: { message: Message }) {
     let active = true;
     let objectUrl: string | null = null;
     const controller = new AbortController();
+    setUrl(null);
+    setMimeType(null);
+    setSizeBytes(null);
+    setThumbnailSizeBytes(null);
+    setFailed(false);
     downloadAbortController.current = controller;
     const previousProgress = { loadedBytes: 0, sampledAt: performance.now() };
+    const isThumbnail = mode === 'thumbnail';
+    const path = `/whatsapp/media/${message.id}${isThumbnail ? '/thumbnail' : ''}`;
+    let responseHeaders: Readonly<Record<string, string>> = {};
     void client
-      .requestBlobWithDownloadProgress(`/whatsapp/media/${message.id}`, {
+      .requestBlobWithDownloadProgress(path, {
         signal: controller.signal,
         onDownloadProgress: (progress) => {
           if (!active) return;
@@ -2575,16 +2636,43 @@ function MediaPreview({ message }: { message: Message }) {
           previousProgress.sampledAt = sampledAt;
           setDownloadProgress({ percent: progress.percent, bytesPerSecond });
         },
+        onDownloadResponse: (headers) => {
+          responseHeaders = headers;
+        },
       })
       .then((blob) => {
         if (active) {
           objectUrl = URL.createObjectURL(blob);
           setUrl(objectUrl);
-          setMimeType(blob.type || 'application/octet-stream');
-          setSizeBytes(blob.size);
+          setThumbnailSizeBytes(isThumbnail ? blob.size : null);
+          setMimeType(
+            isThumbnail
+              ? responseHeaders['x-original-content-type'] ||
+                  blob.type ||
+                  'application/octet-stream'
+              : blob.type || 'application/octet-stream'
+          );
+          const originalSize = Number(responseHeaders['x-original-content-length']);
+          setSizeBytes(
+            isThumbnail
+              ? Number.isSafeInteger(originalSize) && originalSize >= 0
+                ? originalSize
+                : null
+              : blob.size
+          );
         }
       })
       .catch((error: unknown) => {
+        if (
+          active &&
+          isThumbnail &&
+          message.message_type === 'video' &&
+          error instanceof ApiError &&
+          error.status === 415
+        ) {
+          setMode('original');
+          return;
+        }
         if (active) {
           setFailureMessage(mediaLoadFailureMessage(error));
           setFailed(true);
@@ -2599,7 +2687,7 @@ function MediaPreview({ message }: { message: Message }) {
       controller.abort();
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [message.id, attempt]);
+  }, [message.id, message.message_type, mode, attempt]);
   if (failed)
     return (
       <div role="status" className="mt-2 flex items-center gap-2 text-xs text-ink-faint">
@@ -2614,7 +2702,13 @@ function MediaPreview({ message }: { message: Message }) {
             setUrl(null);
             setMimeType(null);
             setSizeBytes(null);
+            setThumbnailSizeBytes(null);
             setDownloadProgress({ percent: 0, bytesPerSecond: 0 });
+            setMode(
+              message.message_type === 'image' || message.message_type === 'video'
+                ? 'thumbnail'
+                : 'original'
+            );
             setAttempt((value) => value + 1);
           }}
         >
@@ -2662,21 +2756,48 @@ function MediaPreview({ message }: { message: Message }) {
   const safeName = safeMediaDownloadName(message.media_file_name);
   const metadata = (
     <p className="mt-1 text-xs text-ink-faint">
-      {mimeType || 'Unknown file type'}
-      {sizeBytes !== null ? ` · ${formatMediaSize(sizeBytes)}` : ''}
+      {mode === 'thumbnail'
+        ? `Preview thumbnail${thumbnailSizeBytes !== null ? ` · ${formatMediaSize(thumbnailSizeBytes)}` : ''}`
+        : mimeType || 'Unknown file type'}
+      {sizeBytes !== null
+        ? ` · ${mode === 'thumbnail' ? 'Original ' : ''}${formatMediaSize(sizeBytes)}`
+        : ''}
     </p>
   );
+  if (mode === 'thumbnail')
+    return (
+      <div>
+        <img
+          src={url}
+          alt={`${safeName.name} preview`}
+          className="mt-2 max-h-64 max-w-full object-contain"
+        />
+        {metadata}
+        <Button
+          type="button"
+          variant="link"
+          className="h-auto p-0 underline"
+          onClick={() => setMode('original')}
+        >
+          {message.message_type === 'video' ? 'Load video' : 'Load original image'}
+        </Button>
+      </div>
+    );
   if (mimeType?.startsWith('image/'))
     return (
       <div>
         <a href={url} target="_blank" rel="noreferrer">
-          <img
-            src={url}
-            alt={safeName.name}
-            className="mt-2 max-h-64 max-w-full object-contain"
-          />
+          <img src={url} alt={safeName.name} className="mt-2 max-h-64 max-w-full object-contain" />
         </a>
         {metadata}
+        <Button
+          type="button"
+          variant="link"
+          className="h-auto p-0 underline"
+          onClick={() => setMode('thumbnail')}
+        >
+          Show thumbnail
+        </Button>
       </div>
     );
   if (mimeType?.startsWith('video/'))
@@ -2684,6 +2805,14 @@ function MediaPreview({ message }: { message: Message }) {
       <div>
         <video controls src={url} className="mt-2 max-h-64 max-w-full" />
         {metadata}
+        <Button
+          type="button"
+          variant="link"
+          className="h-auto p-0 underline"
+          onClick={() => setMode('thumbnail')}
+        >
+          Show poster
+        </Button>
       </div>
     );
   if (mimeType?.startsWith('audio/'))

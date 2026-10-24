@@ -76,7 +76,11 @@ describe('MoonWitnessClient', () => {
         url.pathname === '/auth/login' ? json(tokens('upload-token')) : json({})
       );
       await client.login({ login: 'alice', password: 'pw' });
-      const progress: Array<{ loadedBytes: number; totalBytes: number | null; percent: number | null }> = [];
+      const progress: Array<{
+        loadedBytes: number;
+        totalBytes: number | null;
+        percent: number | null;
+      }> = [];
       const body = new FormData();
       body.set('media', new Blob(['file']), 'file.txt');
       const result = await client.requestWithUploadProgress('/whatsapp/upload', {
@@ -106,7 +110,9 @@ describe('MoonWitnessClient', () => {
       onabort: (() => void) | null = null;
       open(_method: string, _url: string) {}
       setRequestHeader(_name: string, _value: string) {}
-      send(_body: FormData) { request = this as unknown as XMLHttpRequest; }
+      send(_body: FormData) {
+        request = this as unknown as XMLHttpRequest;
+      }
       abort() {
         this.onabort?.();
         this.dispatchEvent(new Event('loadend'));
@@ -141,13 +147,22 @@ describe('MoonWitnessClient', () => {
       statusText = 'OK';
       responseType = '';
       response: Blob | null = new Blob(['image'], { type: 'image/png' });
+      responseHeaders =
+        'content-type: image/webp\r\nx-original-content-type: image/png\r\nx-original-content-length: 2048\r\n';
       onload: (() => void) | null = null;
       onerror: (() => void) | null = null;
       onabort: (() => void) | null = null;
       headers: Record<string, string> = {};
       url = '';
-      open(_method: string, url: string) { this.url = url; }
-      setRequestHeader(name: string, value: string) { this.headers[name] = value; }
+      open(_method: string, url: string) {
+        this.url = url;
+      }
+      setRequestHeader(name: string, value: string) {
+        this.headers[name] = value;
+      }
+      getAllResponseHeaders() {
+        return this.responseHeaders;
+      }
       send() {
         requests.push({ headers: this.headers, url: this.url });
         const progress = new Event('progress');
@@ -159,7 +174,9 @@ describe('MoonWitnessClient', () => {
         this.dispatchEvent(progress);
         this.onload?.();
       }
-      abort() { this.onabort?.(); }
+      abort() {
+        this.onabort?.();
+      }
     }
     vi.stubGlobal('XMLHttpRequest', FakeXMLHttpRequest);
     try {
@@ -167,16 +184,26 @@ describe('MoonWitnessClient', () => {
         url.pathname === '/auth/login' ? json(tokens('download-token')) : json({})
       );
       await client.login({ login: 'alice', password: 'pw' });
-      const progress: Array<{ loadedBytes: number; totalBytes: number | null; percent: number | null }> = [];
+      const progress: Array<{
+        loadedBytes: number;
+        totalBytes: number | null;
+        percent: number | null;
+      }> = [];
+      let responseHeaders: Readonly<Record<string, string>> = {};
       const blob = await client.requestBlobWithDownloadProgress('/whatsapp/media/7', {
         query: { variant: 'preview' },
         onDownloadProgress: (event) => progress.push(event),
+        onDownloadResponse: (headers) => (responseHeaders = headers),
       });
       expect(await blob.text()).toBe('image');
       expect(blob.type).toBe('image/png');
       expect(requests[0]?.headers.Authorization).toBe('Bearer download-token');
       expect(requests[0]?.url).toContain('variant=preview');
       expect(progress).toEqual([{ loadedBytes: 8, totalBytes: 16, percent: 50 }]);
+      expect(responseHeaders).toMatchObject({
+        'x-original-content-type': 'image/png',
+        'x-original-content-length': '2048',
+      });
     } finally {
       vi.unstubAllGlobals();
     }
@@ -195,8 +222,12 @@ describe('MoonWitnessClient', () => {
       onabort: (() => void) | null = null;
       open(_method: string, _url: string) {}
       setRequestHeader(_name: string, _value: string) {}
-      send() { sent = true; }
-      abort() { this.onabort?.(); }
+      send() {
+        sent = true;
+      }
+      abort() {
+        this.onabort?.();
+      }
     }
     vi.stubGlobal('XMLHttpRequest', FakeXMLHttpRequest);
     try {

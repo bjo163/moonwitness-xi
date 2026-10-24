@@ -49,6 +49,7 @@ ENV NODE_ENV=production \
     LOG_PRETTY=false
 RUN apt-get update \
     && apt-get upgrade --yes \
+    && apt-get install --yes --no-install-recommends ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=api-deploy --chown=node:node /deploy/api ./

@@ -36,10 +36,13 @@ export async function reconcileAttachments(options: AttachmentReconcileOptions) 
           ...(typeof row.checksum === 'string' ? { checksum: row.checksum } : {}),
         };
       }
-      const mediaRows = await db('whatsapp_messages').whereNotNull('media_key').select('media_key');
+      const mediaRows = await db('whatsapp_messages')
+        .where((query) => query.whereNotNull('media_key').orWhereNotNull('media_thumbnail_key'))
+        .select('media_key', 'media_thumbnail_key');
       for (const row of mediaRows) {
-        if (typeof row.media_key !== 'string') continue;
-        yield { storageKey: row.media_key };
+        if (typeof row.media_key === 'string') yield { storageKey: row.media_key };
+        if (typeof row.media_thumbnail_key === 'string')
+          yield { storageKey: row.media_thumbnail_key };
       }
     }
     try {

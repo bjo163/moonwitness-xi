@@ -14,6 +14,7 @@ import { whatsappRoutes } from '../src/routes/whatsapp.routes.js';
 import { whatsappManifest } from '../src/whatsapp/manifest.js';
 import { createHmac, randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
+import sharp from 'sharp';
 import { MAX_ATTACHMENT_BYTES } from '@moonwitness/types';
 import { dispatchOneOutboxEvent, jobsManifest } from '@moonwitness/jobs';
 import { manifest as notificationManifest } from '@moonwitness/orm-notification';
@@ -112,6 +113,7 @@ describe('WhatsApp API GoWA bridge', () => {
   let providerDownloadFileName = 'incoming.png';
   let streamPutCount = 0;
   let streamGetCount = 0;
+  let videoPosterCallCount = 0;
   let bufferGetCount = 0;
   const previousGateway = process.env.WHATSAPP_GATEWAY_URL;
   const previousWebhookUrl = process.env.WHATSAPP_WEBHOOK_URL;
@@ -247,6 +249,7 @@ describe('WhatsApp API GoWA bridge', () => {
     providerDownloadFileName = 'incoming.png';
     streamPutCount = 0;
     streamGetCount = 0;
+    videoPosterCallCount = 0;
     bufferGetCount = 0;
     stored.clear();
     activeStorage = memoryStorage;
@@ -390,7 +393,7 @@ describe('WhatsApp API GoWA bridge', () => {
         return json({ message_id: `mutated-${providerMessageMutationRequests.length}` });
       }
       if (/^\/devices\/moonwitness-company-\d+\/logout$/u.test(url.pathname)) return json({});
-      if (url.pathname === '/message/incoming-image/download')
+      if (/^\/message\/[^/]+\/download$/u.test(url.pathname))
         return json({
           file_path: '/statics/media/incoming.png',
           filename: providerDownloadFileName,
@@ -426,7 +429,21 @@ describe('WhatsApp API GoWA bridge', () => {
         };
     });
     await app.register(rateLimit, { global: false });
-    await app.register(whatsappRoutes, { attachmentStorage: storage, attachmentScanner });
+    await app.register(whatsappRoutes, {
+      attachmentStorage: storage,
+      attachmentScanner,
+      createVideoPoster: async () => {
+        videoPosterCallCount++;
+        return {
+          bytes: await sharp({
+            create: { width: 1, height: 1, channels: 3, background: '#ff0000' },
+          })
+            .jpeg()
+            .toBuffer(),
+          contentType: 'image/jpeg',
+        };
+      },
+    });
   });
 
   afterEach(async () => {
@@ -2232,7 +2249,11 @@ describe('WhatsApp API GoWA bridge', () => {
     const conversationId = inbox.json().data[0].id as number;
     const infectedPayload = multipartPayload(
       { content: 'Please inspect this file' },
-      { name: 'sample.bin', mime: 'application/octet-stream', bytes: Buffer.from('EICAR-TEST-FILE') }
+      {
+        name: 'sample.bin',
+        mime: 'application/octet-stream',
+        bytes: Buffer.from('EICAR-TEST-FILE'),
+      }
     );
     scanAsInfected = true;
     const infected = await app.inject({
@@ -2248,7 +2269,9 @@ describe('WhatsApp API GoWA bridge', () => {
     expect(infected.statusCode).toBe(422);
     expect(infected.json().error).toContain('malware scan');
     expect(stored.size).toBe(0);
-    expect(await db('outbox_events').where({ event_type: 'whatsapp.message.send' })).toHaveLength(0);
+    expect(await db('outbox_events').where({ event_type: 'whatsapp.message.send' })).toHaveLength(
+      0
+    );
 
     scanAsInfected = false;
     scannerUnavailable = true;
@@ -2269,7 +2292,9 @@ describe('WhatsApp API GoWA bridge', () => {
     expect(unavailable.statusCode).toBe(503);
     expect(unavailable.json().error).toContain('malware scanning');
     expect(stored.size).toBe(0);
-    expect(await db('outbox_events').where({ event_type: 'whatsapp.message.send' })).toHaveLength(0);
+    expect(await db('outbox_events').where({ event_type: 'whatsapp.message.send' })).toHaveLength(
+      0
+    );
   });
 
   it('quarantines infected inbound media before linking it to a downloadable message', async () => {
@@ -2315,6 +2340,92 @@ describe('WhatsApp API GoWA bridge', () => {
     });
     expect(repeat.statusCode).toBe(410);
     expect(stored.size).toBe(0);
+  });
+
+  it('creates and caches company-scoped image thumbnails and video posters', async () => {
+    const accountId = await connectAndMarkReady();
+    const [conversation] = await db('whatsapp_conversations')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        jid: '628111111111@s.whatsapp.net',
+        name: 'Preview test contact',
+        is_group: false,
+      })
+      .returning(['id']);
+    const [image] = await db('whatsapp_messages')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        conversation_id: conversation.id,
+        external_id: 'incoming-image-preview',
+        direction: 'inbound',
+        message_type: 'image',
+        content: '',
+        status: 'received',
+        media_scan_status: 'pending',
+      })
+      .returning(['id']);
+    providerDownloadBytes = await sharp({
+      create: { width: 1, height: 1, channels: 4, background: '#ff0000' },
+    })
+      .png()
+      .toBuffer();
+
+    const imageThumbnail = await app.inject({
+      method: 'GET',
+      url: `/whatsapp/media/${image.id}/thumbnail`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(imageThumbnail.statusCode).toBe(200);
+    expect(imageThumbnail.headers['content-type']).toContain('image/webp');
+    expect(imageThumbnail.headers['x-original-content-type']).toBe('image/png');
+    expect(imageThumbnail.rawPayload.subarray(0, 4).toString()).toBe('RIFF');
+    const imageRow = await db('whatsapp_messages').where({ id: image.id }).first();
+    expect(imageRow).toMatchObject({ media_scan_status: 'clean' });
+    expect(imageRow.media_thumbnail_key).toMatch(/^[0-9a-f-]{36}$/u);
+    expect(stored.size).toBe(2);
+    const imageStreamReads = streamGetCount;
+
+    const cachedImageThumbnail = await app.inject({
+      method: 'GET',
+      url: `/whatsapp/media/${image.id}/thumbnail`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(cachedImageThumbnail.statusCode).toBe(200);
+    expect(cachedImageThumbnail.rawPayload).toEqual(imageThumbnail.rawPayload);
+    expect(streamGetCount).toBe(imageStreamReads);
+
+    const foreign = await app.inject({
+      method: 'GET',
+      url: `/whatsapp/media/${image.id}/thumbnail`,
+      headers: { authorization: 'Bearer test', 'x-test-company': 'foreign' },
+    });
+    expect(foreign.statusCode).toBe(404);
+
+    const [video] = await db('whatsapp_messages')
+      .insert({
+        company_id: companyId,
+        account_id: accountId,
+        conversation_id: conversation.id,
+        external_id: 'incoming-video-preview',
+        direction: 'inbound',
+        message_type: 'video',
+        content: '',
+        status: 'received',
+        media_scan_status: 'pending',
+      })
+      .returning(['id']);
+    providerDownloadBytes = Buffer.from([0x1a, 0x45, 0xdf, 0xa3, 0x00]);
+    const videoPoster = await app.inject({
+      method: 'GET',
+      url: `/whatsapp/media/${video.id}/thumbnail`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(videoPoster.statusCode).toBe(200);
+    expect(videoPoster.headers['content-type']).toContain('image/jpeg');
+    expect(videoPoster.headers['x-original-content-type']).toBe('video/webm');
+    expect(videoPosterCallCount).toBe(1);
   });
 
   it('queues a company-scoped forward and uses GoWA source IDs instead of re-uploading media', async () => {
