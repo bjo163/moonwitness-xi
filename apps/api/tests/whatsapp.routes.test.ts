@@ -1386,6 +1386,30 @@ describe('WhatsApp API GoWA bridge', () => {
       'Noted',
       'See this',
     ]);
+    const incomingImage = messages.json().data.find(
+      (item: { content: string }) => item.content === 'See this'
+    );
+    expect(incomingImage).toMatchObject({ is_unread: true, is_last_read: false });
+    await db('whatsapp_conversation_reads').insert({
+      company_id: companyId,
+      conversation_id: conversationId,
+      user_id: 1,
+      last_read_message_id: incomingImage.id,
+      last_read_at: incomingImage.create_date,
+    });
+    const messagesWithReadCursor = await app.inject({
+      method: 'GET',
+      url: `/whatsapp/conversations/${conversationId}/messages`,
+      headers: { authorization: 'Bearer test' },
+    });
+    expect(
+      messagesWithReadCursor.json().data.find(
+        (item: { id: number }) => item.id === incomingImage.id
+      )
+    ).toMatchObject({ is_unread: false, is_last_read: true });
+    expect(
+      messagesWithReadCursor.json().data.find((item: { content: string }) => item.content === 'Noted')
+    ).toMatchObject({ is_unread: false, is_last_read: false });
     providerMessages.push(
       {
         id: 'late-arriving-old-message',

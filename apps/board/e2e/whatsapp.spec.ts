@@ -21,6 +21,7 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
     })
   );
   let failSearchConversationLoad = false;
+  let includeNewInboundMessage = false;
   await page.route('**/whatsapp/conversations*', (route) => {
     const url = new URL(route.request().url());
     if (failSearchConversationLoad && url.searchParams.get('search') === 'trigger-error') {
@@ -118,6 +119,17 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
       json: {
         success: true,
         data: [
+          ...(includeNewInboundMessage
+            ? [{
+                id: 55,
+                direction: 'inbound',
+                content: 'New inbound message',
+                status: 'received',
+                is_unread: true,
+                message_type: 'text',
+                create_date: new Date(Date.now() + 1000).toISOString(),
+              }]
+            : []),
           {
             id: 52,
             direction: 'outbound',
@@ -129,6 +141,8 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
           {
             id: 50,
             direction: 'inbound',
+            is_unread: true,
+            is_last_read: false,
             content: 'Can you help?',
             status: 'received',
             message_type: 'text',
@@ -137,6 +151,7 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
           {
             id: 53,
             direction: 'inbound',
+            is_unread: true,
             content: 'Storage failure attachment',
             status: 'received',
             message_type: 'image',
@@ -145,6 +160,7 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
           {
             id: 54,
             direction: 'inbound',
+            is_unread: true,
             content: 'Gateway failure attachment',
             status: 'received',
             message_type: 'image',
@@ -153,6 +169,7 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
           ...Array.from({ length: 46 }, (_, index) => ({
             id: 49 - index,
             direction: 'inbound',
+            is_unread: true,
             content: `Older item ${index}`,
             status: 'received',
             message_type: 'text',
@@ -185,6 +202,7 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   await expect(page.getByText('+6281234567890')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Project group' })).toBeVisible();
   await expect(page.getByText('Group ID: 120363000')).toBeVisible();
+  await expect(page.getByRole('separator', { name: 'New messages' })).toBeVisible();
   await expect(
     page.locator('article').getByText('Attachment storage is temporarily unavailable. Try again.')
   ).toBeVisible();
@@ -201,6 +219,14 @@ test('company WhatsApp inbox displays chats and sends a reply', async ({ page })
   await expect(page.locator('article').getByText('Can you help?')).toBeVisible();
   await page.getByRole('button', { name: 'Load older messages' }).click();
   await expect(page.locator('article').getByText('Older history')).toBeVisible();
+  const messageScroller = page.locator('div.overflow-y-auto').last();
+  await expect.poll(() => messageScroller.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+  await page.locator('article').last().scrollIntoViewIfNeeded();
+  await expect.poll(() => messageScroller.evaluate((element) => element.scrollTop)).toBeLessThan(-48);
+  includeNewInboundMessage = true;
+  await expect(page.getByRole('button', { name: 'New messages · Jump to latest' })).toBeVisible({ timeout: 10_000 });
+  await page.getByRole('button', { name: 'New messages · Jump to latest' }).click();
+  await expect(page.locator('article').getByText('New inbound message')).toBeVisible();
   await page.getByPlaceholder('Write a message…').fill('Thanks, I will take a look.');
   await page.getByRole('button', { name: 'Send message' }).click();
   await expect(page.getByPlaceholder('Write a message…')).toHaveValue('');

@@ -63,6 +63,8 @@ function formatConversationAddress(conversation: Conversation): string {
 type Message = {
   id: number;
   direction: string;
+  is_last_read?: boolean;
+  is_unread?: boolean;
   content?: string | null;
   status: string;
   retryable?: boolean;
@@ -138,6 +140,13 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
   const [loadingOlderConversationId, setLoadingOlderConversationId] = useState<number | null>(null);
   const loadingOlderRef = useRef<number | null>(null);
   const activeConversationIdRef = useRef<number | undefined>(undefined);
+  const messageContainerRef = useRef<HTMLDivElement | null>(null);
+  const latestMessageRef = useRef<{ conversationId: number | undefined; messageId: number | undefined }>({
+    conversationId: undefined,
+    messageId: undefined,
+  });
+  const isNearLatestRef = useRef(true);
+  const [hasNewMessages, setHasNewMessages] = useState(false);
   const [qr, setQr] = useState<{ code: string; image: string } | null>(null);
   useEffect(() => {
     try {
@@ -226,6 +235,31 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
     refetchInterval: 2500,
     refetchIntervalInBackground: false,
   });
+  const latestMessageId = messagesQuery.data?.[0]?.id;
+  useEffect(() => {
+    const conversationId = activeConversation?.id;
+    const previous = latestMessageRef.current;
+    if (previous.conversationId !== conversationId) {
+      latestMessageRef.current = { conversationId, messageId: latestMessageId };
+      isNearLatestRef.current = true;
+      setHasNewMessages(false);
+      if (conversationId !== undefined) {
+        window.requestAnimationFrame(() => {
+          if (activeConversationIdRef.current === conversationId && messageContainerRef.current) {
+            messageContainerRef.current.scrollTop = 0;
+          }
+        });
+      }
+      return;
+    }
+    if (latestMessageId === undefined || latestMessageId === previous.messageId) return;
+    latestMessageRef.current.messageId = latestMessageId;
+    if (isNearLatestRef.current) {
+      messageContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      setHasNewMessages(true);
+    }
+  }, [activeConversation?.id, latestMessageId]);
 
   const loadMoreConversations = async () => {
     const current = queryClient.getQueryData<ConversationPage>(conversationsQueryKey);
@@ -404,6 +438,17 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
       [...(messagesQuery.data ?? []), ...olderMessages].map((message) => [message.id, message])
     ).values()
   );
+  const readCursorIndex = messageList.findIndex((message) => message.is_last_read);
+  const oldestUnreadIndex = messageList.reduce(
+    (oldestIndex, message, index) => (message.is_unread ? index : oldestIndex),
+    -1
+  );
+  const newMessagesDividerIndex =
+    readCursorIndex >= 0
+      ? readCursorIndex
+      : oldestUnreadIndex >= 0
+        ? oldestUnreadIndex + 1
+        : -1;
   const loadOlderMessages = async () => {
     if (!activeConversation || !hasOlderMessages) return;
     const requestedConversationId = activeConversation.id;
@@ -658,7 +703,7 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
               </Button>
             )}
           </aside>
-          <div className="flex min-h-[55vh] flex-col">
+          <div className="flex h-[70vh] min-h-[55vh] max-h-[calc(100dvh-8rem)] flex-col">
             <div className="border-b-2 border-ink p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="min-w-0">
@@ -721,10 +766,31 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                 {loadingOlderMessages ? 'Loading older messages…' : 'Load older messages'}
               </Button>
             )}
+            {hasNewMessages && (
+              <Button
+                type="button"
+                size="sm"
+                className="mx-auto"
+                onClick={() => {
+                  isNearLatestRef.current = true;
+                  setHasNewMessages(false);
+                  messageContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+              >
+                New messages · Jump to latest
+              </Button>
+            )}
             <div
-              className="flex flex-1 flex-col-reverse gap-3 overflow-y-auto p-4"
+              ref={messageContainerRef}
+              className="min-h-0 flex flex-1 flex-col-reverse gap-3 overflow-y-auto p-4"
               onScroll={(event) => {
-                if (event.currentTarget.scrollTop < -48) void loadOlderMessages();
+                const nearLatest = event.currentTarget.scrollTop >= -48;
+                isNearLatestRef.current = nearLatest;
+                if (nearLatest) {
+                  if (hasNewMessages) setHasNewMessages(false);
+                } else {
+                  void loadOlderMessages();
+                }
               }}
             >
               {messagesQuery.isError && !messagesQuery.data && (
@@ -746,11 +812,20 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                   Showing cached messages. Refresh failed; retrying automatically.
                 </p>
               )}
-              {messageList.map((message) => (
-                <article
-                  key={message.id}
-                  className={`max-w-[85%] border-2 border-ink p-3 ${message.direction === 'outbound' ? 'ml-auto bg-pink/30' : 'mr-auto bg-white'}`}
-                >
+              {messageList.map((message, index) => (
+                <div key={message.id} className="contents">
+                  {activeConversation?.unread_count > 0 && index === newMessagesDividerIndex && (
+                    <div
+                      role="separator"
+                      aria-label="New messages"
+                      className="w-full border-y border-ink/40 py-1 text-center text-xs font-semibold text-ink-faint"
+                    >
+                      New messages
+                    </div>
+                  )}
+                  <article
+                    className={`max-w-[85%] border-2 border-ink p-3 ${message.direction === 'outbound' ? 'ml-auto bg-pink/30' : 'mr-auto bg-white'}`}
+                  >
                   {activeConversation?.is_group &&
                     message.direction === 'inbound' &&
                     message.sender_jid && (
@@ -794,8 +869,19 @@ function WhatsappInbox({ inboxPreferenceScope }: { inboxPreferenceScope: string 
                       Retry send
                     </Button>
                   )}
-                </article>
+                  </article>
+                </div>
               ))}
+              {activeConversation?.unread_count > 0 &&
+                newMessagesDividerIndex === messageList.length && (
+                  <div
+                    role="separator"
+                    aria-label="New messages"
+                    className="w-full border-y border-ink/40 py-1 text-center text-xs font-semibold text-ink-faint"
+                  >
+                    New messages
+                  </div>
+                )}
             </div>
             {activeConversation && canSend ? (
               <MessageComposer key={activeConversation.id} conversationId={activeConversation.id} />

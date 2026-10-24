@@ -1406,6 +1406,15 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
       .orderBy('id', 'desc')
       .limit(limit)
       .offset(offset);
+    const readCursor = (await app
+      .db('whatsapp_conversation_reads')
+      .select('last_read_message_id', 'last_read_at')
+      .where({ company_id: companyId, conversation_id: conversationId, user_id: req.auth!.userId })
+      .first()) as
+      | { last_read_message_id?: number | string; last_read_at?: string | Date }
+      | undefined;
+    const lastReadMessageId = Number(readCursor?.last_read_message_id);
+    const lastReadAt = Date.parse(String(readCursor?.last_read_at ?? ''));
     const latestProviderMessage = (upstream.data ?? []).reduce<Record<string, unknown> | null>(
       (latest, item) => {
         const timestamp = providerTimestamp(item.timestamp);
@@ -1436,7 +1445,21 @@ export const whatsappRoutes: FastifyPluginAsync<Options> = async (app, options) 
           write_date: new Date().toISOString(),
         });
     }
-    return { success: true, data: messages };
+    return {
+      success: true,
+      data: messages.map((message) => {
+        const messageAt = Date.parse(String(message.create_date));
+        const afterReadCursor =
+          !Number.isFinite(lastReadAt) ||
+          messageAt > lastReadAt ||
+          (messageAt === lastReadAt && Number(message.id) > lastReadMessageId);
+        return {
+          ...message,
+          is_last_read: Number.isFinite(lastReadAt) && Number(message.id) === lastReadMessageId,
+          is_unread: message.direction === 'inbound' && afterReadCursor,
+        };
+      }),
+    };
   });
 
   app.post<{ Params: Params }>(
